@@ -1,0 +1,192 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+// Nível 1 e 2: Usuários do Sistema (Admins e Pesquisadores)
+model User {
+  id         String   @id @default(uuid())
+  name       String
+  email      String   @unique
+  password   String
+  role       String   @default("RESEARCHER") // ADMIN, RESEARCHER
+  isApproved Boolean  @default(false)        // Requer aprovação do admin
+  createdAt  DateTime @default(now())
+  
+  projects   ProjectMember[]
+}
+
+// O Prontuário Central Global (LGPD: Dados Identificáveis)
+model Patient {
+  id            String   @id @default(uuid())
+  fullName      String
+  cpf           String   @unique
+  email         String?
+  phoneWhatsApp String
+  address       String?
+  dateOfBirth   DateTime
+  biologicalSex String
+  
+  // Anamnese Global Básica
+  comorbidities  String?
+  allergies      String?
+  medications    String?
+  chiefComplaint String?
+  expectations   String?
+
+  createdAt      DateTime @default(now())
+
+  participations Participant[]
+}
+
+// O Projeto de Pesquisa
+model Project {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+
+  members           ProjectMember[]
+  participants      Participant[]
+  forms             Form[]
+  consentForm       ConsentForm?
+  anamnesisTemplate String? // JSON contendo as configurações de Odontograma, Periograma e Perguntas do projeto
+}
+
+// Ligação entre Usuário (Pesquisador) e o Projeto
+model ProjectMember {
+  id        String   @id @default(uuid())
+  userId    String
+  projectId String
+  role      String   @default("OPERATOR") // COORDINATOR, OPERATOR, EVALUATOR
+  isBlinded Boolean  @default(false)      // O segredo do cegamento
+
+  user      User     @relation(fields: [userId], references: [id])
+  project   Project  @relation(fields: [projectId], references: [id])
+}
+
+// Avatar do Paciente dentro de uma Pesquisa Específica (LGPD: Dados Anonimizados)
+model Participant {
+  id              String   @id @default(uuid())
+  patientId       String
+  projectId       String
+  researchCode    String   // Ex: P001, P002
+  status          String   @default("PENDING") // PENDING, APPROVED, EXCLUDED
+  exclusionReason String?
+  group           String?  // Ex: A, B (Oculto para quem é cego)
+  
+  // Regra Clínica: Trava de decisão pós-anamnese
+  anamnesisDone   Boolean  @default(false)
+  anamnesisData   String?  // JSON com as respostas da anamnese/ficha clínica preenchida
+  
+  createdAt       DateTime @default(now())
+
+  patient    Patient            @relation(fields: [patientId], references: [id])
+  project    Project            @relation(fields: [projectId], references: [id])
+  responses  FormResponse[]
+  signatures ConsentSignature[]
+  sessions   ClinicalSession[]
+  
+  @@unique([projectId, researchCode])
+}
+
+// TCLE Personalizável por Projeto e Pesquisador Responsável
+model ConsentForm {
+  id                    String   @id @default(uuid())
+  projectId             String   @unique
+  title                 String
+  responsibleResearcher String
+  advisor               String?
+  institution           String   @default("Universidade Estadual de Ponta Grossa – UEPG")
+  ethicsNumber          String?  // Ex: CAAE ou Parecer do CEP
+  ethicsContacts        String?  // Contatos do CEP
+  contentMarkdown       String   // Texto completo personalizável
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  project    Project            @relation(fields: [projectId], references: [id])
+  signatures ConsentSignature[]
+}
+
+// Assinaturas Eletrônicas Seguras (Trilha de Auditoria)
+model ConsentSignature {
+  id              String   @id @default(uuid())
+  consentFormId   String
+  participantId   String
+  participantName String
+  cpf             String
+  signatureData   String   // Traçado do desenho da assinatura
+  ipAddress       String?
+  userAgent       String?  // Navegador/Dispositivo do paciente
+  signedAt        DateTime @default(now())
+
+  consentForm ConsentForm @relation(fields: [consentFormId], references: [id])
+  participant Participant @relation(fields: [participantId], references: [id])
+}
+
+// Formulários Eletrônicos (eCRFs) criados no Construtor
+model Form {
+  id              String   @id @default(uuid())
+  projectId       String
+  title           String
+  description     String?
+  questionsJson   String   // JSON com a estrutura das perguntas (VAS, Matriz, Sim/Não, etc.)
+  expirationHours Int      @default(24)
+  allowLate       Boolean  @default(false)
+  createdAt       DateTime @default(now())
+
+  project   Project        @relation(fields: [projectId], references: [id])
+  responses FormResponse[]
+}
+
+// Respostas enviadas pelos participantes (via Mobile/WhatsApp)
+model FormResponse {
+  id            String   @id @default(uuid())
+  formId        String
+  participantId String?
+  answersJson   String   // JSON com as respostas do paciente
+  signatureData String?  // Traçado da assinatura em Base64/SVG
+  isLate        Boolean  @default(false)
+  submittedAt   DateTime @default(now())
+
+  form        Form         @relation(fields: [formId], references: [id])
+  participant Participant? @relation(fields: [participantId], references: [id])
+}
+
+// Sessões Clínicas e Acompanhamento Longitudinal (Baseline, Intervenções e Retornos)
+model ClinicalSession {
+  id                 String   @id @default(uuid())
+  participantId      String
+  sessionNumber      Int      // 1 (Baseline / Sessão 1), 2 (Sessão 2 - 7d), 3 (Retorno 14d), 4 (Retorno 30d)
+  sessionType        String   // "BASELINE_INTERVENTION_1", "INTERVENTION_2", "FOLLOW_UP_14D", "FOLLOW_UP_30D"
+  sessionDate        DateTime @default(now())
+  
+  // Aferição Cega de Cor (Escala Vita Classical / Bleachedguide)
+  shadeRight         String?  // Cor no hemiarco direito (ex: "A1", "A2")
+  shadeLeft          String?  // Cor no hemiarco esquerdo (ex: "B1", "B2")
+  
+  // Sensibilidade Dentinária (Escala EVA 0 a 10)
+  painScore0h        Float?   // Sensibilidade imediata durante/pós sessão
+  painScore1h        Float?   // Sensibilidade após 1 hora
+  painScore24h       Float?   // Sensibilidade após 24 horas
+  painScore48h       Float?   // Sensibilidade após 48 horas
+  
+  // Efeitos Adversos e Tecidos Moles
+  gingivalIrritation String?  // "Ausente", "Leve", "Moderada", "Severa"
+  adverseEvents      String?  // Descrição de eventuais intercorrências
+  
+  // Equipe Responsável
+  operatorName       String?  // Nome do Operador
+  evaluatorName      String?  // Nome do Avaliador (Cego)
+  notes              String?  // Parecer clínico geral da consulta
+  
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  participant        Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+}
+

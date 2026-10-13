@@ -1,0 +1,1007 @@
+'use client';
+
+import React, { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
+
+type ParticipantSession = {
+  id: string;
+  sessionNumber: number;
+  sessionType: string;
+  sessionDate: string;
+  painScore0h: number | null;
+  painScore1h: number | null;
+  painScore24h: number | null;
+  painScore48h: number | null;
+  gingivalIrritation: string | null;
+};
+
+type FormQuestionItem = {
+  id: string;
+  type: 'vas' | 'likert' | 'choice' | 'boolean' | 'text' | 'number' | 'instruction';
+  title: string;
+  required: boolean;
+  options?: { label: string; value: string }[];
+  minLabel?: string;
+  maxLabel?: string;
+  observation?: string;
+};
+
+type FormItem = {
+  id: string;
+  title: string;
+  description: string | null;
+  questions: FormQuestionItem[];
+  expirationHours: number;
+  allowLate: boolean;
+  createdAt: string;
+  isCompleted: boolean;
+  submittedAt: string | null;
+  myAnswers: Record<string, any> | null;
+};
+
+type ParticipantData = {
+  id: string;
+  researchCode: string;
+  patientName: string;
+  projectName: string;
+  projectId: string;
+  responsibleResearcher: string;
+  ethicsNumber: string;
+  ethicsContacts: string;
+  sessions: ParticipantSession[];
+  latestSession: ParticipantSession | null;
+  forms: FormItem[];
+};
+
+function PacienteContent() {
+  const searchParams = useSearchParams();
+  const codeParam = searchParams.get('code');
+  const partIdParam = searchParams.get('participantId');
+  const tabParam = searchParams.get('tab');
+  const formIdParam = searchParams.get('formId');
+  const projectIdParam = searchParams.get('projectId');
+
+  const [inputCode, setInputCode] = useState(codeParam || '');
+  const [participant, setParticipant] = useState<ParticipantData | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Navegação entre Diário de Dor e Questionários eCRF
+  const [activeTab, setActiveTab] = useState<'diary' | 'forms'>(
+    tabParam === 'forms' || formIdParam ? 'forms' : 'diary'
+  );
+  const [selectedForm, setSelectedForm] = useState<FormItem | null>(null);
+  const [formAnswers, setFormAnswers] = useState<Record<string, any>>({});
+  const [submittingForm, setSubmittingForm] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [formSuccessMessage, setFormSuccessMessage] = useState<string | null>(null);
+
+  // Form states do Diário de Sensibilidade
+  const [selectedSessionNumber, setSelectedSessionNumber] = useState<number>(1);
+  const [timePoint, setTimePoint] = useState<'1h' | '24h' | '48h'>('24h');
+  const [painScore, setPainScore] = useState<number>(0);
+  const [painType, setPainType] = useState<string>('Sensibilidade ao ingerir líquidos ou alimentos frios');
+  const [gingivalSensation, setGingivalSensation] = useState<string>('Normal');
+  const [usedAnalgesic, setUsedAnalgesic] = useState<'Não' | 'Sim'>('Não');
+  const [analgesicDetails, setAnalgesicDetails] = useState<string>('');
+  const [otherSymptoms, setOtherSymptoms] = useState<string>('');
+  
+  const [submitting, setSubmitting] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [submittedData, setSubmittedData] = useState<any>(null);
+
+  // Fetch participant on mount if param exists
+  useEffect(() => {
+    if (codeParam || partIdParam) {
+      loadParticipant(codeParam, partIdParam);
+    }
+  }, [codeParam, partIdParam]);
+
+  const loadParticipant = async (code?: string | null, id?: string | null) => {
+    try {
+      setLoading(true);
+      setErrorMsg(null);
+
+      let url = '/api/paciente?';
+      if (id) url += `participantId=${encodeURIComponent(id)}`;
+      else if (code) url += `code=${encodeURIComponent(code.trim().toUpperCase())}`;
+      else return;
+
+      if (projectIdParam) {
+        url += `&projectId=${encodeURIComponent(projectIdParam)}`;
+      }
+
+      const res = await fetch(url);
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Participante não localizado.');
+      }
+
+      setParticipant(data.participant);
+      if (data.participant.latestSession) {
+        setSelectedSessionNumber(data.participant.latestSession.sessionNumber);
+      }
+      if (formIdParam && data.participant.forms) {
+        const found = data.participant.forms.find((f: any) => f.id === formIdParam);
+        if (found) {
+          setSelectedForm(found);
+          setFormAnswers(found.myAnswers || {});
+          setFormError(null);
+          setFormSuccessMessage(null);
+          setActiveTab('forms');
+        }
+      }
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Erro ao carregar dados do participante.');
+      setParticipant(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSearchParticipant = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inputCode.trim()) return;
+    loadParticipant(inputCode.trim());
+  };
+
+  const handleSubmitReport = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!participant) return;
+
+    try {
+      setSubmitting(true);
+      setErrorMsg(null);
+
+      const res = await fetch('/api/paciente/report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          participantId: participant.id,
+          sessionNumber: selectedSessionNumber,
+          timePoint,
+          painScore,
+          painType,
+          usedAnalgesic,
+          analgesicDetails: usedAnalgesic === 'Sim' ? analgesicDetails : '',
+          gingivalSensation,
+          otherSymptoms,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Erro ao registrar diário.');
+      }
+
+      setSubmittedData({
+        timePoint,
+        painScore,
+        sessionNumber: selectedSessionNumber,
+        timestamp: new Date().toLocaleString('pt-BR'),
+      });
+      setIsSubmitted(true);
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Erro ao enviar respostas.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleSelectForm = (form: FormItem) => {
+    setSelectedForm(form);
+    setFormAnswers(form.myAnswers || {});
+    setFormError(null);
+    setFormSuccessMessage(null);
+  };
+
+  const handleFormAnswerChange = (questionId: string, value: any) => {
+    setFormAnswers((prev) => ({ ...prev, [questionId]: value }));
+  };
+
+  const handleSubmitCustomForm = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedForm || !participant) return;
+
+    // Validação de campos obrigatórios
+    const missing = selectedForm.questions.filter((q) => {
+      if (!q.required) return false;
+      const val = formAnswers[q.id];
+      return val === undefined || val === null || val === '';
+    });
+
+    if (missing.length > 0) {
+      setFormError(`Por favor, responda a todas as perguntas obrigatórias marcadas com * (${missing.length} pendente(s)).`);
+      return;
+    }
+
+    try {
+      setSubmittingForm(true);
+      setFormError(null);
+
+      const res = await fetch('/api/responses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          formId: selectedForm.id,
+          participantId: participant.id,
+          answers: formAnswers,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Erro ao enviar respostas.');
+      }
+
+      setFormSuccessMessage('Questionário gravado com sucesso no protocolo do estudo!');
+      await loadParticipant(participant.researchCode, participant.id);
+    } catch (err: any) {
+      setFormError(err.message || 'Erro ao registrar respostas.');
+    } finally {
+      setSubmittingForm(false);
+    }
+  };
+
+  // TELA 1: SUCESSO APÓS O ENVIO
+  if (isSubmitted && submittedData) {
+    return (
+      <div className="min-h-screen bg-slate-50 font-sans text-slate-800 flex justify-center p-4 sm:py-10">
+        <div className="w-full max-w-md bg-white rounded-3xl shadow-xl border border-slate-200 p-6 sm:p-8 flex flex-col justify-between">
+          <div className="text-center space-y-4">
+            <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-sm">
+              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+
+            <div>
+              <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-bold font-mono">
+                {participant?.researchCode}
+              </span>
+              <h2 className="text-2xl font-black text-slate-900 mt-2">Relato Registrado!</h2>
+              <p className="text-xs text-slate-500 mt-1">
+                Suas respostas foram gravadas com segurança no banco de dados do ensaio clínico da UEPG.
+              </p>
+            </div>
+
+            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-left space-y-2 text-xs">
+              <div className="flex justify-between border-b border-slate-200 pb-2">
+                <span className="text-slate-500 font-medium">Sessão:</span>
+                <span className="font-bold text-slate-800">Sessão {submittedData.sessionNumber}</span>
+              </div>
+              <div className="flex justify-between border-b border-slate-200 pb-2">
+                <span className="text-slate-500 font-medium">Momento Avaliado:</span>
+                <span className="font-bold text-slate-800">{submittedData.timePoint} pós-clareamento</span>
+              </div>
+              <div className="flex justify-between border-b border-slate-200 pb-2">
+                <span className="text-slate-500 font-medium">Sensibilidade Reportada:</span>
+                <span className="font-semibold text-emerald-700 flex items-center space-x-1">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span>Registrada no sistema</span>
+                </span>
+              </div>
+              <div className="flex justify-between pt-1">
+                <span className="text-slate-500 font-medium">Data e Hora:</span>
+                <span className="font-medium text-slate-700">{submittedData.timestamp}</span>
+              </div>
+            </div>
+
+            <div className="p-4 bg-blue-50 border border-blue-200 rounded-2xl text-left text-xs space-y-2">
+              <h4 className="font-bold text-blue-900 flex items-center space-x-1.5">
+                <span>🛡️</span>
+                <span>Suporte Clínico aos Participantes</span>
+              </h4>
+              <p className="text-blue-800 text-[11px] leading-relaxed">
+                A sensibilidade após clareamento é um efeito transitório que costuma regredir nas primeiras 24 a 48 horas. Se sentir qualquer dor persistente ou desconforto incomum, você tem suporte direto da equipe de pesquisa.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-8 space-y-3">
+            <a
+              href="https://wa.me/5542999999999?text=Ol%C3%A1%2C%20sou%20participante%20da%20pesquisa%20de%20clareamento%20e%20gostaria%20de%20tirar%20uma%20d%C3%BAvida"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full py-3 bg-[#25D366] hover:bg-[#128C7E] text-white font-bold text-xs rounded-xl shadow-md transition flex items-center justify-center space-x-2"
+            >
+              <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+              </svg>
+              <span>Falar com o Pesquisador Responsável</span>
+            </a>
+
+            <button
+              onClick={() => {
+                setIsSubmitted(false);
+                setTimePoint('48h');
+              }}
+              className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition"
+            >
+              Registrar Outro Momento
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // TELA 2: ENTRADA COM CÓDIGO (CASO NÃO VENHA NA URL)
+  if (!participant) {
+    return (
+      <div className="min-h-screen bg-slate-50 font-sans text-slate-800 flex items-center justify-center p-4">
+        <div className="w-full max-w-md bg-white rounded-3xl shadow-xl border border-slate-200 p-6 sm:p-8">
+          <div className="text-center mb-6">
+            <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-blue-50 text-blue-600 mb-3 text-2xl shadow-xs">
+              🦷
+            </div>
+            <h1 className="text-xl font-bold text-slate-900">Portal do Participante</h1>
+            <p className="text-xs text-slate-500 mt-1">
+              Universidade Estadual de Ponta Grossa • UEPG <br />
+              Pesquisa Clínica em Clareamento Dental
+            </p>
+          </div>
+
+          {errorMsg && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 flex items-center space-x-2">
+              <span>⚠️</span>
+              <span>{errorMsg}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleSearchParticipant} className="space-y-4">
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                Digite seu Código de Pesquisa:
+              </label>
+              <input
+                type="text"
+                required
+                placeholder="Ex: P001"
+                value={inputCode}
+                onChange={(e) => setInputCode(e.target.value)}
+                className="w-full px-4 py-3 border border-slate-300 rounded-xl text-center text-lg font-mono font-bold tracking-widest uppercase focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              />
+              <p className="text-[11px] text-slate-400 mt-1 text-center">
+                O código foi enviado por WhatsApp pela equipe no dia da consulta.
+              </p>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md transition disabled:opacity-50"
+            >
+              {loading ? 'Identificando...' : 'Acessar Meu Diário de Pesquisa →'}
+            </button>
+          </form>
+
+          <div className="mt-8 pt-4 border-t border-slate-100 text-center text-[11px] text-slate-400">
+            Dúvidas? Entre em contato com a coordenação de pesquisa pelo e-mail institucional ou WhatsApp fornecido no TCLE.
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // TELA 3: FORMULÁRIO DO DIÁRIO DE DOR E QUESTIONÁRIOS DA PESQUISA
+  const pendingFormsCount = participant.forms?.filter((f) => !f.isCompleted).length || 0;
+
+  return (
+    <div className="min-h-screen bg-slate-100 font-sans text-slate-800 flex justify-center">
+      {/* Contêiner Mobile */}
+      <div className="w-full max-w-md bg-white min-h-screen shadow-2xl flex flex-col justify-between">
+        
+        {/* Cabeçalho */}
+        <header className="bg-gradient-to-br from-blue-700 to-indigo-800 text-white p-6 rounded-b-3xl shadow-md shrink-0">
+          <div className="flex justify-between items-start">
+            <div>
+              <p className="text-blue-200 text-xs font-bold uppercase tracking-wider">UEPG • Pesquisa Clínica</p>
+              <h1 className="text-lg font-bold mt-0.5 leading-snug">
+                {activeTab === 'diary' ? 'Diário de Sensibilidade' : selectedForm ? selectedForm.title : 'Questionários da Pesquisa'}
+              </h1>
+            </div>
+            <span className="px-3 py-1 bg-white/20 backdrop-blur-xs text-white rounded-full text-xs font-mono font-bold">
+              {participant.researchCode}
+            </span>
+          </div>
+
+          <div className="mt-4 p-3 bg-white/10 rounded-2xl text-xs border border-white/10">
+            <p className="font-semibold text-white truncate">{participant.patientName}</p>
+            <p className="text-blue-200 text-[11px] truncate mt-0.5">{participant.projectName}</p>
+          </div>
+        </header>
+
+        {/* Abas Superiores do Paciente */}
+        <div className="p-2 bg-slate-100 border-b border-slate-200 flex space-x-1.5 shrink-0">
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab('diary');
+              setSelectedForm(null);
+              setFormSuccessMessage(null);
+              setFormError(null);
+            }}
+            className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1.5 ${
+              activeTab === 'diary'
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-200'
+            }`}
+          >
+            <span>⚡</span>
+            <span>Diário de Dor</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab('forms');
+              setFormSuccessMessage(null);
+              setFormError(null);
+            }}
+            className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1.5 relative ${
+              activeTab === 'forms'
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-200'
+            }`}
+          >
+            <span>📋</span>
+            <span>Questionários</span>
+            {pendingFormsCount > 0 && (
+              <span className="w-4 h-4 bg-amber-500 text-white rounded-full text-[9px] flex items-center justify-center font-black">
+                {pendingFormsCount}
+              </span>
+            )}
+          </button>
+        </div>
+
+        {/* Corpo do Conteúdo */}
+        <main className="p-5 flex-1 space-y-5 overflow-y-auto">
+          
+          {/* Saudação Amigável e Contexto */}
+          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 flex items-center justify-between gap-2 shadow-xs">
+            <div>
+              <p className="font-bold text-slate-800 text-xs">
+                Olá, {participant.patientName.split(' ')[0]}! 👋
+              </p>
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                {activeTab === 'diary'
+                  ? 'Acompanhe e registre sua sensibilidade pós-sessão.'
+                  : 'Responda aos questionários da pesquisa clínica com tranquilidade.'}
+              </p>
+            </div>
+
+            {pendingFormsCount > 0 && activeTab === 'diary' && (
+              <button
+                type="button"
+                onClick={() => setActiveTab('forms')}
+                className="px-2.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-[11px] font-bold shrink-0 transition shadow-xs flex items-center space-x-1"
+                title="Você tem questionários aguardando resposta"
+              >
+                <span>📋</span>
+                <span>{pendingFormsCount} Pendente{pendingFormsCount > 1 ? 's' : ''} →</span>
+              </button>
+            )}
+          </div>
+
+          {errorMsg && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700">
+              {errorMsg}
+            </div>
+          )}
+
+          {/* ABA 1: DIÁRIO DE SENSIBILIDADE (EVA) */}
+          {activeTab === 'diary' && (
+            <form onSubmit={handleSubmitReport} className="space-y-6">
+              
+              {/* Seleção do Momento da Avaliação */}
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
+                  1. Momento do relato após a sessão:
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { key: '1h' as const, label: '1 Hora', sub: 'Pós-clareamento' },
+                    { key: '24h' as const, label: '24 Horas', sub: 'Dia seguinte' },
+                    { key: '48h' as const, label: '48 Horas', sub: '2 dias após' },
+                  ].map((item) => (
+                    <button
+                      key={item.key}
+                      type="button"
+                      onClick={() => setTimePoint(item.key)}
+                      className={`p-2.5 rounded-xl border text-center transition ${
+                        timePoint === item.key
+                          ? 'bg-blue-600 text-white border-blue-600 shadow-xs font-bold'
+                          : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                      }`}
+                    >
+                      <span className="block text-xs">{item.label}</span>
+                      <span className={`block text-[10px] ${timePoint === item.key ? 'text-blue-100' : 'text-slate-400'}`}>
+                        {item.sub}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Escala Visual Analógica (EVA) Contínua e Neutra */}
+              <div className="p-5 bg-slate-50 border border-slate-200 rounded-2xl space-y-4">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-800 mb-1">
+                    2. Escala Visual Analógica (EVA) de Sensibilidade
+                  </label>
+                  <p className="text-[11px] text-slate-500 leading-relaxed">
+                    Deslize o marcador na linha horizontal contínua abaixo até o ponto exato que melhor representa a sua sensibilidade agora:
+                  </p>
+                </div>
+
+                {/* Linha Contínua Analógica (100mm Digital): Sem números e sem cores para evitar viés de ancoragem */}
+                <div className="py-4 px-1 space-y-3">
+                  <div className="relative flex items-center">
+                    {/* Delimitador vertical esquerdo */}
+                    <div className="w-1 h-6 bg-slate-400 rounded-full shrink-0 -mr-1 z-10" />
+
+                    <input
+                      type="range"
+                      min="0"
+                      max="10"
+                      step="0.1"
+                      value={painScore}
+                      onChange={(e) => setPainScore(parseFloat(parseFloat(e.target.value).toFixed(1)))}
+                      className="w-full h-3 bg-slate-200 border border-slate-300 rounded-lg appearance-none cursor-pointer accent-slate-800 focus:outline-none shadow-inner"
+                    />
+
+                    {/* Delimitador vertical direito */}
+                    <div className="w-1 h-6 bg-slate-400 rounded-full shrink-0 -ml-1 z-10" />
+                  </div>
+
+                  {/* Âncoras verbais nas extremidades (sem números e sem cores chamativas) */}
+                  <div className="flex justify-between items-start text-xs pt-1 px-1">
+                    <div className="text-left max-w-[130px]">
+                      <span className="block font-bold text-slate-800">Nenhuma dor</span>
+                      <span className="text-[10px] text-slate-400 leading-tight block">Ausência total de sensibilidade</span>
+                    </div>
+                    <div className="text-right max-w-[130px]">
+                      <span className="block font-bold text-slate-800">Pior dor possível</span>
+                      <span className="text-[10px] text-slate-400 leading-tight block">Intensidade máxima suportável</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Tipo de Sensação / Estímulo */}
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
+                  3. Como você descreveria essa sensação?
+                </label>
+                <select
+                  value={painType}
+                  onChange={(e) => setPainType(e.target.value)}
+                  className="w-full p-2.5 border border-slate-300 rounded-xl text-xs bg-white text-slate-800 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                >
+                  <option value="Nenhuma sensibilidade ou dor">Nenhuma sensibilidade ou dor</option>
+                  <option value="Sensibilidade ao ingerir líquidos ou alimentos frios">Sensibilidade ao ingerir líquidos ou alimentos frios</option>
+                  <option value="Dor espontânea / pontada transitória">Dor espontânea / pontada transitória</option>
+                  <option value="Sensibilidade ao respirar ar ambiente ou vento frio">Sensibilidade ao respirar ar ambiente ou vento frio</option>
+                  <option value="Sensibilidade durante a escovação dos dentes">Sensibilidade durante a escovação dos dentes</option>
+                  <option value="Desconforto ou pressão ao mastigar">Desconforto ou pressão ao mastigar</option>
+                </select>
+              </div>
+
+              {/* Condição Gengival */}
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
+                  4. Como está sua gengiva ao redor dos dentes?
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {[
+                    { val: 'Normal', label: '✓ Normal e confortável' },
+                    { val: 'Leve queimação ou ardência', label: '⚠️ Leve ardência ou queimação' },
+                    { val: 'Vermelhidão perceptível', label: '⚠️ Vermelhidão perceptível' },
+                    { val: 'Pequena afta ou mancha branca', label: '⚠️ Pequena afta / mancha branca' },
+                  ].map((item) => (
+                    <button
+                      key={item.val}
+                      type="button"
+                      onClick={() => setGingivalSensation(item.val)}
+                      className={`p-2.5 rounded-xl border text-left text-xs transition ${
+                        gingivalSensation === item.val
+                          ? 'bg-indigo-50 border-indigo-400 text-indigo-900 font-bold shadow-xs'
+                          : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                      }`}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Uso de Analgésicos */}
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-3">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-800">
+                  5. Você precisou tomar algum remédio para dor (analgésico)?
+                </label>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setUsedAnalgesic('Não')}
+                    className={`py-2 rounded-xl text-xs font-bold border transition ${
+                      usedAnalgesic === 'Não'
+                        ? 'bg-emerald-600 text-white border-emerald-600'
+                        : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                    }`}
+                  >
+                    Não tomei remédio
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setUsedAnalgesic('Sim')}
+                    className={`py-2 rounded-xl text-xs font-bold border transition ${
+                      usedAnalgesic === 'Sim'
+                        ? 'bg-amber-600 text-white border-amber-600'
+                        : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                    }`}
+                  >
+                    Sim, tomei analgésico
+                  </button>
+                </div>
+
+                {usedAnalgesic === 'Sim' && (
+                  <div className="pt-2 animate-fadeIn">
+                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                      Qual medicamento e quantos comprimidos você tomou?
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Ex: Paracetamol 750mg (1 comprimido) ou Dipirona 500mg"
+                      value={analgesicDetails}
+                      onChange={(e) => setAnalgesicDetails(e.target.value)}
+                      className="w-full p-2.5 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Outros Sintomas ou Observações */}
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                  Observações adicionais (opcional):
+                </label>
+                <textarea
+                  rows={2}
+                  value={otherSymptoms}
+                  onChange={(e) => setOtherSymptoms(e.target.value)}
+                  placeholder="Algo mais que você gostaria de relatar à equipe de pesquisa?"
+                  className="w-full p-2.5 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                />
+              </div>
+
+              {/* Botão de Envio */}
+              <div className="pt-2 pb-6">
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-xl shadow-lg transition disabled:opacity-50 flex items-center justify-center space-x-2"
+                >
+                  {submitting ? (
+                    <span>Gravando Relato...</span>
+                  ) : (
+                    <>
+                      <span>✓</span>
+                      <span>Enviar Meu Diário Clínico</span>
+                    </>
+                  )}
+                </button>
+                <p className="text-[10px] text-slate-400 text-center mt-2">
+                  Conforme as diretrizes éticas, todos os dados são sigilosos e monitorados pelos pesquisadores.
+                </p>
+              </div>
+
+            </form>
+          )}
+
+          {/* ABA 2: QUESTIONÁRIOS DA PESQUISA (eCRF: OHIP-14, Hábitos, Estética) */}
+          {activeTab === 'forms' && (
+            <div>
+              {formError && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 flex items-center space-x-2">
+                  <span>⚠️</span>
+                  <span>{formError}</span>
+                </div>
+              )}
+
+              {formSuccessMessage && (
+                <div className="p-6 bg-white rounded-2xl border border-emerald-200 text-center space-y-4 shadow-sm animate-fadeIn">
+                  <div className="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto text-2xl font-bold">
+                    ✓
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-black text-slate-900">Questionário Gravado!</h3>
+                    <p className="text-xs text-slate-500 mt-1">
+                      {formSuccessMessage}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedForm(null);
+                      setFormSuccessMessage(null);
+                    }}
+                    className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md transition"
+                  >
+                    ← Voltar à Lista de Questionários
+                  </button>
+                </div>
+              )}
+
+              {!formSuccessMessage && !selectedForm && (
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900">Instrumentos Científicos</h3>
+                    <p className="text-[11px] text-slate-500">
+                      Questionários de acompanhamento do ensaio clínico para este participante.
+                    </p>
+                  </div>
+
+                  {(!participant.forms || participant.forms.length === 0) ? (
+                    <div className="p-8 bg-slate-50 border border-slate-200 rounded-2xl text-center text-xs text-slate-400 space-y-1">
+                      <span className="text-2xl block mb-2">📋</span>
+                      <p className="font-semibold text-slate-600">Nenhum questionário complementar ativo.</p>
+                      <p className="text-[11px] text-slate-400">Quando a equipe cadastrar novos formulários (OHIP-14, Hábitos, Estética), eles aparecerão aqui.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {participant.forms.map((f) => (
+                        <div
+                          key={f.id}
+                          className={`p-4 rounded-2xl border transition space-y-3 ${
+                            f.isCompleted
+                              ? 'bg-emerald-50/40 border-emerald-200'
+                              : 'bg-white border-slate-200 hover:border-slate-300 shadow-xs'
+                          }`}
+                        >
+                          <div className="flex justify-between items-start gap-2">
+                            <div>
+                              <h4 className="font-bold text-slate-900 text-xs">{f.title}</h4>
+                              {f.description && (
+                                <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">{f.description}</p>
+                              )}
+                              <span className="inline-block mt-1 text-[10px] text-slate-400 font-mono">
+                                {f.questions.length} perguntas
+                              </span>
+                            </div>
+                            <span
+                              className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                                f.isCompleted
+                                  ? 'bg-emerald-100 text-emerald-800'
+                                  : 'bg-amber-100 text-amber-800'
+                              }`}
+                            >
+                              {f.isCompleted ? '✓ Concluído' : '⏳ Pendente'}
+                            </span>
+                          </div>
+
+                          <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+                            <span className="text-[10px] text-slate-400">
+                              {f.isCompleted && f.submittedAt ? `Enviado em ${f.submittedAt}` : 'Aguardando preenchimento'}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleSelectForm(f)}
+                              className={`px-3.5 py-1.5 rounded-xl font-bold text-xs transition ${
+                                f.isCompleted
+                                  ? 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-300'
+                                  : 'bg-blue-600 hover:bg-blue-700 text-white shadow-xs'
+                              }`}
+                            >
+                              {f.isCompleted ? 'Revisar / Atualizar' : 'Responder →'}
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {!formSuccessMessage && selectedForm && (
+                <form onSubmit={handleSubmitCustomForm} className="space-y-6 pb-6">
+                  <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedForm(null)}
+                      className="text-xs font-bold text-blue-600 hover:text-blue-800 flex items-center space-x-1"
+                    >
+                      <span>←</span>
+                      <span>Voltar aos Questionários</span>
+                    </button>
+                    <span className="text-[10px] text-slate-400 font-mono font-bold">
+                      {selectedForm.questions.length} perguntas
+                    </span>
+                  </div>
+
+                  <div>
+                    <h3 className="text-base font-bold text-slate-900">{selectedForm.title}</h3>
+                    {selectedForm.description && (
+                      <p className="text-xs text-slate-500 mt-1 leading-relaxed">{selectedForm.description}</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-5">
+                    {selectedForm.questions.map((q, idx) => (
+                      <div key={q.id} className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-3">
+                        <div>
+                          <h4 className="font-bold text-slate-900 text-xs leading-snug">
+                            {idx + 1}. {q.title} {q.required && <span className="text-red-500 font-bold">*</span>}
+                          </h4>
+                          {q.observation && (
+                            <p className="text-[11px] text-slate-600 mt-1.5 bg-white p-2.5 rounded-lg border border-slate-200 leading-relaxed">
+                              💡 <strong>Orientação:</strong> {q.observation}
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Likert */}
+                        {q.type === 'likert' && q.options && (
+                          <div className="grid grid-cols-1 gap-1.5 pt-1">
+                            {q.options.map((opt) => {
+                              const isSelected = formAnswers[q.id] === opt.value;
+                              return (
+                                <button
+                                  key={opt.value}
+                                  type="button"
+                                  onClick={() => handleFormAnswerChange(q.id, opt.value)}
+                                  className={`p-2.5 rounded-xl border text-left text-xs transition flex justify-between items-center ${
+                                    isSelected
+                                      ? 'bg-blue-600 text-white border-blue-600 font-bold shadow-xs'
+                                      : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
+                                  }`}
+                                >
+                                  <span>{opt.label}</span>
+                                  {isSelected && <span>✓</span>}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        {/* Choice */}
+                        {q.type === 'choice' && q.options && (
+                          <div className="space-y-1.5 pt-1">
+                            {q.options.map((opt) => {
+                              const isSelected = formAnswers[q.id] === opt.value;
+                              return (
+                                <button
+                                  key={opt.value}
+                                  type="button"
+                                  onClick={() => handleFormAnswerChange(q.id, opt.value)}
+                                  className={`w-full p-2.5 rounded-xl border text-left text-xs transition flex justify-between items-center ${
+                                    isSelected
+                                      ? 'bg-blue-600 text-white border-blue-600 font-bold shadow-xs'
+                                      : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
+                                  }`}
+                                >
+                                  <span>{opt.label}</span>
+                                  {isSelected && <span>✓</span>}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        {/* Boolean */}
+                        {q.type === 'boolean' && (
+                          <div className="grid grid-cols-2 gap-2 pt-1">
+                            {['Sim', 'Não'].map((val) => {
+                              const isSelected = formAnswers[q.id] === val;
+                              return (
+                                <button
+                                  key={val}
+                                  type="button"
+                                  onClick={() => handleFormAnswerChange(q.id, val)}
+                                  className={`py-2.5 rounded-xl border text-center text-xs font-bold transition ${
+                                    isSelected
+                                      ? val === 'Sim' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-slate-700 text-white border-slate-700'
+                                      : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
+                                  }`}
+                                >
+                                  {val}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        {/* VAS Contínua e Neutra para o Paciente */}
+                        {q.type === 'vas' && (
+                          <div className="py-3 px-1 space-y-2">
+                            <p className="text-[11px] text-slate-500 text-center font-medium italic">
+                              ↔️ Deslize o marcador para o ponto que melhor representa sua sensação
+                            </p>
+                            <div className="relative flex items-center">
+                              <div className="w-1 h-6 bg-slate-400 rounded-full shrink-0 -mr-1 z-10" />
+                              <input
+                                type="range"
+                                min="0"
+                                max="10"
+                                step="0.1"
+                                value={formAnswers[q.id] ?? 5}
+                                onChange={(e) => handleFormAnswerChange(q.id, parseFloat(parseFloat(e.target.value).toFixed(1)))}
+                                className="w-full h-3 bg-slate-200 border border-slate-300 rounded-lg appearance-none cursor-pointer accent-slate-800 focus:outline-none shadow-inner"
+                              />
+                              <div className="w-1 h-6 bg-slate-400 rounded-full shrink-0 -ml-1 z-10" />
+                            </div>
+                            <div className="flex justify-between items-start text-xs pt-1 px-1">
+                              <span className="font-bold text-slate-800">{q.minLabel || 'Mínimo'}</span>
+                              <span className="font-bold text-slate-800">{q.maxLabel || 'Máximo'}</span>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Text */}
+                        {q.type === 'text' && (
+                          <textarea
+                            rows={3}
+                            value={formAnswers[q.id] || ''}
+                            onChange={(e) => handleFormAnswerChange(q.id, e.target.value)}
+                            placeholder="Digite sua resposta aqui..."
+                            className="w-full p-2.5 border border-slate-300 rounded-xl text-xs bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                          />
+                        )}
+
+                        {/* Number */}
+                        {q.type === 'number' && (
+                          <input
+                            type="number"
+                            value={formAnswers[q.id] || ''}
+                            onChange={(e) => handleFormAnswerChange(q.id, e.target.value)}
+                            placeholder="Informe um número..."
+                            className="w-full p-2.5 border border-slate-300 rounded-xl text-xs bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                          />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="pt-2">
+                    <button
+                      type="submit"
+                      disabled={submittingForm}
+                      className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-xl shadow-lg transition disabled:opacity-50 flex items-center justify-center space-x-2"
+                    >
+                      {submittingForm ? (
+                        <span>Gravando Respostas...</span>
+                      ) : (
+                        <>
+                          <span>✓</span>
+                          <span>Enviar Respostas do Questionário</span>
+                        </>
+                      )}
+                    </button>
+                    <p className="text-[10px] text-slate-400 text-center mt-2">
+                      Dados integrados diretamente ao banco de pesquisa clínica da UEPG.
+                    </p>
+                  </div>
+                </form>
+              )}
+            </div>
+          )}
+
+        </main>
+      </div>
+    </div>
+  );
+}
+
+export default function PacientePage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-slate-400">Carregando portal do paciente...</div>}>
+      <PacienteContent />
+    </Suspense>
+  );
+}
