@@ -42,7 +42,7 @@ export async function POST(req: Request) {
 
     // Identificar sessão alvo (ou a informada, ou a mais recente, ou criar a sessão 1)
     let targetSession = sessionNumber
-      ? participant.sessions.find((s) => s.sessionNumber === Number(sessionNumber))
+      ? participant.sessions.find((s: any) => s.sessionNumber === Number(sessionNumber))
       : participant.sessions[0];
 
     if (!targetSession) {

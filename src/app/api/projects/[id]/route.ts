@@ -56,12 +56,12 @@ export async function GET(
 
     // Verificar se o usuário logado tem restrição de cegamento (Blinded)
     const currentMember = project.members.find(
-      (m) => m.userId === currentUser?.id
+      (m: any) => m.userId === currentUser?.id
     );
     const isBlinded = currentMember?.isBlinded ?? false;
 
     // Se for cego, remove a informação de 'group' (ex: qual gel ou grupo recebeu)
-    const sanitizedParticipants = project.participants.map((p) => {
+    const sanitizedParticipants = project.participants.map((p: any) => {
       if (isBlinded) {
         return {
           ...p,

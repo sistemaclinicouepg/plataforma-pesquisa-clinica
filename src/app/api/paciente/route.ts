@@ -85,8 +85,8 @@ export async function GET(req: Request) {
     const latestSession = participant.sessions[participant.sessions.length - 1] || null;
 
     // Processar formulários do projeto e identificar status para o participante
-    const formsWithStatus = participant.project.forms.map((f) => {
-      const resp = participant.responses.find((r) => r.formId === f.id);
+    const formsWithStatus = participant.project.forms.map((f: any) => {
+      const resp = participant.responses.find((r: any) => r.formId === f.id);
       let parsedQuestions = [];
       try {
         parsedQuestions = JSON.parse(f.questionsJson);
