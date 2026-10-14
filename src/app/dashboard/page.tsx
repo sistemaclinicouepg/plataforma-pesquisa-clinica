@@ -56,6 +56,7 @@ import {
   Activity,
   FileCode,
   History,
+  RefreshCw,
 } from 'lucide-react';
 
 type Patient = {
@@ -471,10 +472,21 @@ function DashboardContent() {
   const [project, setProject] = useState<ProjectData | null>(null);
   const [allProjects, setAllProjects] = useState<Array<{ id: string; name: string }>>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<'active' | 'triage' | 'audit' | 'consort' | 'team' | 'export'>('active');
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [isBlindedUser, setIsBlindedUser] = useState<boolean>(false);
   const [currentMemberRole, setCurrentMemberRole] = useState<string>('COORDINATOR');
+
+  const handleSelectTab = (tab: 'active' | 'triage' | 'audit' | 'consort' | 'team' | 'export') => {
+    setActiveTab(tab);
+    if (project?.id && typeof window !== 'undefined') {
+      try {
+        sessionStorage.setItem(`uepg_tab_${project.id}`, tab);
+      } catch (e) {}
+    }
+  };
 
   // Estados da Trilha de Auditoria Regulatória GCP (Exclusivo Administrador)
   const [auditSearch, setAuditSearch] = useState('');
@@ -598,18 +610,77 @@ function DashboardContent() {
   const [editPatientReason, setEditPatientReason] = useState('');
   const [savingPatientEdit, setSavingPatientEdit] = useState(false);
 
-  const loadProject = async (silent: boolean = false) => {
+  const applyProjectData = (data: any) => {
+    if (!data?.project) return;
+    setProject(data.project);
+    setIsBlindedUser(Boolean(data.isBlinded || data.currentMember?.isBlinded));
+    setCurrentMemberRole(data.currentMember?.role || 'COORDINATOR');
+
+    // Salva no cache local para renderização instantânea em 0 ms nas próximas visitas (SWR)
     try {
-      if (!silent) {
+      localStorage.setItem(`uepg_cached_project_${data.project.id}`, JSON.stringify(data.project));
+      localStorage.setItem('uepg_cached_last_project', JSON.stringify(data.project));
+    } catch (e) {}
+
+    // Seleção de aba inteligente:
+    // Se não há participantes ativos aprovados, mas há candidatos na triagem, abre direto na Triagem!
+    const approvedCount = (data.project.participants || []).filter((p: any) => p.status === 'APPROVED').length;
+    const pendingCount = (data.project.participants || []).filter((p: any) => p.status === 'PENDING').length;
+
+    const tabParam = searchParams.get('tab');
+    if (tabParam && ['active', 'triage', 'audit', 'consort', 'team', 'export'].includes(tabParam)) {
+      setActiveTab(tabParam as any);
+    } else {
+      const savedTab = typeof window !== 'undefined' ? sessionStorage.getItem(`uepg_tab_${data.project.id}`) : null;
+      if (savedTab && ['active', 'triage', 'audit', 'consort', 'team', 'export'].includes(savedTab)) {
+        setActiveTab(savedTab as any);
+      } else if (approvedCount === 0 && pendingCount > 0) {
+        setActiveTab('triage');
+      }
+    }
+
+    if (timelineParticipant) {
+      const updated = data.project.participants?.find(
+        (p: Participant) => p.id === timelineParticipant.id
+      );
+      if (updated) setTimelineParticipant(updated);
+    }
+
+    if (responsesParticipant) {
+      const updated = data.project.participants?.find(
+        (p: Participant) => p.id === responsesParticipant.id
+      );
+      if (updated) setResponsesParticipant(updated);
+    }
+  };
+
+  const loadProject = async (silent: boolean = false) => {
+    setLoadError(null);
+    try {
+      if (!silent && !project) {
         setLoading(true);
+      } else if (silent) {
+        setIsRefreshing(true);
       }
       const pId = projectIdParam;
 
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 12000);
+
       // Dispara as consultas em PARALELO simultâneo para máxima performance
-      const projectPromise = pId ? fetch(`/api/projects/${pId}`) : null;
-      const listPromise = fetch('/api/projects');
+      const projectPromise = pId ? fetch(`/api/projects/${pId}`, { signal: controller.signal, cache: 'no-store' }) : null;
+      const listPromise = fetch('/api/projects', { signal: controller.signal, cache: 'no-store' });
 
       const [resProject, listRes] = await Promise.all([projectPromise, listPromise]);
+      clearTimeout(timeoutId);
+
+      // Tratamento de sessão expirada (401): redirecionamento automático para login
+      if (resProject?.status === 401 || listRes.status === 401) {
+        if (typeof window !== 'undefined') {
+          window.location.href = `/login?from=${encodeURIComponent(window.location.pathname + window.location.search)}`;
+        }
+        return;
+      }
 
       if (listRes.ok) {
         const listData = await listRes.json();
@@ -621,54 +692,62 @@ function DashboardContent() {
         }
         // Se não havia pId na URL, carrega o primeiro projeto retornado
         if (!pId && listData.projects?.[0]?.id) {
-          const firstRes = await fetch(`/api/projects/${listData.projects[0].id}`);
+          const firstRes = await fetch(`/api/projects/${listData.projects[0].id}`, { cache: 'no-store' });
           if (firstRes.ok) {
             const firstData = await firstRes.json();
-            setProject(firstData.project);
-            setIsBlindedUser(Boolean(firstData.isBlinded || firstData.currentMember?.isBlinded));
-            setCurrentMemberRole(firstData.currentMember?.role || 'COORDINATOR');
+            applyProjectData(firstData);
           }
         }
       }
 
-      if (resProject && resProject.ok) {
-        const data = await resProjectProjectJson(resProject);
-        if (data?.project) {
-          setProject(data.project);
-          setIsBlindedUser(Boolean(data.isBlinded || data.currentMember?.isBlinded));
-          setCurrentMemberRole(data.currentMember?.role || 'COORDINATOR');
-
-          if (timelineParticipant) {
-            const updated = data.project.participants?.find(
-              (p: Participant) => p.id === timelineParticipant.id
-            );
-            if (updated) setTimelineParticipant(updated);
-          }
-
-          if (responsesParticipant) {
-            const updated = data.project.participants?.find(
-              (p: Participant) => p.id === responsesParticipant.id
-            );
-            if (updated) setResponsesParticipant(updated);
-          }
+      if (resProject) {
+        if (resProject.ok) {
+          const data = await resProject.json();
+          applyProjectData(data);
+        } else {
+          const errData = await resProject.json().catch(() => ({}));
+          setLoadError(errData.error || 'Erro ao carregar dados do projeto.');
         }
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Erro ao carregar projeto:', err);
+      if (err.name === 'AbortError') {
+        setLoadError('A conexão com o banco de dados demorou para responder. Clique para tentar novamente.');
+      } else {
+        setLoadError('Não foi possível conectar ao banco de dados no momento.');
+      }
     } finally {
       setLoading(false);
-    }
-  };
-
-  const resProjectProjectJson = async (res: Response) => {
-    try {
-      return await res.json();
-    } catch {
-      return null;
+      setIsRefreshing(false);
     }
   };
 
   useEffect(() => {
+    // 1. Carregamento instantâneo via Cache Local (SWR - 0 ms!)
+    if (typeof window !== 'undefined') {
+      try {
+        const cachedKey = projectIdParam ? `uepg_cached_project_${projectIdParam}` : 'uepg_cached_last_project';
+        const cachedStr = localStorage.getItem(cachedKey);
+        if (cachedStr) {
+          const cached = JSON.parse(cachedStr);
+          if (cached && cached.id) {
+            setProject(cached);
+            setLoading(false); // Exibe o projeto imediatamente sem travar a interface!
+            const approvedCount = (cached.participants || []).filter((p: any) => p.status === 'APPROVED').length;
+            const pendingCount = (cached.participants || []).filter((p: any) => p.status === 'PENDING').length;
+            const savedTab = sessionStorage.getItem(`uepg_tab_${cached.id}`);
+            if (savedTab && ['active', 'triage', 'audit', 'consort', 'team', 'export'].includes(savedTab)) {
+              setActiveTab(savedTab as any);
+            } else if (approvedCount === 0 && pendingCount > 0) {
+              setActiveTab('triage');
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('Erro ao ler cache do projeto:', e);
+      }
+    }
+
     loadProject();
     syncOfflineQueue();
 
@@ -776,10 +855,15 @@ function DashboardContent() {
         body: JSON.stringify({ status: 'APPROVED' }),
       });
       if (res.ok) {
-        loadProject();
+        await loadProject(true);
+        handleSelectTab('active');
+      } else {
+        const errorData = await res.json().catch(() => ({}));
+        alert(errorData.error || 'Erro ao incluir participante.');
       }
     } catch (e) {
       console.error('Erro ao aprovar:', e);
+      alert('Erro de comunicação ao incluir participante.');
     }
   };
 
@@ -1573,8 +1657,14 @@ function DashboardContent() {
 
   if (loading && !project) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center text-slate-400">
-        <p className="animate-pulse">Carregando dados da pesquisa clínica...</p>
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-center">
+        <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 mx-auto flex items-center justify-center mb-4">
+          <RefreshCw className="w-6 h-6 animate-spin text-blue-600" />
+        </div>
+        <h3 className="text-base font-bold text-slate-800">Carregando dados da pesquisa clínica...</h3>
+        <p className="text-xs text-slate-400 mt-1 max-w-xs mx-auto">
+          Conectando com segurança ao banco de dados clínico da UEPG.
+        </p>
       </div>
     );
   }
@@ -1582,10 +1672,31 @@ function DashboardContent() {
   if (!project) {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-center">
-        <h2 className="text-xl font-bold text-slate-800">Nenhum projeto encontrado.</h2>
-        <Link href="/projetos" className="mt-4 text-blue-600 font-semibold underline">
-          ← Voltar para a lista de projetos
-        </Link>
+        <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 mx-auto flex items-center justify-center mb-4">
+          <AlertTriangle className="w-6 h-6 text-amber-600" />
+        </div>
+        <h2 className="text-lg font-bold text-slate-900 mb-1">
+          {loadError || 'Nenhum projeto encontrado.'}
+        </h2>
+        <p className="text-xs text-slate-500 mb-6 max-w-sm mx-auto">
+          Não foi possível carregar os dados deste estudo. Verifique sua conexão ou tente novamente.
+        </p>
+        <div className="flex justify-center gap-3">
+          <button
+            onClick={() => loadProject(false)}
+            className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-xs"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            <span>Tentar Novamente</span>
+          </button>
+          <Link
+            href="/projetos"
+            className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition flex items-center gap-1.5"
+          >
+            <ChevronLeft className="w-3.5 h-3.5" />
+            <span>Meus Projetos</span>
+          </Link>
+        </div>
       </div>
     );
   }
@@ -1653,6 +1764,14 @@ function DashboardContent() {
                   {project.name}
                 </span>
               )}
+              <button
+                onClick={() => loadProject(true)}
+                disabled={isRefreshing}
+                title="Recarregar dados do projeto"
+                className="p-1.5 text-slate-400 hover:text-blue-600 rounded-lg hover:bg-slate-100 transition disabled:opacity-50"
+              >
+                <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-blue-600' : ''}`} />
+              </button>
             </div>
 
             <div className="flex items-center flex-wrap gap-2">
@@ -1703,11 +1822,26 @@ function DashboardContent() {
 
       {/* Conteúdo Principal */}
       <main className="w-full px-4 sm:px-6 lg:px-8 xl:px-10 py-6">
+        {/* Banner de Erro com Versão em Cache */}
+        {loadError && (
+          <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-amber-900 shadow-xs">
+            <div className="flex items-center space-x-2">
+              <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+              <span>{loadError} Exibindo versão local em cache.</span>
+            </div>
+            <button
+              onClick={() => loadProject(false)}
+              className="px-3 py-1.5 bg-amber-200 hover:bg-amber-300 font-bold rounded-lg transition shrink-0"
+            >
+              Tentar Novamente
+            </button>
+          </div>
+        )}
         
         {/* Abas de Navegação do Projeto Organizadas por Função e Papel Clínico */}
         <div className="flex flex-wrap gap-2 border-b border-slate-200 mb-8 bg-slate-100/70 p-1.5 rounded-2xl">
           <button
-            onClick={() => setActiveTab('active')}
+            onClick={() => handleSelectTab('active')}
             className={`flex-1 min-w-[200px] px-4 py-3 text-xs font-bold rounded-xl transition flex items-center space-x-2.5 ${
               activeTab === 'active'
                 ? 'bg-white text-blue-700 shadow-xs border border-slate-200/80 font-extrabold'
@@ -1732,7 +1866,7 @@ function DashboardContent() {
           </button>
 
           <button
-            onClick={() => setActiveTab('triage')}
+            onClick={() => handleSelectTab('triage')}
             className={`flex-1 min-w-[200px] px-4 py-3 text-xs font-bold rounded-xl transition flex items-center space-x-2.5 ${
               activeTab === 'triage'
                 ? 'bg-white text-blue-700 shadow-xs border border-slate-200/80 font-extrabold'
@@ -1756,7 +1890,7 @@ function DashboardContent() {
           {/* ABA TRILHA DE AUDITORIA GCP - EXCLUSIVA PARA O ADMINISTRADOR */}
           {currentUser?.role === 'ADMIN' && (
             <button
-              onClick={() => setActiveTab('audit')}
+              onClick={() => handleSelectTab('audit')}
               className={`flex-1 min-w-[190px] px-4 py-3 text-xs font-bold rounded-xl transition flex items-center space-x-2.5 ${
                 activeTab === 'audit'
                   ? 'bg-white text-indigo-700 shadow-xs border border-indigo-200 font-extrabold'
@@ -1779,7 +1913,7 @@ function DashboardContent() {
           )}
 
           <button
-            onClick={() => setActiveTab('consort')}
+            onClick={() => handleSelectTab('consort')}
             className={`flex-1 min-w-[200px] px-4 py-3 text-xs font-bold rounded-xl transition flex items-center space-x-2.5 ${
               activeTab === 'consort'
                 ? 'bg-white text-blue-700 shadow-xs border border-slate-200/80 font-extrabold'
@@ -1801,7 +1935,7 @@ function DashboardContent() {
           </button>
 
           <button
-            onClick={() => setActiveTab('team')}
+            onClick={() => handleSelectTab('team')}
             className={`flex-1 min-w-[180px] px-4 py-3 text-xs font-bold rounded-xl transition flex items-center space-x-2.5 ${
               activeTab === 'team'
                 ? 'bg-white text-blue-700 shadow-xs border border-slate-200/80 font-extrabold'
@@ -1823,7 +1957,7 @@ function DashboardContent() {
           </button>
 
           <button
-            onClick={() => setActiveTab('export')}
+            onClick={() => handleSelectTab('export')}
             className={`flex-1 min-w-[180px] px-4 py-3 text-xs font-bold rounded-xl transition flex items-center space-x-2.5 ${
               activeTab === 'export'
                 ? 'bg-white text-blue-700 shadow-xs border border-slate-200/80 font-extrabold'
@@ -2103,7 +2237,18 @@ function DashboardContent() {
                   <div className="p-12 text-center text-slate-400 text-sm">
                     <ClipboardList className="w-8 h-8 text-slate-300 mx-auto mb-2" />
                     <p className="font-semibold text-slate-600">Nenhum participante ativo ainda.</p>
-                    <p className="text-xs text-slate-400 mt-1">Acesse a aba <strong>Triagem & Critérios</strong> para avaliar candidatos e aprovar participantes no estudo.</p>
+                    <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
+                      Acesse a aba <strong>Triagem & Critérios</strong> para avaliar candidatos e aprovar participantes no estudo.
+                    </p>
+                    {pendingList.length > 0 && (
+                      <button
+                        onClick={() => handleSelectTab('triage')}
+                        className="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition inline-flex items-center space-x-1.5 shadow-xs"
+                      >
+                        <ClipboardList className="w-3.5 h-3.5" />
+                        <span>Acessar Fila de Triagem ({pendingList.length} aguardando)</span>
+                      </button>
+                    )}
                   </div>
                 ) : (
                   approvedList.map((part) => {
@@ -2481,7 +2626,7 @@ function DashboardContent() {
                                     {part.researchCode}
                                   </span>
                                   <span className="font-bold text-slate-900 text-xs sm:text-sm">
-                                    {part.patient.fullName}
+                                    {part.patient?.fullName || 'Paciente'}
                                   </span>
                                   <button
                                     type="button"
@@ -2497,14 +2642,14 @@ function DashboardContent() {
                               {/* Coluna 2: Contato, Sexo & Queixa */}
                               <td className="py-2.5 px-3">
                                 <div className="text-[11px] leading-tight">
-                                  <span className="font-semibold text-slate-700">{part.patient.phoneWhatsApp}</span>
-                                  <span className="text-slate-400"> • {part.patient.biologicalSex}</span>
-                                  {(part.patient.chiefComplaint || part.patient.allergies) && (
+                                  <span className="font-semibold text-slate-700">{part.patient?.phoneWhatsApp || 'Sem telefone'}</span>
+                                  <span className="text-slate-400"> • {part.patient?.biologicalSex || 'N/I'}</span>
+                                  {(part.patient?.chiefComplaint || part.patient?.allergies) && (
                                     <p
                                       className="text-[10px] text-slate-500 truncate max-w-[240px] mt-0.5"
-                                      title={`Queixa: ${part.patient.chiefComplaint || 'N/I'} | Alergias: ${part.patient.allergies || 'Nenhuma'}`}
+                                      title={`Queixa: ${part.patient?.chiefComplaint || 'N/I'} | Alergias: ${part.patient?.allergies || 'Nenhuma'}`}
                                     >
-                                      Qx: {part.patient.chiefComplaint || 'N/I'} • Alerg: {part.patient.allergies || 'Nenhuma'}
+                                      Qx: {part.patient?.chiefComplaint || 'N/I'} • Alerg: {part.patient?.allergies || 'Nenhuma'}
                                     </p>
                                   )}
                                 </div>

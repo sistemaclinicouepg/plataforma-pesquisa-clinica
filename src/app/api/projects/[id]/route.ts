@@ -34,10 +34,14 @@ export async function GET(
             },
           },
         },
-        auditLogs: currentUser.role === 'ADMIN' ? {
-          orderBy: { createdAt: 'desc' },
-          take: 100,
-        } : false,
+        ...(currentUser.role === 'ADMIN'
+          ? {
+              auditLogs: {
+                orderBy: { createdAt: 'desc' as const },
+                take: 100,
+              },
+            }
+          : {}),
         members: {
           include: {
             user: {
@@ -101,6 +105,7 @@ export async function GET(
     return NextResponse.json({
       project: {
         ...project,
+        auditLogs: (project as any).auditLogs || [],
         participants: sanitizedParticipants,
       },
       currentMember,
