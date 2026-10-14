@@ -1557,10 +1557,10 @@ function DashboardContent() {
     URL.revokeObjectURL(url);
   };
 
-  // Exportação da Trilha de Auditoria Regulatória (GCP / ICH E6 / 21 CFR Part 11) - Exclusivo Administrador
+  // Exportação da Trilha de Auditoria Regulatória (GCP / ICH E6 / 21 CFR Part 11) - Exclusivo Coordenador e Administrador
   const exportAuditLogsToCSV = () => {
-    if (currentUser?.role !== 'ADMIN') {
-      alert('Acesso restrito: Apenas o Administrador do sistema pode exportar a trilha de auditoria.');
+    if (!isAdmin) {
+      alert('Acesso restrito: Apenas o Coordenador do estudo ou Administrador pode exportar a trilha de auditoria.');
       return;
     }
 

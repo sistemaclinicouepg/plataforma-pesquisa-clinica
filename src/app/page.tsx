@@ -181,10 +181,16 @@ export default function HomePage() {
     if (!projectToDelete) return;
     try {
       setDeletingProject(true);
-      setDeleteError(null);
+      const authToken = typeof window !== 'undefined' ? localStorage.getItem('uepg_auth_token') : null;
+      const headers: Record<string, string> = {};
+      if (authToken) {
+        headers['Authorization'] = `Bearer ${authToken}`;
+      }
 
       const res = await fetch(`/api/projects/${projectToDelete.id}`, {
         method: 'DELETE',
+        headers,
+        credentials: 'include',
       });
 
       const data = await res.json().catch(() => ({}));
@@ -829,7 +835,7 @@ export default function HomePage() {
                             </button>
 
                             {/* Botão de Excluir Exclusivo para Administrador */}
-                            {currentUser?.role === 'ADMIN' && (
+                            {(currentUser?.role === 'ADMIN' || currentUser?.email === 'admin@uepg.br') && (
                               <button
                                 type="button"
                                 onClick={(e) => {
@@ -1188,7 +1194,7 @@ export default function HomePage() {
               </div>
 
               {/* Opção de Exclusão para Administrador */}
-              {currentUser?.role === 'ADMIN' && (
+              {(currentUser?.role === 'ADMIN' || currentUser?.email === 'admin@uepg.br') && (
                 <div className="pt-3 border-t border-slate-100">
                   <button
                     type="button"

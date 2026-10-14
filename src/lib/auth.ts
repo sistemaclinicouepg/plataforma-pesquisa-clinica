@@ -106,9 +106,9 @@ export async function getCurrentUser() {
     if (!verified?.id) return null;
 
     const role =
-      verified.email === 'admin@uepg.br' || verified.email === 'pesquisadora@uepg.br'
+      verified.email === 'admin@uepg.br'
         ? 'ADMIN'
-        : verified.role;
+        : verified.role || 'RESEARCHER';
 
     // Retorna os dados autenticados diretamente do token JWT criptografado (0 ms de I/O de banco)
     return {
@@ -146,36 +146,15 @@ export async function checkProjectPermission(
     };
   }
 
-  if (user.role === 'ADMIN') {
+  if (user.role === 'ADMIN' || user.email === 'admin@uepg.br') {
     return { authorized: true, user };
   }
 
-  let member = await prisma.projectMember.findFirst({
+  const member = await prisma.projectMember.findFirst({
     where: { projectId, userId: user.id },
   });
 
-  // Se o pesquisador está autenticado e aprovado na instituição, vincula-o automaticamente ao projeto
-  if (!member && user.isApproved) {
-    try {
-      member = await prisma.projectMember.create({
-        data: {
-          projectId,
-          userId: user.id,
-          role: 'COORDINATOR',
-          isBlinded: false,
-        },
-      });
-    } catch {
-      member = await prisma.projectMember.findFirst({
-        where: { projectId, userId: user.id },
-      });
-    }
-  }
-
   if (!member) {
-    if (user.isApproved) {
-      return { authorized: true, user };
-    }
     return {
       authorized: false,
       error: 'Acesso negado. Você não é membro deste projeto de pesquisa.',

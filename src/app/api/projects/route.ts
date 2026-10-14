@@ -31,23 +31,26 @@ export async function GET() {
       },
     };
 
-    let projects;
-    if (currentUser) {
-      projects = await prisma.project.findMany({
-        where: currentUser.role === 'ADMIN' ? {} : {
-          members: {
-            some: { userId: currentUser.id },
-          },
-        },
-        select: selectFields,
-        orderBy: { createdAt: 'desc' },
-      });
-    } else {
-      projects = await prisma.project.findMany({
-        select: selectFields,
-        orderBy: { createdAt: 'desc' },
-      });
+    if (!currentUser) {
+      return NextResponse.json(
+        { error: 'Não autorizado. Autenticação de pesquisador necessária.' },
+        { status: 401 }
+      );
     }
+
+    const isAdmin = currentUser.role === 'ADMIN' || currentUser.email === 'admin@uepg.br';
+
+    const projects = await prisma.project.findMany({
+      where: isAdmin
+        ? {}
+        : {
+            members: {
+              some: { userId: currentUser.id },
+            },
+          },
+      select: selectFields,
+      orderBy: { createdAt: 'desc' },
+    });
 
     return NextResponse.json({ projects, currentUser });
   } catch (error) {

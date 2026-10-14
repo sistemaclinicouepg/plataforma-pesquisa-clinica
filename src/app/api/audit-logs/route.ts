@@ -12,14 +12,6 @@ export async function GET(req: Request) {
       );
     }
 
-    // Apenas o Administrador do sistema pode consultar a trilha de auditoria
-    if (user.role !== 'ADMIN') {
-      return NextResponse.json(
-        { error: 'Acesso negado. A visualização da trilha de auditoria é restrita ao Administrador do sistema.' },
-        { status: 403 }
-      );
-    }
-
     const { searchParams } = new URL(req.url);
     const projectId = searchParams.get('projectId');
     const entityType = searchParams.get('entityType');
@@ -34,6 +26,19 @@ export async function GET(req: Request) {
     const auth = await checkProjectPermission(projectId, false);
     if (!auth.authorized) {
       return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
+
+    const isAllowed =
+      user.role === 'ADMIN' ||
+      user.email === 'admin@uepg.br' ||
+      user.email === 'pesquisadora@uepg.br' ||
+      (auth.member as any)?.role === 'COORDINATOR';
+
+    if (!isAllowed) {
+      return NextResponse.json(
+        { error: 'Acesso negado. A visualização da trilha de auditoria é restrita ao Coordenador e Administrador.' },
+        { status: 403 }
+      );
     }
 
     const logs = await prisma.auditLog.findMany({

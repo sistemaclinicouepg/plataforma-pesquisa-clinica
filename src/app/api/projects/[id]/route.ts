@@ -15,10 +15,11 @@ export async function GET(
     }
 
     const currentUser = auth.user;
-    const isAdmin =
+    const canViewAudit =
       currentUser.role === 'ADMIN' ||
       currentUser.email === 'admin@uepg.br' ||
-      currentUser.email === 'pesquisadora@uepg.br';
+      currentUser.email === 'pesquisadora@uepg.br' ||
+      (auth.member as any)?.role === 'COORDINATOR';
 
     const project = await prisma.project.findUnique({
       where: { id },
@@ -38,7 +39,7 @@ export async function GET(
             },
           },
         },
-        ...(isAdmin
+        ...(canViewAudit
           ? {
               auditLogs: {
                 orderBy: { createdAt: 'desc' as const },
@@ -183,7 +184,7 @@ export async function DELETE(
     }
 
     // Apenas Administradores do sistema podem excluir um projeto
-    if (auth.user?.role !== 'ADMIN') {
+    if (auth.user?.role !== 'ADMIN' && auth.user?.email !== 'admin@uepg.br') {
       return NextResponse.json(
         { error: 'Apenas o Administrador do sistema possui permissão para excluir um projeto.' },
         { status: 403 }
@@ -199,44 +200,42 @@ export async function DELETE(
       return NextResponse.json({ error: 'Projeto não encontrado.' }, { status: 404 });
     }
 
-    // Exclusão atômica de todas as dependências e do projeto
-    await prisma.$transaction(async (tx) => {
-      // 1. Excluir respostas e formulários eCRF
-      const forms = await tx.form.findMany({ where: { projectId: id }, select: { id: true } });
-      const formIds = forms.map((f) => f.id);
-      if (formIds.length > 0) {
-        await tx.formResponse.deleteMany({ where: { formId: { in: formIds } } });
-        await tx.form.deleteMany({ where: { id: { in: formIds } } });
-      }
+    // Exclusão sequencial das dependências e do projeto (compatível com Neon HTTP Adapter)
+    // 1. Excluir respostas e formulários eCRF
+    const forms = await prisma.form.findMany({ where: { projectId: id }, select: { id: true } });
+    const formIds = forms.map((f) => f.id);
+    if (formIds.length > 0) {
+      await prisma.formResponse.deleteMany({ where: { formId: { in: formIds } } });
+      await prisma.form.deleteMany({ where: { id: { in: formIds } } });
+    }
 
-      // 2. Excluir assinaturas e formulário de consentimento TCLE
-      const consent = await tx.consentForm.findUnique({ where: { projectId: id }, select: { id: true } });
-      if (consent) {
-        await tx.consentSignature.deleteMany({ where: { consentFormId: consent.id } });
-        await tx.consentForm.delete({ where: { id: consent.id } });
-      }
+    // 2. Excluir assinaturas e formulário de consentimento TCLE
+    const consent = await prisma.consentForm.findUnique({ where: { projectId: id }, select: { id: true } });
+    if (consent) {
+      await prisma.consentSignature.deleteMany({ where: { consentFormId: consent.id } });
+      await prisma.consentForm.delete({ where: { id: consent.id } });
+    }
 
-      // 3. Excluir participantes e seus dados clínicos vinculados
-      const participants = await tx.participant.findMany({ where: { projectId: id }, select: { id: true } });
-      const participantIds = participants.map((p) => p.id);
-      if (participantIds.length > 0) {
-        await tx.clinicalAlert.deleteMany({ where: { participantId: { in: participantIds } } });
-        await tx.clinicalSession.deleteMany({ where: { participantId: { in: participantIds } } });
-        await tx.consentSignature.deleteMany({ where: { participantId: { in: participantIds } } });
-        await tx.formResponse.deleteMany({ where: { participantId: { in: participantIds } } });
-        await tx.participant.deleteMany({ where: { id: { in: participantIds } } });
-      }
+    // 3. Excluir participantes e seus dados clínicos vinculados
+    const participants = await prisma.participant.findMany({ where: { projectId: id }, select: { id: true } });
+    const participantIds = participants.map((p) => p.id);
+    if (participantIds.length > 0) {
+      await prisma.clinicalAlert.deleteMany({ where: { participantId: { in: participantIds } } });
+      await prisma.clinicalSession.deleteMany({ where: { participantId: { in: participantIds } } });
+      await prisma.consentSignature.deleteMany({ where: { participantId: { in: participantIds } } });
+      await prisma.formResponse.deleteMany({ where: { participantId: { in: participantIds } } });
+      await prisma.participant.deleteMany({ where: { id: { in: participantIds } } });
+    }
 
-      // 4. Excluir alertas e auditorias restantes vinculadas ao projeto
-      await tx.clinicalAlert.deleteMany({ where: { projectId: id } });
-      await tx.auditLog.deleteMany({ where: { projectId: id } });
+    // 4. Excluir alertas e auditorias restantes vinculadas ao projeto
+    await prisma.clinicalAlert.deleteMany({ where: { projectId: id } });
+    await prisma.auditLog.deleteMany({ where: { projectId: id } });
 
-      // 5. Excluir membros vinculados
-      await tx.projectMember.deleteMany({ where: { projectId: id } });
+    // 5. Excluir membros vinculados
+    await prisma.projectMember.deleteMany({ where: { projectId: id } });
 
-      // 6. Excluir o projeto
-      await tx.project.delete({ where: { id } });
-    });
+    // 6. Excluir o projeto
+    await prisma.project.delete({ where: { id } });
 
     return NextResponse.json({
       success: true,

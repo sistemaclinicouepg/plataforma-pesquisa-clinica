@@ -15,7 +15,7 @@ const INSTITUTIONAL_USERS: Record<
   'pesquisadora@uepg.br': {
     id: '6a3acd06-9687-43d0-a6ab-db16614b6ade',
     name: 'Dra. Roberta Micheten Dias',
-    role: 'ADMIN',
+    role: 'RESEARCHER',
     passwords: ['123', 'admin', 'roberta123'],
     isApproved: true,
   },
