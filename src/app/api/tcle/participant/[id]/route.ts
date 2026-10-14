@@ -57,12 +57,17 @@ Seus dados pessoais serão rigorosamente protegidos nos termos da Lei Geral de P
           select: {
             fullName: true,
             cpf: true,
+            dateOfBirth: true,
           },
         },
         project: {
           include: {
             consentForm: true,
           },
+        },
+        signatures: {
+          orderBy: { signedAt: 'desc' },
+          take: 1,
         },
       },
     });
@@ -73,6 +78,11 @@ Seus dados pessoais serão rigorosamente protegidos nos termos da Lei Geral de P
         { status: 404 }
       );
     }
+
+    const dob = participant.patient.dateOfBirth;
+    const isMinor = dob
+      ? (Date.now() - new Date(dob).getTime()) / (365.25 * 24 * 3600 * 1000) < 18
+      : false;
 
     let consentForm = participant.project.consentForm;
 
@@ -97,18 +107,28 @@ Serão avaliados ao longo do tratamento a eficácia do protocolo, eventual sensi
 
 ### 3. Confidencialidade e LGPD (Lei nº 13.709/2018)
 Seus dados pessoais serão protegidos com sigilo e confidencialidade nos termos da LGPD, sendo identificados na pesquisa estritamente através do seu código de pesquisa.`,
+        assentContentMarkdown: `Termo de Assentimento Livre e Esclarecido (TALE) - UEPG
+Você está sendo convidado a participar de uma pesquisa sobre clareamento dental e saúde bucal.
+Explicamos tudo para você e seus pais ou responsáveis. Se você tiver qualquer dúvida ou não quiser continuar em qualquer momento, você pode nos dizer e nada vai acontecer de ruim. Seus pais assinam junto com você para confirmar sua participação segura.`,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
     }
 
+    const latestSignature = participant.signatures[0] || null;
+
     return NextResponse.json({
       success: true,
       consentForm,
+      isMinor,
+      requiresAssent: isMinor || Boolean(consentForm.assentContentMarkdown),
+      existingSignature: latestSignature,
       participant: {
         id: participant.id,
         researchCode: participant.researchCode,
         fullName: participant.patient.fullName,
+        cpf: participant.patient.cpf,
+        dateOfBirth: participant.patient.dateOfBirth,
         projectName: participant.project.name,
         projectId: participant.project.id,
       },

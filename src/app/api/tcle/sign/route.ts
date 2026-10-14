@@ -77,9 +77,20 @@ export async function GET(req: Request) {
   }
 }
 
+import { generateSignatureHash } from '@/lib/cryptoHash';
+
 export async function POST(req: Request) {
   try {
-    const { participantId, consentFormId, signatureData } = await req.json();
+    const {
+      participantId,
+      consentFormId,
+      signatureData,
+      isAssent,
+      guardianName,
+      guardianCpf,
+      guardianRelationship,
+      guardianSignatureData,
+    } = await req.json();
 
     if (!participantId || !signatureData) {
       return NextResponse.json(
@@ -88,14 +99,34 @@ export async function POST(req: Request) {
       );
     }
 
+    if (isAssent && (!guardianName || !guardianCpf || !guardianSignatureData)) {
+      return NextResponse.json(
+        { error: 'Para o Termo de Assentimento (menores de 18 anos), o preenchimento dos dados e assinatura do responsável legal são obrigatórios.' },
+        { status: 400 }
+      );
+    }
+
     if (participantId === 'demo') {
+      const demoSignedAt = new Date().toISOString();
+      const demoHash = generateSignatureHash({
+        participantId: 'demo',
+        cpf: '000.000.000-00',
+        signedAt: demoSignedAt,
+        consentFormId: 'demo-tcle',
+        signatureData,
+        isAssent: Boolean(isAssent),
+        guardianCpf,
+      });
+
       return NextResponse.json({
         success: true,
         signatureId: 'TCLE-DEMO-2026',
-        signedAt: new Date().toISOString(),
+        signedAt: demoSignedAt,
+        signatureHash: demoHash,
         audit: {
           ipAddress: '127.0.0.1 (Demonstração)',
           userAgent: 'Navegador Web / Modo Teste',
+          hash: demoHash,
         },
       });
     }
@@ -131,6 +162,18 @@ export async function POST(req: Request) {
       reqHeaders.get('x-real-ip') ||
       '127.0.0.1 (Rede Local)';
     const userAgent = reqHeaders.get('user-agent') || 'Navegador Web / Celular';
+    const signedAt = new Date();
+
+    // Cálculo do Hash SHA-256 de validação criptográfica (CNS 466/12 e LGPD)
+    const signatureHash = generateSignatureHash({
+      participantId: participant.id,
+      cpf: participant.patient.cpf,
+      signedAt,
+      consentFormId: targetFormId,
+      signatureData,
+      isAssent: Boolean(isAssent),
+      guardianCpf,
+    });
 
     const signature = await prisma.consentSignature.create({
       data: {
@@ -139,8 +182,35 @@ export async function POST(req: Request) {
         participantName: participant.patient.fullName,
         cpf: participant.patient.cpf,
         signatureData: signatureData,
+        signatureHash: signatureHash,
         ipAddress: ipAddress,
         userAgent: userAgent,
+        isAssent: Boolean(isAssent),
+        guardianName: guardianName || null,
+        guardianCpf: guardianCpf || null,
+        guardianRelationship: guardianRelationship || null,
+        guardianSignatureData: guardianSignatureData || null,
+        signedAt: signedAt,
+      },
+    });
+
+    // Registrar assinatura na Trilha de Auditoria (Audit Trail - GCP / ICH E6)
+    await prisma.auditLog.create({
+      data: {
+        projectId: participant.projectId,
+        entityType: isAssent ? 'ConsentSignature (TALE)' : 'ConsentSignature (TCLE)',
+        entityId: signature.id,
+        action: 'CREATE',
+        changedBy: participant.patient.fullName,
+        userEmail: participant.patient.email || undefined,
+        fieldName: 'signatureData / signatureHash',
+        oldValue: null,
+        newValue: `Hash SHA-256: ${signatureHash}${isAssent ? ` | Responsável: ${guardianName} (${guardianRelationship})` : ''}`,
+        reason: isAssent
+          ? 'Registro e assinatura eletrônica de Termo de Assentimento Livre e Esclarecido (TALE)'
+          : 'Registro e assinatura eletrônica de Termo de Consentimento Livre e Esclarecido (TCLE)',
+        ipAddress,
+        userAgent,
       },
     });
 
@@ -148,13 +218,18 @@ export async function POST(req: Request) {
       success: true,
       signatureId: signature.id,
       signedAt: signature.signedAt,
+      signatureHash: signature.signatureHash,
+      isAssent: signature.isAssent,
+      guardianName: signature.guardianName,
+      guardianRelationship: signature.guardianRelationship,
       audit: {
         ipAddress: signature.ipAddress,
         userAgent: signature.userAgent,
+        hash: signature.signatureHash,
       },
     });
   } catch (error) {
-    console.error('Erro ao assinar TCLE:', error);
+    console.error('Erro ao assinar TCLE/TALE:', error);
     return NextResponse.json(
       { error: 'Erro interno ao registrar assinatura eletrônica.' },
       { status: 500 }

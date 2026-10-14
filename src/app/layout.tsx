@@ -1,7 +1,8 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import AppNav from "@/components/AppNav";
+import OfflineIndicator from "@/components/OfflineIndicator";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -15,7 +16,23 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Plataforma de Pesquisa Clínica Odontológica | UEPG",
-  description: "Sistema Integrado de Ensaios Clínicos Odontológicos e Prontuário Digital",
+  description: "Sistema Integrado de Ensaios Clínicos Odontológicos, Prontuário Digital e Farmacovigilância",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "UEPG Pesquisa",
+  },
+  icons: {
+    icon: "/icons/icon-192x192.png",
+    apple: "/icons/icon-192x192.png",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#1d4ed8",
+  width: "device-width",
+  initialScale: 1,
 };
 
 export default function RootLayout({
@@ -31,7 +48,9 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col bg-slate-50 text-slate-900 w-full overflow-x-hidden">
         <AppNav />
         <main className="flex-1 flex flex-col w-full">{children}</main>
+        <OfflineIndicator />
       </body>
     </html>
   );
 }
+

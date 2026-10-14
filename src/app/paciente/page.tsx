@@ -13,7 +13,12 @@ import {
   Info,
   ShieldCheck,
   Search,
+  FileText,
+  Phone,
+  Smartphone,
 } from 'lucide-react';
+import { enqueueOfflineItem } from '@/lib/offlineSync';
+import { ConnectivityBadge } from '@/components/OfflineIndicator';
 
 type ParticipantSession = {
   id: string;
@@ -62,6 +67,7 @@ type ParticipantData = {
   responsibleResearcher: string;
   ethicsNumber: string;
   ethicsContacts: string;
+  researcherPhone?: string | null;
   sessions: ParticipantSession[];
   latestSession: ParticipantSession | null;
   forms: FormItem[];
@@ -104,10 +110,15 @@ function PacienteContent() {
   const [submittingForm, setSubmittingForm] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccessMessage, setFormSuccessMessage] = useState<string | null>(null);
+  const [formRedAlert, setFormRedAlert] = useState<{
+    isRedAlert: boolean;
+    maxVasScore: number | null;
+    severeDesc?: string | null;
+  } | null>(null);
 
   // Form states do Diário de Sensibilidade
   const [selectedSessionNumber, setSelectedSessionNumber] = useState<number>(1);
-  const [timePoint, setTimePoint] = useState<'1h' | '24h' | '48h'>('24h');
+  const [timePoint, setTimePoint] = useState<'0h' | '1h' | '24h' | '48h'>('24h');
   const [painScore, setPainScore] = useState<number>(0);
   const [painType, setPainType] = useState<string>('Sensibilidade ao ingerir líquidos ou alimentos frios');
   const [gingivalSensation, setGingivalSensation] = useState<string>('Normal');
@@ -122,7 +133,22 @@ function PacienteContent() {
     painScore: number;
     sessionNumber: number;
     timestamp: string;
+    isRedAlert?: boolean;
+    gingivalSensation?: string;
+    isOffline?: boolean;
   } | null>(null);
+
+  const getWhatsAppTarget = () => {
+    if (participant?.researcherPhone) {
+      const clean = participant.researcherPhone.replace(/\D/g, '');
+      if (clean.length >= 10) return clean.startsWith('55') ? clean : `55${clean}`;
+    }
+    if (participant?.ethicsContacts) {
+      const clean = participant.ethicsContacts.replace(/\D/g, '');
+      if (clean.length >= 10) return clean.startsWith('55') ? clean : `55${clean}`;
+    }
+    return '5542999999999';
+  };
 
   const loadParticipant = async (
     code?: string | null,
@@ -206,6 +232,18 @@ function PacienteContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [codeParam, partIdParam]);
 
+  // Recarregar dados automaticamente após sincronização em segundo plano da fila offline
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handleSynced = () => {
+      if (participant?.researchCode) {
+        loadParticipant(participant.researchCode, participant.id);
+      }
+    };
+    window.addEventListener('uepg_offline_synced', handleSynced);
+    return () => window.removeEventListener('uepg_offline_synced', handleSynced);
+  }, [participant]);
+
   const handleSearchParticipant = (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputCode.trim()) return;
@@ -216,6 +254,44 @@ function PacienteContent() {
     e.preventDefault();
     if (!participant) return;
 
+    const payload = {
+      participantId: participant.id,
+      sessionNumber: selectedSessionNumber,
+      timePoint,
+      painScore,
+      painType,
+      usedAnalgesic,
+      analgesicDetails: usedAnalgesic === 'Sim' ? analgesicDetails : '',
+      gingivalSensation,
+      otherSymptoms,
+    };
+
+    const triggeredRedAlert = Boolean(
+      painScore >= 7 ||
+      (gingivalSensation && (
+        gingivalSensation.toLowerCase().includes('queimação') ||
+        gingivalSensation.toLowerCase().includes('ardência') ||
+        gingivalSensation.toLowerCase().includes('moderad') ||
+        gingivalSensation.toLowerCase().includes('sever')
+      ))
+    );
+
+    // Se estiver sem conexão à internet, salva em fila offline imediatamente
+    if (typeof window !== 'undefined' && !navigator.onLine) {
+      enqueueOfflineItem('DIARY_REPORT', '/api/paciente/report', payload);
+      setSubmittedData({
+        timePoint,
+        painScore,
+        sessionNumber: selectedSessionNumber,
+        timestamp: new Date().toLocaleString('pt-BR'),
+        isRedAlert: triggeredRedAlert,
+        gingivalSensation,
+        isOffline: true,
+      });
+      setIsSubmitted(true);
+      return;
+    }
+
     try {
       setSubmitting(true);
       setErrorMsg(null);
@@ -223,17 +299,7 @@ function PacienteContent() {
       const res = await fetch('/api/paciente/report', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          participantId: participant.id,
-          sessionNumber: selectedSessionNumber,
-          timePoint,
-          painScore,
-          painType,
-          usedAnalgesic,
-          analgesicDetails: usedAnalgesic === 'Sim' ? analgesicDetails : '',
-          gingivalSensation,
-          otherSymptoms,
-        }),
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
@@ -246,10 +312,28 @@ function PacienteContent() {
         painScore,
         sessionNumber: selectedSessionNumber,
         timestamp: new Date().toLocaleString('pt-BR'),
+        isRedAlert: Boolean(data.isRedAlert || triggeredRedAlert),
+        gingivalSensation,
+        isOffline: false,
       });
       setIsSubmitted(true);
     } catch (err: unknown) {
-      setErrorMsg(err instanceof Error ? err.message : 'Erro ao enviar respostas.');
+      // Se falhar por erro de rede/conexão, enfileirar offline
+      if (typeof window !== 'undefined' && (!navigator.onLine || (err instanceof TypeError))) {
+        enqueueOfflineItem('DIARY_REPORT', '/api/paciente/report', payload);
+        setSubmittedData({
+          timePoint,
+          painScore,
+          sessionNumber: selectedSessionNumber,
+          timestamp: new Date().toLocaleString('pt-BR'),
+          isRedAlert: triggeredRedAlert,
+          gingivalSensation,
+          isOffline: true,
+        });
+        setIsSubmitted(true);
+      } else {
+        setErrorMsg(err instanceof Error ? err.message : 'Erro ao enviar respostas.');
+      }
     } finally {
       setSubmitting(false);
     }
@@ -282,6 +366,65 @@ function PacienteContent() {
       return;
     }
 
+    const payload = {
+      formId: selectedForm.id,
+      participantId: participant.id,
+      answers: formAnswers,
+    };
+
+    // Detecção precoce de sintomas para alerta offline ou imediato
+    let hasSevereSymptom = false;
+    let localMaxVas: number | null = null;
+    let localDesc = '';
+    for (const val of Object.values(formAnswers)) {
+      const num =
+        typeof val === 'number'
+          ? val
+          : typeof val === 'string' && !isNaN(Number(val)) && val.trim() !== ''
+          ? Number(val)
+          : null;
+      if (num !== null && num >= 7) {
+        hasSevereSymptom = true;
+        if (localMaxVas === null || num > localMaxVas) localMaxVas = num;
+      } else if (typeof val === 'string') {
+        const lower = val.toLowerCase();
+        if (
+          lower.includes('muita dor') ||
+          lower.includes('dor severa') ||
+          lower.includes('queimação intensa') ||
+          lower.includes('dor intensa') ||
+          lower.includes('queimação moderada') ||
+          lower.includes('queimação severa') ||
+          lower.includes('irritação severa') ||
+          lower.includes('irritação moderada') ||
+          lower.includes('queimação gengival') ||
+          lower.includes('irritação gengival') ||
+          lower.includes('dor insuportável') ||
+          lower.includes('afta') ||
+          lower.includes('ulceração')
+        ) {
+          hasSevereSymptom = true;
+          localDesc = val;
+        }
+      }
+    }
+
+    // Se estiver offline, enfileira localmente
+    if (typeof window !== 'undefined' && !navigator.onLine) {
+      enqueueOfflineItem('FORM_RESPONSE', '/api/responses', payload);
+      setFormSuccessMessage('Questionário armazenado na fila offline deste dispositivo. Assim que a conexão retornar, os dados serão sincronizados automaticamente.');
+      if (hasSevereSymptom) {
+        setFormRedAlert({
+          isRedAlert: true,
+          maxVasScore: localMaxVas,
+          severeDesc: localDesc,
+        });
+      } else {
+        setFormRedAlert(null);
+      }
+      return;
+    }
+
     try {
       setSubmittingForm(true);
       setFormError(null);
@@ -289,11 +432,7 @@ function PacienteContent() {
       const res = await fetch('/api/responses', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          formId: selectedForm.id,
-          participantId: participant.id,
-          answers: formAnswers,
-        }),
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
@@ -302,9 +441,30 @@ function PacienteContent() {
       }
 
       setFormSuccessMessage('Questionário gravado com sucesso no protocolo do estudo!');
+      if (data.isRedAlert || hasSevereSymptom) {
+        setFormRedAlert({
+          isRedAlert: true,
+          maxVasScore: data.maxVasScore ?? localMaxVas,
+          severeDesc: data.severeSymptomDesc ?? localDesc,
+        });
+      } else {
+        setFormRedAlert(null);
+      }
       await loadParticipant(participant.researchCode, participant.id);
     } catch (err: unknown) {
-      setFormError(err instanceof Error ? err.message : 'Erro ao registrar respostas.');
+      if (typeof window !== 'undefined' && (!navigator.onLine || err instanceof TypeError)) {
+        enqueueOfflineItem('FORM_RESPONSE', '/api/responses', payload);
+        setFormSuccessMessage('Questionário armazenado na fila offline deste dispositivo. Assim que a conexão for restabelecida, os dados serão transmitidos automaticamente.');
+        if (hasSevereSymptom) {
+          setFormRedAlert({
+            isRedAlert: true,
+            maxVasScore: localMaxVas,
+            severeDesc: localDesc,
+          });
+        }
+      } else {
+        setFormError(err instanceof Error ? err.message : 'Erro ao registrar respostas.');
+      }
     } finally {
       setSubmittingForm(false);
     }
@@ -312,23 +472,51 @@ function PacienteContent() {
 
   // TELA 1: SUCESSO APÓS O ENVIO
   if (isSubmitted && submittedData) {
+    const isRedAlertTriggered = Boolean(
+      submittedData.isRedAlert ||
+      submittedData.painScore >= 7 ||
+      (submittedData.gingivalSensation && (
+        submittedData.gingivalSensation.toLowerCase().includes('queimação') ||
+        submittedData.gingivalSensation.toLowerCase().includes('ardência') ||
+        submittedData.gingivalSensation.toLowerCase().includes('moderad') ||
+        submittedData.gingivalSensation.toLowerCase().includes('sever')
+      ))
+    );
+
     return (
       <div className="min-h-screen bg-slate-50 font-sans text-slate-800 flex justify-center p-4 sm:py-10">
         <div className="w-full max-w-md bg-white rounded-3xl shadow-xl border border-slate-200 p-6 sm:p-8 flex flex-col justify-between">
           <div className="text-center space-y-4">
-            <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-sm">
-              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
+            {isRedAlertTriggered ? (
+              <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto shadow-md animate-pulse">
+                <AlertTriangle className="w-8 h-8" />
+              </div>
+            ) : (
+              <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-sm">
+                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+            )}
 
             <div>
-              <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-bold font-mono">
-                {participant?.researchCode}
-              </span>
-              <h2 className="text-2xl font-black text-slate-900 mt-2">Relato Registrado!</h2>
+              <div className="flex items-center justify-center gap-2">
+                <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-bold font-mono">
+                  {participant?.researchCode}
+                </span>
+                {isRedAlertTriggered && (
+                  <span className="px-3 py-1 bg-red-600 text-white rounded-full text-[10px] font-black uppercase tracking-wider animate-bounce">
+                    Alerta Vermelho Clínico
+                  </span>
+                )}
+              </div>
+              <h2 className="text-2xl font-black text-slate-900 mt-2">
+                {isRedAlertTriggered ? 'Relato Recebido com Prioridade!' : 'Relato Registrado!'}
+              </h2>
               <p className="text-xs text-slate-500 mt-1">
-                Suas respostas foram gravadas com segurança no banco de dados do ensaio clínico da UEPG.
+                {isRedAlertTriggered
+                  ? 'Identificamos dor severa ou queimação gengival acentuada. Nossa equipe foi notificada em tempo real.'
+                  : 'Suas respostas foram gravadas com segurança no banco de dados do ensaio clínico da UEPG.'}
               </p>
             </div>
 
@@ -356,29 +544,84 @@ function PacienteContent() {
               </div>
             </div>
 
-            <div className="p-4 bg-blue-50 border border-blue-200 rounded-2xl text-left text-xs space-y-2">
-              <h4 className="font-bold text-blue-900 flex items-center space-x-1.5">
-                <ShieldCheck className="w-4 h-4 text-blue-600 flex-shrink-0" />
-                <span>Suporte Clínico aos Participantes</span>
-              </h4>
-              <p className="text-blue-800 text-[11px] leading-relaxed">
-                A sensibilidade após clareamento é um efeito transitório que costuma regredir nas primeiras 24 a 48 horas. Se sentir qualquer dor persistente ou desconforto incomum, você tem suporte direto da equipe de pesquisa.
-              </p>
-            </div>
+            {submittedData.isOffline && (
+              <div className="p-3.5 bg-amber-50 border border-amber-300 rounded-2xl text-left text-xs text-amber-900 space-y-1">
+                <div className="font-bold flex items-center space-x-1.5 text-amber-800">
+                  <Smartphone className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                  <span>Modo Offline - Gravado em Fila Local</span>
+                </div>
+                <p className="text-[11px] text-amber-700 leading-relaxed">
+                  Seu relato foi salvo com segurança na memória deste dispositivo. Assim que seu celular ou computador reconectar à internet, o diário será transmitido automaticamente ao servidor da UEPG.
+                </p>
+              </div>
+            )}
+
+            {isRedAlertTriggered ? (
+              <div className="p-4 bg-red-50 border-2 border-red-300 rounded-2xl text-left text-xs space-y-2.5">
+                <h4 className="font-black text-red-900 flex items-center space-x-1.5 text-xs">
+                  <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
+                  <span>Orientações Imediatas de Suporte (Farmacovigilância UEPG):</span>
+                </h4>
+                <ul className="text-red-900 text-[11px] leading-relaxed space-y-1.5 list-disc pl-4">
+                  <li>
+                    <strong>Evite estímulos térmicos:</strong> Não consuma alimentos ou bebidas geladas ou quentes, nem bebidas ácidas (refrigerantes, sucos cítricos).
+                  </li>
+                  <li>
+                    <strong>Higiene suave:</strong> Realize escovação delicada; evite bochechos com força. Bocheche apenas com água morna.
+                  </li>
+                  <li>
+                    <strong>Medicação & Dessensibilizante:</strong> Se a equipe de pesquisa forneceu agente dessensibilizante tópico na consulta, aplique pontualmente conforme orientado.
+                  </li>
+                  <li>
+                    <strong>Prontidão Clínica:</strong> Entre em contato imediatamente com o pesquisador responsável pelo botão de emergência abaixo.
+                  </li>
+                </ul>
+              </div>
+            ) : (
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-2xl text-left text-xs space-y-2">
+                <h4 className="font-bold text-blue-900 flex items-center space-x-1.5">
+                  <ShieldCheck className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                  <span>Suporte Clínico aos Participantes</span>
+                </h4>
+                <p className="text-blue-800 text-[11px] leading-relaxed">
+                  A sensibilidade após clareamento é um efeito transitório que costuma regredir nas primeiras 24 a 48 horas. Se sentir qualquer dor persistente ou desconforto incomum, você tem suporte direto da equipe de pesquisa.
+                </p>
+              </div>
+            )}
           </div>
 
           <div className="mt-8 space-y-3">
             <a
-              href="https://wa.me/5542999999999?text=Ol%C3%A1%2C%20sou%20participante%20da%20pesquisa%20de%20clareamento%20e%20gostaria%20de%20tirar%20uma%20d%C3%BAvida"
+              href={`https://wa.me/${getWhatsAppTarget()}?text=${encodeURIComponent(
+                isRedAlertTriggered
+                  ? `[ALERTA VERMELHO CLÍNICO - UEPG] Olá! Sou o voluntário ${participant?.patientName} (${participant?.researchCode}) do projeto "${participant?.projectName}". Registrei agora dor severa EVA ${submittedData.painScore}/10 no momento ${submittedData.timePoint} pós-clareamento. Solicito suporte e orientação clínica imediata.`
+                  : `Olá, sou participante da pesquisa ${participant?.projectName} (${participant?.researchCode}) e gostaria de tirar uma dúvida sobre o protocolo clareador.`
+              )}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="w-full py-3 bg-[#25D366] hover:bg-[#128C7E] text-white font-bold text-xs rounded-xl shadow-md transition flex items-center justify-center space-x-2"
+              className={`w-full py-3.5 text-white font-bold text-xs rounded-xl shadow-md transition flex items-center justify-center space-x-2 ${
+                isRedAlertTriggered
+                  ? 'bg-red-600 hover:bg-red-700 animate-pulse'
+                  : 'bg-[#25D366] hover:bg-[#128C7E]'
+              }`}
             >
               <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
                 <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
               </svg>
               <span>Falar com o Pesquisador Responsável</span>
             </a>
+
+            {participant?.id && (
+              <a
+                href={`/tcle/${participant.id}/pdf`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition flex items-center justify-center space-x-1.5 border border-slate-300"
+              >
+                <FileText className="w-3.5 h-3.5 text-slate-600 shrink-0" />
+                <span>Visualizar / Imprimir Meu TCLE Assinado (PDF)</span>
+              </a>
+            )}
 
             <button
               onClick={() => {
@@ -601,9 +844,26 @@ function PacienteContent() {
             </span>
           </div>
 
-          <div className="mt-4 p-3 bg-white/10 rounded-2xl text-xs border border-white/10">
-            <p className="font-semibold text-white truncate">{participant.patientName}</p>
-            <p className="text-blue-200 text-[11px] truncate mt-0.5">{participant.projectName}</p>
+          <div className="mt-4 p-3 bg-white/10 rounded-2xl text-xs border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div className="min-w-0">
+              <p className="font-semibold text-white truncate">{participant.patientName}</p>
+              <p className="text-blue-200 text-[11px] truncate mt-0.5">{participant.projectName}</p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <ConnectivityBadge />
+              {participant.id && (
+                <a
+                  href={`/tcle/${participant.id}/pdf`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-2.5 py-1 bg-white/20 hover:bg-white/30 text-white rounded-lg text-[10px] font-bold transition flex items-center space-x-1"
+                  title="Visualizar ou imprimir documento oficial do TCLE assinado em PDF"
+                >
+                  <FileText className="w-3 h-3" />
+                  <span>TCLE (PDF)</span>
+                </a>
+              )}
+            </div>
           </div>
         </header>
 
@@ -695,8 +955,9 @@ function PacienteContent() {
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
                   1. Momento do relato após a sessão:
                 </label>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {[
+                    { key: '0h' as const, label: '0h (Imed.)', sub: 'Na consulta' },
                     { key: '1h' as const, label: '1 Hora', sub: 'Pós-clareamento' },
                     { key: '24h' as const, label: '24 Horas', sub: 'Dia seguinte' },
                     { key: '48h' as const, label: '48 Horas', sub: '2 dias após' },
@@ -793,6 +1054,7 @@ function PacienteContent() {
                   {[
                     { val: 'Normal', label: 'Normal e confortável' },
                     { val: 'Leve queimação ou ardência', label: 'Leve ardência ou queimação' },
+                    { val: 'Queimação / dor gengival moderada a severa', label: 'Queimação / dor gengival moderada a severa' },
                     { val: 'Vermelhidão perceptível', label: 'Vermelhidão perceptível' },
                     { val: 'Pequena afta ou mancha branca', label: 'Pequena afta / mancha branca' },
                   ].map((item) => (
@@ -874,6 +1136,21 @@ function PacienteContent() {
                 />
               </div>
 
+              {/* Alerta Preventivo em Tempo Real caso EVA >= 7 ou Queimação gengival moderada a severa */}
+              {(painScore >= 7 || gingivalSensation === 'Queimação / dor gengival moderada a severa') && (
+                <div className="p-4 bg-red-50 border-2 border-red-500 rounded-2xl shadow-xs text-red-900 space-y-2 animate-pulse">
+                  <div className="flex items-center space-x-2">
+                    <AlertTriangle className="w-5 h-5 text-red-600 shrink-0" />
+                    <span className="font-extrabold text-xs uppercase tracking-wide text-red-700">
+                      Atenção: Sintoma Intenso Selecionado
+                    </span>
+                  </div>
+                  <p className="text-xs text-red-800 leading-relaxed">
+                    Você informou dor elevada (EVA {painScore}/10) ou queimação gengival. Ao clicar em enviar, um <strong>Alerta Vermelho</strong> será acionado imediatamente para a equipe clínica de suporte da UEPG.
+                  </p>
+                </div>
+              )}
+
               {/* Botão de Envio */}
               <div className="pt-2 pb-6">
                 <button
@@ -910,20 +1187,56 @@ function PacienteContent() {
 
               {formSuccessMessage && (
                 <div className="p-6 bg-white rounded-2xl border border-emerald-200 text-center space-y-4 shadow-sm animate-fadeIn">
-                  <div className="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto">
-                    <CheckCircle2 className="w-8 h-8" />
+                  <div
+                    className={`w-14 h-14 ${
+                      formRedAlert ? 'bg-red-100 text-red-600 animate-pulse' : 'bg-emerald-100 text-emerald-600'
+                    } rounded-full flex items-center justify-center mx-auto`}
+                  >
+                    {formRedAlert ? <AlertTriangle className="w-8 h-8" /> : <CheckCircle2 className="w-8 h-8" />}
                   </div>
                   <div>
-                    <h3 className="text-lg font-black text-slate-900">Questionário Gravado!</h3>
+                    <h3 className="text-lg font-black text-slate-900">
+                      {formRedAlert ? 'Questionário Gravado com Alerta Prioritário!' : 'Questionário Gravado!'}
+                    </h3>
                     <p className="text-xs text-slate-500 mt-1">
                       {formSuccessMessage}
                     </p>
                   </div>
+
+                  {formRedAlert && (
+                    <div className="p-4 bg-red-50 border-2 border-red-400 rounded-2xl text-left text-xs space-y-2.5">
+                      <h4 className="font-black text-red-900 flex items-center space-x-1.5 text-xs">
+                        <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
+                        <span>Orientações Imediatas de Farmacovigilância UEPG:</span>
+                      </h4>
+                      <p className="text-red-900 text-[11px] leading-relaxed">
+                        Seu relato identificou sintoma severo{formRedAlert.maxVasScore !== null ? ` (EVA ${formRedAlert.maxVasScore}/10)` : ''}{formRedAlert.severeDesc ? ` - "${formRedAlert.severeDesc}"` : ''}. A equipe clínica foi alertada.
+                      </p>
+                      <ul className="text-red-900 text-[11px] leading-relaxed space-y-1 list-disc pl-4">
+                        <li>Evite ingerir líquidos ou alimentos em temperaturas extremas (gelados ou muito quentes).</li>
+                        <li>Escove os dentes suavemente com cerdas macias e bocheche com água morna.</li>
+                        <li>Entre em contato imediatamente com o pesquisador responsável pelo botão abaixo:</li>
+                      </ul>
+                      <a
+                        href={`https://wa.me/${getWhatsAppTarget()}?text=${encodeURIComponent(
+                          `[ALERTA CLÍNICO UEPG] Olá! Sou o voluntário ${participant?.patientName} (${participant?.researchCode}) da pesquisa "${participant?.projectName}". Registrei agora dor/desconforto intenso no questionário "${selectedForm?.title}" e gostaria de suporte da equipe de pesquisa.`
+                        )}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full py-3 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl shadow-md transition flex items-center justify-center space-x-2"
+                      >
+                        <Phone className="w-4 h-4" />
+                        <span>Falar com o Pesquisador Responsável (WhatsApp)</span>
+                      </a>
+                    </div>
+                  )}
+
                   <button
                     type="button"
                     onClick={() => {
                       setSelectedForm(null);
                       setFormSuccessMessage(null);
+                      setFormRedAlert(null);
                     }}
                     className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md transition"
                   >
@@ -934,11 +1247,14 @@ function PacienteContent() {
 
               {!formSuccessMessage && !selectedForm && (
                 <div className="space-y-4">
-                  <div>
-                    <h3 className="text-sm font-bold text-slate-900">Instrumentos Científicos</h3>
-                    <p className="text-[11px] text-slate-500">
-                      Questionários de acompanhamento do ensaio clínico para este participante.
-                    </p>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-900">Instrumentos Científicos</h3>
+                      <p className="text-[11px] text-slate-500">
+                        Questionários de acompanhamento do ensaio clínico para este participante.
+                      </p>
+                    </div>
+                    <ConnectivityBadge />
                   </div>
 
                   {(!participant.forms || participant.forms.length === 0) ? (
@@ -1023,9 +1339,12 @@ function PacienteContent() {
                       <span>←</span>
                       <span>Voltar aos Questionários</span>
                     </button>
-                    <span className="text-[10px] text-slate-400 font-mono font-bold">
-                      {selectedForm.questions.length} perguntas
-                    </span>
+                    <div className="flex items-center space-x-2">
+                      <ConnectivityBadge />
+                      <span className="text-[10px] text-slate-400 font-mono font-bold">
+                        {selectedForm.questions.length} perguntas
+                      </span>
+                    </div>
                   </div>
 
                   <div>

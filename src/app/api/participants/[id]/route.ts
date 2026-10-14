@@ -63,6 +63,33 @@ export async function PATCH(
       updated.group = 'OCULTO (Avaliador Cego)';
     }
 
+    // Registrar na Trilha de Auditoria (Audit Trail - GCP / ICH E6)
+    const reqHeaders = req.headers;
+    const ipAddress = reqHeaders.get('x-forwarded-for')?.split(',')[0] || reqHeaders.get('x-real-ip') || '127.0.0.1';
+    const userAgent = reqHeaders.get('user-agent') || 'Browser';
+
+    let actionDesc = 'Atualização de prontuário do participante';
+    if (status) actionDesc = `Status alterado para ${status}${exclusionReason ? ` (Motivo: ${exclusionReason})` : ''}`;
+    else if (group) actionDesc = `Grupo alocado: ${group}`;
+    else if (anamnesisDone) actionDesc = 'Anamnese e ficha clínica concluídas';
+
+    await prisma.auditLog.create({
+      data: {
+        projectId: participant.projectId,
+        entityType: 'Participant',
+        entityId: id,
+        action: 'UPDATE',
+        changedBy: currentUser.name || currentUser.email,
+        userEmail: currentUser.email,
+        fieldName: status ? 'status' : group ? 'group' : 'anamnesisData',
+        oldValue: status ? participant.status : group ? participant.group : null,
+        newValue: status || group || 'Ficha atualizada',
+        reason: exclusionReason || actionDesc,
+        ipAddress,
+        userAgent,
+      },
+    });
+
     return NextResponse.json({ success: true, participant: updated });
   } catch (error) {
     console.error('Erro ao atualizar participante:', error);

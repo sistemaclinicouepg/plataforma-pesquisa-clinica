@@ -6,6 +6,16 @@ import Link from 'next/link';
 import type { AnamnesisConfig, AnamnesisQuestion } from '@/app/anamnese/page';
 import { OdontogramChart, ToothSelectorModal, ToothStatus } from '@/components/odontogram';
 import {
+  buildNumericCSVContent,
+  generateCodebookMarkdown,
+  generateCodebookText,
+  generateRAnalysisScript,
+  generateSPSSSyntaxScript,
+  generateGraphPadPrismFormat,
+} from '@/lib/exportGenerators';
+import { ConnectivityBadge } from '@/components/OfflineIndicator';
+import { enqueueOfflineItem } from '@/lib/offlineSync';
+import {
   Stethoscope,
   ClipboardList,
   BarChart3,
@@ -41,7 +51,11 @@ import {
   ExternalLink,
   ShieldCheck,
   CheckCircle,
-  Phone
+  Phone,
+  ShieldAlert,
+  Activity,
+  FileCode,
+  History,
 } from 'lucide-react';
 
 type Patient = {
@@ -115,6 +129,49 @@ type ProjectMember = {
   };
 };
 
+type ClinicalAlertItem = {
+  id: string;
+  projectId: string;
+  participantId: string;
+  severity: string;
+  alertType: string;
+  painScore: number | null;
+  gingivalSensation: string | null;
+  timePoint: string | null;
+  description: string;
+  status: 'PENDING' | 'RESOLVED';
+  resolvedAt: string | null;
+  resolvedBy: string | null;
+  resolutionNotes: string | null;
+  createdAt: string;
+  participant?: {
+    id: string;
+    researchCode: string;
+    group?: string | null;
+    patient?: {
+      fullName: string;
+      phoneWhatsApp?: string;
+    };
+  };
+};
+
+type AuditLogItem = {
+  id: string;
+  projectId: string;
+  entityType: string;
+  entityId: string;
+  action: string;
+  changedBy: string;
+  userEmail: string;
+  fieldName: string;
+  oldValue: string | null;
+  newValue: string | null;
+  reason: string;
+  ipAddress: string | null;
+  userAgent: string | null;
+  createdAt: string;
+};
+
 type ProjectData = {
   id: string;
   name: string;
@@ -130,6 +187,8 @@ type ProjectData = {
   }>;
   isBlinded?: boolean;
   anamnesisTemplate?: string | null;
+  alerts?: ClinicalAlertItem[];
+  auditLogs?: AuditLogItem[];
 };
 
 type DynamicAnamnesisState = {
@@ -410,10 +469,21 @@ function DashboardContent() {
   const [project, setProject] = useState<ProjectData | null>(null);
   const [allProjects, setAllProjects] = useState<Array<{ id: string; name: string }>>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'active' | 'triage' | 'consort' | 'team' | 'export'>('active');
+  const [activeTab, setActiveTab] = useState<'active' | 'triage' | 'vigilance' | 'audit' | 'consort' | 'team' | 'export'>('active');
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [isBlindedUser, setIsBlindedUser] = useState<boolean>(false);
   const [currentMemberRole, setCurrentMemberRole] = useState<string>('COORDINATOR');
+
+  // Estados de Farmacovigilância & Alertas Vermelhos
+  const [vigilanceFilter, setVigilanceFilter] = useState<'ALL' | 'PENDING' | 'RESOLVED'>('ALL');
+  const [selectedAlertForResolution, setSelectedAlertForResolution] = useState<ClinicalAlertItem | null>(null);
+  const [resolutionNotesInput, setResolutionNotesInput] = useState('');
+  const [resolvedByInput, setResolvedByInput] = useState('');
+  const [resolvingAlert, setResolvingAlert] = useState(false);
+
+  // Estados da Trilha de Auditoria Regulatória GCP
+  const [auditSearch, setAuditSearch] = useState('');
+  const [auditEntityFilter, setAuditEntityFilter] = useState('ALL');
 
   // Modais de Triagem
   const [showRejectModal, setShowRejectModal] = useState(false);
@@ -470,6 +540,7 @@ function DashboardContent() {
     operatorName: string;
     evaluatorName: string;
     notes: string;
+    justification?: string;
   }>({
     participantId: '',
     sessionNumber: 1,
@@ -486,6 +557,7 @@ function DashboardContent() {
     operatorName: '',
     evaluatorName: '',
     notes: '',
+    justification: '',
   });
   const [savingSession, setSavingSession] = useState(false);
 
@@ -561,6 +633,18 @@ function DashboardContent() {
 
   useEffect(() => {
     loadProject();
+
+    const handleSync = () => {
+      loadProject();
+    };
+
+    window.addEventListener('uepg_offline_synced', handleSync);
+    window.addEventListener('online', handleSync);
+
+    return () => {
+      window.removeEventListener('uepg_offline_synced', handleSync);
+      window.removeEventListener('online', handleSync);
+    };
   }, [projectIdParam]);
 
   // Ações de Membros da Equipe & Cegamento
@@ -849,6 +933,7 @@ function DashboardContent() {
       operatorName: existing?.operatorName || '',
       evaluatorName: existing?.evaluatorName || '',
       notes: existing?.notes || '',
+      justification: '',
     });
     setShowSessionModal(true);
   };
@@ -856,6 +941,18 @@ function DashboardContent() {
   const handleSaveSession = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentSessionForm.participantId) return;
+
+    // Se estiver offline ou navigator indicar desconexão, salvar na fila local
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      enqueueOfflineItem(
+        'SESSION_UPDATE',
+        `/api/participants/${currentSessionForm.participantId}/sessions`,
+        currentSessionForm
+      );
+      alert('Modo Offline: Prontuário clínico salvo na fila local! Será sincronizado automaticamente assim que a conexão for restabelecida.');
+      setShowSessionModal(false);
+      return;
+    }
 
     try {
       setSavingSession(true);
@@ -869,10 +966,18 @@ function DashboardContent() {
         setShowSessionModal(false);
         await loadProject();
       } else {
-        alert('Erro ao registrar sessão clínica.');
+        const errorData = await res.json().catch(() => ({}));
+        alert(errorData.error || 'Erro ao registrar sessão clínica.');
       }
     } catch (err) {
-      console.error('Erro ao salvar sessão clínica:', err);
+      console.error('Erro ao salvar sessão clínica (adicionando à fila offline):', err);
+      enqueueOfflineItem(
+        'SESSION_UPDATE',
+        `/api/participants/${currentSessionForm.participantId}/sessions`,
+        currentSessionForm
+      );
+      alert('Instabilidade de rede detectada: Prontuário clínico salvo na fila local e será transmitido automaticamente.');
+      setShowSessionModal(false);
     } finally {
       setSavingSession(false);
     }
@@ -1119,6 +1224,243 @@ function DashboardContent() {
     URL.revokeObjectURL(url);
   };
 
+  // Resolução de Alerta Clínico de Farmacovigilância
+  const handleResolveAlert = async () => {
+    if (!selectedAlertForResolution || !resolutionNotesInput.trim()) {
+      alert('Por favor, informe a conduta clínica adotada para a resolução do alerta.');
+      return;
+    }
+
+    try {
+      setResolvingAlert(true);
+      const res = await fetch('/api/alerts', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          alertId: selectedAlertForResolution.id,
+          status: 'RESOLVED',
+          resolutionNotes: resolutionNotesInput.trim(),
+          resolvedBy: resolvedByInput.trim() || currentUser?.name || 'Pesquisador Responsável',
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Erro ao resolver alerta.');
+      }
+
+      if (project) {
+        const updatedAlerts = (project.alerts || []).map((a) =>
+          a.id === selectedAlertForResolution.id
+            ? {
+                ...a,
+                status: 'RESOLVED' as const,
+                resolvedAt: new Date().toISOString(),
+                resolvedBy: resolvedByInput.trim() || currentUser?.name || 'Pesquisador Responsável',
+                resolutionNotes: resolutionNotesInput.trim(),
+              }
+            : a
+        );
+        const updatedAudit = data.auditLog && project.auditLogs ? [data.auditLog, ...project.auditLogs] : (project.auditLogs || []);
+        setProject({
+          ...project,
+          alerts: updatedAlerts,
+          auditLogs: updatedAudit,
+        });
+      }
+
+      setSelectedAlertForResolution(null);
+      setResolutionNotesInput('');
+      setResolvedByInput('');
+    } catch (err: any) {
+      alert(err.message || 'Erro ao registrar conduta clínica.');
+    } finally {
+      setResolvingAlert(false);
+    }
+  };
+
+  // Exportação da Trilha de Auditoria Regulatória (GCP / ICH E6 / 21 CFR Part 11)
+  const exportAuditLogsToCSV = () => {
+    if (!project || !project.auditLogs || project.auditLogs.length === 0) {
+      alert('Nenhum registro de auditoria disponível para exportação.');
+      return;
+    }
+
+    const headers = [
+      'Data_Hora_UTC',
+      'Data_Hora_Local',
+      'Acao',
+      'Tipo_Entidade',
+      'ID_Entidade',
+      'Pesquisador',
+      'Email_Pesquisador',
+      'Campo_Alterado',
+      'Valor_Anterior',
+      'Valor_Novo',
+      'Justificativa_Clinica',
+      'Endereco_IP',
+      'Dispositivo_UserAgent',
+    ];
+
+    const rows = project.auditLogs.map((log) => [
+      `"${log.createdAt}"`,
+      `"${new Date(log.createdAt).toLocaleString('pt-BR')}"`,
+      `"${log.action}"`,
+      `"${log.entityType}"`,
+      `"${log.entityId}"`,
+      `"${(log.changedBy || '').replace(/"/g, '""')}"`,
+      `"${(log.userEmail || '').replace(/"/g, '""')}"`,
+      `"${(log.fieldName || '').replace(/"/g, '""')}"`,
+      `"${(log.oldValue || '').replace(/"/g, '""')}"`,
+      `"${(log.newValue || '').replace(/"/g, '""')}"`,
+      `"${(log.reason || '').replace(/"/g, '""')}"`,
+      `"${log.ipAddress || ''}"`,
+      `"${(log.userAgent || '').replace(/"/g, '""')}"`,
+    ]);
+
+    const csvContent = '\uFEFF' + [headers.join(';'), ...rows.map((r) => r.join(';'))].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute(
+      'download',
+      `auditoria_gcp_${project.name.toLowerCase().replace(/[^a-z0-9]/g, '_')}_${new Date().toISOString().slice(0, 10)}.csv`
+    );
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  // Exportação Numérica Padrão SPSS / R / Jamovi (.CSV)
+  const exportNumericCSV = () => {
+    if (!project) return;
+    const participantsData = project.participants.map((p) => ({
+      researchCode: p.researchCode,
+      biologicalSex: p.patient.biologicalSex,
+      dateOfBirth: p.patient.dateOfBirth,
+      status: p.status,
+      group: p.group,
+      sessions: p.sessions?.map((s) => ({
+        sessionNumber: s.sessionNumber,
+        shadeRight: s.shadeRight,
+        shadeLeft: s.shadeLeft,
+        painScore0h: s.painScore0h,
+        painScore1h: s.painScore1h,
+        painScore24h: s.painScore24h,
+        painScore48h: s.painScore48h,
+        adverseEvents: s.adverseEvents,
+        notes: s.notes,
+      })),
+    }));
+
+    const csvContent = buildNumericCSVContent(project.name, participantsData);
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'uepg_ensaio_clinico_numerico.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  // Download do Dicionário de Variáveis (Codebook .MD)
+  const downloadCodebook = () => {
+    if (!project) return;
+    const content = generateCodebookMarkdown(project.name);
+    const blob = new Blob([content], { type: 'text/markdown;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'codebook_dicionario_variaveis.md');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  // Download do Dicionário de Variáveis em Texto Puro (Codebook .TXT)
+  const downloadCodebookTxt = () => {
+    if (!project) return;
+    const content = generateCodebookText(project.name);
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'codebook_dicionario_variaveis.txt');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  // Download do Script de Análise Estatística em R
+  const downloadRScript = () => {
+    if (!project) return;
+    const content = generateRAnalysisScript(project.name);
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'analise_uepg.R');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  // Download da Syntax de Análise no IBM SPSS
+  const downloadSPSSScript = () => {
+    if (!project) return;
+    const content = generateSPSSSyntaxScript(project.name);
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'analise_uepg.sps');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  // Download dos Dados Formatados para GraphPad Prism (.TXT)
+  const downloadGraphPadData = () => {
+    if (!project) return;
+    const participantsData = project.participants.map((p) => ({
+      researchCode: p.researchCode,
+      biologicalSex: p.patient.biologicalSex,
+      dateOfBirth: p.patient.dateOfBirth,
+      status: p.status,
+      group: p.group,
+      sessions: p.sessions?.map((s) => ({
+        sessionNumber: s.sessionNumber,
+        shadeRight: s.shadeRight,
+        shadeLeft: s.shadeLeft,
+        painScore0h: s.painScore0h,
+        painScore1h: s.painScore1h,
+        painScore24h: s.painScore24h,
+        painScore48h: s.painScore48h,
+        adverseEvents: s.adverseEvents,
+        notes: s.notes,
+      })),
+    }));
+
+    const content = generateGraphPadPrismFormat(project.name, participantsData);
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'dados_graphpad_prism.txt');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   const getPatientUrl = (code: string) => {
     const origin = typeof window !== 'undefined' && window.location?.origin ? window.location.origin : '';
     return `${origin}/paciente?code=${code}`;
@@ -1301,6 +1643,42 @@ function DashboardContent() {
       {/* Conteúdo Principal */}
       <main className="w-full px-4 sm:px-6 lg:px-8 xl:px-10 py-6">
         
+        {/* Banner Persistente de Alertas Vermelhos de Farmacovigilância */}
+        {(() => {
+          const pendingAlerts = (project.alerts || []).filter((a) => a.status === 'PENDING');
+          if (pendingAlerts.length === 0) return null;
+          return (
+            <div className="mb-6 p-4 bg-gradient-to-r from-red-600 via-rose-600 to-red-700 text-white rounded-2xl shadow-lg border border-red-500/50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 animate-pulse">
+              <div className="flex items-center space-x-3.5">
+                <div className="p-2.5 bg-white/20 rounded-xl backdrop-blur-xs shrink-0">
+                  <AlertTriangle className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <div className="flex items-center space-x-2">
+                    <span className="font-black text-xs uppercase tracking-wider bg-white text-red-700 px-2 py-0.5 rounded-md shadow-xs inline-flex items-center gap-1.5">
+                      <AlertTriangle className="w-3.5 h-3.5 text-red-600 shrink-0" />
+                      Alerta Vermelho de Farmacovigilância
+                    </span>
+                    <span className="text-xs font-bold text-red-100">
+                      {pendingAlerts.length} {pendingAlerts.length === 1 ? 'ocorrência pendente' : 'ocorrências pendentes'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-red-100 mt-1 leading-relaxed">
+                    Participante(s) reportaram dor severa (EVA ≥ 7/10) ou queimação gengival aguda que demandam intervenção clínica e registro imediato de conduta.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setActiveTab('vigilance')}
+                className="px-4 py-2.5 bg-white hover:bg-red-50 text-red-700 font-extrabold text-xs rounded-xl shadow-md transition shrink-0 flex items-center justify-center space-x-1.5"
+              >
+                <span>Atender Farmacovigilância ({pendingAlerts.length})</span>
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          );
+        })()}
+
         {/* Abas de Navegação do Projeto Organizadas por Função e Papel Clínico */}
         <div className="flex flex-wrap gap-2 border-b border-slate-200 mb-8 bg-slate-100/70 p-1.5 rounded-2xl">
           <button
@@ -1347,6 +1725,61 @@ function DashboardContent() {
                 </span>
               </div>
               <span className="text-[10px] font-normal text-slate-400 block">Ficha Clínica, TCLE & Elegibilidade</span>
+            </div>
+          </button>
+
+          {/* ABA FARMACOVIGILÂNCIA & ALERTAS VERMELHOS */}
+          <button
+            onClick={() => setActiveTab('vigilance')}
+            className={`flex-1 min-w-[200px] px-4 py-3 text-xs font-bold rounded-xl transition flex items-center space-x-2.5 ${
+              activeTab === 'vigilance'
+                ? 'bg-white text-red-700 shadow-xs border border-red-200 font-extrabold'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+            }`}
+          >
+            <div className={`p-2 rounded-lg ${activeTab === 'vigilance' ? 'bg-red-50 text-red-600' : 'bg-slate-200/60 text-slate-500'}`}>
+              <ShieldAlert className="w-4 h-4" />
+            </div>
+            <div className="text-left">
+              <div className="flex items-center space-x-1.5">
+                <span>Farmacovigilância</span>
+                {(() => {
+                  const pendingCount = (project.alerts || []).filter((a) => a.status === 'PENDING').length;
+                  return pendingCount > 0 ? (
+                    <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-red-600 text-white font-black animate-pulse">
+                      {pendingCount}
+                    </span>
+                  ) : (
+                    <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${activeTab === 'vigilance' ? 'bg-red-100 text-red-800' : 'bg-slate-200 text-slate-700'}`}>
+                      {project.alerts?.length || 0}
+                    </span>
+                  );
+                })()}
+              </div>
+              <span className="text-[10px] font-normal text-slate-400 block">Alertas Vermelhos & Segurança</span>
+            </div>
+          </button>
+
+          {/* ABA TRILHA DE AUDITORIA GCP */}
+          <button
+            onClick={() => setActiveTab('audit')}
+            className={`flex-1 min-w-[190px] px-4 py-3 text-xs font-bold rounded-xl transition flex items-center space-x-2.5 ${
+              activeTab === 'audit'
+                ? 'bg-white text-indigo-700 shadow-xs border border-indigo-200 font-extrabold'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+            }`}
+          >
+            <div className={`p-2 rounded-lg ${activeTab === 'audit' ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-200/60 text-slate-500'}`}>
+              <ShieldCheck className="w-4 h-4" />
+            </div>
+            <div className="text-left">
+              <div className="flex items-center space-x-1.5">
+                <span>Trilha de Auditoria GCP</span>
+                <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${activeTab === 'audit' ? 'bg-indigo-100 text-indigo-800' : 'bg-slate-200 text-slate-700'}`}>
+                  {project.auditLogs?.length || 0}
+                </span>
+              </div>
+              <span className="text-[10px] font-normal text-slate-400 block">Rastreabilidade & Justificativas</span>
             </div>
           </button>
 
@@ -1867,6 +2300,17 @@ function DashboardContent() {
                             <span>Portal</span>
                           </a>
 
+                          {/* TCLE Assinado (PDF Oficial) */}
+                          <Link
+                            href={`/tcle/${part.id}/pdf`}
+                            target="_blank"
+                            className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-xl text-xs font-bold transition flex items-center space-x-1 shadow-2xs"
+                            title="Baixar ou visualizar cópia oficial do TCLE/TALE em PDF com autenticação digital SHA-256"
+                          >
+                            <FileText className="w-3.5 h-3.5 text-slate-600" />
+                            <span>TCLE (PDF)</span>
+                          </Link>
+
                           {/* WhatsApp de Agendamento */}
                           {next && (windows.overallAlert === 'OVERDUE' || windows.overallAlert === 'DUE_NOW') ? (
                             <button
@@ -2037,7 +2481,7 @@ function DashboardContent() {
                         </div>
 
                         {/* Botão de Preenchimento da Ficha Clínica e TCLE */}
-                        <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-2">
                           <button
                             onClick={() => openAnamnesisModal(part)}
                             className={`py-2 px-3 rounded-lg text-xs font-bold flex items-center justify-center space-x-1.5 border transition ${
@@ -2048,7 +2492,7 @@ function DashboardContent() {
                           >
                             {isAnamnesisDone ? <Search className="w-3.5 h-3.5 mr-1" /> : <ClipboardList className="w-3.5 h-3.5 mr-1" />}
                             <span className="truncate">
-                              {isAnamnesisDone ? 'Ficha Clínica Preenchida' : 'Preencher Ficha & Anamnese'}
+                              {isAnamnesisDone ? 'Ficha Preenchida' : 'Preencher Ficha'}
                             </span>
                           </button>
 
@@ -2058,7 +2502,17 @@ function DashboardContent() {
                             className="py-2 px-3 rounded-lg text-xs font-bold flex items-center justify-center space-x-1.5 border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 transition"
                           >
                             <FileText className="w-3.5 h-3.5 mr-1 text-indigo-600" />
-                            <span>Abrir TCLE Digital</span>
+                            <span>TCLE Digital</span>
+                          </Link>
+
+                          <Link
+                            href={`/tcle/${part.id}/pdf`}
+                            target="_blank"
+                            className="py-2 px-3 rounded-lg text-xs font-bold flex items-center justify-center space-x-1.5 border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 transition"
+                            title="Baixar ou visualizar via impressa/PDF do TCLE assinado"
+                          >
+                            <FileText className="w-3.5 h-3.5 mr-1 text-slate-500" />
+                            <span>TCLE (PDF)</span>
                           </Link>
                         </div>
 
@@ -2110,6 +2564,453 @@ function DashboardContent() {
             </div>
           </div>
         )}
+
+        {/* ABA: FARMACOVIGILÂNCIA EM TEMPO REAL & ALERTAS VERMELHOS */}
+        {activeTab === 'vigilance' && (() => {
+          const allAlerts = project.alerts || [];
+          const pendingCount = allAlerts.filter((a) => a.status === 'PENDING').length;
+          const resolvedCount = allAlerts.filter((a) => a.status === 'RESOLVED').length;
+          const criticalCount = allAlerts.filter((a) => a.severity === 'CRITICAL').length;
+
+          const filteredAlerts = allAlerts.filter((a) => {
+            if (vigilanceFilter === 'PENDING') return a.status === 'PENDING';
+            if (vigilanceFilter === 'RESOLVED') return a.status === 'RESOLVED';
+            return true;
+          });
+
+          return (
+            <div className="space-y-6">
+              {/* Banner de Contexto de Farmacovigilância */}
+              <div className="bg-gradient-to-r from-red-50 via-rose-50 to-amber-50 border border-red-200 rounded-2xl p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="flex items-start space-x-3.5">
+                  <div className="p-2.5 bg-red-100 rounded-xl text-red-700 shrink-0 mt-0.5">
+                    <ShieldAlert className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-slate-900">
+                      Farmacovigilância em Tempo Real & Monitoramento de Segurança
+                    </h3>
+                    <p className="text-xs text-slate-600 mt-1 leading-relaxed max-w-3xl">
+                      Sistema ativo de monitoramento de eventos adversos e dor severa (EVA ≥ 7/10 ou queimação gengival). Permite intervenção clínica em tempo hábil e registro de condutas terapêuticas em conformidade com as Boas Práticas Clínicas (GCP/ICH E6) e diretrizes éticas (CNS 466/12).
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-2 shrink-0">
+                  <span className="px-3 py-1.5 bg-white border border-red-200 text-red-700 text-xs font-black rounded-xl shadow-2xs">
+                    {pendingCount} Pendente{pendingCount === 1 ? '' : 's'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Cards de Métricas de Farmacovigilância */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs">
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Total de Ocorrências</p>
+                  <p className="text-2xl font-black text-slate-900 mt-1">{allAlerts.length}</p>
+                  <p className="text-[11px] text-slate-500 mt-1">Registros de dor/irritação</p>
+                </div>
+
+                <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs">
+                  <p className="text-xs font-bold text-red-500 uppercase tracking-wider">Alertas Pendentes</p>
+                  <p className="text-2xl font-black text-red-600 mt-1">{pendingCount}</p>
+                  <p className="text-[11px] text-red-500 mt-1">Requerem conduta clínica</p>
+                </div>
+
+                <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs">
+                  <p className="text-xs font-bold text-amber-500 uppercase tracking-wider">Alertas Críticos</p>
+                  <p className="text-2xl font-black text-amber-600 mt-1">{criticalCount}</p>
+                  <p className="text-[11px] text-slate-500 mt-1">EVA ≥ 8 ou queimação severa</p>
+                </div>
+
+                <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs">
+                  <p className="text-xs font-bold text-emerald-500 uppercase tracking-wider">Taxa de Resolução</p>
+                  <p className="text-2xl font-black text-emerald-600 mt-1">
+                    {allAlerts.length > 0 ? Math.round((resolvedCount / allAlerts.length) * 100) : 100}%
+                  </p>
+                  <p className="text-[11px] text-slate-500 mt-1">{resolvedCount} ocorrências tratadas</p>
+                </div>
+              </div>
+
+              {/* Barra de Filtros de Farmacovigilância */}
+              <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => setVigilanceFilter('ALL')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                      vigilanceFilter === 'ALL'
+                        ? 'bg-slate-900 text-white'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    Todos ({allAlerts.length})
+                  </button>
+                  <button
+                    onClick={() => setVigilanceFilter('PENDING')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center space-x-1 ${
+                      vigilanceFilter === 'PENDING'
+                        ? 'bg-red-600 text-white shadow-xs'
+                        : 'bg-red-50 text-red-700 hover:bg-red-100'
+                    }`}
+                  >
+                    <span>Pendentes ({pendingCount})</span>
+                    {pendingCount > 0 && <span className="w-2 h-2 rounded-full bg-white animate-pulse" />}
+                  </button>
+                  <button
+                    onClick={() => setVigilanceFilter('RESOLVED')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                      vigilanceFilter === 'RESOLVED'
+                        ? 'bg-emerald-600 text-white'
+                        : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                    }`}
+                  >
+                    Resolvidos ({resolvedCount})
+                  </button>
+                </div>
+
+                <span className="text-xs text-slate-400">
+                  Exibindo {filteredAlerts.length} de {allAlerts.length} registro(s)
+                </span>
+              </div>
+
+              {/* Lista de Alertas de Farmacovigilância */}
+              {filteredAlerts.length === 0 ? (
+                <div className="bg-white rounded-2xl p-12 text-center border border-slate-200 shadow-xs">
+                  <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <CheckCircle className="w-6 h-6" />
+                  </div>
+                  <h4 className="text-sm font-bold text-slate-800">Nenhum alerta de farmacovigilância</h4>
+                  <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+                    Nenhum evento adverso ou relato de dor severa registrado no filtro selecionado. Os voluntários estão com sintomas sob controle.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {filteredAlerts.map((alert) => {
+                    const isPending = alert.status === 'PENDING';
+                    const isCritical = alert.severity === 'CRITICAL';
+                    const phone = alert.participant?.patient?.phoneWhatsApp;
+                    const cleanPhone = phone ? phone.replace(/\D/g, '') : '';
+                    const fullPhone = cleanPhone ? (cleanPhone.startsWith('55') ? cleanPhone : `55${cleanPhone}`) : '';
+                    const whatsappMsg = encodeURIComponent(
+                      `Olá! Aqui é a equipe de Pesquisa Clínica da UEPG. Recebemos seu relato de dor/desconforto (${alert.timePoint || 'Diário'}). Como você está se sentindo agora?`
+                    );
+
+                    return (
+                      <div
+                        key={alert.id}
+                        className={`bg-white rounded-2xl border transition shadow-xs overflow-hidden ${
+                          isPending
+                            ? isCritical
+                              ? 'border-red-400 ring-1 ring-red-300'
+                              : 'border-amber-300'
+                            : 'border-slate-200'
+                        }`}
+                      >
+                        <div className="p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100">
+                          <div className="flex items-start space-x-3.5">
+                            <div
+                              className={`p-2.5 rounded-xl text-white shrink-0 mt-0.5 ${
+                                isCritical ? 'bg-red-600' : 'bg-amber-500'
+                              }`}
+                            >
+                              <AlertTriangle className="w-5 h-5" />
+                            </div>
+                            <div>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="font-mono font-black text-sm text-slate-900">
+                                  {alert.participant?.researchCode || 'Participante'}
+                                </span>
+                                {!isBlindedUser && alert.participant?.patient?.fullName && (
+                                  <span className="text-xs text-slate-500">
+                                    ({alert.participant.patient.fullName})
+                                  </span>
+                                )}
+                                <span
+                                  className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                                    isCritical
+                                      ? 'bg-red-100 text-red-800 border border-red-200'
+                                      : 'bg-amber-100 text-amber-800 border border-amber-200'
+                                  }`}
+                                >
+                                  {alert.severity}
+                                </span>
+                                {alert.timePoint && (
+                                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                                    Momento {alert.timePoint}
+                                  </span>
+                                )}
+                                <span
+                                  className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                                    isPending
+                                      ? 'bg-red-600 text-white animate-pulse'
+                                      : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                                  }`}
+                                >
+                                  {isPending ? 'Pendente' : 'Resolvido'}
+                                </span>
+                              </div>
+
+                              <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                                {alert.description}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-2 shrink-0 self-end md:self-auto">
+                            {fullPhone && (
+                              <a
+                                href={`https://wa.me/${fullPhone}?text=${whatsappMsg}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center space-x-1.5"
+                                title="Abrir contato direto no WhatsApp com o voluntário"
+                              >
+                                <Phone className="w-3.5 h-3.5" />
+                                <span>Suporte WhatsApp</span>
+                              </a>
+                            )}
+
+                            {isPending ? (
+                              <button
+                                onClick={() => {
+                                  setSelectedAlertForResolution(alert);
+                                  setResolvedByInput(currentUser?.name || '');
+                                  setResolutionNotesInput('');
+                                }}
+                                className="px-3.5 py-2 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center space-x-1.5"
+                              >
+                                <CheckCircle2 className="w-3.5 h-3.5" />
+                                <span>Registrar Conduta Clínica</span>
+                              </button>
+                            ) : (
+                              <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200 flex items-center space-x-1">
+                                <CheckCircle className="w-3.5 h-3.5" />
+                                <span>Conduta Concluída</span>
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Detalhes Clínicos do Alerta */}
+                        <div className="p-4 bg-slate-50/70 grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                          <div>
+                            <span className="text-[10px] font-bold uppercase text-slate-400 block">Dor / EVA Reportada</span>
+                            <div className="mt-1 flex items-center space-x-2">
+                              <span className="font-mono font-black text-slate-900 text-base">
+                                {alert.painScore !== null ? `${alert.painScore}/10` : 'Não aferido'}
+                              </span>
+                              {alert.painScore !== null && (
+                                <div className="flex-1 bg-slate-200 h-2.5 rounded-full overflow-hidden max-w-[120px]">
+                                  <div
+                                    className={`h-full rounded-full ${
+                                      alert.painScore >= 8 ? 'bg-red-600' : 'bg-amber-500'
+                                    }`}
+                                    style={{ width: `${Math.min(100, (alert.painScore / 10) * 100)}%` }}
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          <div>
+                            <span className="text-[10px] font-bold uppercase text-slate-400 block">Condição Gengival</span>
+                            <span className="font-semibold text-slate-800 mt-1 block">
+                              {alert.gingivalSensation || 'Normal'}
+                            </span>
+                          </div>
+
+                          <div>
+                            <span className="text-[10px] font-bold uppercase text-slate-400 block">Registrado em</span>
+                            <span className="text-slate-600 mt-1 block">
+                              {new Date(alert.createdAt).toLocaleString('pt-BR')}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Bloco de Resolução Clínica (se já resolvido) */}
+                        {!isPending && alert.resolutionNotes && (
+                          <div className="p-4 bg-emerald-50/50 border-t border-emerald-100 text-xs text-emerald-950 flex items-start space-x-2">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                            <div>
+                              <p className="font-bold text-emerald-900">
+                                Conduta Clínica Registrada por {alert.resolvedBy || 'Pesquisador'} em {alert.resolvedAt ? new Date(alert.resolvedAt).toLocaleString('pt-BR') : ''}:
+                              </p>
+                              <p className="text-emerald-800 mt-0.5 leading-relaxed">
+                                {alert.resolutionNotes}
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* ABA: TRILHA DE AUDITORIA REGULATÓRIA GCP (ICH-GCP E6 & 21 CFR PART 11) */}
+        {activeTab === 'audit' && (() => {
+          const allLogs = project.auditLogs || [];
+
+          const filteredLogs = allLogs.filter((log) => {
+            const matchesEntity = (() => {
+              if (auditEntityFilter === 'ALL') return true;
+              const type = (log.entityType || '').toLowerCase();
+              const filter = auditEntityFilter.toLowerCase();
+              if (filter === 'participant') return type.includes('participant');
+              if (filter === 'session') return type.includes('session');
+              if (filter === 'clinical_alert') return type.includes('alert');
+              if (filter === 'consent_signature') return type.includes('consent') || type.includes('signature');
+              if (filter === 'project') return type.includes('project');
+              return type === filter;
+            })();
+            const term = auditSearch.trim().toLowerCase();
+            if (!term) return matchesEntity;
+            const matchesSearch =
+              log.action.toLowerCase().includes(term) ||
+              log.changedBy.toLowerCase().includes(term) ||
+              log.reason.toLowerCase().includes(term) ||
+              log.fieldName.toLowerCase().includes(term) ||
+              log.entityId.toLowerCase().includes(term);
+            return matchesEntity && matchesSearch;
+          });
+
+          return (
+            <div className="space-y-6">
+              {/* Banner de Contexto de Auditoria */}
+              <div className="bg-gradient-to-r from-indigo-50 to-slate-100 border border-indigo-200 rounded-2xl p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="flex items-start space-x-3.5">
+                  <div className="p-2.5 bg-indigo-100 rounded-xl text-indigo-700 shrink-0 mt-0.5">
+                    <ShieldCheck className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-slate-900">
+                      Trilha de Auditoria Regulatória (ICH-GCP E6 & 21 CFR Part 11)
+                    </h3>
+                    <p className="text-xs text-slate-600 mt-1 leading-relaxed max-w-3xl">
+                      Registro contínuo e imutável de todas as modificações no ensaio clínico: assinaturas de TCLE, alocações de grupos, edições de prontuário, resoluções de alertas e justificativas clínicas obrigatórias.
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={exportAuditLogsToCSV}
+                  className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center space-x-1.5 shrink-0"
+                  title="Exportar trilha completa em CSV para auditoria e submissão ao CEP"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>Exportar Trilha (.CSV)</span>
+                </button>
+              </div>
+
+              {/* Filtros e Busca de Auditoria */}
+              <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex-1 flex flex-col sm:flex-row gap-2">
+                  <div className="relative flex-1">
+                    <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                    <input
+                      type="text"
+                      placeholder="Buscar por pesquisador, justificativa, campo ou participante..."
+                      value={auditSearch}
+                      onChange={(e) => setAuditSearch(e.target.value)}
+                      className="w-full pl-9 pr-3 py-2 text-xs border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <select
+                    value={auditEntityFilter}
+                    onChange={(e) => setAuditEntityFilter(e.target.value)}
+                    className="text-xs border border-slate-300 rounded-xl px-3 py-2 bg-white text-slate-700 focus:outline-none"
+                  >
+                    <option value="ALL">Todas as Entidades</option>
+                    <option value="PARTICIPANT">Participantes & Status</option>
+                    <option value="SESSION">Sessões Clínicas</option>
+                    <option value="CLINICAL_ALERT">Farmacovigilância / Alertas</option>
+                    <option value="CONSENT_SIGNATURE">Assinaturas TCLE/TALE</option>
+                    <option value="PROJECT">Projeto / Equipe</option>
+                  </select>
+                </div>
+
+                <span className="text-xs text-slate-400 shrink-0">
+                  {filteredLogs.length} registro(s) encontrado(s)
+                </span>
+              </div>
+
+              {/* Tabela de Trilha de Auditoria */}
+              <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead className="bg-slate-50 text-slate-600 font-bold uppercase tracking-wider border-b border-slate-200">
+                      <tr>
+                        <th className="p-3.5">Data / Hora</th>
+                        <th className="p-3.5">Ação</th>
+                        <th className="p-3.5">Entidade</th>
+                        <th className="p-3.5">Pesquisador</th>
+                        <th className="p-3.5">Campo Alterado</th>
+                        <th className="p-3.5">Valor Anterior → Novo</th>
+                        <th className="p-3.5">Justificativa Clínica</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-[11px]">
+                      {filteredLogs.length === 0 ? (
+                        <tr>
+                          <td colSpan={7} className="p-8 text-center text-slate-400">
+                            Nenhum registro de auditoria encontrado para os critérios pesquisados.
+                          </td>
+                        </tr>
+                      ) : (
+                        filteredLogs.map((log) => (
+                          <tr key={log.id} className="hover:bg-slate-50/70 transition">
+                            <td className="p-3.5 whitespace-nowrap text-slate-500 font-mono">
+                              {new Date(log.createdAt).toLocaleString('pt-BR')}
+                            </td>
+                            <td className="p-3.5 whitespace-nowrap">
+                              <span
+                                className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                  log.action.includes('RESOLV')
+                                    ? 'bg-emerald-100 text-emerald-800'
+                                    : log.action.includes('SIGN') || log.action.includes('TCLE')
+                                    ? 'bg-indigo-100 text-indigo-800'
+                                    : log.action.includes('CREATE') || log.action.includes('INCLUS')
+                                    ? 'bg-blue-100 text-blue-800'
+                                    : 'bg-slate-100 text-slate-700'
+                                }`}
+                              >
+                                {log.action}
+                              </span>
+                            </td>
+                            <td className="p-3.5 whitespace-nowrap font-mono text-slate-600">
+                              {log.entityType}
+                            </td>
+                            <td className="p-3.5 whitespace-nowrap">
+                              <span className="font-bold text-slate-800 block">{log.changedBy}</span>
+                              <span className="text-[10px] text-slate-400 block">{log.userEmail}</span>
+                            </td>
+                            <td className="p-3.5 whitespace-nowrap font-mono font-semibold text-slate-700">
+                              {log.fieldName}
+                            </td>
+                            <td className="p-3.5 text-slate-600 max-w-xs truncate">
+                              {log.oldValue ? <span className="line-through text-slate-400 mr-1">{log.oldValue}</span> : null}
+                              {log.newValue ? <span className="font-bold text-slate-800">{log.newValue}</span> : '-'}
+                            </td>
+                            <td className="p-3.5 text-slate-700 max-w-sm">
+                              <span className="line-clamp-2" title={log.reason}>
+                                {log.reason}
+                              </span>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* ABA 3: FLUXOGRAMA CONSORT 2010 & EXCLUÍDOS */}
         {activeTab === 'consort' && (
@@ -2429,33 +3330,46 @@ function DashboardContent() {
           const r14Sessions = allSessions.filter((s) => s.sessionNumber === 3);
           const r30Sessions = allSessions.filter((s) => s.sessionNumber === 4);
 
-          const calcMeanPain = (sessions: ClinicalSession[], field: 'painScore0h' | 'painScore1h' | 'painScore24h' | 'painScore48h') => {
-            const valid = sessions.filter(
-              (s) => s[field] !== null && s[field] !== undefined && typeof s[field] === 'number'
-            );
-            if (valid.length === 0) return 0;
-            const sum = valid.reduce((acc, curr) => acc + (curr[field] as number), 0);
-            return Number((sum / valid.length).toFixed(1));
+          const calcPainStats = (sessions: ClinicalSession[], field: 'painScore0h' | 'painScore1h' | 'painScore24h' | 'painScore48h') => {
+            const valid = sessions
+              .map((s) => s[field])
+              .filter((v): v is number => typeof v === 'number' && !isNaN(v));
+            if (valid.length === 0) return { mean: 0, sd: 0, sem: 0, ci95: 0, n: 0 };
+            const sum = valid.reduce((acc, curr) => acc + curr, 0);
+            const mean = sum / valid.length;
+            const variance = valid.length > 1
+              ? valid.reduce((acc, curr) => acc + Math.pow(curr - mean, 2), 0) / (valid.length - 1)
+              : 0;
+            const sd = Math.sqrt(variance);
+            const sem = valid.length > 0 ? sd / Math.sqrt(valid.length) : 0;
+            const ci95 = 1.96 * sem;
+            return {
+              mean: Number(mean.toFixed(1)),
+              sd: Number(sd.toFixed(1)),
+              sem: Number(sem.toFixed(2)),
+              ci95: Number(ci95.toFixed(1)),
+              n: valid.length,
+            };
           };
 
           const s1Pain = {
-            h0: calcMeanPain(s1Sessions, 'painScore0h'),
-            h1: calcMeanPain(s1Sessions, 'painScore1h'),
-            h24: calcMeanPain(s1Sessions, 'painScore24h'),
-            h48: calcMeanPain(s1Sessions, 'painScore48h'),
+            h0: calcPainStats(s1Sessions, 'painScore0h'),
+            h1: calcPainStats(s1Sessions, 'painScore1h'),
+            h24: calcPainStats(s1Sessions, 'painScore24h'),
+            h48: calcPainStats(s1Sessions, 'painScore48h'),
           };
 
           const s2Pain = {
-            h0: calcMeanPain(s2Sessions, 'painScore0h'),
-            h1: calcMeanPain(s2Sessions, 'painScore1h'),
-            h24: calcMeanPain(s2Sessions, 'painScore24h'),
-            h48: calcMeanPain(s2Sessions, 'painScore48h'),
+            h0: calcPainStats(s2Sessions, 'painScore0h'),
+            h1: calcPainStats(s2Sessions, 'painScore1h'),
+            h24: calcPainStats(s2Sessions, 'painScore24h'),
+            h48: calcPainStats(s2Sessions, 'painScore48h'),
           };
 
-          // Cálculo de Delta SGU (Unidades da Escala Vita Classical) Boca Dividida
-          let totalDeltaR = 0;
-          let totalDeltaL = 0;
-          let deltaCount = 0;
+          // Cálculo de Delta SGU (Unidades da Escala Vita Classical) Boca Dividida com Estatística Pareada
+          const deltasR: number[] = [];
+          const deltasL: number[] = [];
+          const pairedDiffs: number[] = [];
 
           project.participants.forEach((p) => {
             const s1 = p.sessions?.find((s) => s.sessionNumber === 1);
@@ -2466,19 +3380,34 @@ function DashboardContent() {
               const sguS1L = getVitaSGU(s1.shadeLeft);
               const sguLatL = getVitaSGU(latest.shadeLeft);
               if (sguS1R > 0 && sguLatR > 0 && sguS1L > 0 && sguLatL > 0) {
-                totalDeltaR += (sguS1R - sguLatR);
-                totalDeltaL += (sguS1L - sguLatL);
-                deltaCount++;
+                const dR = sguS1R - sguLatR;
+                const dL = sguS1L - sguLatL;
+                deltasR.push(dR);
+                deltasL.push(dL);
+                pairedDiffs.push(dR - dL);
               }
             }
           });
 
-          const avgDeltaR = deltaCount > 0 ? Number((totalDeltaR / deltaCount).toFixed(1)) : 0;
-          const avgDeltaL = deltaCount > 0 ? Number((totalDeltaL / deltaCount).toFixed(1)) : 0;
+          const deltaCount = deltasR.length;
+          const avgDeltaR = deltaCount > 0 ? Number((deltasR.reduce((a, b) => a + b, 0) / deltaCount).toFixed(1)) : 0;
+          const avgDeltaL = deltaCount > 0 ? Number((deltasL.reduce((a, b) => a + b, 0) / deltaCount).toFixed(1)) : 0;
+          
+          const sdDeltaR = deltaCount > 1
+            ? Number(Math.sqrt(deltasR.reduce((a, b) => a + Math.pow(b - avgDeltaR, 2), 0) / (deltaCount - 1)).toFixed(1))
+            : 0;
+          const sdDeltaL = deltaCount > 1
+            ? Number(Math.sqrt(deltasL.reduce((a, b) => a + Math.pow(b - avgDeltaL, 2), 0) / (deltaCount - 1)).toFixed(1))
+            : 0;
+
+          const meanDiff = deltaCount > 0 ? Number((pairedDiffs.reduce((a, b) => a + b, 0) / deltaCount).toFixed(2)) : 0;
+          const sdDiff = deltaCount > 1
+            ? Number(Math.sqrt(pairedDiffs.reduce((a, b) => a + Math.pow(b - meanDiff, 2), 0) / (deltaCount - 1)).toFixed(2))
+            : 0;
 
           const peakPainAll = Math.max(
-            s1Pain.h0, s1Pain.h1, s1Pain.h24, s1Pain.h48,
-            s2Pain.h0, s2Pain.h1, s2Pain.h24, s2Pain.h48
+            s1Pain.h0.mean, s1Pain.h1.mean, s1Pain.h24.mean, s1Pain.h48.mean,
+            s2Pain.h0.mean, s2Pain.h1.mean, s2Pain.h24.mean, s2Pain.h48.mean
           );
 
           return (
@@ -2486,30 +3415,84 @@ function DashboardContent() {
               {/* Cabeçalho da Aba de Resultados */}
               <div className="bg-white rounded-2xl shadow-xs border border-slate-200 p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
-                  <h2 className="text-lg font-bold text-slate-900">Análise Estatística & Banco de Dados Longitudinal</h2>
+                  <h2 className="text-lg font-bold text-slate-900">Análise Bioestatística & Exportação Científica</h2>
                   <p className="text-xs text-slate-500 mt-1">
-                    Painel visual de desfechos clínicos (Sensibilidade Dentinária EVA e Clareamento ΔSGU) e exportação em conformidade LGPD.
+                    Desfechos clínicos longitudinais (Sensibilidade EVA e Clareamento ΔSGU) e exportação em conformidade com CNS 466/12 e LGPD.
                   </p>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">
                   <button
                     onClick={exportToCSV}
-                    className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-md transition flex items-center space-x-2 shrink-0"
-                    title="Exportar dados clínicos desidentificados contendo apenas código de pesquisa"
+                    className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center space-x-1.5 shrink-0"
+                    title="Exportar dados clínicos desidentificados em CSV"
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                    <span>Exportar Dados Clínicos (Desidentificado)</span>
+                    <Download className="w-3.5 h-3.5" />
+                    <span>CSV Clínico</span>
+                  </button>
+
+                  <button
+                    onClick={exportNumericCSV}
+                    className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center space-x-1.5 shrink-0"
+                    title="Exportar banco numérico codificado pronto para SPSS, R, Jamovi e Prism"
+                  >
+                    <BarChart3 className="w-3.5 h-3.5" />
+                    <span>Banco Numérico (R/SPSS)</span>
+                  </button>
+
+                  <button
+                    onClick={downloadCodebook}
+                    className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl border border-slate-300 transition flex items-center space-x-1 shrink-0"
+                    title="Baixar dicionário completo de variáveis em Markdown (.md)"
+                  >
+                    <FileText className="w-3.5 h-3.5 text-slate-500" />
+                    <span>Codebook (.MD)</span>
+                  </button>
+
+                  <button
+                    onClick={downloadCodebookTxt}
+                    className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl border border-slate-300 transition flex items-center space-x-1 shrink-0"
+                    title="Baixar dicionário completo de variáveis em texto simples (.txt)"
+                  >
+                    <FileText className="w-3.5 h-3.5 text-slate-500" />
+                    <span>Codebook (.TXT)</span>
+                  </button>
+
+                  <button
+                    onClick={downloadRScript}
+                    className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl border border-slate-300 transition flex items-center space-x-1 shrink-0"
+                    title="Baixar script completo de análise bioestatística em R"
+                  >
+                    <FileCode className="w-3.5 h-3.5 text-blue-600" />
+                    <span>Script R (.R)</span>
+                  </button>
+
+                  <button
+                    onClick={downloadSPSSScript}
+                    className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl border border-slate-300 transition flex items-center space-x-1 shrink-0"
+                    title="Baixar syntax de análise estatística para IBM SPSS"
+                  >
+                    <FileSpreadsheet className="w-3.5 h-3.5 text-red-600" />
+                    <span>Syntax SPSS (.SPS)</span>
+                  </button>
+
+                  <button
+                    onClick={downloadGraphPadData}
+                    className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl border border-slate-300 transition flex items-center space-x-1 shrink-0"
+                    title="Baixar formato tabular delimitado por tabulação para GraphPad Prism"
+                  >
+                    <Activity className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Prism (.TXT)</span>
                   </button>
 
                   {!isBlindedUser && (
                     <button
                       onClick={exportCadastralToCSV}
-                      className="px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl border border-slate-300 transition flex items-center space-x-1.5 shrink-0"
+                      className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs rounded-xl border border-slate-300 transition flex items-center space-x-1 shrink-0"
                       title="Exportar cadastro completo de pacientes (Restrito à Coordenação)"
                     >
                       <ClipboardList className="w-3.5 h-3.5" />
-                      <span>Cadastro (Identificado)</span>
+                      <span>Cadastro</span>
                     </button>
                   )}
                 </div>
@@ -2544,10 +3527,57 @@ function DashboardContent() {
                 </div>
               </div>
 
+              {/* Funil de Retenção & Aderência ao Protocolo CONSORT 2010 */}
+              <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
+                  <div className="flex items-center space-x-2">
+                    <Award className="w-4 h-4 text-emerald-600" />
+                    <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                      Funil de Retenção Longitudinal CONSORT 2010
+                    </h3>
+                  </div>
+                  <span className="text-[11px] text-slate-500">
+                    Adesão Global: <strong className="text-emerald-700">{approvedList.length > 0 ? Math.round((s1Sessions.length / approvedList.length) * 100) : 0}%</strong> dos elegíveis iniciaram a intervenção
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-center text-xs">
+                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                    <span className="text-[10px] text-slate-400 font-bold block uppercase">1. Triagem</span>
+                    <span className="font-mono font-black text-slate-900 text-base">{project.participants.length}</span>
+                    <span className="text-[10px] text-slate-500 block">Avaliados</span>
+                  </div>
+
+                  <div className="p-3 bg-blue-50/60 rounded-xl border border-blue-200">
+                    <span className="text-[10px] text-blue-600 font-bold block uppercase">2. Alocados</span>
+                    <span className="font-mono font-black text-blue-900 text-base">{approvedList.length}</span>
+                    <span className="text-[10px] text-blue-600 block">{project.participants.length > 0 ? Math.round((approvedList.length / project.participants.length) * 100) : 0}% elegibilidade</span>
+                  </div>
+
+                  <div className="p-3 bg-indigo-50/60 rounded-xl border border-indigo-200">
+                    <span className="text-[10px] text-indigo-600 font-bold block uppercase">3. Sessão 1</span>
+                    <span className="font-mono font-black text-indigo-900 text-base">{s1Sessions.length}</span>
+                    <span className="text-[10px] text-indigo-600 block">1ª Intervenção</span>
+                  </div>
+
+                  <div className="p-3 bg-purple-50/60 rounded-xl border border-purple-200">
+                    <span className="text-[10px] text-purple-600 font-bold block uppercase">4. Sessão 2</span>
+                    <span className="font-mono font-black text-purple-900 text-base">{s2Sessions.length}</span>
+                    <span className="text-[10px] text-purple-600 block">2ª Intervenção</span>
+                  </div>
+
+                  <div className="p-3 bg-emerald-50/60 rounded-xl border border-emerald-200 col-span-2 sm:col-span-1">
+                    <span className="text-[10px] text-emerald-600 font-bold block uppercase">5. Retornos</span>
+                    <span className="font-mono font-black text-emerald-900 text-base">{r14Sessions.length + r30Sessions.length}</span>
+                    <span className="text-[10px] text-emerald-600 block">14d & 30d</span>
+                  </div>
+                </div>
+              </div>
+
               {/* Gráficos Clínicos Comparativos */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 
-                {/* Gráfico 1: Curva de Sensibilidade Dentinária EVA (0h, 1h, 24h, 48h) */}
+                {/* Gráfico 1: Curva de Sensibilidade Dentinária EVA (0h, 1h, 24h, 48h) com Barras de Erro */}
                 <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs flex flex-col justify-between">
                   <div>
                     <div className="flex items-center justify-between">
@@ -2555,10 +3585,10 @@ function DashboardContent() {
                         <Zap className="w-5 h-5 text-amber-600" />
                         <h3 className="text-base font-bold text-slate-900">Cinética da Sensibilidade (EVA)</h3>
                       </div>
-                      <span className="text-xs font-semibold text-slate-400">Escala 0 a 10</span>
+                      <span className="text-xs font-semibold text-slate-400">Média ± DP (0-10)</span>
                     </div>
                     <p className="text-xs text-slate-500 mt-1">
-                      Média de dor relatada pelos participantes ao longo de 48 horas após a intervenção.
+                      Média ± Desvio Padrão (DP) e Intervalo de Confiança (IC 95%) ao longo de 48 horas pós-clareamento.
                     </p>
                   </div>
 
@@ -2568,39 +3598,48 @@ function DashboardContent() {
                     </div>
                   ) : (
                     <div className="mt-6">
-                      {/* Gráfico em Barras Comparativas */}
-                      <div className="flex items-end justify-between h-44 border-b border-slate-200 px-4 pb-2 pt-6">
+                      {/* Gráfico em Barras Comparativas com Barras de Erro */}
+                      <div className="flex items-end justify-between h-48 border-b border-slate-200 px-4 pb-2 pt-6">
                         {[
-                          { label: '0h (Imediato)', key: 'h0' as const },
+                          { label: '0h (Imed.)', key: 'h0' as const },
                           { label: '1h Pós', key: 'h1' as const },
                           { label: '24h Pós', key: 'h24' as const },
                           { label: '48h Pós', key: 'h48' as const },
                         ].map((tp) => {
                           const v1 = s1Pain[tp.key];
                           const v2 = s2Pain[tp.key];
-                          const h1Pct = Math.max(8, (v1 / 10) * 100);
-                          const h2Pct = Math.max(8, (v2 / 10) * 100);
+                          const h1Pct = Math.max(8, (v1.mean / 10) * 100);
+                          const h2Pct = Math.max(8, (v2.mean / 10) * 100);
 
                           return (
                             <div key={tp.key} className="flex flex-col items-center space-y-2 flex-1">
-                              <div className="flex items-end space-x-2 h-32">
-                                {/* Barra S1 */}
-                                <div className="flex flex-col items-center">
-                                  <span className="text-[10px] font-black text-blue-700 mb-1">{v1}</span>
-                                  <div
-                                    style={{ height: `${h1Pct}%` }}
-                                    className="w-5 sm:w-7 bg-blue-500 rounded-t-md shadow-xs transition-all"
-                                    title={`Sessão 1 (${tp.label}): ${v1}/10`}
-                                  />
+                              <div className="flex items-end space-x-2.5 h-36">
+                                {/* Barra S1 com Barra de Erro */}
+                                <div className="flex flex-col items-center relative">
+                                  <span className="text-[9px] font-black text-blue-700 mb-1" title={`Média: ${v1.mean} ± DP: ${v1.sd} (N=${v1.n})`}>
+                                    {v1.mean} <span className="font-normal text-[8px] text-slate-400">±{v1.sd}</span>
+                                  </span>
+                                  <div className="relative">
+                                    <div
+                                      style={{ height: `${h1Pct}%` }}
+                                      className="w-5 sm:w-8 bg-blue-500 rounded-t-md shadow-xs transition-all"
+                                      title={`Sessão 1 (${tp.label}): Média ${v1.mean} ± DP ${v1.sd} | IC95% [${Math.max(0, v1.mean - v1.ci95).toFixed(1)} - ${Math.min(10, v1.mean + v1.ci95).toFixed(1)}]`}
+                                    />
+                                  </div>
                                 </div>
-                                {/* Barra S2 */}
-                                <div className="flex flex-col items-center">
-                                  <span className="text-[10px] font-black text-indigo-700 mb-1">{v2}</span>
-                                  <div
-                                    style={{ height: `${h2Pct}%` }}
-                                    className="w-5 sm:w-7 bg-indigo-400 rounded-t-md shadow-xs transition-all"
-                                    title={`Sessão 2 (${tp.label}): ${v2}/10`}
-                                  />
+
+                                {/* Barra S2 com Barra de Erro */}
+                                <div className="flex flex-col items-center relative">
+                                  <span className="text-[9px] font-black text-indigo-700 mb-1" title={`Média: ${v2.mean} ± DP: ${v2.sd} (N=${v2.n})`}>
+                                    {v2.mean} <span className="font-normal text-[8px] text-slate-400">±{v2.sd}</span>
+                                  </span>
+                                  <div className="relative">
+                                    <div
+                                      style={{ height: `${h2Pct}%` }}
+                                      className="w-5 sm:w-8 bg-indigo-400 rounded-t-md shadow-xs transition-all"
+                                      title={`Sessão 2 (${tp.label}): Média ${v2.mean} ± DP ${v2.sd} | IC95% [${Math.max(0, v2.mean - v2.ci95).toFixed(1)} - ${Math.min(10, v2.mean + v2.ci95).toFixed(1)}]`}
+                                    />
+                                  </div>
                                 </div>
                               </div>
                               <span className="text-[11px] font-bold text-slate-600 text-center">{tp.label}</span>
@@ -2610,7 +3649,7 @@ function DashboardContent() {
                       </div>
 
                       {/* Legenda do Gráfico */}
-                      <div className="mt-4 flex items-center justify-between text-xs pt-2">
+                      <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs pt-2 border-t border-slate-100">
                         <div className="flex items-center space-x-4">
                           <div className="flex items-center space-x-1.5">
                             <span className="w-3 h-3 rounded bg-blue-500 inline-block" />
@@ -2621,7 +3660,7 @@ function DashboardContent() {
                             <span className="text-slate-600 font-semibold">2ª Aplicação (S2)</span>
                           </div>
                         </div>
-                        <span className="text-[11px] text-slate-400 italic">Pico em 1h-24h com remissão em 48h</span>
+                        <span className="text-[10px] text-slate-400 italic">Pico em 1h-24h com remissão em 48h</span>
                       </div>
                     </div>
                   )}
@@ -2657,7 +3696,9 @@ function DashboardContent() {
                       <div>
                         <div className="flex justify-between items-center text-xs mb-1.5">
                           <span className="font-bold text-slate-700">Hemi-arco Direito (13 a 11)</span>
-                          <span className="font-mono font-black text-emerald-700 text-sm">+{avgDeltaR} ΔSGU</span>
+                          <span className="font-mono font-black text-emerald-700 text-sm">
+                            +{avgDeltaR} <span className="text-xs text-slate-400 font-normal">± {sdDeltaR} ΔSGU</span>
+                          </span>
                         </div>
                         <div className="w-full bg-slate-100 h-4 rounded-full overflow-hidden border border-slate-200 p-0.5">
                           <div
@@ -2666,7 +3707,7 @@ function DashboardContent() {
                           />
                         </div>
                         <span className="text-[10px] text-slate-400 mt-0.5 block">
-                          Evolução média de clareamento observada no quadrante direito.
+                          Clareamento médio no quadrante direito (Média ± DP).
                         </span>
                       </div>
 
@@ -2674,7 +3715,9 @@ function DashboardContent() {
                       <div>
                         <div className="flex justify-between items-center text-xs mb-1.5">
                           <span className="font-bold text-slate-700">Hemi-arco Esquerdo (21 a 23)</span>
-                          <span className="font-mono font-black text-indigo-700 text-sm">+{avgDeltaL} ΔSGU</span>
+                          <span className="font-mono font-black text-indigo-700 text-sm">
+                            +{avgDeltaL} <span className="text-xs text-slate-400 font-normal">± {sdDeltaL} ΔSGU</span>
+                          </span>
                         </div>
                         <div className="w-full bg-slate-100 h-4 rounded-full overflow-hidden border border-slate-200 p-0.5">
                           <div
@@ -2683,14 +3726,17 @@ function DashboardContent() {
                           />
                         </div>
                         <span className="text-[10px] text-slate-400 mt-0.5 block">
-                          Evolução média de clareamento observada no quadrante esquerdo.
+                          Clareamento médio no quadrante esquerdo (Média ± DP).
                         </span>
                       </div>
 
                       <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl flex items-center justify-between text-xs">
-                        <span className="text-blue-900 font-semibold">Diferença Inter-grupos:</span>
-                        <span className="font-mono font-bold text-blue-800">
-                          {Math.abs(avgDeltaR - avgDeltaL).toFixed(1)} ΔSGU {avgDeltaR >= avgDeltaL ? '(Direito > Esquerdo)' : '(Esquerdo > Direito)'}
+                        <div>
+                          <span className="text-blue-900 font-semibold block">Diferença Pareada Inter-grupos:</span>
+                          <span className="text-[10px] text-blue-700">Teste t Pareado / Wilcoxon Boca Dividida</span>
+                        </div>
+                        <span className="font-mono font-bold text-blue-900 text-sm">
+                          {Math.abs(meanDiff)} ± {sdDiff} ΔSGU
                         </span>
                       </div>
                     </div>
@@ -3715,6 +4761,92 @@ function DashboardContent() {
         </div>
       )}
 
+      {/* Modal de Registro de Conduta Clínica / Farmacovigilância */}
+      {selectedAlertForResolution && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 border border-slate-200">
+            <div className="flex items-center space-x-3 mb-4 text-red-600">
+              <div className="p-2.5 bg-red-100 rounded-xl">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900">
+                  Resolução de Alerta de Farmacovigilância
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Participante: <strong className="text-slate-800">{selectedAlertForResolution.participant?.researchCode}</strong>
+                </p>
+              </div>
+            </div>
+
+            <div className="mb-4 p-3.5 bg-red-50 border border-red-200 rounded-xl text-xs space-y-1">
+              <p className="font-bold text-red-900">
+                Sintoma Reportado: {selectedAlertForResolution.painScore !== null ? `EVA ${selectedAlertForResolution.painScore}/10` : ''} - {selectedAlertForResolution.description}
+              </p>
+              {selectedAlertForResolution.gingivalSensation && (
+                <p className="text-red-800">
+                  Gengiva: <strong>{selectedAlertForResolution.gingivalSensation}</strong>
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-4 text-xs">
+              <div>
+                <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">
+                  Profissional / Pesquisador Responsável *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Nome do pesquisador que realizou o atendimento"
+                  value={resolvedByInput}
+                  onChange={(e) => setResolvedByInput(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">
+                  Conduta Clínica & Justificativa (Obrigatório - GCP / ICH E6) *
+                </label>
+                <textarea
+                  rows={4}
+                  required
+                  placeholder="Descreva detalhadamente a conduta clínica adotada: ex. contato telefônico realizado, orientação de suspensão de alimentos ácidos/frios, posologia de analgésico de resgate orientada, sintomas remitidos..."
+                  value={resolutionNotesInput}
+                  onChange={(e) => setResolutionNotesInput(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="mt-6 flex space-x-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedAlertForResolution(null);
+                  setResolutionNotesInput('');
+                  setResolvedByInput('');
+                }}
+                disabled={resolvingAlert}
+                className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleResolveAlert}
+                disabled={resolvingAlert || !resolutionNotesInput.trim()}
+                className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-md transition disabled:opacity-50 flex items-center justify-center space-x-1.5"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                <span>{resolvingAlert ? 'Gravando Conduta...' : 'Concluir Resolução'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal de Cadastro de Novo Paciente e Prontuário */}
       {showNewPatientModal && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto">
@@ -4124,9 +5256,12 @@ function DashboardContent() {
             <div className="bg-white rounded-2xl shadow-2xl max-w-xl w-full p-6 border border-slate-200 my-8 max-h-[90vh] overflow-y-auto">
               <div className="border-b border-slate-100 pb-4 mb-5 flex justify-between items-start">
                 <div>
-                  <h3 className="text-lg font-bold text-slate-900">
-                    {sessionInfo?.title || `Registro Clínico: Sessão ${currentSessionForm.sessionNumber}`}
-                  </h3>
+                  <div className="flex items-center space-x-2">
+                    <h3 className="text-lg font-bold text-slate-900">
+                      {sessionInfo?.title || `Registro Clínico: Sessão ${currentSessionForm.sessionNumber}`}
+                    </h3>
+                    <ConnectivityBadge />
+                  </div>
                   <p className="text-xs text-slate-500 mt-1">
                     {sessionInfo?.subtitle || 'Preencha os desfechos aferidos durante a consulta.'}
                   </p>
@@ -4375,6 +5510,25 @@ function DashboardContent() {
                     placeholder="Observações do atendimento, comportamento do paciente ou intercorrências..."
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs"
                   />
+                </div>
+
+                {/* Justificativa de Alteração / Registro Clínico (GCP / ICH E6 e 21 CFR Part 11) */}
+                <div className="p-3 bg-amber-50/70 border border-amber-200/80 rounded-xl space-y-1">
+                  <label className="block font-bold text-amber-900 uppercase tracking-wider text-[10px]">
+                    Justificativa Clínica / Motivo do Registro (GCP / 21 CFR Part 11)
+                  </label>
+                  <input
+                    type="text"
+                    value={currentSessionForm.justification || ''}
+                    onChange={(e) =>
+                      setCurrentSessionForm({ ...currentSessionForm, justification: e.target.value })
+                    }
+                    placeholder="Ex: Consulta regular, ajuste de sensibilidade, retificação de cor..."
+                    className="w-full px-3 py-1.5 border border-amber-300 rounded-lg text-xs bg-white focus:ring-1 focus:ring-amber-500"
+                  />
+                  <p className="text-[10px] text-amber-700">
+                    Obrigatório para rastreabilidade e integridade regulatória na Trilha de Auditoria.
+                  </p>
                 </div>
 
                 {/* Ações do Rodapé */}

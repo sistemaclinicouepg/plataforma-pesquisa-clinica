@@ -55,6 +55,8 @@ model Project {
   forms             Form[]
   consentForm       ConsentForm?
   anamnesisTemplate String? // JSON contendo as configurações de Odontograma, Periograma e Perguntas do projeto
+  alerts            ClinicalAlert[]
+  auditLogs         AuditLog[]
 }
 
 // Ligação entre Usuário (Pesquisador) e o Projeto
@@ -90,6 +92,7 @@ model Participant {
   responses  FormResponse[]
   signatures ConsentSignature[]
   sessions   ClinicalSession[]
+  alerts     ClinicalAlert[]
   
   @@unique([projectId, researchCode])
 }
@@ -105,6 +108,7 @@ model ConsentForm {
   ethicsNumber          String?  // Ex: CAAE ou Parecer do CEP
   ethicsContacts        String?  // Contatos do CEP
   contentMarkdown       String   // Texto completo personalizável
+  assentContentMarkdown String?  // Texto de assentimento (TALE) adaptado para menores de 18 anos
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 
@@ -112,17 +116,23 @@ model ConsentForm {
   signatures ConsentSignature[]
 }
 
-// Assinaturas Eletrônicas Seguras (Trilha de Auditoria)
+// Assinaturas Eletrônicas Seguras (Trilha de Auditoria e Conformidade Legal CNS 466/12 e LGPD)
 model ConsentSignature {
-  id              String   @id @default(uuid())
-  consentFormId   String
-  participantId   String
-  participantName String
-  cpf             String
-  signatureData   String   // Traçado do desenho da assinatura
-  ipAddress       String?
-  userAgent       String?  // Navegador/Dispositivo do paciente
-  signedAt        DateTime @default(now())
+  id                    String   @id @default(uuid())
+  consentFormId         String
+  participantId         String
+  participantName       String
+  cpf                   String
+  signatureData         String   // Traçado do desenho da assinatura
+  signatureHash         String?  // Hash SHA-256 criptográfico para validação de autenticidade
+  ipAddress             String?
+  userAgent             String?  // Navegador/Dispositivo do paciente
+  isAssent              Boolean  @default(false) // Se é Termo de Assentimento (TALE)
+  guardianName          String?  // Nome do responsável legal (para menores de idade)
+  guardianCpf           String?  // CPF do responsável legal
+  guardianRelationship  String?  // Vínculo/Parentesco (Ex: Pai, Mãe, Tutor Legal)
+  guardianSignatureData String?  // Traçado da assinatura do responsável legal
+  signedAt              DateTime @default(now())
 
   consentForm ConsentForm @relation(fields: [consentFormId], references: [id])
   participant Participant @relation(fields: [participantId], references: [id])
@@ -187,5 +197,51 @@ model ClinicalSession {
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
-  participant        Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  participant        Participant     @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  alerts             ClinicalAlert[]
 }
+
+// Alertas de Farmacovigilância em Tempo Real (Alerta Vermelho para Sensibilidade Severa e Eventos Adversos)
+model ClinicalAlert {
+  id                String    @id @default(uuid())
+  projectId         String
+  participantId     String
+  sessionId         String?
+  severity          String    @default("SEVERE") // SEVERE, MODERATE, CRITICAL
+  alertType         String    // SEVERE_PAIN, GINGIVAL_BURNING, SEVERE_PAIN_AND_BURNING, ADVERSE_EVENT
+  painScore         Float?    // Escore EVA (>= 7)
+  gingivalSensation String?   // "Leve", "Moderada", "Severa", etc.
+  timePoint         String?   // "0h", "1h", "24h", "48h"
+  description       String    // Mensagem descritiva do alerta
+  status            String    @default("PENDING") // PENDING, RESOLVED
+  resolvedAt        DateTime?
+  resolvedBy        String?   // Nome do pesquisador que atendeu
+  resolutionNotes   String?   // Conduta clínica adotada
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  project           Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  participant       Participant      @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  session           ClinicalSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+}
+
+// Trilha de Auditoria Regulatória (Audit Trail - GCP / ICH E6 e 21 CFR Part 11)
+model AuditLog {
+  id          String   @id @default(uuid())
+  projectId   String?
+  entityType  String   // "ClinicalSession", "Participant", "Patient", "ConsentSignature"
+  entityId    String
+  action      String   // "CREATE", "UPDATE", "DELETE"
+  changedBy   String   // Nome do usuário ou pesquisador
+  userEmail   String?
+  fieldName   String?  // Campo alterado ou "RECORD"
+  oldValue    String?  // Valor anterior
+  newValue    String?  // Novo valor
+  reason      String   // Justificativa clínica da alteração (obrigatória em GCP)
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+
+  project     Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+

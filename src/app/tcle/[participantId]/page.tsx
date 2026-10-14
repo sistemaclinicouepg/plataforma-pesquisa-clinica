@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect, useRef, use } from 'react';
 import Link from 'next/link';
-import { AlertTriangle, CheckCircle2, Lock, ShieldCheck } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Lock, ShieldCheck, Printer, Users } from 'lucide-react';
+import { formatDisplayHash } from '@/lib/cryptoHash';
 
 type TCLEData = {
   title: string;
@@ -12,14 +13,20 @@ type TCLEData = {
   ethicsNumber?: string | null;
   ethicsContacts?: string | null;
   contentMarkdown: string;
+  assentContentMarkdown?: string | null;
 };
 
 type AuditResult = {
   signatureId: string;
   signedAt: string;
+  signatureHash?: string | null;
+  isAssent?: boolean;
+  guardianName?: string | null;
+  guardianRelationship?: string | null;
   audit: {
     ipAddress: string;
     userAgent: string;
+    hash?: string | null;
   };
 };
 
@@ -38,26 +45,49 @@ export default function PatientTclePage({
   const [auditResult, setAuditResult] = useState<AuditResult | null>(null);
   const [signError, setSignError] = useState<string | null>(null);
 
-  // Canvas de Assinatura Digital
+  // Informações de menor de idade e TALE
+  const [isMinor, setIsMinor] = useState(false);
+  const [requiresAssent, setRequiresAssent] = useState(false);
+  const [guardianName, setGuardianName] = useState('');
+  const [guardianCpf, setGuardianCpf] = useState('');
+  const [guardianRelationship, setGuardianRelationship] = useState('Mãe');
+  const [guardianConfirmed, setGuardianConfirmed] = useState(false);
+
+  // Canvas do Participante
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [hasSignature, setHasSignature] = useState(false);
+
+  // Canvas do Responsável Legal (TALE)
+  const guardianCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [isGuardianDrawing, setIsGuardianDrawing] = useState(false);
+  const [hasGuardianSignature, setHasGuardianSignature] = useState(false);
 
   useEffect(() => {
     const loadTCLE = async () => {
       try {
         setLoading(true);
-        // Busca o TCLE ativo diretamente para este participante e projeto (rota pública)
         const res = await fetch(`/api/tcle/participant/${participantId}`);
         if (res.ok) {
           const data = await res.json();
           setTcle(data.consentForm);
-        } else {
-          // Fallback via query param
-          const fallbackRes = await fetch(`/api/tcle/sign?participantId=${participantId}`);
-          if (fallbackRes.ok) {
-            const data = await fallbackRes.json();
-            setTcle(data.consentForm);
+          setIsMinor(Boolean(data.isMinor));
+          setRequiresAssent(Boolean(data.requiresAssent));
+
+          if (data.existingSignature) {
+            setAuditResult({
+              signatureId: data.existingSignature.id,
+              signedAt: data.existingSignature.signedAt,
+              signatureHash: data.existingSignature.signatureHash,
+              isAssent: data.existingSignature.isAssent,
+              guardianName: data.existingSignature.guardianName,
+              guardianRelationship: data.existingSignature.guardianRelationship,
+              audit: {
+                ipAddress: data.existingSignature.ipAddress || '127.0.0.1',
+                userAgent: data.existingSignature.userAgent || 'Navegador Web',
+                hash: data.existingSignature.signatureHash,
+              },
+            });
           }
         }
       } catch (err) {
@@ -70,7 +100,7 @@ export default function PatientTclePage({
     loadTCLE();
   }, [participantId]);
 
-  // Funções de Desenho no Canvas (Suporta Mouse e Toque no Celular)
+  // Funções do Canvas do Participante
   const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -86,7 +116,7 @@ export default function PatientTclePage({
     ctx.moveTo(x, y);
     ctx.lineWidth = 2.5;
     ctx.lineCap = 'round';
-    ctx.strokeStyle = '#1e293b'; // slate-800
+    ctx.strokeStyle = '#1e293b';
   };
 
   const draw = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
@@ -118,15 +148,73 @@ export default function PatientTclePage({
     setHasSignature(false);
   };
 
+  // Funções do Canvas do Responsável Legal (TALE)
+  const startGuardianDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+    const canvas = guardianCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    setIsGuardianDrawing(true);
+    const rect = canvas.getBoundingClientRect();
+    const x = 'touches' in e ? e.touches[0].clientX - rect.left : e.clientX - rect.left;
+    const y = 'touches' in e ? e.touches[0].clientY - rect.top : e.clientY - rect.top;
+
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = '#1e293b';
+  };
+
+  const drawGuardian = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+    if (!isGuardianDrawing) return;
+    const canvas = guardianCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const x = 'touches' in e ? e.touches[0].clientX - rect.left : e.clientX - rect.left;
+    const y = 'touches' in e ? e.touches[0].clientY - rect.top : e.clientY - rect.top;
+
+    ctx.lineTo(x, y);
+    ctx.stroke();
+    setHasGuardianSignature(true);
+  };
+
+  const stopGuardianDrawing = () => {
+    setIsGuardianDrawing(false);
+  };
+
+  const clearGuardianCanvas = () => {
+    const canvas = guardianCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    setHasGuardianSignature(false);
+  };
+
   const handleSign = async () => {
     if (!hasSignature || !readConfirmed) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
 
+    if (requiresAssent) {
+      if (!guardianName.trim() || !guardianCpf.trim() || !hasGuardianSignature || !guardianConfirmed) {
+        setSignError('Para menores de 18 anos, é obrigatório o preenchimento de todos os dados e assinatura do responsável legal.');
+        return;
+      }
+    }
+
     try {
       setSigning(true);
       setSignError(null);
       const signatureDataUrl = canvas.toDataURL('image/png');
+      const guardianSignatureDataUrl = requiresAssent && guardianCanvasRef.current
+        ? guardianCanvasRef.current.toDataURL('image/png')
+        : undefined;
 
       const res = await fetch('/api/tcle/sign', {
         method: 'POST',
@@ -134,6 +222,11 @@ export default function PatientTclePage({
         body: JSON.stringify({
           participantId: participantId,
           signatureData: signatureDataUrl,
+          isAssent: requiresAssent,
+          guardianName: requiresAssent ? guardianName.trim() : undefined,
+          guardianCpf: requiresAssent ? guardianCpf.trim() : undefined,
+          guardianRelationship: requiresAssent ? guardianRelationship : undefined,
+          guardianSignatureData: guardianSignatureDataUrl,
         }),
       });
 
@@ -155,7 +248,7 @@ export default function PatientTclePage({
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center text-slate-400">
-        <p className="animate-pulse">Carregando Termo de Consentimento...</p>
+        <p className="animate-pulse text-xs">Carregando Termo de Consentimento...</p>
       </div>
     );
   }
@@ -169,7 +262,7 @@ export default function PatientTclePage({
           </div>
           <h2 className="text-xl font-bold text-slate-900 mb-2">Termo Não Encontrado</h2>
           <p className="text-xs text-slate-500 mb-6">
-            Não foi possível localizar o Termo de Consentimento para este participante. Verifique se o link está correto.
+            Não foi possível localizar o Termo de Consentimento para este participante.
           </p>
           <Link
             href="/paciente"
@@ -182,49 +275,91 @@ export default function PatientTclePage({
     );
   }
 
-  // Tela de Confirmação com Selo de Auditoria e Certificado
+  // TELA DE TERMO ASSINADO COM CERTIFICADO E BOTÃO PARA BAIXAR PDF
   if (auditResult) {
     return (
-      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 font-sans text-slate-800">
-        <div className="max-w-md w-full bg-white rounded-3xl shadow-xl p-8 border border-slate-200 text-center">
-          <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"></path></svg>
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4 sm:p-6 font-sans text-slate-800">
+        <div className="max-w-lg w-full bg-white rounded-3xl shadow-xl p-6 sm:p-8 border border-slate-200 text-center space-y-4">
+          <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-sm">
+            <CheckCircle2 className="w-8 h-8 text-emerald-600" />
           </div>
           
-          <h2 className="text-2xl font-bold text-slate-900 mb-1">Termo Assinado com Sucesso!</h2>
-          <p className="text-xs text-slate-500 mb-6">
-            Seu consentimento foi registrado eletronicamente em conformidade com as resoluções do CNS/Conep e a LGPD.
-          </p>
+          <div>
+            <span className="px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full text-[10px] font-bold uppercase tracking-wider">
+              {auditResult.isAssent ? 'TALE Assinado' : 'TCLE Assinado'}
+            </span>
+            <h2 className="text-xl sm:text-2xl font-black text-slate-900 mt-2">
+              Consentimento Registrado!
+            </h2>
+            <p className="text-xs text-slate-500 mt-1">
+              Documento validado eletronicamente em conformidade com as resoluções CNS 466/2012 e a Lei nº 13.709/2018 (LGPD).
+            </p>
+          </div>
 
-          <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200 text-left text-xs space-y-2 mb-6 font-mono text-slate-600">
+          {/* Selo Criptográfico de Auditoria */}
+          <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200 text-left text-xs space-y-2 font-mono text-slate-700">
+            <div className="flex items-center space-x-1.5 text-emerald-700 font-bold border-b border-slate-200 pb-1.5 text-[11px]">
+              <ShieldCheck className="w-4 h-4 shrink-0" />
+              <span>Selo Criptográfico de Integridade</span>
+            </div>
             <p><strong>Código de Auditoria:</strong> {auditResult.signatureId}</p>
             <p><strong>Data e Hora:</strong> {new Date(auditResult.signedAt).toLocaleString('pt-BR')}</p>
             <p><strong>Endereço IP:</strong> {auditResult.audit.ipAddress}</p>
-            <p className="truncate"><strong>Dispositivo:</strong> {auditResult.audit.userAgent}</p>
+            {auditResult.signatureHash && (
+              <p className="break-all pt-1 border-t border-slate-200 text-[10px]">
+                <strong>Hash SHA-256:</strong>{' '}
+                <span className="text-blue-700 font-bold">
+                  {formatDisplayHash(auditResult.signatureHash)}
+                </span>
+              </p>
+            )}
+            {auditResult.guardianName && (
+              <p className="pt-1 border-t border-slate-200 text-[10px] text-slate-600">
+                <strong>Responsável Legal:</strong> {auditResult.guardianName} ({auditResult.guardianRelationship})
+              </p>
+            )}
           </div>
 
-          <Link
-            href={participantId && participantId !== 'demo' ? `/paciente?participantId=${participantId}` : '/paciente'}
-            className="w-full inline-block py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-xl shadow-md transition"
-          >
-            Avançar para o Diário Clínico
-          </Link>
+          {/* Ações de Impressão / PDF e Avançar */}
+          <div className="space-y-2 pt-2">
+            <Link
+              href={`/tcle/${participantId}/pdf`}
+              target="_blank"
+              className="w-full py-3.5 bg-blue-700 hover:bg-blue-800 text-white font-bold text-xs rounded-xl shadow-md transition flex items-center justify-center space-x-2"
+            >
+              <Printer className="w-4 h-4" />
+              <span>Baixar / Imprimir Cópia Oficial em PDF</span>
+            </Link>
+
+            <Link
+              href={participantId && participantId !== 'demo' ? `/paciente?participantId=${participantId}` : '/paciente'}
+              className="w-full inline-block py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition"
+            >
+              Avançar para o Diário Clínico do Paciente →
+            </Link>
+          </div>
         </div>
       </div>
     );
   }
 
+  // TELA DE ASSINATURA ELETRÔNICA
+  const isAssentMode = requiresAssent;
+
   return (
     <div className="min-h-screen bg-slate-100 font-sans text-slate-800 py-6 px-3 sm:px-6 flex justify-center">
       <div className="max-w-xl w-full bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden flex flex-col">
         
-        {/* Cabeçalho Institucional do TCLE */}
+        {/* Cabeçalho Institucional do TCLE/TALE */}
         <header className="bg-blue-700 text-white p-6 text-center border-b border-blue-800">
           <p className="text-blue-200 text-xs font-semibold tracking-wider uppercase mb-1">
             {tcle?.institution || 'Universidade Estadual de Ponta Grossa – UEPG'}
           </p>
+          <div className="inline-block px-3 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-white/20 text-white mb-1.5">
+            {isAssentMode ? 'Termo de Assentimento Livre e Esclarecido (TALE)' : 'Termo de Consentimento Livre e Esclarecido (TCLE)'}
+          </div>
           <h1 className="text-lg sm:text-xl font-bold leading-snug">
-            Termo de Consentimento Livre e Esclarecido (TCLE)
+            {isAssentMode ? 'Assentimento Livre e Esclarecido' : 'Consentimento Livre e Esclarecido'}
           </h1>
           <p className="text-xs text-blue-200 mt-2 line-clamp-2">
             Pesquisa: {tcle?.title}
@@ -238,12 +373,22 @@ export default function PatientTclePage({
           {tcle?.ethicsNumber && (
             <p><strong>Comitê de Ética:</strong> Aprovado sob {tcle.ethicsNumber}</p>
           )}
+          {isAssentMode && (
+            <div className="mt-2 p-2.5 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-[11px] flex items-center space-x-2">
+              <Users className="w-4 h-4 shrink-0 text-amber-700" />
+              <span>
+                <strong>Participante Menor de Idade / Vulnerável:</strong> Este documento requer a leitura conjunta e a assinatura do participante e do seu responsável legal.
+              </span>
+            </div>
+          )}
         </div>
 
-        {/* Corpo do Texto Completo do TCLE */}
-        <main className="p-6 space-y-5 text-xs text-slate-700 leading-relaxed overflow-y-auto max-h-[45vh] border-b border-slate-200 bg-white">
+        {/* Corpo do Texto Completo do TCLE / TALE */}
+        <main className="p-6 space-y-5 text-xs text-slate-700 leading-relaxed overflow-y-auto max-h-[42vh] border-b border-slate-200 bg-white">
           <div className="whitespace-pre-line">
-            {tcle?.contentMarkdown}
+            {isAssentMode && tcle?.assentContentMarkdown
+              ? tcle.assentContentMarkdown
+              : tcle?.contentMarkdown}
           </div>
 
           {tcle?.ethicsContacts && (
@@ -254,8 +399,8 @@ export default function PatientTclePage({
           )}
         </main>
 
-        {/* Declaração de Leitura e Assinatura Digital */}
-        <div className="p-6 bg-slate-50 space-y-5">
+        {/* Declaração de Leitura e Assinaturas */}
+        <div className="p-6 bg-slate-50 space-y-6">
           
           <label className="flex items-start space-x-3 cursor-pointer select-none">
             <input
@@ -265,18 +410,20 @@ export default function PatientTclePage({
               className="mt-0.5 w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
             />
             <span className="text-xs text-slate-800 font-medium leading-tight">
-              Declaro que li este documento, todas as minhas dúvidas foram esclarecidas e <strong>concordo voluntariamente em participar</strong> desta pesquisa clínica.
+              Declaro que li este documento, todas as dúvidas foram esclarecidas e <strong>concordo voluntariamente em participar</strong> desta pesquisa clínica.
             </span>
           </label>
 
-          {/* Quadro de Assinatura com o Dedo na Tela */}
+          {/* Quadro 1: Assinatura do Participante */}
           <div className="space-y-2">
             <div className="flex justify-between items-center text-xs">
-              <span className="font-bold text-slate-700">Desenhe sua assinatura abaixo (com o dedo ou mouse):</span>
+              <span className="font-bold text-slate-700">
+                {isAssentMode ? 'Assinatura do Participante (Assentimento):' : 'Assinatura do Participante:'}
+              </span>
               <button
                 type="button"
                 onClick={clearCanvas}
-                className="text-blue-600 hover:text-blue-800 font-medium underline"
+                className="text-blue-600 hover:text-blue-800 font-medium underline text-[11px]"
               >
                 Limpar
               </button>
@@ -286,7 +433,7 @@ export default function PatientTclePage({
               <canvas
                 ref={canvasRef}
                 width={500}
-                height={160}
+                height={140}
                 onMouseDown={startDrawing}
                 onMouseMove={draw}
                 onMouseUp={stopDrawing}
@@ -294,7 +441,7 @@ export default function PatientTclePage({
                 onTouchStart={startDrawing}
                 onTouchMove={draw}
                 onTouchEnd={stopDrawing}
-                className="w-full h-40 cursor-crosshair"
+                className="w-full h-36 cursor-crosshair"
               />
               {!hasSignature && (
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none text-slate-300 text-xs font-semibold uppercase tracking-wider">
@@ -302,11 +449,120 @@ export default function PatientTclePage({
                 </div>
               )}
             </div>
-            <p className="text-[10px] text-slate-400 text-center flex items-center justify-center gap-1">
-              <Lock className="w-3 h-3 text-slate-400" />
-              <span>Sua assinatura será vinculada com segurança ao seu IP, data/hora e identificador do estudo.</span>
-            </p>
           </div>
+
+          {/* Bloco TALE: Responsável Legal */}
+          {isAssentMode && (
+            <div className="p-4 bg-white rounded-2xl border border-slate-300 space-y-4 shadow-xs">
+              <div className="flex items-center space-x-2 border-b border-slate-100 pb-2">
+                <Users className="w-4 h-4 text-blue-700 shrink-0" />
+                <h4 className="font-bold text-xs text-slate-900 uppercase tracking-wide">
+                  Autorização do Responsável Legal (Obrigatório)
+                </h4>
+              </div>
+
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                    Nome Completo do Responsável: *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Ex: Maria dos Santos"
+                    value={guardianName}
+                    onChange={(e) => setGuardianName(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                      CPF do Responsável: *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="000.000.000-00"
+                      value={guardianCpf}
+                      onChange={(e) => setGuardianCpf(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs font-mono focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                      Grau de Parentesco / Vínculo: *
+                    </label>
+                    <select
+                      value={guardianRelationship}
+                      onChange={(e) => setGuardianRelationship(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    >
+                      <option value="Mãe">Mãe</option>
+                      <option value="Pai">Pai</option>
+                      <option value="Tutor(a) Legal">Tutor(a) Legal</option>
+                      <option value="Guardião(ã) Legal">Guardião(ã) Legal</option>
+                      <option value="Outro Responsável Legal">Outro Responsável Legal</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Quadro 2: Assinatura do Responsável Legal */}
+                <div className="space-y-2 pt-2">
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="font-bold text-slate-700">Assinatura do Responsável Legal: *</span>
+                    <button
+                      type="button"
+                      onClick={clearGuardianCanvas}
+                      className="text-blue-600 hover:text-blue-800 font-medium underline text-[11px]"
+                    >
+                      Limpar
+                    </button>
+                  </div>
+
+                  <div className="border-2 border-dashed border-slate-300 rounded-2xl bg-slate-50/50 relative overflow-hidden shadow-inner touch-none">
+                    <canvas
+                      ref={guardianCanvasRef}
+                      width={500}
+                      height={140}
+                      onMouseDown={startGuardianDrawing}
+                      onMouseMove={drawGuardian}
+                      onMouseUp={stopGuardianDrawing}
+                      onMouseLeave={stopGuardianDrawing}
+                      onTouchStart={startGuardianDrawing}
+                      onTouchMove={drawGuardian}
+                      onTouchEnd={stopGuardianDrawing}
+                      className="w-full h-36 cursor-crosshair"
+                    />
+                    {!hasGuardianSignature && (
+                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none text-slate-300 text-xs font-semibold uppercase tracking-wider">
+                        Assinatura do Responsável Aqui
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <label className="flex items-start space-x-2 cursor-pointer select-none pt-1">
+                  <input
+                    type="checkbox"
+                    checked={guardianConfirmed}
+                    onChange={(e) => setGuardianConfirmed(e.target.checked)}
+                    className="mt-0.5 w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
+                  />
+                  <span className="text-[11px] text-slate-700 leading-tight">
+                    Declaro ser responsável legal pelo participante menor de 18 anos e <strong>autorizo expressamente sua participação</strong> no ensaio clínico da UEPG.
+                  </span>
+                </label>
+              </div>
+            </div>
+          )}
+
+          <p className="text-[10px] text-slate-400 text-center flex items-center justify-center gap-1">
+            <Lock className="w-3 h-3 text-slate-400" />
+            <span>Assinatura eletrônica protegida com carimbo criptográfico SHA-256 e trilha de auditoria CNS 466/12.</span>
+          </p>
 
           {signError && (
             <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl font-medium flex items-center space-x-2">
@@ -317,11 +573,16 @@ export default function PatientTclePage({
 
           <button
             onClick={handleSign}
-            disabled={!hasSignature || !readConfirmed || signing}
+            disabled={
+              !hasSignature ||
+              !readConfirmed ||
+              signing ||
+              (isAssentMode && (!hasGuardianSignature || !guardianName.trim() || !guardianCpf.trim() || !guardianConfirmed))
+            }
             className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm rounded-xl shadow-lg shadow-emerald-600/30 transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             <CheckCircle2 className="w-4 h-4" />
-            <span>{signing ? 'Registrando Consentimento...' : 'Confirmar e Assinar Eletronicamente'}</span>
+            <span>{signing ? 'Registrando Assinatura Eletrônica...' : 'Confirmar e Assinar Eletronicamente'}</span>
           </button>
 
         </div>

@@ -20,6 +20,24 @@ export async function GET(
       where: { id },
       include: {
         consentForm: true,
+        alerts: {
+          orderBy: { createdAt: 'desc' },
+          include: {
+            participant: {
+              select: {
+                id: true,
+                researchCode: true,
+                patient: {
+                  select: { fullName: true, phoneWhatsApp: true },
+                },
+              },
+            },
+          },
+        },
+        auditLogs: {
+          orderBy: { createdAt: 'desc' },
+          take: 100,
+        },
         members: {
           include: {
             user: {
@@ -33,6 +51,9 @@ export async function GET(
             signatures: true, // Assinaturas eletrônicas do TCLE
             sessions: {
               orderBy: { sessionNumber: 'asc' },
+            },
+            alerts: {
+              orderBy: { createdAt: 'desc' },
             },
             responses: {
               include: {

@@ -58,7 +58,9 @@ export async function POST(req: Request) {
 
     // Montar objeto de atualização do score de dor
     const updateData: Record<string, unknown> = {};
-    if (timePoint === '1h') {
+    if (timePoint === '0h') {
+      updateData.painScore0h = Number(painScore);
+    } else if (timePoint === '1h') {
       updateData.painScore1h = Number(painScore);
     } else if (timePoint === '24h') {
       updateData.painScore24h = Number(painScore);
@@ -88,12 +90,82 @@ export async function POST(req: Request) {
       data: updateData,
     });
 
+    // Gatilho de Alerta Vermelho de Farmacovigilância em Tempo Real
+    const numericPain = Number(painScore);
+    const isSeverePain = numericPain >= 7;
+    const isGingivalIssue = Boolean(
+      gingivalSensation &&
+      gingivalSensation !== 'Normal' &&
+      (
+        gingivalSensation.toLowerCase().includes('queimação') ||
+        gingivalSensation.toLowerCase().includes('ardência') ||
+        gingivalSensation.toLowerCase().includes('moderad') ||
+        gingivalSensation.toLowerCase().includes('sever') ||
+        gingivalSensation.toLowerCase().includes('afta') ||
+        gingivalSensation.toLowerCase().includes('vermelhidão')
+      )
+    );
+
+    const isRedAlert = isSeverePain || isGingivalIssue;
+    let alertRecord = null;
+
+    if (isRedAlert) {
+      let alertType = 'SEVERE_PAIN';
+      if (isSeverePain && isGingivalIssue) {
+        alertType = 'SEVERE_PAIN_AND_BURNING';
+      } else if (isGingivalIssue) {
+        alertType = 'GINGIVAL_BURNING';
+      }
+
+      const severity = (numericPain >= 8 || (gingivalSensation && gingivalSensation.toLowerCase().includes('sever'))) ? 'CRITICAL' : 'SEVERE';
+      const alertDesc = `[Alerta Vermelho ${timePoint}] Participante ${participant.researchCode} relatou dor severa EVA ${numericPain}/10${isGingivalIssue ? ` com desconforto gengival: "${gingivalSensation}"` : ''}${usedAnalgesic === 'Sim' ? ` (Uso de analgésico: ${analgesicDetails || 'Sim'})` : ''}.`;
+
+      alertRecord = await prisma.clinicalAlert.create({
+        data: {
+          projectId: participant.projectId,
+          participantId: participant.id,
+          sessionId: updatedSession.id,
+          severity,
+          alertType,
+          painScore: numericPain,
+          gingivalSensation: gingivalSensation || null,
+          timePoint: String(timePoint),
+          description: alertDesc,
+          status: 'PENDING',
+        },
+      });
+
+      // Trilha de Auditoria (Audit Trail - GCP / ICH E6)
+      await prisma.auditLog.create({
+        data: {
+          projectId: participant.projectId,
+          entityType: 'ClinicalAlert',
+          entityId: alertRecord.id,
+          action: 'CREATE',
+          changedBy: `PARTICIPANTE (${participant.researchCode})`,
+          fieldName: 'painScore / gingivalSensation',
+          oldValue: null,
+          newValue: `EVA: ${numericPain}/10, Gengiva: ${gingivalSensation || 'Normal'}`,
+          reason: 'Disparo automático de Gatilho de Alerta Vermelho de Farmacovigilância em Tempo Real',
+        },
+      });
+    }
+
     return NextResponse.json({
       success: true,
       message: 'Diário de dor e sensibilidade gravado com sucesso!',
       sessionId: updatedSession.id,
       timePoint,
-      painScore,
+      painScore: numericPain,
+      isRedAlert,
+      alert: alertRecord
+        ? {
+            id: alertRecord.id,
+            severity: alertRecord.severity,
+            alertType: alertRecord.alertType,
+            description: alertRecord.description,
+          }
+        : null,
     });
   } catch (error) {
     console.error('Erro ao registrar diário do paciente:', error);

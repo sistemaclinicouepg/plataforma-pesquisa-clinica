@@ -222,6 +222,13 @@ export async function GET(req: Request) {
                 createdAt: true,
               },
             },
+            members: {
+              include: {
+                user: {
+                  select: { name: true, email: true },
+                },
+              },
+            },
           },
         },
         sessions: {
@@ -283,6 +290,7 @@ export async function GET(req: Request) {
         responsibleResearcher: participant.project.consentForm?.responsibleResearcher || 'Equipe de Pesquisa UEPG',
         ethicsNumber: participant.project.consentForm?.ethicsNumber || 'Em conformidade com o CEP/CONEP',
         ethicsContacts: participant.project.consentForm?.ethicsContacts || 'cep@uepg.br',
+        researcherPhone: null,
         sessions: participant.sessions,
         latestSession,
         forms: formsWithStatus,
