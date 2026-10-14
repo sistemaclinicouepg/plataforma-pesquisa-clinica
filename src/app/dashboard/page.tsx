@@ -4,6 +4,7 @@ import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import type { AnamnesisConfig, AnamnesisQuestion } from '@/app/anamnese/page';
+import { OdontogramChart, ToothSelectorModal, ToothStatus } from '@/components/odontogram';
 
 type Patient = {
   id: string;
@@ -388,6 +389,7 @@ function DashboardContent() {
   const [currentAnamnesisPart, setCurrentAnamnesisPart] = useState<Participant | null>(null);
   const [anamnesisData, setAnamnesisData] = useState<DynamicAnamnesisState>(initialDynamicAnamnesis);
   const [savingAnamnesis, setSavingAnamnesis] = useState(false);
+  const [showToothSelectorModal, setShowToothSelectorModal] = useState(false);
 
   // Modal de Gestão de Equipe
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
@@ -3101,7 +3103,7 @@ function DashboardContent() {
 
         return (
           <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto">
-            <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full p-6 border border-slate-200 my-8 max-h-[90vh] overflow-y-auto">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-5xl w-full p-4 sm:p-6 border border-slate-200 my-8 max-h-[90vh] overflow-y-auto">
               {/* Topo do Modal */}
               <div className="border-b border-slate-100 pb-4 mb-5 flex justify-between items-start">
                 <div>
@@ -3148,49 +3150,45 @@ function DashboardContent() {
                   </div>
                 )}
 
-                {/* 1. MÓDULO ODONTOGRAMA (SE HABILITADO) */}
+                {/* 1. MÓDULO ODONTOGRAMA COM ILUSTRAÇÃO ANATÔMICA (SE HABILITADO) */}
                 {config.enableOdontogram && (
-                  <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl space-y-3">
-                    <div className="flex justify-between items-center">
-                      <h4 className="font-bold text-slate-800 text-sm flex items-center">
-                        <span className="mr-2">🦷</span> Módulo de Odontograma (Clique no dente para alterar o status)
-                      </h4>
-                      <span className="text-[11px] text-slate-500">
-                        Escopo: {config.odontogramScope === 'anterior' ? 'Dentes Anteriores (13 a 23 e 33 a 43)' : 'Arcada Completa'}
-                      </span>
+                  <div className="bg-slate-50 border border-slate-200 p-4 rounded-2xl space-y-3">
+                    <div className="flex flex-wrap justify-between items-center gap-2">
+                      <div>
+                        <h4 className="font-bold text-slate-800 text-sm flex items-center">
+                          <span className="mr-2">🦷</span> Mapeamento Anatômico Dental (Odontograma Clínico)
+                        </h4>
+                        <p className="text-[11px] text-slate-500">
+                          Escopo: {config.odontogramScope === 'anterior' ? 'Dentes Anteriores (13 a 23 e 33 a 43)' : 'Arcada Completa'} • Clique no dente para alterar o status
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => setShowToothSelectorModal(true)}
+                        className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs transition flex items-center space-x-1.5 cursor-pointer"
+                      >
+                        <span>🔍</span>
+                        <span>Abrir Seletor de Elementos</span>
+                      </button>
                     </div>
 
-                    {/* Grade de Dentes */}
-                    <div className="flex flex-wrap gap-2 justify-center py-4 bg-white rounded-lg border border-slate-200">
-                      {teethList.map((tooth) => {
-                        const status = anamnesisData.odontogram[tooth] || 'HIGIDO';
-                        const statusConfig = toothStatusLabels[status] || toothStatusLabels.HIGIDO;
-
-                        return (
-                          <button
-                            type="button"
-                            key={tooth}
-                            onClick={() => cycleToothStatus(tooth)}
-                            className={`w-12 h-14 border rounded-lg flex flex-col items-center justify-center transition shadow-xs hover:scale-105 cursor-pointer ${statusConfig.bg} ${statusConfig.border}`}
-                            title={`Dente ${tooth}: ${statusConfig.label}. Clique para alterar.`}
-                          >
-                            <span className="text-xs font-black text-slate-900">{tooth}</span>
-                            <span className={`text-[9px] font-bold ${statusConfig.text} truncate px-0.5`}>
-                              {statusConfig.label.slice(0, 5)}
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
-
-                    {/* Legenda de Status */}
-                    <div className="flex flex-wrap justify-center gap-3 text-[11px] text-slate-500 pt-1">
-                      <span className="flex items-center"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500 mr-1.5"></span> Hígido</span>
-                      <span className="flex items-center"><span className="w-2.5 h-2.5 rounded-full bg-blue-500 mr-1.5"></span> Restaurado</span>
-                      <span className="flex items-center"><span className="w-2.5 h-2.5 rounded-full bg-red-500 mr-1.5"></span> Cárie</span>
-                      <span className="flex items-center"><span className="w-2.5 h-2.5 rounded-full bg-slate-400 mr-1.5"></span> Ausente</span>
-                      <span className="flex items-center"><span className="w-2.5 h-2.5 rounded-full bg-purple-500 mr-1.5"></span> Faceta/Coroa</span>
-                    </div>
+                    {/* Componente Gráfico com Desenhos Anatômicos dos Dentes */}
+                    <OdontogramChart
+                      mode="clinical_status"
+                      statusMap={anamnesisData.odontogram as Record<string, ToothStatus>}
+                      scope={config.odontogramScope || 'full'}
+                      allowDeciduous={true}
+                      onChangeStatus={(tooth, newStatus) => {
+                        setAnamnesisData((prev) => ({
+                          ...prev,
+                          odontogram: {
+                            ...prev.odontogram,
+                            [tooth]: newStatus,
+                          },
+                        }));
+                      }}
+                    />
                   </div>
                 )}
 
@@ -3526,6 +3524,26 @@ function DashboardContent() {
         </div>
       );
     })()}
+
+      {/* Modal Interativo de Seleção de Elementos (ToothSelectorModal) */}
+      <ToothSelectorModal
+        isOpen={showToothSelectorModal}
+        onClose={() => setShowToothSelectorModal(false)}
+        title="Selecione os Elementos"
+        subtitle={
+          currentAnamnesisPart
+            ? `Paciente: ${currentAnamnesisPart.patient.fullName} • ${project?.name || ''}`
+            : 'Mapeamento Dentário Anátomo-Clínico'
+        }
+        mode="clinical_status"
+        initialStatusMap={anamnesisData.odontogram as Record<string, ToothStatus>}
+        onConfirmStatus={(newStatusMap) => {
+          setAnamnesisData((prev) => ({
+            ...prev,
+            odontogram: newStatusMap,
+          }));
+        }}
+      />
 
       {/* Modal de Exclusão Obrigatória com Motivo */}
       {showRejectModal && (

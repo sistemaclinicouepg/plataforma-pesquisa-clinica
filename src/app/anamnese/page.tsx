@@ -3,6 +3,7 @@
 import React, { useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
+import { OdontogramChart } from '@/components/odontogram';
 
 export type QuestionType =
   | 'boolean'
@@ -540,37 +541,23 @@ function AnamnesisBuilderContent() {
                     </div>
                   </div>
 
-                  {/* Pré-visualização Ilustrativa da Arcada */}
-                  <div className="border border-slate-200 rounded-xl p-5 bg-slate-50">
-                    <h4 className="text-xs font-bold text-slate-600 uppercase tracking-wider mb-3">
-                      Pré-visualização do Mapeamento de Dentes na Triagem:
-                    </h4>
-                    <div className="flex flex-wrap gap-2 justify-center py-4 bg-white rounded-lg border border-slate-200">
-                      {(odontogramScope === 'anterior'
-                        ? ['13', '12', '11', '21', '22', '23', '33', '32', '31', '41', '42', '43']
-                        : [
-                            '18', '17', '16', '15', '14', '13', '12', '11',
-                            '21', '22', '23', '24', '25', '26', '27', '28',
-                            '48', '47', '46', '45', '44', '43', '42', '41',
-                            '31', '32', '33', '34', '35', '36', '37', '38',
-                          ]
-                      ).map((tooth) => (
-                        <div
-                          key={tooth}
-                          className="w-10 h-12 bg-slate-100 hover:bg-blue-100 border border-slate-300 rounded flex flex-col items-center justify-center text-xs font-bold text-slate-700 transition"
-                        >
-                          <span>{tooth}</span>
-                          <span className="text-[9px] text-emerald-600">Híg.</span>
-                        </div>
-                      ))}
+                  {/* Pré-visualização Ilustrativa da Arcada com Desenhos Anatômicos */}
+                  <div className="border border-slate-200 rounded-2xl p-4 sm:p-5 bg-slate-50 space-y-3">
+                    <div className="flex flex-wrap justify-between items-center gap-2">
+                      <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                        Pré-visualização do Mapeamento Anatômico de Dentes na Triagem:
+                      </h4>
+                      <span className="text-[11px] text-blue-600 font-bold bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">
+                        {odontogramScope === 'anterior' ? '12 Dentes Anteriores' : 'Arcada Completa (Permanentes + Decíduos)'}
+                      </span>
                     </div>
-                    <div className="flex justify-center gap-4 text-xs mt-3 text-slate-500">
-                      <span className="flex items-center"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500 mr-1.5"></span> Hígido</span>
-                      <span className="flex items-center"><span className="w-2.5 h-2.5 rounded-full bg-blue-500 mr-1.5"></span> Restaurado</span>
-                      <span className="flex items-center"><span className="w-2.5 h-2.5 rounded-full bg-red-500 mr-1.5"></span> Cárie</span>
-                      <span className="flex items-center"><span className="w-2.5 h-2.5 rounded-full bg-slate-400 mr-1.5"></span> Ausente</span>
-                      <span className="flex items-center"><span className="w-2.5 h-2.5 rounded-full bg-purple-500 mr-1.5"></span> Faceta/Coroa</span>
-                    </div>
+
+                    <OdontogramChart
+                      mode="clinical_status"
+                      scope={odontogramScope}
+                      allowDeciduous={true}
+                      readOnly={false}
+                    />
                   </div>
                 </div>
               ) : (
