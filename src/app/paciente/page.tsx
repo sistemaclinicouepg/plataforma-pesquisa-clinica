@@ -17,7 +17,7 @@ import {
   Phone,
   Smartphone,
 } from 'lucide-react';
-import { enqueueOfflineItem } from '@/lib/offlineSync';
+import { enqueueOfflineItem, syncOfflineQueue } from '@/lib/offlineSync';
 import { ConnectivityBadge } from '@/components/OfflineIndicator';
 
 type ParticipantSession = {
@@ -235,6 +235,13 @@ function PacienteContent() {
   // Recarregar dados automaticamente após sincronização em segundo plano da fila offline
   useEffect(() => {
     if (typeof window === 'undefined') return;
+
+    syncOfflineQueue().then((res) => {
+      if (res.synced > 0 && participant?.researchCode) {
+        loadParticipant(participant.researchCode, participant.id);
+      }
+    });
+
     const handleSynced = () => {
       if (participant?.researchCode) {
         loadParticipant(participant.researchCode, participant.id);
@@ -275,22 +282,6 @@ function PacienteContent() {
         gingivalSensation.toLowerCase().includes('sever')
       ))
     );
-
-    // Se estiver sem conexão à internet, salva em fila offline imediatamente
-    if (typeof window !== 'undefined' && !navigator.onLine) {
-      enqueueOfflineItem('DIARY_REPORT', '/api/paciente/report', payload);
-      setSubmittedData({
-        timePoint,
-        painScore,
-        sessionNumber: selectedSessionNumber,
-        timestamp: new Date().toLocaleString('pt-BR'),
-        isRedAlert: triggeredRedAlert,
-        gingivalSensation,
-        isOffline: true,
-      });
-      setIsSubmitted(true);
-      return;
-    }
 
     try {
       setSubmitting(true);
@@ -407,22 +398,6 @@ function PacienteContent() {
           localDesc = val;
         }
       }
-    }
-
-    // Se estiver offline, enfileira localmente
-    if (typeof window !== 'undefined' && !navigator.onLine) {
-      enqueueOfflineItem('FORM_RESPONSE', '/api/responses', payload);
-      setFormSuccessMessage('Questionário armazenado na fila offline deste dispositivo. Assim que a conexão retornar, os dados serão sincronizados automaticamente.');
-      if (hasSevereSymptom) {
-        setFormRedAlert({
-          isRedAlert: true,
-          maxVasScore: localMaxVas,
-          severeDesc: localDesc,
-        });
-      } else {
-        setFormRedAlert(null);
-      }
-      return;
     }
 
     try {

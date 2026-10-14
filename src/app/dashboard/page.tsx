@@ -14,7 +14,7 @@ import {
   generateGraphPadPrismFormat,
 } from '@/lib/exportGenerators';
 import { ConnectivityBadge } from '@/components/OfflineIndicator';
-import { enqueueOfflineItem } from '@/lib/offlineSync';
+import { enqueueOfflineItem, removeOfflineItemByEndpoint, syncOfflineQueue } from '@/lib/offlineSync';
 import {
   Stethoscope,
   ClipboardList,
@@ -633,6 +633,11 @@ function DashboardContent() {
 
   useEffect(() => {
     loadProject();
+    syncOfflineQueue().then((res) => {
+      if (res.synced > 0) {
+        loadProject();
+      }
+    });
 
     const handleSync = () => {
       loadProject();
@@ -796,10 +801,14 @@ function DashboardContent() {
       if (res.ok) {
         setShowAllocationModal(false);
         setAllocatingParticipant(null);
-        loadProject();
+        await loadProject();
+      } else {
+        const errorData = await res.json().catch(() => ({}));
+        alert(errorData.error || 'Erro ao salvar alocação de grupo.');
       }
     } catch (err) {
       console.error('Erro ao salvar alocação:', err);
+      alert('Erro de comunicação ao salvar alocação.');
     } finally {
       setSavingAllocation(false);
     }
@@ -841,9 +850,13 @@ function DashboardContent() {
         if (openAnamnesisAfterCreate && result.participant) {
           openAnamnesisModal(result.participant);
         }
+      } else {
+        const errorData = await res.json().catch(() => ({}));
+        alert(errorData.error || 'Erro ao cadastrar paciente.');
       }
     } catch (e) {
       console.error('Erro ao cadastrar paciente:', e);
+      alert('Erro de rede ao cadastrar paciente.');
     }
   };
 
@@ -895,10 +908,14 @@ function DashboardContent() {
       if (res.ok) {
         setShowAnamnesisModal(false);
         setCurrentAnamnesisPart(null);
-        loadProject();
+        await loadProject();
+      } else {
+        const errorData = await res.json().catch(() => ({}));
+        alert(errorData.error || 'Erro ao salvar ficha clínica / anamnese.');
       }
     } catch (err) {
       console.error('Erro ao salvar anamnese:', err);
+      alert('Falha de rede ao salvar anamnese.');
     } finally {
       setSavingAnamnesis(false);
     }
@@ -942,18 +959,6 @@ function DashboardContent() {
     e.preventDefault();
     if (!currentSessionForm.participantId) return;
 
-    // Se estiver offline ou navigator indicar desconexão, salvar na fila local
-    if (typeof navigator !== 'undefined' && !navigator.onLine) {
-      enqueueOfflineItem(
-        'SESSION_UPDATE',
-        `/api/participants/${currentSessionForm.participantId}/sessions`,
-        currentSessionForm
-      );
-      alert('Modo Offline: Prontuário clínico salvo na fila local! Será sincronizado automaticamente assim que a conexão for restabelecida.');
-      setShowSessionModal(false);
-      return;
-    }
-
     try {
       setSavingSession(true);
       const res = await fetch(`/api/participants/${currentSessionForm.participantId}/sessions`, {
@@ -964,19 +969,20 @@ function DashboardContent() {
 
       if (res.ok) {
         setShowSessionModal(false);
+        removeOfflineItemByEndpoint(`/api/participants/${currentSessionForm.participantId}/sessions`);
         await loadProject();
       } else {
         const errorData = await res.json().catch(() => ({}));
         alert(errorData.error || 'Erro ao registrar sessão clínica.');
       }
     } catch (err) {
-      console.error('Erro ao salvar sessão clínica (adicionando à fila offline):', err);
+      console.warn('Falha de conexão ao salvar sessão clínica (adicionando à fila offline):', err);
       enqueueOfflineItem(
         'SESSION_UPDATE',
         `/api/participants/${currentSessionForm.participantId}/sessions`,
         currentSessionForm
       );
-      alert('Instabilidade de rede detectada: Prontuário clínico salvo na fila local e será transmitido automaticamente.');
+      alert('Sem conexão direta com a internet: Sessão clínica armazenada com segurança na memória local deste navegador e será transmitida automaticamente assim que a conexão restabelecer.');
       setShowSessionModal(false);
     } finally {
       setSavingSession(false);
