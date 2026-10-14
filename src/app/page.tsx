@@ -12,6 +12,8 @@ import {
   ExternalLink,
   FolderKanban,
   FileSpreadsheet,
+  Sparkles,
+  Stethoscope,
 } from 'lucide-react';
 
 type ProjectItem = {
@@ -102,14 +104,14 @@ export default function HomePage() {
       </section>
 
       {/* Grid de Módulos Principais do Sistema */}
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-10 space-y-8">
+      <main className="w-full px-4 sm:px-6 lg:px-8 xl:px-10 py-10 space-y-8">
         
         <div>
           <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-4">
             Módulos de Acesso Rápido para Atendimento e Pesquisa:
           </h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             
             {/* Card 1: Prontuário & Dashboard */}
             <div className="bg-white rounded-3xl p-6 border border-slate-200 hover:border-blue-300 shadow-xs hover:shadow-md transition-all flex flex-col justify-between group">
@@ -138,7 +140,32 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* Card 2: Construtor de Fichas eCRF */}
+            {/* Card 2: Odontograma & Ficha Clínica */}
+            <div className="bg-white rounded-3xl p-6 border border-slate-200 hover:border-purple-300 shadow-xs hover:shadow-md transition-all flex flex-col justify-between group">
+              <div className="space-y-3">
+                <div className="w-12 h-12 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold border border-purple-100 group-hover:scale-105 transition">
+                  <Sparkles className="w-6 h-6 text-purple-600" />
+                </div>
+                <h3 className="text-lg font-bold text-slate-900 group-hover:text-purple-600 transition">
+                  Odontograma & Ficha
+                </h3>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Mapeamento anatômico dos 32 dentes permanentes e decíduos, exame periodontal e critérios de elegibilidade para triagem clínica.
+                </p>
+              </div>
+
+              <div className="pt-6">
+                <Link
+                  href={`/anamnese?projectId=${selectedProjectId}`}
+                  className="w-full py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1.5 shadow-xs"
+                >
+                  <span>Abrir Odontograma</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
+            </div>
+
+            {/* Card 3: Construtor de Fichas eCRF */}
             <div className="bg-white rounded-3xl p-6 border border-slate-200 hover:border-indigo-300 shadow-xs hover:shadow-md transition-all flex flex-col justify-between group">
               <div className="space-y-3">
                 <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold border border-indigo-100 group-hover:scale-105 transition">
@@ -165,7 +192,7 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* Card 3: Portal do Voluntário */}
+            {/* Card 4: Portal do Voluntário */}
             <div className="bg-white rounded-3xl p-6 border border-slate-200 hover:border-emerald-300 shadow-xs hover:shadow-md transition-all flex flex-col justify-between group">
               <div className="space-y-3">
                 <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold border border-emerald-100 group-hover:scale-105 transition">

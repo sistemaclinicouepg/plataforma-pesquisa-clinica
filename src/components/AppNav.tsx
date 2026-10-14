@@ -106,6 +106,7 @@ export default function AppNav() {
     pathname.startsWith('/projetos') ||
     pathname.startsWith('/dashboard') ||
     pathname.startsWith('/construtor') ||
+    pathname.startsWith('/anamnese') ||
     pathname.startsWith('/relatorio-cep');
 
   if (!loading && !currentUser && isProtectedPath) {
@@ -133,6 +134,7 @@ export default function AppNav() {
   const navLinks = [
     { href: '/projetos', label: 'Estudos', icon: FolderKanban },
     { href: `/dashboard?projectId=${activeProjectId}`, label: 'Prontuário & Atendimento', icon: Activity },
+    { href: `/anamnese?projectId=${activeProjectId}`, label: 'Odontograma & Ficha', icon: Stethoscope },
     {
       href: `/construtor?projectId=${activeProjectId}`,
       label: 'Construtor eCRF',
@@ -144,7 +146,7 @@ export default function AppNav() {
 
   return (
     <header className="bg-white/95 text-slate-800 border-b border-slate-200/90 text-xs sticky top-0 z-40 shadow-xs backdrop-blur-md">
-      <div className="max-w-7xl mx-auto px-4 py-2 flex flex-col md:flex-row md:items-center justify-between gap-2.5">
+      <div className="w-full px-4 sm:px-6 lg:px-8 py-2.5 flex flex-col md:flex-row md:items-center justify-between gap-2.5">
         
         {/* Identificação Oficial do Sistema */}
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">

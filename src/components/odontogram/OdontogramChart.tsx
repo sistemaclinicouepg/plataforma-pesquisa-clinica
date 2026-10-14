@@ -427,18 +427,20 @@ export const OdontogramChart: React.FC<OdontogramChartProps> = ({
         </div>
 
         {/* Linha de Dentes da Arcada Superior (18 a 11 | 21 a 28) */}
-        <div className="flex items-center justify-center overflow-x-auto py-2 px-1">
-          {/* Quadrante 1 (Direito do Paciente): 18 a 11 */}
-          <div className="flex items-center space-x-0.5 sm:space-x-1">
-            {UPPER_PERMANENT_RIGHT.map((tooth) => renderToothCard(tooth))}
-          </div>
+        <div className="w-full overflow-x-auto py-2 px-1">
+          <div className="inline-flex min-w-full items-center justify-center">
+            {/* Quadrante 1 (Direito do Paciente): 18 a 11 */}
+            <div className="flex items-center space-x-0.5 sm:space-x-1 shrink-0">
+              {UPPER_PERMANENT_RIGHT.map((tooth) => renderToothCard(tooth))}
+            </div>
 
-          {/* Linha Média Sagital Divisória */}
-          <div className="h-28 w-[2px] bg-slate-400/80 mx-1.5 sm:mx-3 self-center rounded-full" />
+            {/* Linha Média Sagital Divisória */}
+            <div className="h-28 w-[2px] bg-slate-400/80 mx-1.5 sm:mx-3 self-center rounded-full shrink-0" />
 
-          {/* Quadrante 2 (Esquerdo do Paciente): 21 a 28 */}
-          <div className="flex items-center space-x-0.5 sm:space-x-1">
-            {UPPER_PERMANENT_LEFT.map((tooth) => renderToothCard(tooth))}
+            {/* Quadrante 2 (Esquerdo do Paciente): 21 a 28 */}
+            <div className="flex items-center space-x-0.5 sm:space-x-1 shrink-0">
+              {UPPER_PERMANENT_LEFT.map((tooth) => renderToothCard(tooth))}
+            </div>
           </div>
         </div>
       </div>
@@ -458,18 +460,20 @@ export const OdontogramChart: React.FC<OdontogramChartProps> = ({
         </div>
 
         {/* Linha de Dentes da Arcada Inferior (48 a 41 | 31 a 38) */}
-        <div className="flex items-center justify-center overflow-x-auto py-2 px-1">
-          {/* Quadrante 4 (Direito do Paciente): 48 a 41 */}
-          <div className="flex items-center space-x-0.5 sm:space-x-1">
-            {LOWER_PERMANENT_RIGHT.map((tooth) => renderToothCard(tooth))}
-          </div>
+        <div className="w-full overflow-x-auto py-2 px-1">
+          <div className="inline-flex min-w-full items-center justify-center">
+            {/* Quadrante 4 (Direito do Paciente): 48 a 41 */}
+            <div className="flex items-center space-x-0.5 sm:space-x-1 shrink-0">
+              {LOWER_PERMANENT_RIGHT.map((tooth) => renderToothCard(tooth))}
+            </div>
 
-          {/* Linha Média Sagital Divisória */}
-          <div className="h-28 w-[2px] bg-slate-400/80 mx-1.5 sm:mx-3 self-center rounded-full" />
+            {/* Linha Média Sagital Divisória */}
+            <div className="h-28 w-[2px] bg-slate-400/80 mx-1.5 sm:mx-3 self-center rounded-full shrink-0" />
 
-          {/* Quadrante 3 (Esquerdo do Paciente): 31 a 38 */}
-          <div className="flex items-center space-x-0.5 sm:space-x-1">
-            {LOWER_PERMANENT_LEFT.map((tooth) => renderToothCard(tooth))}
+            {/* Quadrante 3 (Esquerdo do Paciente): 31 a 38 */}
+            <div className="flex items-center space-x-0.5 sm:space-x-1 shrink-0">
+              {LOWER_PERMANENT_LEFT.map((tooth) => renderToothCard(tooth))}
+            </div>
           </div>
         </div>
       </div>
@@ -529,13 +533,15 @@ export const OdontogramChart: React.FC<OdontogramChartProps> = ({
                       Superior - Decíduos
                     </span>
                   </div>
-                  <div className="flex items-center justify-center overflow-x-auto py-1">
-                    <div className="flex items-center space-x-1">
-                      {UPPER_DECIDUOUS_RIGHT.map((tooth) => renderToothCard(tooth))}
-                    </div>
-                    <div className="h-16 w-[1.5px] bg-purple-300 mx-2 self-center rounded-full opacity-70" />
-                    <div className="flex items-center space-x-1">
-                      {UPPER_DECIDUOUS_LEFT.map((tooth) => renderToothCard(tooth))}
+                  <div className="w-full overflow-x-auto py-1">
+                    <div className="inline-flex min-w-full items-center justify-center">
+                      <div className="flex items-center space-x-1 shrink-0">
+                        {UPPER_DECIDUOUS_RIGHT.map((tooth) => renderToothCard(tooth))}
+                      </div>
+                      <div className="h-16 w-[1.5px] bg-purple-300 mx-2 self-center rounded-full opacity-70 shrink-0" />
+                      <div className="flex items-center space-x-1 shrink-0">
+                        {UPPER_DECIDUOUS_LEFT.map((tooth) => renderToothCard(tooth))}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -549,13 +555,15 @@ export const OdontogramChart: React.FC<OdontogramChartProps> = ({
                       Inferior - Decíduos
                     </span>
                   </div>
-                  <div className="flex items-center justify-center overflow-x-auto py-1">
-                    <div className="flex items-center space-x-1">
-                      {LOWER_DECIDUOUS_RIGHT.map((tooth) => renderToothCard(tooth))}
-                    </div>
-                    <div className="h-16 w-[1.5px] bg-purple-300 mx-2 self-center rounded-full opacity-70" />
-                    <div className="flex items-center space-x-1">
-                      {LOWER_DECIDUOUS_LEFT.map((tooth) => renderToothCard(tooth))}
+                  <div className="w-full overflow-x-auto py-1">
+                    <div className="inline-flex min-w-full items-center justify-center">
+                      <div className="flex items-center space-x-1 shrink-0">
+                        {LOWER_DECIDUOUS_RIGHT.map((tooth) => renderToothCard(tooth))}
+                      </div>
+                      <div className="h-16 w-[1.5px] bg-purple-300 mx-2 self-center rounded-full opacity-70 shrink-0" />
+                      <div className="flex items-center space-x-1 shrink-0">
+                        {LOWER_DECIDUOUS_LEFT.map((tooth) => renderToothCard(tooth))}
+                      </div>
                     </div>
                   </div>
                 </div>

@@ -186,7 +186,7 @@ function AnamnesisBuilderContent() {
   // Configuração Principal da Ficha Clínica
   const [activeTab, setActiveTab] = useState<'odontogram' | 'periodontogram' | 'questions'>('odontogram');
 
-  const [enableOdontogram, setEnableOdontogram] = useState(false);
+  const [enableOdontogram, setEnableOdontogram] = useState(true);
   const [odontogramScope, setOdontogramScope] = useState<'anterior' | 'full'>('anterior');
   const [previewOdontogram, setPreviewOdontogram] = useState<Record<string, ToothStatus>>({});
 
@@ -234,7 +234,7 @@ function AnamnesisBuilderContent() {
 
           if (data.anamnesisTemplate) {
             const tmpl: AnamnesisConfig = data.anamnesisTemplate;
-            setEnableOdontogram(Boolean(tmpl.enableOdontogram));
+            setEnableOdontogram(tmpl.enableOdontogram !== undefined ? Boolean(tmpl.enableOdontogram) : true);
             setOdontogramScope(tmpl.odontogramScope || 'anterior');
             setEnablePeriodontogram(Boolean(tmpl.enablePeriodontogram));
             setPeriodontogramFields(
@@ -248,8 +248,8 @@ function AnamnesisBuilderContent() {
             );
             setQuestions(tmpl.questions || []);
           } else {
-            // Nenhum template configurado: começa limpo conforme instrução do usuário
-            setEnableOdontogram(false);
+            // Padrão clínico odontológico: Odontograma ativo para o estudo
+            setEnableOdontogram(true);
             setEnablePeriodontogram(false);
             setQuestions([]);
           }
@@ -370,7 +370,7 @@ function AnamnesisBuilderContent() {
   return (
     <div className="min-h-screen bg-slate-100 font-sans text-slate-800 pb-20">
       {/* Barra Superior */}
-      <header className="bg-white border-b border-slate-200 px-6 py-4 relative shadow-xs flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <header className="bg-white border-b border-slate-200 px-4 sm:px-6 lg:px-8 xl:px-10 py-4 relative shadow-xs flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex items-center space-x-3">
           <Link
             href={`/dashboard?projectId=${projectId}`}
@@ -417,11 +417,11 @@ function AnamnesisBuilderContent() {
       </header>
 
       {/* Navegação por Abas Modulares */}
-      <div className="max-w-6xl mx-auto px-6 pt-6">
-        <div className="flex border-b border-slate-200 bg-white rounded-t-2xl px-4 pt-2 space-x-2">
+      <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-10 pt-6">
+        <div className="flex border-b border-slate-200 bg-white rounded-t-2xl px-4 pt-2 space-x-2 overflow-x-auto">
           <button
             onClick={() => setActiveTab('odontogram')}
-            className={`px-5 py-3 text-sm font-bold border-b-2 transition flex items-center space-x-2 ${
+            className={`px-5 py-3 text-sm font-bold border-b-2 transition flex items-center space-x-2 shrink-0 ${
               activeTab === 'odontogram'
                 ? 'border-blue-600 text-blue-600'
                 : 'border-transparent text-slate-500 hover:text-slate-800'
@@ -436,7 +436,7 @@ function AnamnesisBuilderContent() {
 
           <button
             onClick={() => setActiveTab('periodontogram')}
-            className={`px-5 py-3 text-sm font-bold border-b-2 transition flex items-center space-x-2 ${
+            className={`px-5 py-3 text-sm font-bold border-b-2 transition flex items-center space-x-2 shrink-0 ${
               activeTab === 'periodontogram'
                 ? 'border-blue-600 text-blue-600'
                 : 'border-transparent text-slate-500 hover:text-slate-800'
@@ -451,7 +451,7 @@ function AnamnesisBuilderContent() {
 
           <button
             onClick={() => setActiveTab('questions')}
-            className={`px-5 py-3 text-sm font-bold border-b-2 transition flex items-center space-x-2 ${
+            className={`px-5 py-3 text-sm font-bold border-b-2 transition flex items-center space-x-2 shrink-0 ${
               activeTab === 'questions'
                 ? 'border-blue-600 text-blue-600'
                 : 'border-transparent text-slate-500 hover:text-slate-800'
@@ -464,8 +464,8 @@ function AnamnesisBuilderContent() {
       </div>
 
       {/* Conteúdo Principal */}
-      <main className="max-w-6xl mx-auto px-6">
-        <div className="bg-white rounded-b-2xl border-x border-b border-slate-200 p-8 shadow-sm">
+      <main className="w-full px-4 sm:px-6 lg:px-8 xl:px-10">
+        <div className="bg-white rounded-b-2xl border-x border-b border-slate-200 p-4 sm:p-8 shadow-sm">
           {/* ===================== ABA 1: ODONTOGRAMA ===================== */}
           {activeTab === 'odontogram' && (
             <div className="space-y-6">

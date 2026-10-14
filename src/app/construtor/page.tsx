@@ -412,7 +412,7 @@ function FormBuilderContent() {
     <div className="min-h-screen bg-slate-100/80 font-sans text-slate-800 pb-28">
       {/* Barra Superior de Comando Clínico */}
       <header className="bg-white border-b border-slate-200/90 relative shadow-xs">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-10 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           
           <div className="flex items-center space-x-3">
             <Link
@@ -506,7 +506,7 @@ function FormBuilderContent() {
 
       {/* Alerta de Sucesso com Acesso Rápido */}
       {savedSuccess && (
-        <div className="max-w-4xl mx-auto px-4 mt-6">
+        <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-10 mt-6">
           <div className="p-4 bg-emerald-50 border border-emerald-300 rounded-2xl text-emerald-900 text-xs font-bold space-y-2 animate-fadeIn shadow-sm">
             <div className="flex items-center space-x-2">
               <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
@@ -534,7 +534,7 @@ function FormBuilderContent() {
 
       {/* Alerta de Erro */}
       {errorMessage && (
-        <div className="max-w-4xl mx-auto px-4 mt-6">
+        <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-10 mt-6">
           <div className="p-4 bg-red-50 border border-red-300 rounded-2xl text-red-800 text-xs font-bold flex items-center space-x-2">
             <AlertCircle className="w-5 h-5 text-red-600 shrink-0" />
             <span>{errorMessage}</span>
@@ -545,7 +545,7 @@ function FormBuilderContent() {
       {/* ============================================================== */}
       {/* ÁREA CENTRAL: A PRANCHETA CLÍNICA DIGITAL (Clinical Canvas)     */}
       {/* ============================================================== */}
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+      <main className="w-full px-4 sm:px-6 lg:px-8 xl:px-10 py-6 space-y-6">
 
         {viewMode === 'edit' ? (
           /* MODO EDIÇÃO: Prancheta Clínica Digital */

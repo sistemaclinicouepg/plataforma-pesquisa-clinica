@@ -146,7 +146,7 @@ export default function ProjetosPage() {
     <div className="min-h-screen bg-slate-50 font-sans text-slate-800 pb-20">
 
       {/* Conteúdo Principal */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+      <main className="w-full px-4 sm:px-6 lg:px-8 xl:px-10 py-8">
         
         {/* Painel do Administrador: Aprovações Pendentes */}
         {currentUser?.role === 'ADMIN' && pendingUsers.length > 0 && (

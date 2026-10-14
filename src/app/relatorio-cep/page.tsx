@@ -3,7 +3,7 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { CheckCircle2, XCircle, Check } from 'lucide-react';
+import { CheckCircle2, XCircle, Check, ArrowLeft, Printer } from 'lucide-react';
 
 type ParticipantSession = {
   id: string;
@@ -147,27 +147,26 @@ function RelatorioCepContent() {
     <div className="min-h-screen bg-slate-100 font-sans text-slate-800 py-8 px-4 sm:px-6">
       
       {/* Barra de Ações Superior (Oculta na Impressão) */}
-      <div className="max-w-5xl mx-auto mb-6 flex justify-between items-center print:hidden">
+      <div className="w-full max-w-6xl mx-auto mb-6 flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 print:hidden">
         <Link
           href={`/dashboard?projectId=${project.id}`}
-          className="px-4 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl shadow-xs transition"
+          className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl shadow-xs transition"
         >
-          ← Voltar ao Painel da Pesquisa
+          <ArrowLeft className="w-4 h-4" />
+          <span>Voltar ao Painel da Pesquisa</span>
         </Link>
 
         <button
           onClick={() => window.print()}
-          className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-md transition flex items-center space-x-2"
+          className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-md transition flex items-center justify-center space-x-2"
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-          </svg>
+          <Printer className="w-4 h-4" />
           <span>Imprimir Relatório Oficial / Salvar PDF</span>
         </button>
       </div>
 
       {/* Documento A4 Oficial */}
-      <div className="max-w-5xl mx-auto bg-white border border-slate-300 shadow-xl rounded-2xl p-8 sm:p-12 print:border-none print:shadow-none print:p-0 print:m-0">
+      <div className="w-full max-w-6xl mx-auto bg-white border border-slate-300 shadow-xl rounded-2xl p-6 sm:p-10 lg:p-12 print:border-none print:shadow-none print:p-0 print:m-0">
         
         {/* Cabeçalho Institucional UEPG */}
         <div className="border-b-2 border-slate-800 pb-6 mb-8 text-center space-y-1.5">

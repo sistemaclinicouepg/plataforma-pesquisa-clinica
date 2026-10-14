@@ -80,8 +80,8 @@ export const ToothSelectorModal: React.FC<ToothSelectorModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-900/60 backdrop-blur-xs overflow-y-auto animate-fadeIn">
-      {/* Modal Card com estética fiel à foto enviada */}
-      <div className="bg-slate-100 rounded-3xl shadow-2xl border border-slate-300 w-full max-w-4xl overflow-hidden my-auto max-h-[95vh] flex flex-col">
+      {/* Modal Card com estética anatômica odontológica */}
+      <div className="bg-slate-100 rounded-3xl shadow-2xl border border-slate-300 w-full max-w-6xl overflow-hidden my-auto max-h-[95vh] flex flex-col">
         
         {/* Cabeçalho Azul Institucional idêntico ao da imagem */}
         <div className="bg-[#004799] text-white px-6 py-4 flex items-center justify-between shrink-0">
