@@ -1863,10 +1863,18 @@ function DashboardContent() {
               </button>
             </div>
 
-            <div className="flex items-center flex-wrap gap-2">
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={() => setShowNewPatientModal(true)}
+                className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center space-x-1.5 cursor-pointer shrink-0"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Cadastrar Paciente</span>
+              </button>
+
               <Link
                 href={`/anamnese?projectId=${project.id}`}
-                className="px-3 py-1.5 bg-slate-50 border border-slate-300 text-slate-700 hover:bg-slate-100 text-xs font-bold rounded-lg transition flex items-center space-x-1.5 shadow-2xs"
+                className="px-3 py-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-semibold rounded-xl transition flex items-center space-x-1.5 shadow-2xs shrink-0"
                 title="Configurar Odontograma, Critérios e Instrumentos do Estudo"
               >
                 <Settings className="w-3.5 h-3.5 text-slate-600" />
@@ -1875,27 +1883,12 @@ function DashboardContent() {
 
               <Link
                 href={`/tcle/editor?projectId=${project.id}`}
-                className="px-3 py-1.5 border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-bold rounded-lg transition flex items-center space-x-1.5 shadow-2xs"
+                className="px-3 py-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-semibold rounded-xl transition flex items-center space-x-1.5 shadow-2xs shrink-0"
+                title="Personalizar Termo de Consentimento Livre e Esclarecido"
               >
-                <FileText className="w-3.5 h-3.5 text-slate-500" />
+                <FileText className="w-3.5 h-3.5 text-slate-600" />
                 <span>Personalizar TCLE</span>
               </Link>
-
-              <Link
-                href={`/relatorio-cep?projectId=${project.id}`}
-                className="px-3 py-1.5 bg-emerald-50 border border-emerald-300 text-emerald-800 hover:bg-emerald-100 text-xs font-bold rounded-lg transition flex items-center space-x-1.5 shadow-2xs"
-              >
-                <Award className="w-3.5 h-3.5 text-emerald-700" />
-                <span>Relatório CEP / CONSORT</span>
-              </Link>
-
-              <button
-                onClick={() => setShowNewPatientModal(true)}
-                className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow-xs transition flex items-center space-x-1.5"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Cadastrar Paciente</span>
-              </button>
             </div>
           </div>
         </div>
@@ -2895,14 +2888,6 @@ function DashboardContent() {
                   </p>
                 </div>
               </div>
-
-              <Link
-                href={`/relatorio-cep?projectId=${project.id}`}
-                className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center space-x-1.5 shrink-0"
-              >
-                <Award className="w-3.5 h-3.5" />
-                <span>Relatório Oficial CEP/CONSORT</span>
-              </Link>
             </div>
 
             {/* Diagrama Visual das 4 Fases do CONSORT */}

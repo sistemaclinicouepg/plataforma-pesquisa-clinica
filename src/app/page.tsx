@@ -772,14 +772,14 @@ export default function HomePage() {
                           </div>
 
                           {/* Botões de Acesso Rápido Direto + Botão de Excluir para ADMIN */}
-                          <div className="flex items-center gap-1.5 pt-1 text-[11px] font-bold">
+                          <div className="flex items-center gap-2 pt-1 text-xs font-bold">
                             <Link
                               href={`/dashboard?projectId=${project.id}`}
                               onClick={(e) => e.stopPropagation()}
-                              className="flex-1 py-1.5 px-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-center border border-blue-200 transition flex items-center justify-center space-x-1"
+                              className="flex-1 py-2 px-3 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl text-center border border-blue-200 transition flex items-center justify-center space-x-1.5"
                             >
-                              <Activity className="w-3 h-3 text-blue-600" />
-                              <span>Painel</span>
+                              <Activity className="w-3.5 h-3.5 text-blue-600" />
+                              <span>Prontuário & Atendimento</span>
                             </Link>
                             <button
                               type="button"
@@ -787,20 +787,12 @@ export default function HomePage() {
                                 e.stopPropagation();
                                 openEditModal(project);
                               }}
-                              className="flex-1 py-1.5 px-2 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-lg text-center border border-slate-200 transition flex items-center justify-center space-x-1 cursor-pointer"
+                              className="py-2 px-3 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-xl text-center border border-slate-200 transition flex items-center justify-center space-x-1.5 cursor-pointer shrink-0"
                               title="Configurar particularidades do estudo, Odontograma e eCRF"
                             >
-                              <Sliders className="w-3 h-3 text-slate-600" />
+                              <Sliders className="w-3.5 h-3.5 text-slate-600" />
                               <span>Configurar</span>
                             </button>
-                            <Link
-                              href={`/relatorio-cep?projectId=${project.id}`}
-                              onClick={(e) => e.stopPropagation()}
-                              className="flex-1 py-1.5 px-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-lg text-center border border-emerald-200 transition flex items-center justify-center space-x-1"
-                            >
-                              <FileSpreadsheet className="w-3 h-3 text-emerald-600" />
-                              <span>CEP</span>
-                            </Link>
 
                             {/* Botão de Excluir Exclusivo para Administrador */}
                             {currentUser?.role === 'ADMIN' && (

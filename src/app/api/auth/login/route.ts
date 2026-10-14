@@ -73,21 +73,7 @@ export async function POST(req: Request) {
       role: user.role,
     });
 
-    const cookieStore = await cookies();
-
-    // Grava o cookie seguro com o JWT assinado
-    cookieStore.set(SESSION_COOKIE_NAME, sessionToken, {
-      path: '/',
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7, // 7 dias
-    });
-
-    // Remove eventual cookie antigo legado
-    cookieStore.delete('auth_user_id');
-
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       user: {
         id: user.id,
@@ -96,6 +82,18 @@ export async function POST(req: Request) {
         role: user.role,
       },
     });
+
+    response.cookies.set(SESSION_COOKIE_NAME, sessionToken, {
+      path: '/',
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 7, // 7 dias
+    });
+
+    response.cookies.delete('auth_user_id');
+
+    return response;
   } catch (error) {
     console.error('Erro no login:', error);
     return NextResponse.json(

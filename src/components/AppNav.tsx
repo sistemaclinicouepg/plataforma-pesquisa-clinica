@@ -140,7 +140,6 @@ export default function AppNav() {
   }> = [
     { href: '/', label: 'Meus Projetos', icon: FolderKanban },
     { href: `/dashboard?projectId=${activeProjectId}`, label: 'Prontuário & Atendimento', icon: Activity },
-    { href: `/relatorio-cep?projectId=${activeProjectId}`, label: 'Relatório CEP', icon: FileSpreadsheet },
   ];
 
   return (

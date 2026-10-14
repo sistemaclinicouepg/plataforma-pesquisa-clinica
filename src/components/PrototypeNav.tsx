@@ -108,7 +108,6 @@ export default function PrototypeNav() {
     { href: `/dashboard?projectId=${activeProjectId}`, label: 'Prontuário & Dashboard', icon: LayoutDashboard },
     { href: `/paciente?code=${activeParticipantCode}`, label: 'Portal Paciente', icon: Smartphone },
     { href: `/tcle/${defaultParticipantId}`, label: 'TCLE Digital', icon: FileSignature },
-    { href: `/relatorio-cep?projectId=${activeProjectId}`, label: 'Relatório CEP', icon: FileText },
   ];
 
   return (

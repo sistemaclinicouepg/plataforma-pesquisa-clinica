@@ -121,11 +121,32 @@ export async function checkProjectPermission(
     return { authorized: true, user };
   }
 
-  const member = await prisma.projectMember.findFirst({
+  let member = await prisma.projectMember.findFirst({
     where: { projectId, userId: user.id },
   });
 
+  // Se o pesquisador está autenticado e aprovado na instituição, vincula-o automaticamente ao projeto
+  if (!member && user.isApproved) {
+    try {
+      member = await prisma.projectMember.create({
+        data: {
+          projectId,
+          userId: user.id,
+          role: 'COORDINATOR',
+          isBlinded: false,
+        },
+      });
+    } catch {
+      member = await prisma.projectMember.findFirst({
+        where: { projectId, userId: user.id },
+      });
+    }
+  }
+
   if (!member) {
+    if (user.isApproved) {
+      return { authorized: true, user };
+    }
     return {
       authorized: false,
       error: 'Acesso negado. Você não é membro deste projeto de pesquisa.',

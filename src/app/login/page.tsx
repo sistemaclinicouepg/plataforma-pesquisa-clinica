@@ -74,8 +74,11 @@ export default function LoginPage() {
         const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
         const fromParam = urlParams?.get('from');
         const targetPath = fromParam && fromParam !== '/login' ? (fromParam === '/projetos' ? '/' : fromParam) : '/';
-        router.push(targetPath);
-        router.refresh();
+        if (typeof window !== 'undefined') {
+          window.location.href = targetPath;
+        } else {
+          router.push(targetPath);
+        }
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Ocorreu um erro.');
