@@ -59,18 +59,11 @@ export default function LoginPage() {
         router.push('/projetos');
         router.refresh();
       }
-    } catch (err: any) {
-      setError(err.message || 'Ocorreu um erro.');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Ocorreu um erro.');
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleQuickLogin = (quickEmail: string, quickPass: string) => {
-    setEmail(quickEmail);
-    setPassword(quickPass);
-    setError(null);
-    setIsPendingApproval(false);
   };
 
   return (
@@ -209,51 +202,6 @@ export default function LoginPage() {
                 ? '← Já possui conta? Fazer Login'
                 : 'Não tem conta? Solicitar cadastro como pesquisador / aluno →'}
             </button>
-          </div>
-
-          {/* Atalhos para Demonstração de Contas Independentes */}
-          <div className="pt-4 border-t border-slate-100 space-y-2">
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center">
-              Alternador de Contas Independentes (Para Demonstração):
-            </p>
-
-            <div className="space-y-1.5 text-xs">
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('pesquisadora@uepg.br', '123')}
-                className="w-full p-2.5 rounded-xl border border-blue-200 bg-blue-50/60 hover:bg-blue-100 text-blue-900 transition flex items-center justify-between text-left"
-              >
-                <div>
-                  <span className="font-bold block">👩‍⚕️ Dra. Roberta (Coordenadora)</span>
-                  <span className="text-[10px] text-blue-700">Acesso pleno: prontuários, triagem, eCRF, alocação</span>
-                </div>
-                <span className="text-[10px] bg-blue-600 text-white font-bold px-2 py-0.5 rounded-md">Usar</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('carlos@uepg.br', '123')}
-                className="w-full p-2.5 rounded-xl border border-amber-200 bg-amber-50/60 hover:bg-amber-100 text-amber-900 transition flex items-center justify-between text-left"
-              >
-                <div>
-                  <span className="font-bold block">🎓 Carlos Eduardo (Avaliador Cego)</span>
-                  <span className="text-[10px] text-amber-700">Duplo-cego ativo: grupos e dores mascarados</span>
-                </div>
-                <span className="text-[10px] bg-amber-600 text-white font-bold px-2 py-0.5 rounded-md">Usar</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('admin@uepg.br', 'admin')}
-                className="w-full p-2.5 rounded-xl border border-purple-200 bg-purple-50/60 hover:bg-purple-100 text-purple-900 transition flex items-center justify-between text-left"
-              >
-                <div>
-                  <span className="font-bold block">👑 Dra. Alessandra (Administradora Geral)</span>
-                  <span className="text-[10px] text-purple-700">Aprovação de novos pesquisadores e todos os estudos</span>
-                </div>
-                <span className="text-[10px] bg-purple-600 text-white font-bold px-2 py-0.5 rounded-md">Usar</span>
-              </button>
-            </div>
           </div>
 
           {/* Link para o Portal do Paciente */}

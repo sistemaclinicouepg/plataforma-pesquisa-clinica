@@ -2,6 +2,81 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { headers } from 'next/headers';
 
+export async function GET(req: Request) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const participantId = searchParams.get('participantId');
+
+    if (!participantId) {
+      return NextResponse.json(
+        { error: 'participantId é obrigatório.' },
+        { status: 400 }
+      );
+    }
+
+    if (participantId === 'demo') {
+      return NextResponse.json({
+        success: true,
+        consentForm: {
+          id: 'demo-tcle',
+          title: 'Ensaio Clínico de Demonstração - Clareamento Dental UEPG',
+          responsibleResearcher: 'Dra. Roberta Micheten Dias',
+          advisor: 'Profa. Dra. Alessandra Reis',
+          institution: 'Universidade Estadual de Ponta Grossa – UEPG',
+          ethicsNumber: 'Parecer CEP nº 5.892.104 / CAAE',
+          ethicsContacts:
+            'Comitê de Ética em Pesquisa da UEPG: Av. Carlos Cavalcanti, nº 4748, Bloco Reitoria, Sala 22 - Uvaranas, Ponta Grossa/PR. Tel: (42) 3220-3282 - E-mail: coep105@uepg.br',
+          contentMarkdown: 'Termo de Consentimento Livre e Esclarecido padrão assinado pelo participante.',
+        },
+        participant: {
+          id: 'demo',
+          researchCode: 'P-DEMO',
+          fullName: 'Voluntário de Demonstração',
+        },
+      });
+    }
+
+    const participant = await prisma.participant.findUnique({
+      where: { id: participantId },
+      include: {
+        patient: { select: { fullName: true, cpf: true } },
+        project: { include: { consentForm: true } },
+      },
+    });
+
+    if (!participant) {
+      return NextResponse.json({ error: 'Participante não encontrado.' }, { status: 404 });
+    }
+
+    const consentForm = participant.project.consentForm || {
+      id: `default-${participant.project.id}`,
+      projectId: participant.project.id,
+      title: participant.project.name,
+      responsibleResearcher: 'Dra. Roberta Micheten Dias',
+      advisor: 'Profa. Dra. Alessandra Reis',
+      institution: 'Universidade Estadual de Ponta Grossa – UEPG',
+      ethicsNumber: 'Parecer CEP nº 5.892.104 / CAAE',
+      ethicsContacts:
+        'Comitê de Ética em Pesquisa da UEPG: Av. Carlos Cavalcanti, nº 4748, Bloco Reitoria, Sala 22 - Uvaranas, Ponta Grossa/PR. Tel: (42) 3220-3282 - E-mail: coep105@uepg.br',
+      contentMarkdown: 'Termo de Consentimento Livre e Esclarecido padrão assinado pelo participante.',
+    };
+
+    return NextResponse.json({
+      success: true,
+      consentForm,
+      participant: {
+        id: participant.id,
+        researchCode: participant.researchCode,
+        fullName: participant.patient.fullName,
+        projectName: participant.project.name,
+      },
+    });
+  } catch (error) {
+    console.error('Erro ao consultar TCLE:', error);
+    return NextResponse.json({ error: 'Erro ao consultar TCLE.' }, { status: 500 });
+  }
+}
+
 export async function POST(req: Request) {
   try {
     const { participantId, consentFormId, signatureData } = await req.json();

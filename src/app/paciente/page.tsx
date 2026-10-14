@@ -26,6 +26,8 @@ type FormQuestionItem = {
   observation?: string;
 };
 
+type FormAnswerValue = string | number | boolean | null | undefined;
+
 type FormItem = {
   id: string;
   title: string;
@@ -36,7 +38,7 @@ type FormItem = {
   createdAt: string;
   isCompleted: boolean;
   submittedAt: string | null;
-  myAnswers: Record<string, any> | null;
+  myAnswers: Record<string, FormAnswerValue> | null;
 };
 
 type ParticipantData = {
@@ -53,6 +55,16 @@ type ParticipantData = {
   forms: FormItem[];
 };
 
+type CollisionOption = {
+  participantId: string;
+  projectId: string;
+  projectName: string;
+  maskedName: string;
+  maskedCpf: string;
+  cpfPrefix: string;
+  birthYear: number | null;
+};
+
 function PacienteContent() {
   const searchParams = useSearchParams();
   const codeParam = searchParams.get('code');
@@ -66,12 +78,17 @@ function PacienteContent() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  // Estados para Desambiguação de Colisão de Códigos (P001 em múltiplos estudos)
+  const [collisionOptions, setCollisionOptions] = useState<CollisionOption[] | null>(null);
+  const [disambigCpf, setDisambigCpf] = useState('');
+  const [disambigBirth, setDisambigBirth] = useState('');
+
   // Navegação entre Diário de Dor e Questionários eCRF
   const [activeTab, setActiveTab] = useState<'diary' | 'forms'>(
     tabParam === 'forms' || formIdParam ? 'forms' : 'diary'
   );
   const [selectedForm, setSelectedForm] = useState<FormItem | null>(null);
-  const [formAnswers, setFormAnswers] = useState<Record<string, any>>({});
+  const [formAnswers, setFormAnswers] = useState<Record<string, FormAnswerValue>>({});
   const [submittingForm, setSubmittingForm] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccessMessage, setFormSuccessMessage] = useState<string | null>(null);
@@ -88,27 +105,39 @@ function PacienteContent() {
   
   const [submitting, setSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const [submittedData, setSubmittedData] = useState<any>(null);
+  const [submittedData, setSubmittedData] = useState<{
+    timePoint: string;
+    painScore: number;
+    sessionNumber: number;
+    timestamp: string;
+  } | null>(null);
 
-  // Fetch participant on mount if param exists
-  useEffect(() => {
-    if (codeParam || partIdParam) {
-      loadParticipant(codeParam, partIdParam);
-    }
-  }, [codeParam, partIdParam]);
-
-  const loadParticipant = async (code?: string | null, id?: string | null) => {
+  const loadParticipant = async (
+    code?: string | null,
+    id?: string | null,
+    projId?: string | null,
+    cpfFilter?: string | null,
+    birthFilter?: string | null
+  ) => {
     try {
       setLoading(true);
       setErrorMsg(null);
+      setCollisionOptions(null);
 
       let url = '/api/paciente?';
       if (id) url += `participantId=${encodeURIComponent(id)}`;
       else if (code) url += `code=${encodeURIComponent(code.trim().toUpperCase())}`;
       else return;
 
-      if (projectIdParam) {
-        url += `&projectId=${encodeURIComponent(projectIdParam)}`;
+      const activeProjId = projId || projectIdParam;
+      if (activeProjId) {
+        url += `&projectId=${encodeURIComponent(activeProjId)}`;
+      }
+      if (cpfFilter) {
+        url += `&cpf=${encodeURIComponent(cpfFilter)}`;
+      }
+      if (birthFilter) {
+        url += `&birthDate=${encodeURIComponent(birthFilter)}`;
       }
 
       const res = await fetch(url);
@@ -118,12 +147,17 @@ function PacienteContent() {
         throw new Error(data.error || 'Participante não localizado.');
       }
 
+      if (data.multiple) {
+        setCollisionOptions(data.options);
+        return;
+      }
+
       setParticipant(data.participant);
       if (data.participant.latestSession) {
         setSelectedSessionNumber(data.participant.latestSession.sessionNumber);
       }
       if (formIdParam && data.participant.forms) {
-        const found = data.participant.forms.find((f: any) => f.id === formIdParam);
+        const found = data.participant.forms.find((f: FormItem) => f.id === formIdParam);
         if (found) {
           setSelectedForm(found);
           setFormAnswers(found.myAnswers || {});
@@ -132,13 +166,22 @@ function PacienteContent() {
           setActiveTab('forms');
         }
       }
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Erro ao carregar dados do participante.');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Erro ao carregar dados do participante.';
+      setErrorMsg(msg);
       setParticipant(null);
     } finally {
       setLoading(false);
     }
   };
+
+  // Fetch participant on mount if param exists
+  useEffect(() => {
+    if (codeParam || partIdParam) {
+      loadParticipant(codeParam, partIdParam);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [codeParam, partIdParam]);
 
   const handleSearchParticipant = (e: React.FormEvent) => {
     e.preventDefault();
@@ -182,8 +225,8 @@ function PacienteContent() {
         timestamp: new Date().toLocaleString('pt-BR'),
       });
       setIsSubmitted(true);
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Erro ao enviar respostas.');
+    } catch (err: unknown) {
+      setErrorMsg(err instanceof Error ? err.message : 'Erro ao enviar respostas.');
     } finally {
       setSubmitting(false);
     }
@@ -196,7 +239,7 @@ function PacienteContent() {
     setFormSuccessMessage(null);
   };
 
-  const handleFormAnswerChange = (questionId: string, value: any) => {
+  const handleFormAnswerChange = (questionId: string, value: FormAnswerValue) => {
     setFormAnswers((prev) => ({ ...prev, [questionId]: value }));
   };
 
@@ -237,8 +280,8 @@ function PacienteContent() {
 
       setFormSuccessMessage('Questionário gravado com sucesso no protocolo do estudo!');
       await loadParticipant(participant.researchCode, participant.id);
-    } catch (err: any) {
-      setFormError(err.message || 'Erro ao registrar respostas.');
+    } catch (err: unknown) {
+      setFormError(err instanceof Error ? err.message : 'Erro ao registrar respostas.');
     } finally {
       setSubmittingForm(false);
     }
@@ -324,6 +367,127 @@ function PacienteContent() {
               Registrar Outro Momento
             </button>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  // TELA 2A: RESOLUÇÃO DE COLISÃO DE CÓDIGOS DE VOLUNTÁRIOS (P001 EM MÚLTIPLOS ESTUDOS)
+  if (collisionOptions && !participant) {
+    return (
+      <div className="min-h-screen bg-slate-50 font-sans text-slate-800 flex items-center justify-center p-4">
+        <div className="w-full max-w-lg bg-white rounded-3xl shadow-xl border border-slate-200 p-6 sm:p-8">
+          <div className="text-center mb-6">
+            <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 mb-2 text-xl shadow-xs">
+              🔍
+            </div>
+            <h1 className="text-lg font-bold text-slate-900">Selecione seu Estudo Clínico</h1>
+            <p className="text-xs text-slate-500 mt-1">
+              O código <strong className="font-mono text-slate-800">{inputCode.toUpperCase()}</strong> está cadastrado em mais de uma pesquisa na UEPG. Escolha seu estudo abaixo ou confirme seus dados:
+            </p>
+          </div>
+
+          {errorMsg && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 flex items-center space-x-2">
+              <span>⚠️</span>
+              <span>{errorMsg}</span>
+            </div>
+          )}
+
+          {/* Opção A: Seleção Direta de Projeto */}
+          <div className="space-y-3 mb-6">
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500">
+              Selecione o Projeto correspondente:
+            </label>
+            {collisionOptions.map((opt) => (
+              <div
+                key={opt.participantId}
+                className="p-4 rounded-2xl border border-slate-200 bg-slate-50/70 hover:bg-blue-50/50 hover:border-blue-300 transition flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+              >
+                <div>
+                  <h3 className="text-xs font-bold text-slate-900">{opt.projectName}</h3>
+                  <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1 text-[11px] text-slate-500">
+                    <span>Voluntário: <strong className="text-slate-700">{opt.maskedName}</strong></span>
+                    <span>CPF: <strong className="font-mono text-slate-700">{opt.maskedCpf}</strong></span>
+                    {opt.birthYear && <span>Nasc.: <strong className="text-slate-700">{opt.birthYear}</strong></span>}
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => loadParticipant(null, opt.participantId)}
+                  disabled={loading}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs transition shrink-0"
+                >
+                  Confirmar Acesso →
+                </button>
+              </div>
+            ))}
+          </div>
+
+          {/* Opção B: Validação por CPF ou Data de Nascimento */}
+          <div className="pt-4 border-t border-slate-100">
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">
+              Ou valide confirmando seus dados de cadastro:
+            </label>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                loadParticipant(inputCode.trim(), null, null, disambigCpf, disambigBirth);
+              }}
+              className="space-y-3"
+            >
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-semibold text-slate-600 mb-1">
+                    Primeiros 3 dígitos do CPF:
+                  </label>
+                  <input
+                    type="text"
+                    maxLength={3}
+                    placeholder="Ex: 123"
+                    value={disambigCpf}
+                    onChange={(e) => setDisambigCpf(e.target.value.replace(/\D/g, ''))}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl text-center text-sm font-mono font-bold focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-semibold text-slate-600 mb-1">
+                    Ano de Nascimento ou Data:
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ex: 1995 ou DD/MM/AAAA"
+                    value={disambigBirth}
+                    onChange={(e) => setDisambigBirth(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl text-center text-sm font-semibold focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCollisionOptions(null);
+                    setErrorMsg(null);
+                  }}
+                  className="w-1/3 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition"
+                >
+                  ← Voltar
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading || (!disambigCpf && !disambigBirth)}
+                  className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs transition disabled:opacity-50"
+                >
+                  {loading ? 'Verificando...' : 'Confirmar e Entrar'}
+                </button>
+              </div>
+            </form>
+          </div>
+
         </div>
       </div>
     );
@@ -930,7 +1094,7 @@ function PacienteContent() {
                                 min="0"
                                 max="10"
                                 step="0.1"
-                                value={formAnswers[q.id] ?? 5}
+                                value={(formAnswers[q.id] as number | undefined) ?? 5}
                                 onChange={(e) => handleFormAnswerChange(q.id, parseFloat(parseFloat(e.target.value).toFixed(1)))}
                                 className="w-full h-3 bg-slate-200 border border-slate-300 rounded-lg appearance-none cursor-pointer accent-slate-800 focus:outline-none shadow-inner"
                               />
@@ -947,7 +1111,7 @@ function PacienteContent() {
                         {q.type === 'text' && (
                           <textarea
                             rows={3}
-                            value={formAnswers[q.id] || ''}
+                            value={(formAnswers[q.id] as string | undefined) ?? ''}
                             onChange={(e) => handleFormAnswerChange(q.id, e.target.value)}
                             placeholder="Digite sua resposta aqui..."
                             className="w-full p-2.5 border border-slate-300 rounded-xl text-xs bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
@@ -958,7 +1122,7 @@ function PacienteContent() {
                         {q.type === 'number' && (
                           <input
                             type="number"
-                            value={formAnswers[q.id] || ''}
+                            value={(formAnswers[q.id] as string | number | undefined) ?? ''}
                             onChange={(e) => handleFormAnswerChange(q.id, e.target.value)}
                             placeholder="Informe um número..."
                             className="w-full p-2.5 border border-slate-300 rounded-xl text-xs bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"

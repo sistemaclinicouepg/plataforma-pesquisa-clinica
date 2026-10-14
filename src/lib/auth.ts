@@ -63,7 +63,7 @@ export async function verifySessionToken(
   try {
     const { payload } = await jose.jwtVerify(token, JWT_SECRET);
     return payload as unknown as SessionPayload;
-  } catch (error) {
+  } catch {
     return null;
   }
 }
@@ -81,14 +81,6 @@ export async function getCurrentUser() {
     const verified = await verifySessionToken(sessionToken);
     if (verified?.id) {
       userId = verified.id;
-    }
-  }
-
-  // Fallback de retrocompatibilidade para o cookie legado
-  if (!userId) {
-    const legacyId = cookieStore.get('auth_user_id')?.value;
-    if (legacyId) {
-      userId = legacyId;
     }
   }
 
@@ -115,4 +107,53 @@ export async function getCurrentUser() {
     console.error('Erro ao buscar usuário logado:', error);
     return null;
   }
+}
+
+export type ProjectAuthResult =
+  | { authorized: true; user: NonNullable<Awaited<ReturnType<typeof getCurrentUser>>>; member?: unknown }
+  | { authorized: false; error: string; status: number };
+
+/**
+ * Valida se o usuário logado tem permissão para acessar ou alterar dados do projeto.
+ * Por padrão, valida se o usuário é membro ou ADMIN. Se requireCoordinator for true,
+ * exige que seja COORDINATOR do projeto ou ADMIN geral do sistema.
+ */
+export async function checkProjectPermission(
+  projectId: string,
+  requireCoordinator: boolean = false
+): Promise<ProjectAuthResult> {
+  const user = await getCurrentUser();
+  if (!user) {
+    return {
+      authorized: false,
+      error: 'Não autorizado. Autenticação de pesquisador necessária.',
+      status: 401,
+    };
+  }
+
+  if (user.role === 'ADMIN') {
+    return { authorized: true, user };
+  }
+
+  const member = await prisma.projectMember.findFirst({
+    where: { projectId, userId: user.id },
+  });
+
+  if (!member) {
+    return {
+      authorized: false,
+      error: 'Acesso negado. Você não é membro deste projeto de pesquisa.',
+      status: 403,
+    };
+  }
+
+  if (requireCoordinator && member.role !== 'COORDINATOR') {
+    return {
+      authorized: false,
+      error: 'Acesso negado. Apenas Coordenadores ou Administradores possuem permissão para realizar esta operação.',
+      status: 403,
+    };
+  }
+
+  return { authorized: true, user, member };
 }

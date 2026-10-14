@@ -7,6 +7,8 @@ export async function GET(req: Request) {
     const code = searchParams.get('code');
     const participantId = searchParams.get('participantId');
     const projectId = searchParams.get('projectId');
+    const cpfParam = searchParams.get('cpf') || searchParams.get('cpfPrefix');
+    const birthDateParam = searchParams.get('birthDate');
 
     if (!code && !participantId) {
       return NextResponse.json(
@@ -15,18 +17,121 @@ export async function GET(req: Request) {
       );
     }
 
-    let whereClause: any = {};
-    if (participantId) {
-      whereClause.id = participantId;
-    } else if (code) {
-      whereClause.researchCode = code.trim().toUpperCase();
-      if (projectId) {
-        whereClause.projectId = projectId;
+    let resolvedParticipantId: string | null = participantId;
+
+    if (!resolvedParticipantId && code) {
+      const cleanedCode = code.trim().toUpperCase();
+
+      // Buscar todos os participantes que compartilham este código de pesquisa
+      const candidates = await prisma.participant.findMany({
+        where: {
+          researchCode: cleanedCode,
+          ...(projectId && { projectId }),
+        },
+        include: {
+          patient: {
+            select: {
+              fullName: true,
+              cpf: true,
+              dateOfBirth: true,
+            },
+          },
+          project: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+      });
+
+      if (candidates.length === 0) {
+        return NextResponse.json(
+          { error: 'Participante não encontrado com o código fornecido.' },
+          { status: 404 }
+        );
+      }
+
+      if (candidates.length === 1) {
+        resolvedParticipantId = candidates[0].id;
+      } else {
+        // Múltiplos voluntários com o mesmo código em projetos distintos.
+        // Tentar desambiguar caso o usuário tenha fornecido CPF ou Data de Nascimento
+        let filtered = candidates;
+
+        if (cpfParam) {
+          const cleanedCpfInput = cpfParam.replace(/\D/g, '');
+          if (cleanedCpfInput.length >= 3) {
+            filtered = filtered.filter((c) => {
+              const pCpf = c.patient.cpf.replace(/\D/g, '');
+              return pCpf.startsWith(cleanedCpfInput) || pCpf === cleanedCpfInput;
+            });
+          }
+        }
+
+        if (birthDateParam) {
+          const cleanedBirth = birthDateParam.trim();
+          filtered = filtered.filter((c) => {
+            const dob = new Date(c.patient.dateOfBirth);
+            const isoDate = dob.toISOString().split('T')[0];
+            const brDate = dob.toLocaleDateString('pt-BR');
+            const year = String(dob.getFullYear());
+            return (
+              cleanedBirth === isoDate ||
+              cleanedBirth === brDate ||
+              cleanedBirth === year
+            );
+          });
+        }
+
+        if (filtered.length === 1) {
+          resolvedParticipantId = filtered[0].id;
+        } else {
+          // Retornar lista segura de opções para o paciente escolher seu projeto ou confirmar dados
+          const options = candidates.map((c) => {
+            const rawCpf = c.patient.cpf.replace(/\D/g, '');
+            const maskedCpf =
+              rawCpf.length >= 3 ? `${rawCpf.slice(0, 3)}.***.***-**` : '***';
+            const nameParts = c.patient.fullName.trim().split(/\s+/);
+            const maskedName =
+              nameParts.length > 1
+                ? `${nameParts[0]} ${nameParts[nameParts.length - 1][0]}.`
+                : nameParts[0];
+            const birthYear = c.patient.dateOfBirth
+              ? new Date(c.patient.dateOfBirth).getFullYear()
+              : null;
+
+            return {
+              participantId: c.id,
+              projectId: c.project.id,
+              projectName: c.project.name,
+              maskedName,
+              maskedCpf,
+              cpfPrefix: rawCpf.slice(0, 3),
+              birthYear,
+            };
+          });
+
+          return NextResponse.json({
+            multiple: true,
+            code: cleanedCode,
+            message:
+              'Foram encontrados múltiplos voluntários com este código em pesquisas diferentes. Por favor, confirme seu projeto ou seus dados de identificação.',
+            options,
+          });
+        }
       }
     }
 
-    const participant = await prisma.participant.findFirst({
-      where: whereClause,
+    if (!resolvedParticipantId) {
+      return NextResponse.json(
+        { error: 'Participante não encontrado.' },
+        { status: 404 }
+      );
+    }
+
+    const participant = await prisma.participant.findUnique({
+      where: { id: resolvedParticipantId },
       include: {
         patient: {
           select: {
@@ -76,7 +181,7 @@ export async function GET(req: Request) {
 
     if (!participant) {
       return NextResponse.json(
-        { error: 'Participante não encontrado com o código fornecido.' },
+        { error: 'Participante não encontrado com o identificador fornecido.' },
         { status: 404 }
       );
     }
@@ -85,8 +190,8 @@ export async function GET(req: Request) {
     const latestSession = participant.sessions[participant.sessions.length - 1] || null;
 
     // Processar formulários do projeto e identificar status para o participante
-    const formsWithStatus = participant.project.forms.map((f: any) => {
-      const resp = participant.responses.find((r: any) => r.formId === f.id);
+    const formsWithStatus = participant.project.forms.map((f: { id: string; title: string; description: string | null; questionsJson: string; expirationHours: number; allowLate: boolean; createdAt: Date }) => {
+      const resp = participant.responses.find((r: { formId: string; submittedAt: Date; answersJson: string | null }) => r.formId === f.id);
       let parsedQuestions = [];
       try {
         parsedQuestions = JSON.parse(f.questionsJson);

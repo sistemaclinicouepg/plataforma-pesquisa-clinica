@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getCurrentUser } from '@/lib/auth';
+import { checkProjectPermission } from '@/lib/auth';
 
 export async function GET(
   req: Request,
@@ -8,6 +8,11 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
+
+    const auth = await checkProjectPermission(id, false);
+    if (!auth.authorized) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
 
     const members = await prisma.projectMember.findMany({
       where: { projectId: id },
@@ -32,6 +37,12 @@ export async function POST(
 ) {
   try {
     const { id } = await params;
+
+    const auth = await checkProjectPermission(id, true);
+    if (!auth.authorized) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
+
     const { email, role, isBlinded } = await req.json();
 
     if (!email) {
@@ -87,6 +98,12 @@ export async function PATCH(
 ) {
   try {
     const { id } = await params;
+
+    const auth = await checkProjectPermission(id, true);
+    if (!auth.authorized) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
+
     const { memberId, role, isBlinded } = await req.json();
 
     const updated = await prisma.projectMember.update({
@@ -114,6 +131,13 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
+
+    const auth = await checkProjectPermission(id, true);
+    if (!auth.authorized) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
+
     const { searchParams } = new URL(req.url);
     const memberId = searchParams.get('memberId');
 

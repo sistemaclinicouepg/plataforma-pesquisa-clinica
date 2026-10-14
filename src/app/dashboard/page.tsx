@@ -422,9 +422,9 @@ function DashboardContent() {
     shadeRight: string;
     shadeLeft: string;
     painScore0h: number;
-    painScore1h: number;
-    painScore24h: number;
-    painScore48h: number;
+    painScore1h: number | null;
+    painScore24h: number | null;
+    painScore48h: number | null;
     gingivalIrritation: string;
     adverseEvents: string;
     operatorName: string;
@@ -438,9 +438,9 @@ function DashboardContent() {
     shadeRight: 'A3',
     shadeLeft: 'A3',
     painScore0h: 0,
-    painScore1h: 0,
-    painScore24h: 0,
-    painScore48h: 0,
+    painScore1h: null,
+    painScore24h: null,
+    painScore48h: null,
     gingivalIrritation: 'Ausente',
     adverseEvents: '',
     operatorName: '',
@@ -801,9 +801,9 @@ function DashboardContent() {
       shadeRight: existing?.shadeRight || 'A3',
       shadeLeft: existing?.shadeLeft || 'A3',
       painScore0h: existing?.painScore0h ?? 0,
-      painScore1h: existing?.painScore1h ?? 0,
-      painScore24h: existing?.painScore24h ?? 0,
-      painScore48h: existing?.painScore48h ?? 0,
+      painScore1h: existing?.painScore1h ?? null,
+      painScore24h: existing?.painScore24h ?? null,
+      painScore48h: existing?.painScore48h ?? null,
       gingivalIrritation: existing?.gingivalIrritation || 'Ausente',
       adverseEvents: existing?.adverseEvents || '',
       operatorName: existing?.operatorName || '',
@@ -838,7 +838,7 @@ function DashboardContent() {
     }
   };
 
-  // Exportação de Dados para Excel (.CSV)
+  // Exportação Clínica Principal: Desidentificada em conformidade com a LGPD (Apenas Código de Pesquisa)
   const exportToCSV = () => {
     if (!project) return;
     const formHeaders = (project.forms || []).map(
@@ -847,11 +847,8 @@ function DashboardContent() {
 
     const headers = [
       'Codigo_Pesquisa',
-      'Nome_Completo',
-      'CPF',
       'Sexo',
-      'Data_Nascimento',
-      'WhatsApp',
+      'Ano_Nascimento',
       'Status_Triagem',
       'Ficha_Clinica_Concluida',
       'Grupo_Alocado',
@@ -888,13 +885,14 @@ function DashboardContent() {
         return resp ? 'CONCLUIDO' : 'PENDENTE';
       });
 
+      const birthYear = p.patient.dateOfBirth
+        ? new Date(p.patient.dateOfBirth).getFullYear()
+        : '';
+
       return [
         p.researchCode,
-        `"${p.patient.fullName}"`,
-        `"${p.patient.cpf}"`,
         p.patient.biologicalSex,
-        p.patient.dateOfBirth ? new Date(p.patient.dateOfBirth).toLocaleDateString('pt-BR') : '',
-        `"${p.patient.phoneWhatsApp}"`,
+        birthYear,
         p.status,
         p.anamnesisDone ? 'SIM' : 'NAO',
         `"${p.group || 'Nao Alocado'}"`,
@@ -921,22 +919,62 @@ function DashboardContent() {
       ];
     });
 
-    const csvContent =
-      'data:text/csv;charset=utf-8,\uFEFF' +
-      [headers.join(';'), ...rows.map((r) => r.join(';'))].join('\n');
-    const encodedUri = encodeURI(csvContent);
+    const csvContent = '\uFEFF' + [headers.join(';'), ...rows.map((r) => r.join(';'))].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
+    link.setAttribute('href', url);
     link.setAttribute(
       'download',
-      `pesquisa_${project.name.toLowerCase().replace(/[^a-z0-9]/g, '_')}_dados.csv`
+      `pesquisa_${project.name.toLowerCase().replace(/[^a-z0-9]/g, '_')}_dados_clinicos_desidentificados.csv`
     );
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
-  // Exportação Específica por Questionário (Pronto para SPSS / R / Jamovi)
+  // Exportação Cadastral Separada: Restrita para fins administrativos/auditoria
+  const exportCadastralToCSV = () => {
+    if (!project) return;
+    const headers = [
+      'Codigo_Pesquisa',
+      'Nome_Completo',
+      'CPF',
+      'Sexo',
+      'Data_Nascimento',
+      'WhatsApp',
+      'Status_Triagem',
+      'Grupo_Alocado',
+    ];
+
+    const rows = project.participants.map((p) => [
+      p.researchCode,
+      `"${p.patient.fullName}"`,
+      `"${p.patient.cpf}"`,
+      p.patient.biologicalSex,
+      p.patient.dateOfBirth ? new Date(p.patient.dateOfBirth).toLocaleDateString('pt-BR') : '',
+      `"${p.patient.phoneWhatsApp}"`,
+      p.status,
+      `"${p.group || 'Nao Alocado'}"`,
+    ]);
+
+    const csvContent = '\uFEFF' + [headers.join(';'), ...rows.map((r) => r.join(';'))].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute(
+      'download',
+      `pesquisa_${project.name.toLowerCase().replace(/[^a-z0-9]/g, '_')}_cadastro_identificado.csv`
+    );
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  // Exportação Específica por Questionário (Pronto para SPSS / R / Jamovi - Desidentificado)
   const exportFormToCSV = (formId: string) => {
     if (!project) return;
     const targetForm = project.forms.find((f) => f.id === formId);
@@ -955,11 +993,9 @@ function DashboardContent() {
     // Filtrar questões que possuem respostas (ignorar instruções puras)
     const evaluableQuestions = parsedQuestions.filter((q) => q.type !== 'instruction');
 
-    // Montar cabeçalhos
+    // Montar cabeçalhos desidentificados
     const headers = [
       'Codigo_Pesquisa',
-      'Nome_Completo',
-      'WhatsApp',
       'Grupo_Alocado',
       'Status_Formulario',
       'Data_Submissao',
@@ -1019,8 +1055,6 @@ function DashboardContent() {
 
       return [
         p.researchCode,
-        `"${p.patient.fullName}"`,
-        `"${p.patient.phoneWhatsApp}"`,
         `"${p.group || 'Nao Alocado'}"`,
         resp ? 'CONCLUIDO' : 'PENDENTE',
         resp?.submittedAt ? new Date(resp.submittedAt).toLocaleString('pt-BR') : '',
@@ -1029,19 +1063,19 @@ function DashboardContent() {
       ];
     });
 
-    const csvContent =
-      'data:text/csv;charset=utf-8,\uFEFF' +
-      [headers.join(';'), ...rows.map((r) => r.join(';'))].join('\n');
-    const encodedUri = encodeURI(csvContent);
+    const csvContent = '\uFEFF' + [headers.join(';'), ...rows.map((r) => r.join(';'))].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
+    link.setAttribute('href', url);
     link.setAttribute(
       'download',
-      `questionario_${targetForm.title.toLowerCase().replace(/[^a-z0-9]/g, '_')}.csv`
+      `questionario_${targetForm.title.toLowerCase().replace(/[^a-z0-9]/g, '_')}_desidentificado.csv`
     );
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   const openWhatsApp = (phone: string, code: string) => {
@@ -2270,9 +2304,11 @@ function DashboardContent() {
           const r30Sessions = allSessions.filter((s) => s.sessionNumber === 4);
 
           const calcMeanPain = (sessions: ClinicalSession[], field: 'painScore0h' | 'painScore1h' | 'painScore24h' | 'painScore48h') => {
-            const valid = sessions.filter((s) => s[field] !== null && s[field] !== undefined);
+            const valid = sessions.filter(
+              (s) => s[field] !== null && s[field] !== undefined && typeof s[field] === 'number'
+            );
             if (valid.length === 0) return 0;
-            const sum = valid.reduce((acc, curr) => acc + (curr[field] || 0), 0);
+            const sum = valid.reduce((acc, curr) => acc + (curr[field] as number), 0);
             return Number((sum / valid.length).toFixed(1));
           };
 
@@ -2330,13 +2366,25 @@ function DashboardContent() {
                   </p>
                 </div>
 
-                <button
-                  onClick={exportToCSV}
-                  className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-md transition flex items-center space-x-2 shrink-0"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                  <span>Exportar Planilha Excel (.CSV)</span>
-                </button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={exportToCSV}
+                    className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-md transition flex items-center space-x-2 shrink-0"
+                    title="Exportar dados clínicos desidentificados contendo apenas código de pesquisa"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                    <span>Exportar Dados Clínicos (Desidentificado)</span>
+                  </button>
+
+                  <button
+                    onClick={exportCadastralToCSV}
+                    className="px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl border border-slate-300 transition flex items-center space-x-1.5 shrink-0"
+                    title="Exportar cadastro completo de pacientes (Restrito à Coordenação)"
+                  >
+                    <span>📋</span>
+                    <span>Cadastro (Identificado)</span>
+                  </button>
+                </div>
               </div>
 
               {/* Cards de Resumo Metodológico */}
@@ -4007,31 +4055,62 @@ function DashboardContent() {
                     <div key={tp.key} className="space-y-1.5 bg-white/70 p-3 rounded-xl border border-blue-100">
                       <div className="flex justify-between items-center text-xs">
                         <span className="font-semibold text-slate-700">{tp.label}:</span>
-                        <span className="font-mono font-bold text-blue-800 text-sm">
-                          {Number(currentSessionForm[tp.key] || 0).toFixed(1)} <span className="text-[10px] text-slate-400 font-normal">/ 10</span>
-                        </span>
+                        <div className="flex items-center space-x-2">
+                          {currentSessionForm[tp.key] === null ? (
+                            <span className="font-mono font-medium text-amber-700 text-xs bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
+                              Pendente (Aguardando diário)
+                            </span>
+                          ) : (
+                            <span className="font-mono font-bold text-blue-800 text-sm">
+                              {Number(currentSessionForm[tp.key]).toFixed(1)}{' '}
+                              <span className="text-[10px] text-slate-400 font-normal">/ 10</span>
+                            </span>
+                          )}
+                          {tp.key !== 'painScore0h' && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setCurrentSessionForm({
+                                  ...currentSessionForm,
+                                  [tp.key]: currentSessionForm[tp.key] === null ? 0 : null,
+                                })
+                              }
+                              className="text-[10px] text-blue-600 hover:text-blue-800 underline font-medium"
+                            >
+                              {currentSessionForm[tp.key] === null ? 'Definir EVA' : 'Marcar pendente'}
+                            </button>
+                          )}
+                        </div>
                       </div>
 
-                      <input
-                        type="range"
-                        min="0"
-                        max="10"
-                        step="0.1"
-                        value={currentSessionForm[tp.key] ?? 0}
-                        onChange={(e) =>
-                          setCurrentSessionForm({
-                            ...currentSessionForm,
-                            [tp.key]: parseFloat(parseFloat(e.target.value).toFixed(1)),
-                          })
-                        }
-                        className="w-full h-2.5 bg-gradient-to-r from-emerald-400 via-amber-400 via-orange-400 to-red-500 rounded-lg appearance-none cursor-pointer accent-blue-600 focus:outline-none"
-                      />
+                      {currentSessionForm[tp.key] !== null ? (
+                        <>
+                          <input
+                            type="range"
+                            min="0"
+                            max="10"
+                            step="0.1"
+                            value={currentSessionForm[tp.key] ?? 0}
+                            onChange={(e) =>
+                              setCurrentSessionForm({
+                                ...currentSessionForm,
+                                [tp.key]: parseFloat(parseFloat(e.target.value).toFixed(1)),
+                              })
+                            }
+                            className="w-full h-2.5 bg-gradient-to-r from-emerald-400 via-amber-400 via-orange-400 to-red-500 rounded-lg appearance-none cursor-pointer accent-blue-600 focus:outline-none"
+                          />
 
-                      <div className="flex justify-between text-[10px] text-slate-400 font-medium">
-                        <span>0.0 - Nenhuma dor</span>
-                        <span>5.0 - Moderada</span>
-                        <span>10.0 - Pior dor</span>
-                      </div>
+                          <div className="flex justify-between text-[10px] text-slate-400 font-medium">
+                            <span>0.0 - Nenhuma dor</span>
+                            <span>5.0 - Moderada</span>
+                            <span>10.0 - Pior dor</span>
+                          </div>
+                        </>
+                      ) : (
+                        <p className="text-[11px] text-slate-400 italic">
+                          Aguardando registro pelo paciente no portal.
+                        </p>
+                      )}
                     </div>
                   ))}
                 </div>

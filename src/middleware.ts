@@ -25,14 +25,14 @@ export async function middleware(request: NextRequest) {
     pathname === '/' ||
     pathname === '/login' ||
     pathname === '/paciente' ||
-    pathname.startsWith('/tcle') ||
+    (pathname.startsWith('/tcle') && !pathname.startsWith('/tcle/editor')) ||
     pathname === '/api/auth/login' ||
     pathname === '/api/auth/register' ||
     pathname === '/api/auth/logout' ||
     pathname === '/api/auth/me' ||
-    pathname === '/api/paciente' ||
+    pathname.startsWith('/api/paciente') ||
     pathname.startsWith('/api/tcle') ||
-    pathname.startsWith('/api/responses');
+    (pathname.startsWith('/api/responses') && request.method === 'POST');
 
   // 3. Validar token assinado JWT da sessão
   const token = request.cookies.get(SESSION_COOKIE_NAME)?.value;
@@ -47,11 +47,6 @@ export async function middleware(request: NextRequest) {
     } catch {
       isAuthenticated = false;
     }
-  }
-
-  // Fallback retrocompatível para cookie legado
-  if (!isAuthenticated && request.cookies.get('auth_user_id')?.value) {
-    isAuthenticated = true;
   }
 
   // 4. Se já estiver autenticado e tentar acessar /login, direcionar para Meus Estudos

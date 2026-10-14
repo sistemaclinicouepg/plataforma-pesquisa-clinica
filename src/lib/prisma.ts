@@ -1,10 +1,9 @@
 import { PrismaClient } from '@prisma/client';
-import { PrismaNeon } from '@prisma/adapter-neon';
+import { PrismaNeonHTTP } from '@prisma/adapter-neon';
 import { neonConfig } from '@neondatabase/serverless';
 import ws from 'ws';
 
-// Em ambiente Node.js, configuramos o construtor WebSocket para o Neon.
-// No Cloudflare Workers/Pages ou browser, o WebSocket nativo global é usado automaticamente.
+// Em ambiente Node.js sem WebSocket nativo, injetamos ws se necessário
 if (typeof WebSocket === 'undefined') {
   neonConfig.webSocketConstructor = ws;
 }
@@ -17,7 +16,11 @@ function createPrismaClient(): PrismaClient {
   const connectionString = process.env.DATABASE_URL;
 
   if (connectionString) {
-    const adapter = new PrismaNeon({ connectionString });
+    // No Cloudflare Workers (workerd) e serverless edge, o adapter HTTP (PrismaNeonHTTP)
+    // executa queries via fetch HTTP sem manter pools/sockets WebSocket persistentes entre requisições.
+    // Isso elimina o erro fatal: "Cannot perform I/O on behalf of a different request".
+    // Funciona de forma transparente tanto no Cloudflare quanto no Node.js local.
+    const adapter = new PrismaNeonHTTP(connectionString, {});
     return new PrismaClient({
       adapter,
       log: ['error', 'warn'],
@@ -32,3 +35,4 @@ function createPrismaClient(): PrismaClient {
 export const prisma = globalForPrisma.prisma ?? createPrismaClient();
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
+

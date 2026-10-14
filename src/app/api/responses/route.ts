@@ -1,14 +1,22 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { getCurrentUser } from '@/lib/auth';
 
 export async function GET(req: Request) {
   try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Não autorizado. Autenticação de pesquisador necessária.' },
+        { status: 401 }
+      );
+    }
     const { searchParams } = new URL(req.url);
     const formId = searchParams.get('formId');
     const participantId = searchParams.get('participantId');
     const projectId = searchParams.get('projectId');
 
-    const where: any = {};
+    const where: Record<string, unknown> = {};
     if (formId) where.formId = formId;
     if (participantId) where.participantId = participantId;
     if (projectId) where.form = { projectId };

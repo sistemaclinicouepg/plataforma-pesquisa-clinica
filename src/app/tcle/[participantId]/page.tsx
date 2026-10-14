@@ -45,17 +45,17 @@ export default function PatientTclePage({
     const loadTCLE = async () => {
       try {
         setLoading(true);
-        // Busca o TCLE ativo
-        const res = await fetch('/api/projects');
+        // Busca o TCLE ativo diretamente para este participante e projeto (rota pública)
+        const res = await fetch(`/api/tcle/participant/${participantId}`);
         if (res.ok) {
-          const list = await res.json();
-          const firstProjectId = list.projects?.[0]?.id;
-          if (firstProjectId) {
-            const tcleRes = await fetch(`/api/projects/${firstProjectId}/tcle`);
-            if (tcleRes.ok) {
-              const data = await tcleRes.json();
-              setTcle(data.consentForm);
-            }
+          const data = await res.json();
+          setTcle(data.consentForm);
+        } else {
+          // Fallback via query param
+          const fallbackRes = await fetch(`/api/tcle/sign?participantId=${participantId}`);
+          if (fallbackRes.ok) {
+            const data = await fallbackRes.json();
+            setTcle(data.consentForm);
           }
         }
       } catch (err) {
@@ -185,7 +185,7 @@ export default function PatientTclePage({
           </div>
 
           <Link
-            href="/paciente"
+            href={participantId && participantId !== 'demo' ? `/paciente?participantId=${participantId}` : '/paciente'}
             className="w-full inline-block py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-xl shadow-md transition"
           >
             Avançar para o Diário Clínico

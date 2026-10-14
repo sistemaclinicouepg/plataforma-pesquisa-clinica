@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { checkProjectPermission } from '@/lib/auth';
 
 export async function GET(
   req: Request,
@@ -7,6 +8,11 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
+
+    const auth = await checkProjectPermission(id, false);
+    if (!auth.authorized) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
 
     const project = await prisma.project.findUnique({
       where: { id },
@@ -50,6 +56,12 @@ export async function PUT(
 ) {
   try {
     const { id } = await params;
+
+    const auth = await checkProjectPermission(id, true);
+    if (!auth.authorized) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
+
     const body = await req.json();
     const { anamnesisTemplate } = body;
 

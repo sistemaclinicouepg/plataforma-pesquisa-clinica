@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { getCurrentUser } from '@/lib/auth';
 
 export async function PATCH(
   req: Request,
@@ -17,12 +18,27 @@ export async function PATCH(
       return NextResponse.json({ error: 'Participante não encontrado.' }, { status: 404 });
     }
 
+    const currentUser = await getCurrentUser();
+    let isBlinded = false;
+
+    if (currentUser) {
+      if (currentUser.role !== 'ADMIN') {
+        const member = await prisma.projectMember.findFirst({
+          where: { projectId: participant.projectId, userId: currentUser.id },
+        });
+        if (member?.isBlinded) {
+          isBlinded = true;
+        }
+      }
+    }
+
+    // Se o usuário for avaliador cego, impede alteração direta do grupo
     const updated = await prisma.participant.update({
       where: { id },
       data: {
         ...(status && { status }),
         ...(exclusionReason !== undefined && { exclusionReason }),
-        ...(group !== undefined && { group }),
+        ...(!isBlinded && group !== undefined && { group }),
         ...(anamnesisDone !== undefined && { anamnesisDone }),
         ...(anamnesisData !== undefined && { anamnesisData }),
       },
@@ -30,6 +46,11 @@ export async function PATCH(
         patient: true,
       },
     });
+
+    // Se o usuário atual for avaliador cego, mascara o atributo group
+    if (isBlinded) {
+      updated.group = 'OCULTO (Avaliador Cego)';
+    }
 
     return NextResponse.json({ success: true, participant: updated });
   } catch (error) {
