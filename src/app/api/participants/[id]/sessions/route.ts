@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { checkProjectPermission } from '@/lib/auth';
 
 export async function GET(
   req: Request,
@@ -7,6 +8,20 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
+
+    const participant = await prisma.participant.findUnique({
+      where: { id },
+      select: { projectId: true },
+    });
+
+    if (!participant) {
+      return NextResponse.json({ error: 'Participante não encontrado.' }, { status: 404 });
+    }
+
+    const auth = await checkProjectPermission(participant.projectId, false);
+    if (!auth.authorized) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
 
     const sessions = await prisma.clinicalSession.findMany({
       where: { participantId: id },
@@ -29,6 +44,21 @@ export async function POST(
 ) {
   try {
     const { id } = await params;
+
+    const participant = await prisma.participant.findUnique({
+      where: { id },
+      select: { projectId: true },
+    });
+
+    if (!participant) {
+      return NextResponse.json({ error: 'Participante não encontrado.' }, { status: 404 });
+    }
+
+    const auth = await checkProjectPermission(participant.projectId, false);
+    if (!auth.authorized) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
+
     const body = await req.json();
 
     const {

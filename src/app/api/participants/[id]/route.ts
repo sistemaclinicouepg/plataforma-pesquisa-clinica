@@ -19,16 +19,27 @@ export async function PATCH(
     }
 
     const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      return NextResponse.json(
+        { error: 'Não autorizado. Autenticação de pesquisador necessária.' },
+        { status: 401 }
+      );
+    }
+
     let isBlinded = false;
 
-    if (currentUser) {
-      if (currentUser.role !== 'ADMIN') {
-        const member = await prisma.projectMember.findFirst({
-          where: { projectId: participant.projectId, userId: currentUser.id },
-        });
-        if (member?.isBlinded) {
-          isBlinded = true;
-        }
+    if (currentUser.role !== 'ADMIN') {
+      const member = await prisma.projectMember.findFirst({
+        where: { projectId: participant.projectId, userId: currentUser.id },
+      });
+      if (!member) {
+        return NextResponse.json(
+          { error: 'Acesso negado. Você não é membro deste projeto de pesquisa.' },
+          { status: 403 }
+        );
+      }
+      if (member.isBlinded) {
+        isBlinded = true;
       }
     }
 

@@ -153,6 +153,14 @@ function PacienteContent() {
       }
 
       setParticipant(data.participant);
+      if (data.participant.researchCode) {
+        setInputCode(data.participant.researchCode);
+      }
+      if (typeof window !== 'undefined' && data.participant.id) {
+        const currentUrl = new URL(window.location.href);
+        currentUrl.searchParams.set('participantId', data.participant.id);
+        window.history.replaceState({}, '', currentUrl.toString());
+      }
       if (data.participant.latestSession) {
         setSelectedSessionNumber(data.participant.latestSession.sessionNumber);
       }
@@ -178,7 +186,10 @@ function PacienteContent() {
   // Fetch participant on mount if param exists
   useEffect(() => {
     if (codeParam || partIdParam) {
-      loadParticipant(codeParam, partIdParam);
+      const timer = setTimeout(() => {
+        loadParticipant(codeParam, partIdParam);
+      }, 0);
+      return () => clearTimeout(timer);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [codeParam, partIdParam]);
@@ -472,6 +483,8 @@ function PacienteContent() {
                   onClick={() => {
                     setCollisionOptions(null);
                     setErrorMsg(null);
+                    setDisambigCpf('');
+                    setDisambigBirth('');
                   }}
                   className="w-1/3 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition"
                 >

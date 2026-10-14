@@ -1,6 +1,66 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
+function matchesBirthDate(dobRaw: Date | string | null | undefined, inputRaw: string): boolean {
+  if (!dobRaw || !inputRaw) return false;
+  const dob = new Date(dobRaw);
+  if (isNaN(dob.getTime())) return false;
+
+  const input = inputRaw.trim();
+  const digits = input.replace(/\D/g, '');
+
+  const utcYear = dob.getUTCFullYear();
+  const utcMonth = dob.getUTCMonth() + 1;
+  const utcDay = dob.getUTCDate();
+
+  const locYear = dob.getFullYear();
+  const locMonth = dob.getMonth() + 1;
+  const locDay = dob.getDate();
+
+  // Caso 1: Usuário informou apenas o ano de nascimento (4 dígitos)
+  if (digits.length === 4) {
+    const inputYear = Number(digits);
+    return inputYear === utcYear || inputYear === locYear;
+  }
+
+  // Caso 2: Formato ISO YYYY-MM-DD
+  const utcIso = `${utcYear}-${String(utcMonth).padStart(2, '0')}-${String(utcDay).padStart(2, '0')}`;
+  const locIso = `${locYear}-${String(locMonth).padStart(2, '0')}-${String(locDay).padStart(2, '0')}`;
+  if (input === utcIso || input === locIso) return true;
+
+  // Caso 3: Formato BR DD/MM/YYYY
+  const utcBr = `${String(utcDay).padStart(2, '0')}/${String(utcMonth).padStart(2, '0')}/${utcYear}`;
+  const locBr = `${String(locDay).padStart(2, '0')}/${String(locMonth).padStart(2, '0')}/${locYear}`;
+  if (input === utcBr || input === locBr) return true;
+
+  // Caso 4: Somente dígitos DDMMYYYY
+  const utcDigits = `${String(utcDay).padStart(2, '0')}${String(utcMonth).padStart(2, '0')}${utcYear}`;
+  const locDigits = `${String(locDay).padStart(2, '0')}${String(locMonth).padStart(2, '0')}${locYear}`;
+  if (digits === utcDigits || digits === locDigits) return true;
+
+  // Caso 5: Componentes separados por barra ou hífen sem zero à esquerda (ex: 1/1/1998)
+  const parts = input.split(/[/.-]/);
+  if (parts.length === 3) {
+    if (parts[0].length === 4) {
+      const y = Number(parts[0]);
+      const m = Number(parts[1]);
+      const d = Number(parts[2]);
+      if ((y === utcYear && m === utcMonth && d === utcDay) || (y === locYear && m === locMonth && d === locDay)) {
+        return true;
+      }
+    } else {
+      const d = Number(parts[0]);
+      const m = Number(parts[1]);
+      const y = Number(parts[2]);
+      if ((y === utcYear && m === utcMonth && d === utcDay) || (y === locYear && m === locMonth && d === locDay)) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
@@ -63,42 +123,42 @@ export async function GET(req: Request) {
           const cleanedCpfInput = cpfParam.replace(/\D/g, '');
           if (cleanedCpfInput.length >= 3) {
             filtered = filtered.filter((c) => {
-              const pCpf = c.patient.cpf.replace(/\D/g, '');
+              const pCpf = (c.patient.cpf || '').replace(/\D/g, '');
               return pCpf.startsWith(cleanedCpfInput) || pCpf === cleanedCpfInput;
             });
           }
         }
 
         if (birthDateParam) {
-          const cleanedBirth = birthDateParam.trim();
-          filtered = filtered.filter((c) => {
-            const dob = new Date(c.patient.dateOfBirth);
-            const isoDate = dob.toISOString().split('T')[0];
-            const brDate = dob.toLocaleDateString('pt-BR');
-            const year = String(dob.getFullYear());
-            return (
-              cleanedBirth === isoDate ||
-              cleanedBirth === brDate ||
-              cleanedBirth === year
-            );
-          });
+          filtered = filtered.filter((c) =>
+            matchesBirthDate(c.patient.dateOfBirth, birthDateParam)
+          );
         }
 
         if (filtered.length === 1) {
           resolvedParticipantId = filtered[0].id;
+        } else if (filtered.length === 0 && (cpfParam || birthDateParam)) {
+          return NextResponse.json(
+            {
+              error:
+                'Nenhum voluntário encontrado com os dados de confirmação (CPF ou data de nascimento) informados.',
+            },
+            { status: 404 }
+          );
         } else {
           // Retornar lista segura de opções para o paciente escolher seu projeto ou confirmar dados
           const options = candidates.map((c) => {
-            const rawCpf = c.patient.cpf.replace(/\D/g, '');
+            const rawCpf = (c.patient.cpf || '').replace(/\D/g, '');
             const maskedCpf =
               rawCpf.length >= 3 ? `${rawCpf.slice(0, 3)}.***.***-**` : '***';
-            const nameParts = c.patient.fullName.trim().split(/\s+/);
+            const nameParts = (c.patient.fullName || '').trim().split(/\s+/);
             const maskedName =
               nameParts.length > 1
                 ? `${nameParts[0]} ${nameParts[nameParts.length - 1][0]}.`
                 : nameParts[0];
             const birthYear = c.patient.dateOfBirth
-              ? new Date(c.patient.dateOfBirth).getFullYear()
+              ? new Date(c.patient.dateOfBirth).getUTCFullYear() ||
+                new Date(c.patient.dateOfBirth).getFullYear()
               : null;
 
             return {

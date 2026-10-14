@@ -886,7 +886,8 @@ function DashboardContent() {
       });
 
       const birthYear = p.patient.dateOfBirth
-        ? new Date(p.patient.dateOfBirth).getFullYear()
+        ? new Date(p.patient.dateOfBirth).getUTCFullYear() ||
+          new Date(p.patient.dateOfBirth).getFullYear()
         : '';
 
       return [
@@ -2376,14 +2377,16 @@ function DashboardContent() {
                     <span>Exportar Dados Clínicos (Desidentificado)</span>
                   </button>
 
-                  <button
-                    onClick={exportCadastralToCSV}
-                    className="px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl border border-slate-300 transition flex items-center space-x-1.5 shrink-0"
-                    title="Exportar cadastro completo de pacientes (Restrito à Coordenação)"
-                  >
-                    <span>📋</span>
-                    <span>Cadastro (Identificado)</span>
-                  </button>
+                  {!isBlindedUser && (
+                    <button
+                      onClick={exportCadastralToCSV}
+                      className="px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl border border-slate-300 transition flex items-center space-x-1.5 shrink-0"
+                      title="Exportar cadastro completo de pacientes (Restrito à Coordenação)"
+                    >
+                      <span>📋</span>
+                      <span>Cadastro (Identificado)</span>
+                    </button>
+                  )}
                 </div>
               </div>
 

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getCurrentUser } from '@/lib/auth';
+import { checkProjectPermission } from '@/lib/auth';
 
 export async function GET(
   req: Request,
@@ -8,7 +8,13 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const currentUser = await getCurrentUser();
+
+    const auth = await checkProjectPermission(id, false);
+    if (!auth.authorized) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
+
+    const currentUser = auth.user;
 
     const project = await prisma.project.findUnique({
       where: { id },
@@ -56,12 +62,12 @@ export async function GET(
 
     // Verificar se o usuário logado tem restrição de cegamento (Blinded)
     const currentMember = project.members.find(
-      (m: any) => m.userId === currentUser?.id
+      (m: { userId: string; isBlinded: boolean }) => m.userId === currentUser.id
     );
     const isBlinded = currentMember?.isBlinded ?? false;
 
     // Se for cego, remove a informação de 'group' (ex: qual gel ou grupo recebeu)
-    const sanitizedParticipants = project.participants.map((p: any) => {
+    const sanitizedParticipants = project.participants.map((p) => {
       if (isBlinded) {
         return {
           ...p,

@@ -35,6 +35,7 @@ export default function PatientTclePage({
   const [readConfirmed, setReadConfirmed] = useState(false);
   const [signing, setSigning] = useState(false);
   const [auditResult, setAuditResult] = useState<AuditResult | null>(null);
+  const [signError, setSignError] = useState<string | null>(null);
 
   // Canvas de Assinatura Digital
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -123,13 +124,14 @@ export default function PatientTclePage({
 
     try {
       setSigning(true);
+      setSignError(null);
       const signatureDataUrl = canvas.toDataURL('image/png');
 
       const res = await fetch('/api/tcle/sign', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          participantId: participantId === 'demo' ? undefined : participantId,
+          participantId: participantId,
           signatureData: signatureDataUrl,
         }),
       });
@@ -138,18 +140,12 @@ export default function PatientTclePage({
         const data = await res.json();
         setAuditResult(data);
       } else {
-        // Modo demonstração fallback caso participantId seja 'demo'
-        setAuditResult({
-          signatureId: 'TCLE-AUTH-2026-DEMO',
-          signedAt: new Date().toISOString(),
-          audit: {
-            ipAddress: '187.56.24.110 (Verificado)',
-            userAgent: 'Dispositivo Móvel / Google Chrome Mobile',
-          },
-        });
+        const data = await res.json().catch(() => ({}));
+        setSignError(data.error || 'Erro ao registrar assinatura eletrônica. Por favor, tente novamente.');
       }
     } catch (err) {
       console.error('Erro ao enviar assinatura:', err);
+      setSignError('Erro de conexão ao enviar assinatura eletrônica. Verifique sua conexão.');
     } finally {
       setSigning(false);
     }
@@ -159,6 +155,28 @@ export default function PatientTclePage({
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center text-slate-400">
         <p className="animate-pulse">Carregando Termo de Consentimento...</p>
+      </div>
+    );
+  }
+
+  if (!tcle) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-slate-800">
+        <div className="max-w-md w-full bg-white rounded-3xl shadow-xl p-8 border border-slate-200 text-center">
+          <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
+            ⚠️
+          </div>
+          <h2 className="text-xl font-bold text-slate-900 mb-2">Termo Não Encontrado</h2>
+          <p className="text-xs text-slate-500 mb-6">
+            Não foi possível localizar o Termo de Consentimento para este participante. Verifique se o link está correto.
+          </p>
+          <Link
+            href="/paciente"
+            className="w-full inline-block py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md transition"
+          >
+            Ir para o Portal do Paciente
+          </Link>
+        </div>
       </div>
     );
   }
@@ -287,6 +305,13 @@ export default function PatientTclePage({
               🔒 Sua assinatura será vinculada com segurança ao seu IP, data/hora e identificador do estudo.
             </p>
           </div>
+
+          {signError && (
+            <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl font-medium flex items-center space-x-2">
+              <span>⚠️</span>
+              <span>{signError}</span>
+            </div>
+          )}
 
           <button
             onClick={handleSign}

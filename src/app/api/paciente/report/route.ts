@@ -42,7 +42,7 @@ export async function POST(req: Request) {
 
     // Identificar sessão alvo (ou a informada, ou a mais recente, ou criar a sessão 1)
     let targetSession = sessionNumber
-      ? participant.sessions.find((s: any) => s.sessionNumber === Number(sessionNumber))
+      ? participant.sessions.find((s: { sessionNumber: number }) => s.sessionNumber === Number(sessionNumber))
       : participant.sessions[0];
 
     if (!targetSession) {
@@ -57,7 +57,7 @@ export async function POST(req: Request) {
     }
 
     // Montar objeto de atualização do score de dor
-    const updateData: any = {};
+    const updateData: Record<string, unknown> = {};
     if (timePoint === '1h') {
       updateData.painScore1h = Number(painScore);
     } else if (timePoint === '24h') {

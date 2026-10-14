@@ -88,6 +88,18 @@ export async function POST(req: Request) {
       );
     }
 
+    if (participantId === 'demo') {
+      return NextResponse.json({
+        success: true,
+        signatureId: 'TCLE-DEMO-2026',
+        signedAt: new Date().toISOString(),
+        audit: {
+          ipAddress: '127.0.0.1 (Demonstração)',
+          userAgent: 'Navegador Web / Modo Teste',
+        },
+      });
+    }
+
     const participant = await prisma.participant.findUnique({
       where: { id: participantId },
       include: { patient: true, project: { include: { consentForm: true } } },
