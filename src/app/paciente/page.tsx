@@ -535,7 +535,7 @@ function PacienteContent() {
               <div className="p-4 bg-red-50 border-2 border-red-300 rounded-2xl text-left text-xs space-y-2.5">
                 <h4 className="font-black text-red-900 flex items-center space-x-1.5 text-xs">
                   <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
-                  <span>Orientações Imediatas de Suporte (Farmacovigilância UEPG):</span>
+                  <span>Orientações Imediatas de Suporte Clínico:</span>
                 </h4>
                 <ul className="text-red-900 text-[11px] leading-relaxed space-y-1.5 list-disc pl-4">
                   <li>
@@ -1182,7 +1182,7 @@ function PacienteContent() {
                     <div className="p-4 bg-red-50 border-2 border-red-400 rounded-2xl text-left text-xs space-y-2.5">
                       <h4 className="font-black text-red-900 flex items-center space-x-1.5 text-xs">
                         <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
-                        <span>Orientações Imediatas de Farmacovigilância UEPG:</span>
+                        <span>Orientações Imediatas de Suporte Clínico:</span>
                       </h4>
                       <p className="text-red-900 text-[11px] leading-relaxed">
                         Seu relato identificou sintoma severo{formRedAlert.maxVasScore !== null ? ` (EVA ${formRedAlert.maxVasScore}/10)` : ''}{formRedAlert.severeDesc ? ` - "${formRedAlert.severeDesc}"` : ''}. A equipe clínica foi alertada.

@@ -12,6 +12,14 @@ export async function GET(req: Request) {
       );
     }
 
+    // Apenas o Administrador do sistema pode consultar a trilha de auditoria
+    if (user.role !== 'ADMIN') {
+      return NextResponse.json(
+        { error: 'Acesso negado. A visualização da trilha de auditoria é restrita ao Administrador do sistema.' },
+        { status: 403 }
+      );
+    }
+
     const { searchParams } = new URL(req.url);
     const projectId = searchParams.get('projectId');
     const entityType = searchParams.get('entityType');

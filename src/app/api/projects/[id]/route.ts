@@ -34,10 +34,10 @@ export async function GET(
             },
           },
         },
-        auditLogs: {
+        auditLogs: currentUser.role === 'ADMIN' ? {
           orderBy: { createdAt: 'desc' },
           take: 100,
-        },
+        } : false,
         members: {
           include: {
             user: {

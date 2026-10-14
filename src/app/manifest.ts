@@ -4,7 +4,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: 'Pesquisa Clínica UEPG Odontologia',
     short_name: 'UEPG Pesquisa',
-    description: 'Plataforma Integrada de Ensaios Clínicos Odontológicos, Prontuário e Farmacovigilância - UEPG',
+    description: 'Plataforma Integrada de Ensaios Clínicos Odontológicos e Prontuário Digital - UEPG',
     start_url: '/',
     display: 'standalone',
     background_color: '#ffffff',

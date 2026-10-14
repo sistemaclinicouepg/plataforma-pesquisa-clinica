@@ -183,7 +183,7 @@ function RelatorioCepContent() {
             Relatório Consolidado de Acompanhamento Ético & Diagrama CONSORT
           </h1>
           <p className="text-xs text-slate-500 font-medium">
-            Documento de Prestação de Contas, Auditoria de TCLEs e Monitoramento de Farmacovigilância
+            Documento de Prestação de Contas, Auditoria de TCLEs e Monitoramento de Eventos Adversos
           </p>
         </div>
 
@@ -353,10 +353,10 @@ function RelatorioCepContent() {
           </div>
         </section>
 
-        {/* 3. Farmacovigilância & Monitoramento de Eventos Adversos */}
+        {/* 3. Monitoramento de Eventos Adversos & Segurança */}
         <section className="mb-8">
           <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider bg-slate-100 p-2 rounded-md mb-3">
-            3. Farmacovigilância & Segurança dos Participantes
+            3. Monitoramento de Eventos Adversos & Segurança dos Participantes
           </h2>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4 text-xs">

@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Plataforma de Pesquisa Clínica Odontológica | UEPG",
-  description: "Sistema Integrado de Ensaios Clínicos Odontológicos, Prontuário Digital e Farmacovigilância",
+  description: "Sistema Integrado de Ensaios Clínicos Odontológicos e Prontuário Digital",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,

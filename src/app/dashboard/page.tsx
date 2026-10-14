@@ -469,21 +469,21 @@ function DashboardContent() {
   const [project, setProject] = useState<ProjectData | null>(null);
   const [allProjects, setAllProjects] = useState<Array<{ id: string; name: string }>>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'active' | 'triage' | 'vigilance' | 'audit' | 'consort' | 'team' | 'export'>('active');
+  const [activeTab, setActiveTab] = useState<'active' | 'triage' | 'audit' | 'consort' | 'team' | 'export'>('active');
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [isBlindedUser, setIsBlindedUser] = useState<boolean>(false);
   const [currentMemberRole, setCurrentMemberRole] = useState<string>('COORDINATOR');
 
-  // Estados de Farmacovigilância & Alertas Vermelhos
-  const [vigilanceFilter, setVigilanceFilter] = useState<'ALL' | 'PENDING' | 'RESOLVED'>('ALL');
-  const [selectedAlertForResolution, setSelectedAlertForResolution] = useState<ClinicalAlertItem | null>(null);
-  const [resolutionNotesInput, setResolutionNotesInput] = useState('');
-  const [resolvedByInput, setResolvedByInput] = useState('');
-  const [resolvingAlert, setResolvingAlert] = useState(false);
-
-  // Estados da Trilha de Auditoria Regulatória GCP
+  // Estados da Trilha de Auditoria Regulatória GCP (Exclusivo Administrador)
   const [auditSearch, setAuditSearch] = useState('');
   const [auditEntityFilter, setAuditEntityFilter] = useState('ALL');
+
+  // Proteção: Apenas o Administrador pode visualizar a aba de auditoria
+  useEffect(() => {
+    if (activeTab === 'audit' && currentUser && currentUser.role !== 'ADMIN') {
+      setActiveTab('active');
+    }
+  }, [activeTab, currentUser]);
 
   // Modais de Triagem
   const [showRejectModal, setShowRejectModal] = useState(false);
@@ -1248,63 +1248,13 @@ function DashboardContent() {
     URL.revokeObjectURL(url);
   };
 
-  // Resolução de Alerta Clínico de Farmacovigilância
-  const handleResolveAlert = async () => {
-    if (!selectedAlertForResolution || !resolutionNotesInput.trim()) {
-      alert('Por favor, informe a conduta clínica adotada para a resolução do alerta.');
+  // Exportação da Trilha de Auditoria Regulatória (GCP / ICH E6 / 21 CFR Part 11) - Exclusivo Administrador
+  const exportAuditLogsToCSV = () => {
+    if (currentUser?.role !== 'ADMIN') {
+      alert('Acesso restrito: Apenas o Administrador do sistema pode exportar a trilha de auditoria.');
       return;
     }
 
-    try {
-      setResolvingAlert(true);
-      const res = await fetch('/api/alerts', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          alertId: selectedAlertForResolution.id,
-          status: 'RESOLVED',
-          resolutionNotes: resolutionNotesInput.trim(),
-          resolvedBy: resolvedByInput.trim() || currentUser?.name || 'Pesquisador Responsável',
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Erro ao resolver alerta.');
-      }
-
-      if (project) {
-        const updatedAlerts = (project.alerts || []).map((a) =>
-          a.id === selectedAlertForResolution.id
-            ? {
-                ...a,
-                status: 'RESOLVED' as const,
-                resolvedAt: new Date().toISOString(),
-                resolvedBy: resolvedByInput.trim() || currentUser?.name || 'Pesquisador Responsável',
-                resolutionNotes: resolutionNotesInput.trim(),
-              }
-            : a
-        );
-        const updatedAudit = data.auditLog && project.auditLogs ? [data.auditLog, ...project.auditLogs] : (project.auditLogs || []);
-        setProject({
-          ...project,
-          alerts: updatedAlerts,
-          auditLogs: updatedAudit,
-        });
-      }
-
-      setSelectedAlertForResolution(null);
-      setResolutionNotesInput('');
-      setResolvedByInput('');
-    } catch (err: any) {
-      alert(err.message || 'Erro ao registrar conduta clínica.');
-    } finally {
-      setResolvingAlert(false);
-    }
-  };
-
-  // Exportação da Trilha de Auditoria Regulatória (GCP / ICH E6 / 21 CFR Part 11)
-  const exportAuditLogsToCSV = () => {
     if (!project || !project.auditLogs || project.auditLogs.length === 0) {
       alert('Nenhum registro de auditoria disponível para exportação.');
       return;
@@ -1667,42 +1617,6 @@ function DashboardContent() {
       {/* Conteúdo Principal */}
       <main className="w-full px-4 sm:px-6 lg:px-8 xl:px-10 py-6">
         
-        {/* Banner Persistente de Alertas Vermelhos de Farmacovigilância */}
-        {(() => {
-          const pendingAlerts = (project.alerts || []).filter((a) => a.status === 'PENDING');
-          if (pendingAlerts.length === 0) return null;
-          return (
-            <div className="mb-6 p-4 bg-gradient-to-r from-red-600 via-rose-600 to-red-700 text-white rounded-2xl shadow-lg border border-red-500/50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 animate-pulse">
-              <div className="flex items-center space-x-3.5">
-                <div className="p-2.5 bg-white/20 rounded-xl backdrop-blur-xs shrink-0">
-                  <AlertTriangle className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <div className="flex items-center space-x-2">
-                    <span className="font-black text-xs uppercase tracking-wider bg-white text-red-700 px-2 py-0.5 rounded-md shadow-xs inline-flex items-center gap-1.5">
-                      <AlertTriangle className="w-3.5 h-3.5 text-red-600 shrink-0" />
-                      Alerta Vermelho de Farmacovigilância
-                    </span>
-                    <span className="text-xs font-bold text-red-100">
-                      {pendingAlerts.length} {pendingAlerts.length === 1 ? 'ocorrência pendente' : 'ocorrências pendentes'}
-                    </span>
-                  </div>
-                  <p className="text-xs text-red-100 mt-1 leading-relaxed">
-                    Participante(s) reportaram dor severa (EVA ≥ 7/10) ou queimação gengival aguda que demandam intervenção clínica e registro imediato de conduta.
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => setActiveTab('vigilance')}
-                className="px-4 py-2.5 bg-white hover:bg-red-50 text-red-700 font-extrabold text-xs rounded-xl shadow-md transition shrink-0 flex items-center justify-center space-x-1.5"
-              >
-                <span>Atender Farmacovigilância ({pendingAlerts.length})</span>
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-          );
-        })()}
-
         {/* Abas de Navegação do Projeto Organizadas por Função e Papel Clínico */}
         <div className="flex flex-wrap gap-2 border-b border-slate-200 mb-8 bg-slate-100/70 p-1.5 rounded-2xl">
           <button
@@ -1752,60 +1666,30 @@ function DashboardContent() {
             </div>
           </button>
 
-          {/* ABA FARMACOVIGILÂNCIA & ALERTAS VERMELHOS */}
-          <button
-            onClick={() => setActiveTab('vigilance')}
-            className={`flex-1 min-w-[200px] px-4 py-3 text-xs font-bold rounded-xl transition flex items-center space-x-2.5 ${
-              activeTab === 'vigilance'
-                ? 'bg-white text-red-700 shadow-xs border border-red-200 font-extrabold'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
-            }`}
-          >
-            <div className={`p-2 rounded-lg ${activeTab === 'vigilance' ? 'bg-red-50 text-red-600' : 'bg-slate-200/60 text-slate-500'}`}>
-              <ShieldAlert className="w-4 h-4" />
-            </div>
-            <div className="text-left">
-              <div className="flex items-center space-x-1.5">
-                <span>Farmacovigilância</span>
-                {(() => {
-                  const pendingCount = (project.alerts || []).filter((a) => a.status === 'PENDING').length;
-                  return pendingCount > 0 ? (
-                    <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-red-600 text-white font-black animate-pulse">
-                      {pendingCount}
-                    </span>
-                  ) : (
-                    <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${activeTab === 'vigilance' ? 'bg-red-100 text-red-800' : 'bg-slate-200 text-slate-700'}`}>
-                      {project.alerts?.length || 0}
-                    </span>
-                  );
-                })()}
+          {/* ABA TRILHA DE AUDITORIA GCP - EXCLUSIVA PARA O ADMINISTRADOR */}
+          {currentUser?.role === 'ADMIN' && (
+            <button
+              onClick={() => setActiveTab('audit')}
+              className={`flex-1 min-w-[190px] px-4 py-3 text-xs font-bold rounded-xl transition flex items-center space-x-2.5 ${
+                activeTab === 'audit'
+                  ? 'bg-white text-indigo-700 shadow-xs border border-indigo-200 font-extrabold'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+              }`}
+            >
+              <div className={`p-2 rounded-lg ${activeTab === 'audit' ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-200/60 text-slate-500'}`}>
+                <ShieldCheck className="w-4 h-4" />
               </div>
-              <span className="text-[10px] font-normal text-slate-400 block">Alertas Vermelhos & Segurança</span>
-            </div>
-          </button>
-
-          {/* ABA TRILHA DE AUDITORIA GCP */}
-          <button
-            onClick={() => setActiveTab('audit')}
-            className={`flex-1 min-w-[190px] px-4 py-3 text-xs font-bold rounded-xl transition flex items-center space-x-2.5 ${
-              activeTab === 'audit'
-                ? 'bg-white text-indigo-700 shadow-xs border border-indigo-200 font-extrabold'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
-            }`}
-          >
-            <div className={`p-2 rounded-lg ${activeTab === 'audit' ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-200/60 text-slate-500'}`}>
-              <ShieldCheck className="w-4 h-4" />
-            </div>
-            <div className="text-left">
-              <div className="flex items-center space-x-1.5">
-                <span>Trilha de Auditoria GCP</span>
-                <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${activeTab === 'audit' ? 'bg-indigo-100 text-indigo-800' : 'bg-slate-200 text-slate-700'}`}>
-                  {project.auditLogs?.length || 0}
-                </span>
+              <div className="text-left">
+                <div className="flex items-center space-x-1.5">
+                  <span>Trilha de Auditoria GCP</span>
+                  <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${activeTab === 'audit' ? 'bg-indigo-100 text-indigo-800' : 'bg-slate-200 text-slate-700'}`}>
+                    {project.auditLogs?.length || 0}
+                  </span>
+                </div>
+                <span className="text-[10px] font-normal text-slate-400 block">Rastreabilidade & Justificativas (Admin)</span>
               </div>
-              <span className="text-[10px] font-normal text-slate-400 block">Rastreabilidade & Justificativas</span>
-            </div>
-          </button>
+            </button>
+          )}
 
           <button
             onClick={() => setActiveTab('consort')}
@@ -2589,294 +2473,8 @@ function DashboardContent() {
           </div>
         )}
 
-        {/* ABA: FARMACOVIGILÂNCIA EM TEMPO REAL & ALERTAS VERMELHOS */}
-        {activeTab === 'vigilance' && (() => {
-          const allAlerts = project.alerts || [];
-          const pendingCount = allAlerts.filter((a) => a.status === 'PENDING').length;
-          const resolvedCount = allAlerts.filter((a) => a.status === 'RESOLVED').length;
-          const criticalCount = allAlerts.filter((a) => a.severity === 'CRITICAL').length;
-
-          const filteredAlerts = allAlerts.filter((a) => {
-            if (vigilanceFilter === 'PENDING') return a.status === 'PENDING';
-            if (vigilanceFilter === 'RESOLVED') return a.status === 'RESOLVED';
-            return true;
-          });
-
-          return (
-            <div className="space-y-6">
-              {/* Banner de Contexto de Farmacovigilância */}
-              <div className="bg-gradient-to-r from-red-50 via-rose-50 to-amber-50 border border-red-200 rounded-2xl p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div className="flex items-start space-x-3.5">
-                  <div className="p-2.5 bg-red-100 rounded-xl text-red-700 shrink-0 mt-0.5">
-                    <ShieldAlert className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className="text-base font-bold text-slate-900">
-                      Farmacovigilância em Tempo Real & Monitoramento de Segurança
-                    </h3>
-                    <p className="text-xs text-slate-600 mt-1 leading-relaxed max-w-3xl">
-                      Sistema ativo de monitoramento de eventos adversos e dor severa (EVA ≥ 7/10 ou queimação gengival). Permite intervenção clínica em tempo hábil e registro de condutas terapêuticas em conformidade com as Boas Práticas Clínicas (GCP/ICH E6) e diretrizes éticas (CNS 466/12).
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center space-x-2 shrink-0">
-                  <span className="px-3 py-1.5 bg-white border border-red-200 text-red-700 text-xs font-black rounded-xl shadow-2xs">
-                    {pendingCount} Pendente{pendingCount === 1 ? '' : 's'}
-                  </span>
-                </div>
-              </div>
-
-              {/* Cards de Métricas de Farmacovigilância */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs">
-                  <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Total de Ocorrências</p>
-                  <p className="text-2xl font-black text-slate-900 mt-1">{allAlerts.length}</p>
-                  <p className="text-[11px] text-slate-500 mt-1">Registros de dor/irritação</p>
-                </div>
-
-                <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs">
-                  <p className="text-xs font-bold text-red-500 uppercase tracking-wider">Alertas Pendentes</p>
-                  <p className="text-2xl font-black text-red-600 mt-1">{pendingCount}</p>
-                  <p className="text-[11px] text-red-500 mt-1">Requerem conduta clínica</p>
-                </div>
-
-                <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs">
-                  <p className="text-xs font-bold text-amber-500 uppercase tracking-wider">Alertas Críticos</p>
-                  <p className="text-2xl font-black text-amber-600 mt-1">{criticalCount}</p>
-                  <p className="text-[11px] text-slate-500 mt-1">EVA ≥ 8 ou queimação severa</p>
-                </div>
-
-                <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs">
-                  <p className="text-xs font-bold text-emerald-500 uppercase tracking-wider">Taxa de Resolução</p>
-                  <p className="text-2xl font-black text-emerald-600 mt-1">
-                    {allAlerts.length > 0 ? Math.round((resolvedCount / allAlerts.length) * 100) : 100}%
-                  </p>
-                  <p className="text-[11px] text-slate-500 mt-1">{resolvedCount} ocorrências tratadas</p>
-                </div>
-              </div>
-
-              {/* Barra de Filtros de Farmacovigilância */}
-              <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
-                <div className="flex items-center space-x-2">
-                  <button
-                    onClick={() => setVigilanceFilter('ALL')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-                      vigilanceFilter === 'ALL'
-                        ? 'bg-slate-900 text-white'
-                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                    }`}
-                  >
-                    Todos ({allAlerts.length})
-                  </button>
-                  <button
-                    onClick={() => setVigilanceFilter('PENDING')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center space-x-1 ${
-                      vigilanceFilter === 'PENDING'
-                        ? 'bg-red-600 text-white shadow-xs'
-                        : 'bg-red-50 text-red-700 hover:bg-red-100'
-                    }`}
-                  >
-                    <span>Pendentes ({pendingCount})</span>
-                    {pendingCount > 0 && <span className="w-2 h-2 rounded-full bg-white animate-pulse" />}
-                  </button>
-                  <button
-                    onClick={() => setVigilanceFilter('RESOLVED')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-                      vigilanceFilter === 'RESOLVED'
-                        ? 'bg-emerald-600 text-white'
-                        : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
-                    }`}
-                  >
-                    Resolvidos ({resolvedCount})
-                  </button>
-                </div>
-
-                <span className="text-xs text-slate-400">
-                  Exibindo {filteredAlerts.length} de {allAlerts.length} registro(s)
-                </span>
-              </div>
-
-              {/* Lista de Alertas de Farmacovigilância */}
-              {filteredAlerts.length === 0 ? (
-                <div className="bg-white rounded-2xl p-12 text-center border border-slate-200 shadow-xs">
-                  <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <CheckCircle className="w-6 h-6" />
-                  </div>
-                  <h4 className="text-sm font-bold text-slate-800">Nenhum alerta de farmacovigilância</h4>
-                  <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
-                    Nenhum evento adverso ou relato de dor severa registrado no filtro selecionado. Os voluntários estão com sintomas sob controle.
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {filteredAlerts.map((alert) => {
-                    const isPending = alert.status === 'PENDING';
-                    const isCritical = alert.severity === 'CRITICAL';
-                    const phone = alert.participant?.patient?.phoneWhatsApp;
-                    const cleanPhone = phone ? phone.replace(/\D/g, '') : '';
-                    const fullPhone = cleanPhone ? (cleanPhone.startsWith('55') ? cleanPhone : `55${cleanPhone}`) : '';
-                    const whatsappMsg = encodeURIComponent(
-                      `Olá! Aqui é a equipe de Pesquisa Clínica da UEPG. Recebemos seu relato de dor/desconforto (${alert.timePoint || 'Diário'}). Como você está se sentindo agora?`
-                    );
-
-                    return (
-                      <div
-                        key={alert.id}
-                        className={`bg-white rounded-2xl border transition shadow-xs overflow-hidden ${
-                          isPending
-                            ? isCritical
-                              ? 'border-red-400 ring-1 ring-red-300'
-                              : 'border-amber-300'
-                            : 'border-slate-200'
-                        }`}
-                      >
-                        <div className="p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100">
-                          <div className="flex items-start space-x-3.5">
-                            <div
-                              className={`p-2.5 rounded-xl text-white shrink-0 mt-0.5 ${
-                                isCritical ? 'bg-red-600' : 'bg-amber-500'
-                              }`}
-                            >
-                              <AlertTriangle className="w-5 h-5" />
-                            </div>
-                            <div>
-                              <div className="flex flex-wrap items-center gap-2">
-                                <span className="font-mono font-black text-sm text-slate-900">
-                                  {alert.participant?.researchCode || 'Participante'}
-                                </span>
-                                {!isBlindedUser && alert.participant?.patient?.fullName && (
-                                  <span className="text-xs text-slate-500">
-                                    ({alert.participant.patient.fullName})
-                                  </span>
-                                )}
-                                <span
-                                  className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-                                    isCritical
-                                      ? 'bg-red-100 text-red-800 border border-red-200'
-                                      : 'bg-amber-100 text-amber-800 border border-amber-200'
-                                  }`}
-                                >
-                                  {alert.severity}
-                                </span>
-                                {alert.timePoint && (
-                                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
-                                    Momento {alert.timePoint}
-                                  </span>
-                                )}
-                                <span
-                                  className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-                                    isPending
-                                      ? 'bg-red-600 text-white animate-pulse'
-                                      : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
-                                  }`}
-                                >
-                                  {isPending ? 'Pendente' : 'Resolvido'}
-                                </span>
-                              </div>
-
-                              <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                                {alert.description}
-                              </p>
-                            </div>
-                          </div>
-
-                          <div className="flex flex-wrap items-center gap-2 shrink-0 self-end md:self-auto">
-                            {fullPhone && (
-                              <a
-                                href={`https://wa.me/${fullPhone}?text=${whatsappMsg}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center space-x-1.5"
-                                title="Abrir contato direto no WhatsApp com o voluntário"
-                              >
-                                <Phone className="w-3.5 h-3.5" />
-                                <span>Suporte WhatsApp</span>
-                              </a>
-                            )}
-
-                            {isPending ? (
-                              <button
-                                onClick={() => {
-                                  setSelectedAlertForResolution(alert);
-                                  setResolvedByInput(currentUser?.name || '');
-                                  setResolutionNotesInput('');
-                                }}
-                                className="px-3.5 py-2 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center space-x-1.5"
-                              >
-                                <CheckCircle2 className="w-3.5 h-3.5" />
-                                <span>Registrar Conduta Clínica</span>
-                              </button>
-                            ) : (
-                              <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200 flex items-center space-x-1">
-                                <CheckCircle className="w-3.5 h-3.5" />
-                                <span>Conduta Concluída</span>
-                              </span>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Detalhes Clínicos do Alerta */}
-                        <div className="p-4 bg-slate-50/70 grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
-                          <div>
-                            <span className="text-[10px] font-bold uppercase text-slate-400 block">Dor / EVA Reportada</span>
-                            <div className="mt-1 flex items-center space-x-2">
-                              <span className="font-mono font-black text-slate-900 text-base">
-                                {alert.painScore !== null ? `${alert.painScore}/10` : 'Não aferido'}
-                              </span>
-                              {alert.painScore !== null && (
-                                <div className="flex-1 bg-slate-200 h-2.5 rounded-full overflow-hidden max-w-[120px]">
-                                  <div
-                                    className={`h-full rounded-full ${
-                                      alert.painScore >= 8 ? 'bg-red-600' : 'bg-amber-500'
-                                    }`}
-                                    style={{ width: `${Math.min(100, (alert.painScore / 10) * 100)}%` }}
-                                  />
-                                </div>
-                              )}
-                            </div>
-                          </div>
-
-                          <div>
-                            <span className="text-[10px] font-bold uppercase text-slate-400 block">Condição Gengival</span>
-                            <span className="font-semibold text-slate-800 mt-1 block">
-                              {alert.gingivalSensation || 'Normal'}
-                            </span>
-                          </div>
-
-                          <div>
-                            <span className="text-[10px] font-bold uppercase text-slate-400 block">Registrado em</span>
-                            <span className="text-slate-600 mt-1 block">
-                              {new Date(alert.createdAt).toLocaleString('pt-BR')}
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Bloco de Resolução Clínica (se já resolvido) */}
-                        {!isPending && alert.resolutionNotes && (
-                          <div className="p-4 bg-emerald-50/50 border-t border-emerald-100 text-xs text-emerald-950 flex items-start space-x-2">
-                            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                            <div>
-                              <p className="font-bold text-emerald-900">
-                                Conduta Clínica Registrada por {alert.resolvedBy || 'Pesquisador'} em {alert.resolvedAt ? new Date(alert.resolvedAt).toLocaleString('pt-BR') : ''}:
-                              </p>
-                              <p className="text-emerald-800 mt-0.5 leading-relaxed">
-                                {alert.resolutionNotes}
-                              </p>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          );
-        })()}
-
         {/* ABA: TRILHA DE AUDITORIA REGULATÓRIA GCP (ICH-GCP E6 & 21 CFR PART 11) */}
-        {activeTab === 'audit' && (() => {
+        {activeTab === 'audit' && currentUser?.role === 'ADMIN' && (() => {
           const allLogs = project.auditLogs || [];
 
           const filteredLogs = allLogs.filter((log) => {
@@ -2886,7 +2484,6 @@ function DashboardContent() {
               const filter = auditEntityFilter.toLowerCase();
               if (filter === 'participant') return type.includes('participant');
               if (filter === 'session') return type.includes('session');
-              if (filter === 'clinical_alert') return type.includes('alert');
               if (filter === 'consent_signature') return type.includes('consent') || type.includes('signature');
               if (filter === 'project') return type.includes('project');
               return type === filter;
@@ -2952,7 +2549,6 @@ function DashboardContent() {
                     <option value="ALL">Todas as Entidades</option>
                     <option value="PARTICIPANT">Participantes & Status</option>
                     <option value="SESSION">Sessões Clínicas</option>
-                    <option value="CLINICAL_ALERT">Farmacovigilância / Alertas</option>
                     <option value="CONSENT_SIGNATURE">Assinaturas TCLE/TALE</option>
                     <option value="PROJECT">Projeto / Equipe</option>
                   </select>
@@ -4775,92 +4371,6 @@ function DashboardContent() {
                 className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold transition disabled:opacity-50"
               >
                 Confirmar Exclusão
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal de Registro de Conduta Clínica / Farmacovigilância */}
-      {selectedAlertForResolution && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 border border-slate-200">
-            <div className="flex items-center space-x-3 mb-4 text-red-600">
-              <div className="p-2.5 bg-red-100 rounded-xl">
-                <AlertTriangle className="w-6 h-6" />
-              </div>
-              <div>
-                <h3 className="text-base font-bold text-slate-900">
-                  Resolução de Alerta de Farmacovigilância
-                </h3>
-                <p className="text-xs text-slate-500">
-                  Participante: <strong className="text-slate-800">{selectedAlertForResolution.participant?.researchCode}</strong>
-                </p>
-              </div>
-            </div>
-
-            <div className="mb-4 p-3.5 bg-red-50 border border-red-200 rounded-xl text-xs space-y-1">
-              <p className="font-bold text-red-900">
-                Sintoma Reportado: {selectedAlertForResolution.painScore !== null ? `EVA ${selectedAlertForResolution.painScore}/10` : ''} - {selectedAlertForResolution.description}
-              </p>
-              {selectedAlertForResolution.gingivalSensation && (
-                <p className="text-red-800">
-                  Gengiva: <strong>{selectedAlertForResolution.gingivalSensation}</strong>
-                </p>
-              )}
-            </div>
-
-            <div className="space-y-4 text-xs">
-              <div>
-                <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">
-                  Profissional / Pesquisador Responsável *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Nome do pesquisador que realizou o atendimento"
-                  value={resolvedByInput}
-                  onChange={(e) => setResolvedByInput(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">
-                  Conduta Clínica & Justificativa (Obrigatório - GCP / ICH E6) *
-                </label>
-                <textarea
-                  rows={4}
-                  required
-                  placeholder="Descreva detalhadamente a conduta clínica adotada: ex. contato telefônico realizado, orientação de suspensão de alimentos ácidos/frios, posologia de analgésico de resgate orientada, sintomas remitidos..."
-                  value={resolutionNotesInput}
-                  onChange={(e) => setResolutionNotesInput(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                />
-              </div>
-            </div>
-
-            <div className="mt-6 flex space-x-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedAlertForResolution(null);
-                  setResolutionNotesInput('');
-                  setResolvedByInput('');
-                }}
-                disabled={resolvingAlert}
-                className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={handleResolveAlert}
-                disabled={resolvingAlert || !resolutionNotesInput.trim()}
-                className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-md transition disabled:opacity-50 flex items-center justify-center space-x-1.5"
-              >
-                <CheckCircle2 className="w-4 h-4" />
-                <span>{resolvingAlert ? 'Gravando Conduta...' : 'Concluir Resolução'}</span>
               </button>
             </div>
           </div>
