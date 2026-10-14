@@ -22,6 +22,8 @@ import {
 } from './teethData';
 import { ToothSvg } from './ToothSvg';
 
+export type ToolMode = ToothStatus | 'CYCLE';
+
 export interface OdontogramChartProps {
   mode?: 'clinical_status' | 'selection';
   statusMap?: Record<string, ToothStatus>;
@@ -45,52 +47,58 @@ export const OdontogramChart: React.FC<OdontogramChartProps> = ({
   readOnly = false,
   allowDeciduous = true,
 }) => {
-  // Estado local autossuficiente para garantir que o clique funcione imediatamente
+  // Estado local dos dentes garantido para renderização instantânea
   const [localStatusMap, setLocalStatusMap] = useState<Record<string, ToothStatus>>(statusMap || {});
+  
+  // Pincel / Ferramenta de Status Ativo (permite selecionar o status e ir clicando nos dentes!)
+  const [activeBrush, setActiveBrush] = useState<ToolMode>('CYCLE');
+  
   const [deciduousOpen, setDeciduousOpen] = useState(false);
   const [hoveredTooth, setHoveredTooth] = useState<string | null>(null);
-  const [activeSelectedTooth, setActiveSelectedTooth] = useState<string | null>(null);
 
-  // Sincronizar quando a prop externa mudar
+  // Sincronizar quando a prop externa for atualizada
   useEffect(() => {
     if (statusMap) {
       setLocalStatusMap(statusMap);
     }
   }, [statusMap]);
 
-  // Função para definir status específico de um dente
-  const setSpecificStatus = (tooth: string, newStatus: ToothStatus) => {
+  // Aplica o status em um dente específico
+  const applyToothStatus = (tooth: string, statusToApply: ToothStatus) => {
     if (readOnly) return;
     setLocalStatusMap((prev) => ({
       ...prev,
-      [tooth]: newStatus,
+      [tooth]: statusToApply,
     }));
-    onChangeStatus?.(tooth, newStatus);
+    onChangeStatus?.(tooth, statusToApply);
   };
 
-  // Status cíclico ao clicar no dente: Hígido -> Restaurado -> Cárie -> Ausente -> Faceta -> Hígido
-  const cycleStatus = (tooth: string) => {
-    if (readOnly) return;
-    const current = localStatusMap[tooth] || 'HIGIDO';
-    const sequence: ToothStatus[] = ['HIGIDO', 'RESTAURADO', 'CARIE', 'AUSENTE', 'FACETA'];
-    const nextIdx = (sequence.indexOf(current) + 1) % sequence.length;
-    const nextStatus = sequence[nextIdx];
-
-    setSpecificStatus(tooth, nextStatus);
-    setActiveSelectedTooth(tooth);
-  };
-
+  // Clique no dente com comportamento inteligente de Pincel / Ciclo
   const handleToothClick = (tooth: string) => {
     if (readOnly) return;
+
     if (mode === 'selection') {
       onToggleSelect?.(tooth);
+      return;
+    }
+
+    // Modo Pincel Ativo: se o usuário escolheu Ausente, Cárie, Restaurado, etc.
+    if (activeBrush !== 'CYCLE') {
+      const current = localStatusMap[tooth] || 'HIGIDO';
+      // Se clicar com a mesma ferramenta em dente que já tem aquele status, reverte para Hígido
+      const nextStatus = current === activeBrush ? 'HIGIDO' : activeBrush;
+      applyToothStatus(tooth, nextStatus);
     } else {
-      cycleStatus(tooth);
+      // Modo Ciclo Sequencial
+      const current = localStatusMap[tooth] || 'HIGIDO';
+      const sequence: ToothStatus[] = ['HIGIDO', 'RESTAURADO', 'CARIE', 'AUSENTE', 'FACETA'];
+      const nextIdx = (sequence.indexOf(current) + 1) % sequence.length;
+      applyToothStatus(tooth, sequence[nextIdx]);
     }
   };
 
-  // Ações em massa
-  const handleClear = () => {
+  // Ações em lote
+  const handleClearAll = () => {
     if (readOnly) return;
     if (mode === 'selection') {
       onBatchSelect?.([...ALL_PERMANENT_TEETH, ...ALL_DECIDUOUS_TEETH], 'deselect');
@@ -104,73 +112,22 @@ export const OdontogramChart: React.FC<OdontogramChartProps> = ({
     }
   };
 
-  const handleSelectAll = () => {
+  // Aplica o pincel atual em uma lista de dentes
+  const applyBrushToTeeth = (teeth: string[]) => {
     if (readOnly) return;
     if (mode === 'selection') {
-      onBatchSelect?.(ALL_PERMANENT_TEETH, 'select');
+      onBatchSelect?.(teeth, 'select');
     } else {
-      const current = activeSelectedTooth ? localStatusMap[activeSelectedTooth] || 'HIGIDO' : 'HIGIDO';
-      const updated: Record<string, ToothStatus> = { ...localStatusMap };
-      ALL_PERMANENT_TEETH.forEach((t) => {
-        updated[t] = current;
-        onChangeStatus?.(t, current);
+      const targetStatus: ToothStatus = activeBrush === 'CYCLE' ? 'HIGIDO' : activeBrush;
+      const updated = { ...localStatusMap };
+      teeth.forEach((t) => {
+        updated[t] = targetStatus;
+        onChangeStatus?.(t, targetStatus);
       });
       setLocalStatusMap(updated);
     }
   };
 
-  const handleSelectUpper = () => {
-    if (readOnly) return;
-    if (mode === 'selection') {
-      onBatchSelect?.(UPPER_PERMANENT_TEETH, 'select');
-    } else {
-      const current = activeSelectedTooth ? localStatusMap[activeSelectedTooth] || 'HIGIDO' : 'HIGIDO';
-      const updated: Record<string, ToothStatus> = { ...localStatusMap };
-      UPPER_PERMANENT_TEETH.forEach((t) => {
-        updated[t] = current;
-        onChangeStatus?.(t, current);
-      });
-      setLocalStatusMap(updated);
-    }
-  };
-
-  const handleSelectLower = () => {
-    if (readOnly) return;
-    if (mode === 'selection') {
-      onBatchSelect?.(LOWER_PERMANENT_TEETH, 'select');
-    } else {
-      const current = activeSelectedTooth ? localStatusMap[activeSelectedTooth] || 'HIGIDO' : 'HIGIDO';
-      const updated: Record<string, ToothStatus> = { ...localStatusMap };
-      LOWER_PERMANENT_TEETH.forEach((t) => {
-        updated[t] = current;
-        onChangeStatus?.(t, current);
-      });
-      setLocalStatusMap(updated);
-    }
-  };
-
-  const handleSelectAllDeciduous = () => {
-    if (readOnly) return;
-    if (mode === 'selection') {
-      onBatchSelect?.(ALL_DECIDUOUS_TEETH, 'select');
-    }
-  };
-
-  const handleSelectUpperDeciduous = () => {
-    if (readOnly) return;
-    if (mode === 'selection') {
-      onBatchSelect?.(UPPER_DECIDUOUS_TEETH, 'select');
-    }
-  };
-
-  const handleSelectLowerDeciduous = () => {
-    if (readOnly) return;
-    if (mode === 'selection') {
-      onBatchSelect?.(LOWER_DECIDUOUS_TEETH, 'select');
-    }
-  };
-
-  // Se escopo for apenas dentes anteriores (13..23 e 43..33)
   const isToothVisible = (tooth: string) => {
     if (scope !== 'anterior') return true;
     const anterior = ['13', '12', '11', '21', '22', '23', '43', '42', '41', '31', '32', '33'];
@@ -182,7 +139,6 @@ export const OdontogramChart: React.FC<OdontogramChartProps> = ({
     const status = localStatusMap[tooth] || 'HIGIDO';
     const statusCfg = TOOTH_STATUS_CONFIG[status] || TOOTH_STATUS_CONFIG.HIGIDO;
     const isSelected = selectedTeeth.includes(tooth);
-    const isActive = activeSelectedTooth === tooth;
     const visible = isToothVisible(tooth);
 
     if (!visible) {
@@ -198,27 +154,23 @@ export const OdontogramChart: React.FC<OdontogramChartProps> = ({
         onMouseEnter={() => setHoveredTooth(tooth)}
         onMouseLeave={() => setHoveredTooth(null)}
         className={`group relative flex flex-col items-center justify-between p-1.5 sm:p-2 rounded-2xl transition-all duration-150 cursor-pointer ${
-          isActive
-            ? 'bg-blue-50 ring-2 ring-blue-500 shadow-sm scale-105 z-20'
-            : isSelected
-            ? 'bg-blue-100/70 ring-2 ring-blue-500 shadow-xs scale-105 z-10'
-            : 'hover:bg-slate-100/90 hover:scale-105 hover:shadow-xs'
+          isSelected
+            ? 'bg-blue-100/80 ring-2 ring-blue-500 shadow-sm scale-105 z-10'
+            : 'hover:bg-slate-100/90 hover:scale-105 hover:shadow-xs active:scale-95'
         }`}
-        title={`${tooth} - ${meta?.name || 'Dente'}: ${
-          mode === 'selection'
-            ? isSelected
-              ? 'Selecionado'
-              : 'Clique para selecionar'
-            : `${statusCfg.label}. Clique para alternar status.`
+        title={`${tooth} - ${meta?.name || 'Dente'}: ${statusCfg.label}. ${
+          activeBrush !== 'CYCLE'
+            ? `Clique para aplicar status [${TOOTH_STATUS_CONFIG[activeBrush]?.label}]`
+            : 'Clique para alternar status'
         }`}
       >
-        {/* Ilustração Anatômica Realista do Dente */}
+        {/* Ilustração Anatômica Hiper-realista do Dente */}
         <ToothSvg
           fdi={tooth}
           status={status}
-          isSelected={isSelected || isActive}
+          isSelected={isSelected}
           width={30}
-          height={60}
+          height={62}
           className="transition-transform group-hover:drop-shadow-sm"
         />
 
@@ -227,11 +179,11 @@ export const OdontogramChart: React.FC<OdontogramChartProps> = ({
           {tooth}
         </span>
 
-        {/* Badge de Higidez / Status Clínico */}
+        {/* Indicador de Status Clínico */}
         {mode === 'clinical_status' && (
           <div className="mt-0.5 flex items-center justify-center">
             {status === 'HIGIDO' ? (
-              <span className="w-2 h-2 rounded-full bg-emerald-500" title="Hígido" />
+              <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-2xs" title="Hígido" />
             ) : (
               <span
                 className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded-full ${statusCfg.bg} ${statusCfg.text} border ${statusCfg.border}`}
@@ -252,40 +204,146 @@ export const OdontogramChart: React.FC<OdontogramChartProps> = ({
     );
   };
 
-  const activeToothStatus = activeSelectedTooth ? localStatusMap[activeSelectedTooth] || 'HIGIDO' : null;
-
   return (
-    <div className="w-full bg-white rounded-3xl border border-slate-200 shadow-xs p-3 sm:p-6 select-none space-y-6">
+    <div className="w-full bg-white rounded-3xl border border-slate-200 shadow-xs p-3 sm:p-6 select-none space-y-5">
       
-      {/* Barra de Ações Rápidas do Topo (Limpar | Todos | Superior | Inferior) */}
-      {!readOnly && (
-        <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-100">
-          <div className="inline-flex items-center gap-1.5 sm:gap-2">
+      {/* ============================================================ */}
+      {/* BARRA DE FERRAMENTAS / MODO PINCEL CLÍNICO ATIVO             */}
+      {/* Permite selecionar um status e ir clicando nos dentes!       */}
+      {/* ============================================================ */}
+      {!readOnly && mode === 'clinical_status' && (
+        <div className="p-3 bg-slate-900 text-white rounded-2xl shadow-md border border-slate-800 space-y-2.5 animate-fadeIn">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center space-x-2">
+              <span className="text-sm">🖌️</span>
+              <span className="text-xs font-bold text-slate-200 uppercase tracking-wider">
+                Ferramenta / Pincel Clínico:
+              </span>
+            </div>
+
+            <span className="text-[11px] text-slate-300 font-semibold bg-slate-800 px-2.5 py-0.5 rounded-full border border-slate-700">
+              {activeBrush === 'CYCLE' ? (
+                '🔄 Modo Ciclo: Clique no dente para alternar sequencialmente'
+              ) : (
+                <span>
+                  Pincel Ativo: <strong className="text-white underline">{TOOTH_STATUS_CONFIG[activeBrush]?.label}</strong> (Clique nos dentes para aplicar)
+                </span>
+              )}
+            </span>
+          </div>
+
+          {/* Botões seletores de ferramenta/pincel */}
+          <div className="flex flex-wrap items-center gap-1.5 text-xs">
             <button
               type="button"
-              onClick={handleClear}
-              className="px-3.5 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition shadow-2xs cursor-pointer active:scale-95"
+              onClick={() => setActiveBrush('AUSENTE')}
+              className={`px-3 py-1.5 rounded-xl font-bold transition flex items-center space-x-1.5 cursor-pointer ${
+                activeBrush === 'AUSENTE'
+                  ? 'bg-slate-700 text-white ring-2 ring-red-400 shadow-xs scale-105'
+                  : 'bg-slate-800/80 hover:bg-slate-800 text-slate-300'
+              }`}
+            >
+              <span className="w-2.5 h-2.5 rounded-full bg-slate-400" />
+              <span>⚪ Ausente (Extraído)</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveBrush('CARIE')}
+              className={`px-3 py-1.5 rounded-xl font-bold transition flex items-center space-x-1.5 cursor-pointer ${
+                activeBrush === 'CARIE'
+                  ? 'bg-red-600 text-white ring-2 ring-red-300 shadow-xs scale-105'
+                  : 'bg-slate-800/80 hover:bg-slate-800 text-slate-300'
+              }`}
+            >
+              <span className="w-2.5 h-2.5 rounded-full bg-red-400" />
+              <span>🔴 Cárie</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveBrush('RESTAURADO')}
+              className={`px-3 py-1.5 rounded-xl font-bold transition flex items-center space-x-1.5 cursor-pointer ${
+                activeBrush === 'RESTAURADO'
+                  ? 'bg-blue-600 text-white ring-2 ring-blue-300 shadow-xs scale-105'
+                  : 'bg-slate-800/80 hover:bg-slate-800 text-slate-300'
+              }`}
+            >
+              <span className="w-2.5 h-2.5 rounded-full bg-blue-400" />
+              <span>🔵 Restaurado</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveBrush('FACETA')}
+              className={`px-3 py-1.5 rounded-xl font-bold transition flex items-center space-x-1.5 cursor-pointer ${
+                activeBrush === 'FACETA'
+                  ? 'bg-purple-600 text-white ring-2 ring-purple-300 shadow-xs scale-105'
+                  : 'bg-slate-800/80 hover:bg-slate-800 text-slate-300'
+              }`}
+            >
+              <span className="w-2.5 h-2.5 rounded-full bg-purple-400" />
+              <span>🟣 Faceta / Coroa</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveBrush('HIGIDO')}
+              className={`px-3 py-1.5 rounded-xl font-bold transition flex items-center space-x-1.5 cursor-pointer ${
+                activeBrush === 'HIGIDO'
+                  ? 'bg-emerald-600 text-white ring-2 ring-emerald-300 shadow-xs scale-105'
+                  : 'bg-slate-800/80 hover:bg-slate-800 text-slate-300'
+              }`}
+            >
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
+              <span>🟢 Hígido</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveBrush('CYCLE')}
+              className={`px-3 py-1.5 rounded-xl font-bold transition flex items-center space-x-1.5 cursor-pointer ${
+                activeBrush === 'CYCLE'
+                  ? 'bg-amber-600 text-white ring-2 ring-amber-300 shadow-xs scale-105'
+                  : 'bg-slate-800/80 hover:bg-slate-800 text-slate-300'
+              }`}
+            >
+              <span>🔄</span>
+              <span>Alternar (Ciclo)</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Barra de Ações Rápidas (Limpar | Aplicar Superior | Aplicar Inferior | Todos) */}
+      {!readOnly && (
+        <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-100">
+          <div className="inline-flex flex-wrap items-center gap-1.5 sm:gap-2">
+            <button
+              type="button"
+              onClick={handleClearAll}
+              className="px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition shadow-2xs cursor-pointer active:scale-95"
             >
               Limpar (Todos Hígidos)
             </button>
             <button
               type="button"
-              onClick={handleSelectAll}
-              className="px-3.5 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition shadow-2xs cursor-pointer active:scale-95"
+              onClick={() => applyBrushToTeeth(ALL_PERMANENT_TEETH)}
+              className="px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition shadow-2xs cursor-pointer active:scale-95"
             >
-              Todos
+              {activeBrush === 'CYCLE' ? 'Todos' : `Aplicar em Todos`}
             </button>
             <button
               type="button"
-              onClick={handleSelectUpper}
-              className="px-3.5 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition shadow-2xs cursor-pointer active:scale-95"
+              onClick={() => applyBrushToTeeth(UPPER_PERMANENT_TEETH)}
+              className="px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition shadow-2xs cursor-pointer active:scale-95"
             >
               Superior
             </button>
             <button
               type="button"
-              onClick={handleSelectLower}
-              className="px-3.5 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition shadow-2xs cursor-pointer active:scale-95"
+              onClick={() => applyBrushToTeeth(LOWER_PERMANENT_TEETH)}
+              className="px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition shadow-2xs cursor-pointer active:scale-95"
             >
               Inferior
             </button>
@@ -304,91 +362,11 @@ export const OdontogramChart: React.FC<OdontogramChartProps> = ({
               </span>
             ) : (
               <span className="text-slate-400">
-                {mode === 'clinical_status'
-                  ? '💡 Clique diretamente no dente para alterar o status'
-                  : '💡 Selecione os dentes desejados para a intervenção'}
+                {activeBrush !== 'CYCLE'
+                  ? `👉 Clique em qualquer dente para aplicar [${TOOTH_STATUS_CONFIG[activeBrush]?.label}]`
+                  : '👉 Clique em qualquer dente para alternar o status clínico'}
               </span>
             )}
-          </div>
-        </div>
-      )}
-
-      {/* Paleta Rápida de Status (aparece ao selecionar um dente) */}
-      {!readOnly && mode === 'clinical_status' && activeSelectedTooth && (
-        <div className="bg-slate-900 text-white p-3 rounded-2xl flex flex-wrap items-center justify-between gap-3 shadow-md border border-slate-700 animate-fadeIn">
-          <div className="flex items-center space-x-2">
-            <span className="text-xs font-bold text-blue-400 font-mono">Dente {activeSelectedTooth}:</span>
-            <span className="text-xs font-medium text-slate-300">
-              {TEETH_METADATA[activeSelectedTooth]?.name}
-            </span>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-1.5 text-xs">
-            <span className="text-[11px] text-slate-400 mr-1 font-semibold">Definir status:</span>
-            <button
-              type="button"
-              onClick={() => setSpecificStatus(activeSelectedTooth, 'HIGIDO')}
-              className={`px-2.5 py-1 rounded-lg font-bold transition flex items-center space-x-1 cursor-pointer ${
-                activeToothStatus === 'HIGIDO'
-                  ? 'bg-emerald-600 text-white ring-2 ring-emerald-300'
-                  : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-              }`}
-            >
-              <span className="w-2 h-2 rounded-full bg-emerald-400" />
-              <span>Hígido</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setSpecificStatus(activeSelectedTooth, 'RESTAURADO')}
-              className={`px-2.5 py-1 rounded-lg font-bold transition flex items-center space-x-1 cursor-pointer ${
-                activeToothStatus === 'RESTAURADO'
-                  ? 'bg-blue-600 text-white ring-2 ring-blue-300'
-                  : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-              }`}
-            >
-              <span className="w-2 h-2 rounded-full bg-blue-400" />
-              <span>Restaurado</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setSpecificStatus(activeSelectedTooth, 'CARIE')}
-              className={`px-2.5 py-1 rounded-lg font-bold transition flex items-center space-x-1 cursor-pointer ${
-                activeToothStatus === 'CARIE'
-                  ? 'bg-red-600 text-white ring-2 ring-red-300'
-                  : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-              }`}
-            >
-              <span className="w-2 h-2 rounded-full bg-red-400" />
-              <span>Cárie</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setSpecificStatus(activeSelectedTooth, 'AUSENTE')}
-              className={`px-2.5 py-1 rounded-lg font-bold transition flex items-center space-x-1 cursor-pointer ${
-                activeToothStatus === 'AUSENTE'
-                  ? 'bg-slate-600 text-white ring-2 ring-slate-400'
-                  : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-              }`}
-            >
-              <span className="w-2 h-2 rounded-full bg-slate-400" />
-              <span>Ausente</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setSpecificStatus(activeSelectedTooth, 'FACETA')}
-              className={`px-2.5 py-1 rounded-lg font-bold transition flex items-center space-x-1 cursor-pointer ${
-                activeToothStatus === 'FACETA'
-                  ? 'bg-purple-600 text-white ring-2 ring-purple-300'
-                  : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-              }`}
-            >
-              <span className="w-2 h-2 rounded-full bg-purple-400" />
-              <span>Faceta / Coroa</span>
-            </button>
           </div>
         </div>
       )}
@@ -476,21 +454,21 @@ export const OdontogramChart: React.FC<OdontogramChartProps> = ({
                   <div className="flex items-center justify-center gap-2 pb-2">
                     <button
                       type="button"
-                      onClick={handleSelectAllDeciduous}
+                      onClick={() => applyBrushToTeeth(ALL_DECIDUOUS_TEETH)}
                       className="px-3 py-1 rounded-lg border border-purple-200 bg-white hover:bg-purple-50 text-purple-800 text-[11px] font-bold shadow-2xs transition cursor-pointer"
                     >
                       Todos Decíduos
                     </button>
                     <button
                       type="button"
-                      onClick={handleSelectUpperDeciduous}
+                      onClick={() => applyBrushToTeeth(UPPER_DECIDUOUS_TEETH)}
                       className="px-3 py-1 rounded-lg border border-purple-200 bg-white hover:bg-purple-50 text-purple-800 text-[11px] font-bold shadow-2xs transition cursor-pointer"
                     >
                       Superior
                     </button>
                     <button
                       type="button"
-                      onClick={handleSelectLowerDeciduous}
+                      onClick={() => applyBrushToTeeth(LOWER_DECIDUOUS_TEETH)}
                       className="px-3 py-1 rounded-lg border border-purple-200 bg-white hover:bg-purple-50 text-purple-800 text-[11px] font-bold shadow-2xs transition cursor-pointer"
                     >
                       Inferior
@@ -545,16 +523,16 @@ export const OdontogramChart: React.FC<OdontogramChartProps> = ({
       {mode === 'clinical_status' && (
         <div className="flex flex-wrap items-center justify-center gap-3 pt-3 border-t border-slate-100 text-[11px] text-slate-600">
           <span className="flex items-center">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 mr-1.5 shadow-2xs" /> Hígido (Branco)
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 mr-1.5 shadow-2xs" /> Hígido (Esmalte Natural)
           </span>
           <span className="flex items-center">
-            <span className="w-2.5 h-2.5 rounded-full bg-blue-500 mr-1.5 shadow-2xs" /> Restaurado (Azul)
+            <span className="w-2.5 h-2.5 rounded-full bg-blue-500 mr-1.5 shadow-2xs" /> Restaurado (Resina Azul)
           </span>
           <span className="flex items-center">
-            <span className="w-2.5 h-2.5 rounded-full bg-red-500 mr-1.5 shadow-2xs" /> Cárie (Vermelho)
+            <span className="w-2.5 h-2.5 rounded-full bg-red-500 mr-1.5 shadow-2xs" /> Cárie (Lesão Vermelha)
           </span>
           <span className="flex items-center">
-            <span className="w-2.5 h-2.5 rounded-full bg-slate-400 mr-1.5 shadow-2xs" /> Ausente (Traço X)
+            <span className="w-2.5 h-2.5 rounded-full bg-slate-400 mr-1.5 shadow-2xs" /> Ausente (Cruz Vermelha)
           </span>
           <span className="flex items-center">
             <span className="w-2.5 h-2.5 rounded-full bg-purple-500 mr-1.5 shadow-2xs" /> Faceta / Coroa (Roxo)
