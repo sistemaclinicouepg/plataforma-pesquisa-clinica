@@ -66,6 +66,14 @@ export default function LoginPage() {
     }
   };
 
+  const handleQuickLogin = (quickEmail: string, quickPass: string) => {
+    setIsRequestingAccess(false);
+    setEmail(quickEmail);
+    setPassword(quickPass);
+    setError(null);
+    setIsPendingApproval(false);
+  };
+
   return (
     <div className="min-h-screen bg-slate-50/80 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 font-sans text-slate-800">
       
@@ -202,6 +210,96 @@ export default function LoginPage() {
                 ? '← Já possui conta? Fazer Login'
                 : 'Não tem conta? Solicitar cadastro como pesquisador / aluno →'}
             </button>
+          </div>
+
+          {/* Atalhos para Testes e Demonstração */}
+          <div className="pt-4 border-t border-slate-100 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                🧪 Credenciais de Teste (Atalhos Rápidos):
+              </p>
+              <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full">
+                Ativo no Banco Neon
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 gap-2 text-xs">
+              <button
+                type="button"
+                onClick={() => handleQuickLogin('pesquisadora@uepg.br', '123')}
+                className="w-full p-2.5 rounded-xl border border-blue-200 bg-blue-50/70 hover:bg-blue-100/90 text-blue-950 transition flex items-center justify-between text-left group"
+              >
+                <div>
+                  <div className="font-bold flex items-center space-x-1.5">
+                    <span>👩‍⚕️</span>
+                    <span>Dra. Roberta (Coordenadora de Estudos)</span>
+                  </div>
+                  <span className="text-[10px] text-blue-700 block mt-0.5">
+                    pesquisadora@uepg.br • senha: 123
+                  </span>
+                </div>
+                <span className="text-[10px] bg-blue-600 group-hover:bg-blue-700 text-white font-bold px-2.5 py-1 rounded-md transition shadow-2xs">
+                  Preencher
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleQuickLogin('carlos@uepg.br', '123')}
+                className="w-full p-2.5 rounded-xl border border-amber-200 bg-amber-50/70 hover:bg-amber-100/90 text-amber-950 transition flex items-center justify-between text-left group"
+              >
+                <div>
+                  <div className="font-bold flex items-center space-x-1.5">
+                    <span>🎓</span>
+                    <span>Carlos Eduardo (Avaliador Cego)</span>
+                  </div>
+                  <span className="text-[10px] text-amber-700 block mt-0.5">
+                    carlos@uepg.br • senha: 123
+                  </span>
+                </div>
+                <span className="text-[10px] bg-amber-600 group-hover:bg-amber-700 text-white font-bold px-2.5 py-1 rounded-md transition shadow-2xs">
+                  Preencher
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleQuickLogin('admin@uepg.br', 'admin')}
+                className="w-full p-2.5 rounded-xl border border-purple-200 bg-purple-50/70 hover:bg-purple-100/90 text-purple-950 transition flex items-center justify-between text-left group"
+              >
+                <div>
+                  <div className="font-bold flex items-center space-x-1.5">
+                    <span>👑</span>
+                    <span>Dra. Alessandra (Administradora Geral)</span>
+                  </div>
+                  <span className="text-[10px] text-purple-700 block mt-0.5">
+                    admin@uepg.br • senha: admin
+                  </span>
+                </div>
+                <span className="text-[10px] bg-purple-600 group-hover:bg-purple-700 text-white font-bold px-2.5 py-1 rounded-md transition shadow-2xs">
+                  Preencher
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleQuickLogin('pendente@uepg.br', '123')}
+                className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-800 transition flex items-center justify-between text-left group"
+              >
+                <div>
+                  <div className="font-bold flex items-center space-x-1.5 text-slate-700">
+                    <span>⏳</span>
+                    <span>Lucas Penteado (Pendente de Aprovação)</span>
+                  </div>
+                  <span className="text-[10px] text-slate-500 block mt-0.5">
+                    pendente@uepg.br • senha: 123 (Testa bloqueio ético)
+                  </span>
+                </div>
+                <span className="text-[10px] bg-slate-500 group-hover:bg-slate-600 text-white font-bold px-2.5 py-1 rounded-md transition shadow-2xs">
+                  Preencher
+                </span>
+              </button>
+            </div>
           </div>
 
           {/* Link para o Portal do Paciente */}
