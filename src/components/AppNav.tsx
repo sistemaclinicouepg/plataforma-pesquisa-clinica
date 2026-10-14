@@ -131,16 +131,14 @@ export default function AppNav() {
   const isEvaluator = currentUser?.email === 'carlos@uepg.br';
   const isAdmin = currentUser?.role === 'ADMIN';
 
-  const navLinks = [
+  const navLinks: Array<{
+    href: string;
+    label: string;
+    icon: React.ComponentType<{ className?: string }>;
+    roleBadge?: string;
+  }> = [
     { href: '/projetos', label: 'Estudos', icon: FolderKanban },
     { href: `/dashboard?projectId=${activeProjectId}`, label: 'Prontuário & Atendimento', icon: Activity },
-    { href: `/anamnese?projectId=${activeProjectId}`, label: 'Odontograma & Ficha', icon: Stethoscope },
-    {
-      href: `/construtor?projectId=${activeProjectId}`,
-      label: 'Construtor eCRF',
-      icon: FileEdit,
-      roleBadge: isEvaluator ? 'Leitura' : 'Coordenação',
-    },
     { href: `/relatorio-cep?projectId=${activeProjectId}`, label: 'Relatório CEP', icon: FileSpreadsheet },
   ];
 

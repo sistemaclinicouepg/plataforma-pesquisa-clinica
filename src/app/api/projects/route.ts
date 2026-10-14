@@ -13,6 +13,7 @@ export async function GET() {
       id: true,
       name: true,
       description: true,
+      anamnesisTemplate: true,
       createdAt: true,
       members: {
         include: {

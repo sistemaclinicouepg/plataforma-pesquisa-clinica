@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { AlertTriangle, CheckCircle2, Lock, ShieldCheck, Printer, Users } from 'lucide-react';
 import { formatDisplayHash } from '@/lib/cryptoHash';
+import { formatUserAgent } from '@/lib/formatUserAgent';
 
 type TCLEData = {
   title: string;
@@ -315,6 +316,12 @@ function PatientTcleContent() {
             <p><strong>Código de Auditoria:</strong> {auditResult.signatureId}</p>
             <p><strong>Data e Hora:</strong> {new Date(auditResult.signedAt).toLocaleString('pt-BR')}</p>
             <p><strong>Endereço IP:</strong> {auditResult.audit.ipAddress}</p>
+            <p>
+              <strong>Dispositivo:</strong>{' '}
+              <span className="font-semibold text-slate-800" title={auditResult.audit.userAgent}>
+                {formatUserAgent(auditResult.audit.userAgent)}
+              </span>
+            </p>
             {auditResult.signatureHash && (
               <p className="break-all pt-1 border-t border-slate-200 text-[10px]">
                 <strong>Hash SHA-256:</strong>{' '}

@@ -119,3 +119,47 @@ export async function GET(
     );
   }
 }
+
+export async function PATCH(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const auth = await checkProjectPermission(id, true);
+    if (!auth.authorized) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
+
+    const body = await req.json();
+    const { name, description, anamnesisTemplate } = body;
+
+    const dataToUpdate: Record<string, any> = {};
+    if (typeof name === 'string' && name.trim()) {
+      dataToUpdate.name = name.trim();
+    }
+    if (typeof description !== 'undefined') {
+      dataToUpdate.description = description?.trim() || null;
+    }
+    if (typeof anamnesisTemplate !== 'undefined') {
+      dataToUpdate.anamnesisTemplate =
+        typeof anamnesisTemplate === 'string'
+          ? anamnesisTemplate
+          : JSON.stringify(anamnesisTemplate);
+    }
+
+    const updated = await prisma.project.update({
+      where: { id },
+      data: dataToUpdate,
+    });
+
+    return NextResponse.json({ success: true, project: updated });
+  } catch (error) {
+    console.error('Erro ao atualizar projeto:', error);
+    return NextResponse.json(
+      { error: 'Erro ao atualizar dados do projeto.' },
+      { status: 500 }
+    );
+  }
+}
+

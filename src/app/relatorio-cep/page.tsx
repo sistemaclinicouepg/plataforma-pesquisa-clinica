@@ -3,7 +3,8 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { CheckCircle2, XCircle, Check, ArrowLeft, Printer } from 'lucide-react';
+import { CheckCircle2, XCircle, Check, ArrowLeft, Printer, RefreshCw, FolderKanban } from 'lucide-react';
+import { formatUserAgent } from '@/lib/formatUserAgent';
 
 type ParticipantSession = {
   id: string;
@@ -23,6 +24,7 @@ type ParticipantSignature = {
   participantName: string;
   cpf: string;
   ipAddress: string | null;
+  userAgent?: string | null;
   signedAt: string;
 };
 
@@ -70,40 +72,137 @@ function RelatorioCepContent() {
   const projectIdParam = searchParams.get('projectId');
 
   const [project, setProject] = useState<ProjectData | null>(null);
+  const [allProjects, setAllProjects] = useState<Array<{ id: string; name: string }>>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  const fetchWithRetry = async (url: string, timeoutMs: number = 35000, maxRetries: number = 2): Promise<Response> => {
+    let lastError: any = null;
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        const res = await fetch(url, { signal: controller.signal, cache: 'no-store' });
+        clearTimeout(timer);
+        if (!res.ok && res.status >= 500 && attempt < maxRetries) {
+          console.warn(`[RelatorioCEP] Tentativa ${attempt + 1} para ${url} retornou ${res.status}. Retentando...`);
+          await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
+          continue;
+        }
+        return res;
+      } catch (err: any) {
+        clearTimeout(timer);
+        lastError = err;
+        console.warn(`[RelatorioCEP] Tentativa ${attempt + 1} para ${url} falhou: ${err.message || err.name}.`);
+        if (attempt < maxRetries) {
+          await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
+          continue;
+        }
+      }
+    }
+    throw lastError;
+  };
+
+  const loadData = async () => {
+    setLoadError(null);
+    try {
+      let pId = projectIdParam;
+
+      // 1. Busca em segundo plano a lista de projetos para preencher o seletor rápido
+      fetchWithRetry('/api/projects', 35000, 1)
+        .then(async (listRes) => {
+          if (listRes.status === 401 && typeof window !== 'undefined') {
+            window.location.href = `/login?from=${encodeURIComponent(window.location.pathname + window.location.search)}`;
+            return;
+          }
+          if (listRes.ok) {
+            const listData = await listRes.json();
+            if (listData.projects) {
+              setAllProjects(listData.projects.map((p: any) => ({ id: p.id, name: p.name })));
+              if (!pId && listData.projects.length > 0) {
+                // Se não havia pId na URL, carrega o primeiro projeto da lista
+                loadProjectById(listData.projects[0].id);
+              }
+            }
+          }
+        })
+        .catch((e) => console.warn('Erro ao carregar lista de projetos para o seletor:', e));
+
+      // 2. Se já temos o ID do projeto na URL ou no armazenamento local
+      if (!pId && typeof window !== 'undefined') {
+        pId = localStorage.getItem('app_active_project_id') || localStorage.getItem('prototipo_active_project_id');
+      }
+
+      if (pId) {
+        await loadProjectById(pId);
+      }
+    } catch (err: any) {
+      console.error('Erro ao carregar dados para o relatório:', err);
+      setLoadError('A conexão com o servidor demorou para responder. Clique para tentar novamente.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadProjectById = async (targetId: string) => {
+    try {
+      const res = await fetchWithRetry(`/api/projects/${targetId}`, 35000, 2);
+
+      if (res.status === 401) {
+        if (typeof window !== 'undefined') {
+          window.location.href = `/login?from=${encodeURIComponent(window.location.pathname + window.location.search)}`;
+        }
+        return;
+      }
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.project) {
+          setProject(data.project);
+          setLoadError(null);
+          try {
+            localStorage.setItem(`uepg_cached_project_${data.project.id}`, JSON.stringify(data.project));
+            localStorage.setItem('uepg_cached_last_project', JSON.stringify(data.project));
+          } catch (e) {}
+        }
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        setLoadError(errData.error || 'Não foi possível carregar os dados deste estudo.');
+      }
+    } catch (err: any) {
+      console.error('Erro ao carregar projeto por ID:', err);
+      setLoadError('A conexão com o banco de dados demorou para responder.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const loadData = async () => {
+    // 0. Leitura imediata do Cache Local (0 ms SWR!)
+    if (typeof window !== 'undefined') {
       try {
-        setLoading(true);
-        let pId = projectIdParam;
-        if (!pId) {
-          const listRes = await fetch('/api/projects');
-          const listData = await listRes.json();
-          pId = listData.projects?.[0]?.id;
-        }
-
-        if (pId) {
-          const res = await fetch(`/api/projects/${pId}`);
-          if (res.ok) {
-            const data = await res.json();
-            setProject(data.project);
+        const pId = projectIdParam || localStorage.getItem('app_active_project_id') || localStorage.getItem('prototipo_active_project_id');
+        const cachedKey = pId ? `uepg_cached_project_${pId}` : 'uepg_cached_last_project';
+        const cachedStr = localStorage.getItem(cachedKey);
+        if (cachedStr) {
+          const cached = JSON.parse(cachedStr);
+          if (cached && cached.id) {
+            setProject(cached);
+            setLoading(false);
           }
         }
-      } catch (err) {
-        console.error('Erro ao carregar dados para o relatório:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
+      } catch (e) {}
+    }
 
     loadData();
   }, [projectIdParam]);
 
-  if (loading) {
+  if (loading && !project) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center text-slate-400">
-        <p className="animate-pulse">Gerando Relatório de Auditoria CEP/CONSORT...</p>
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center text-slate-500 gap-3 p-6 text-center">
+        <div className="w-8 h-8 border-3 border-blue-600 border-t-transparent rounded-full animate-spin" />
+        <p className="font-bold text-sm text-slate-700 animate-pulse">Gerando Relatório de Auditoria CEP/CONSORT...</p>
+        <p className="text-xs text-slate-400">Compilando dados de elegibilidade, sessões e assinaturas eletrônicas</p>
       </div>
     );
   }
@@ -111,10 +210,34 @@ function RelatorioCepContent() {
   if (!project) {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-center">
-        <h2 className="text-xl font-bold text-slate-800">Nenhum projeto localizado.</h2>
-        <Link href="/projetos" className="mt-4 text-blue-600 font-semibold underline">
-          ← Voltar para projetos
-        </Link>
+        <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 mx-auto flex items-center justify-center mb-4 border border-amber-200">
+          <FolderKanban className="w-6 h-6" />
+        </div>
+        <h2 className="text-lg font-bold text-slate-900 mb-1">
+          {loadError || 'Nenhum projeto localizado.'}
+        </h2>
+        <p className="text-xs text-slate-500 mb-6 max-w-sm mx-auto">
+          Não foi possível carregar os dados consolidados do estudo para emissão do relatório ético.
+        </p>
+        <div className="flex justify-center gap-3">
+          <button
+            onClick={() => {
+              setLoading(true);
+              loadData();
+            }}
+            className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-xs"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            <span>Tentar Novamente</span>
+          </button>
+          <Link
+            href="/projetos"
+            className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition flex items-center gap-1.5"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>Ver Meus Projetos</span>
+          </Link>
+        </div>
       </div>
     );
   }
@@ -148,13 +271,43 @@ function RelatorioCepContent() {
       
       {/* Barra de Ações Superior (Oculta na Impressão) */}
       <div className="w-full max-w-6xl mx-auto mb-6 flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 print:hidden">
-        <Link
-          href={`/dashboard?projectId=${project.id}`}
-          className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl shadow-xs transition"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span>Voltar ao Painel da Pesquisa</span>
-        </Link>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href={`/dashboard?projectId=${project.id}`}
+            className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl shadow-xs transition"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Voltar ao Painel</span>
+          </Link>
+
+          {allProjects.length > 1 && (
+            <div className="flex items-center gap-1.5 bg-white border border-slate-300 rounded-xl px-2.5 py-1.5 shadow-xs text-xs">
+              <FolderKanban className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+              <select
+                value={project.id}
+                onChange={(e) => {
+                  const newId = e.target.value;
+                  if (newId) {
+                    setLoading(true);
+                    loadProjectById(newId);
+                    if (typeof window !== 'undefined') {
+                      const url = new URL(window.location.href);
+                      url.searchParams.set('projectId', newId);
+                      window.history.replaceState({}, '', url.toString());
+                    }
+                  }
+                }}
+                className="bg-transparent text-slate-800 font-semibold focus:outline-none cursor-pointer max-w-[220px] truncate"
+              >
+                {allProjects.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
 
         <button
           onClick={() => window.print()}
@@ -404,7 +557,8 @@ function RelatorioCepContent() {
                 <tr>
                   <th className="p-2.5">Código</th>
                   <th className="p-2.5">Data / Hora de Assinatura</th>
-                  <th className="p-2.5">IP do Dispositivo</th>
+                  <th className="p-2.5">IP de Conexão</th>
+                  <th className="p-2.5">Dispositivo / Navegador</th>
                   <th className="p-2.5">Integridade Criptográfica</th>
                   <th className="p-2.5 text-right">Status do TCLE</th>
                 </tr>
@@ -419,6 +573,11 @@ function RelatorioCepContent() {
                         {sig?.signedAt ? new Date(sig.signedAt).toLocaleString('pt-BR') : 'Assinado digitalmente'}
                       </td>
                       <td className="p-2.5 font-mono text-slate-500">{sig?.ipAddress || '127.0.0.1 (Ambiente Seguro)'}</td>
+                      <td className="p-2.5 text-slate-700 font-medium">
+                        <span title={sig?.userAgent || ''}>
+                          {formatUserAgent(sig?.userAgent)}
+                        </span>
+                      </td>
                       <td className="p-2.5 font-mono text-[10px] text-slate-400 truncate max-w-xs">
                         SHA-256: VALIDADO (Trilha Ativa)
                       </td>

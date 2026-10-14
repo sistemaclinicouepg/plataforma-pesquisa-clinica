@@ -19,12 +19,16 @@ import {
   RefreshCw,
   AlertTriangle,
   LogIn,
+  Sliders,
+  Settings,
+  X,
 } from 'lucide-react';
 
 type Project = {
   id: string;
   name: string;
   description: string | null;
+  anamnesisTemplate?: string | null;
   createdAt: string;
   members: Array<{
     id: string;
@@ -68,6 +72,83 @@ export default function ProjetosPage() {
   const [enablePeriodontogram, setEnablePeriodontogram] = useState(false);
   const [enableAnamnesis, setEnableAnamnesis] = useState(true);
   const [creating, setCreating] = useState(false);
+
+  // Modal de edição / configuração do estudo
+  const [editingProject, setEditingProject] = useState<Project | null>(null);
+  const [editProjectName, setEditProjectName] = useState('');
+  const [editProjectDesc, setEditProjectDesc] = useState('');
+  const [editEnableOdontogram, setEditEnableOdontogram] = useState(true);
+  const [editOdontogramScope, setEditOdontogramScope] = useState<'anterior' | 'full'>('anterior');
+  const [editEnablePeriodontogram, setEditEnablePeriodontogram] = useState(false);
+  const [editEnableAnamnesis, setEditEnableAnamnesis] = useState(true);
+  const [savingEdit, setSavingEdit] = useState(false);
+
+  const openEditModal = (p: Project) => {
+    setEditingProject(p);
+    setEditProjectName(p.name);
+    setEditProjectDesc(p.description || '');
+
+    let tpl: any = {};
+    if (p.anamnesisTemplate) {
+      try {
+        tpl = typeof p.anamnesisTemplate === 'string' ? JSON.parse(p.anamnesisTemplate) : p.anamnesisTemplate;
+      } catch (e) {}
+    }
+
+    setEditEnableOdontogram(tpl.enableOdontogram !== false);
+    setEditOdontogramScope(tpl.odontogramScope || 'anterior');
+    setEditEnablePeriodontogram(Boolean(tpl.enablePeriodontogram));
+    setEditEnableAnamnesis(tpl.enableAnamnesis !== false);
+  };
+
+  const handleSaveProjectEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingProject || !editProjectName.trim()) return;
+
+    try {
+      setSavingEdit(true);
+      let existingTemplate: any = {};
+      if (editingProject.anamnesisTemplate) {
+        try {
+          existingTemplate =
+            typeof editingProject.anamnesisTemplate === 'string'
+              ? JSON.parse(editingProject.anamnesisTemplate)
+              : editingProject.anamnesisTemplate;
+        } catch (e) {}
+      }
+
+      const updatedTemplate = {
+        ...existingTemplate,
+        enableOdontogram: editEnableOdontogram,
+        odontogramScope: editOdontogramScope,
+        enablePeriodontogram: editEnablePeriodontogram,
+        enableAnamnesis: editEnableAnamnesis,
+      };
+
+      const res = await fetch(`/api/projects/${editingProject.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: editProjectName.trim(),
+          description: editProjectDesc.trim() || null,
+          anamnesisTemplate: updatedTemplate,
+        }),
+      });
+
+      if (res.ok) {
+        setEditingProject(null);
+        await loadData(true);
+      } else {
+        const err = await res.json().catch(() => ({}));
+        alert(err.error || 'Erro ao salvar alterações do projeto.');
+      }
+    } catch (err) {
+      console.error('Erro ao atualizar projeto:', err);
+      alert('Erro de conexão ao salvar alterações.');
+    } finally {
+      setSavingEdit(false);
+    }
+  };
 
   const fetchWithRetry = async (url: string, timeoutMs: number = 35000, maxRetries: number = 2): Promise<Response> => {
     let lastError: any = null;
@@ -461,14 +542,18 @@ export default function ProjetosPage() {
                           <Activity className="w-3 h-3 text-blue-600" />
                           <span>Painel</span>
                         </Link>
-                        <Link
-                          href={`/construtor?projectId=${project.id}`}
-                          onClick={(e) => e.stopPropagation()}
-                          className="py-1.5 px-2 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-lg text-center border border-slate-200 transition flex items-center justify-center space-x-1"
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openEditModal(project);
+                          }}
+                          className="py-1.5 px-2 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-lg text-center border border-slate-200 transition flex items-center justify-center space-x-1 cursor-pointer"
+                          title="Configurar particularidades do estudo, Odontograma e eCRF"
                         >
-                          <FileEdit className="w-3 h-3 text-slate-600" />
-                          <span>eCRF</span>
-                        </Link>
+                          <Sliders className="w-3 h-3 text-slate-600" />
+                          <span>Configurar</span>
+                        </button>
                         <Link
                           href={`/relatorio-cep?projectId=${project.id}`}
                           onClick={(e) => e.stopPropagation()}
@@ -505,7 +590,7 @@ export default function ProjetosPage() {
       {/* Modal de Criação de Projeto */}
       {isCreateModalOpen && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 border border-slate-200">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 border border-slate-200 max-h-[90vh] overflow-y-auto">
             <h2 className="text-xl font-bold text-slate-900 mb-2">Cadastrar Novo Projeto</h2>
             <p className="text-xs text-slate-500 mb-6">
               O projeto será registrado no banco de dados com você como Coordenador(a).
@@ -639,6 +724,169 @@ export default function ProjetosPage() {
                   className="px-5 py-2 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition disabled:opacity-50"
                 >
                   {creating ? 'Criando Projeto...' : 'Criar Estudo & Configurar Itens'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Configuração / Edição de Estudo Existente */}
+      {editingProject && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 border border-slate-200 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+              <div>
+                <h2 className="text-lg font-bold text-slate-900">Configurar Estudo Clínico</h2>
+                <p className="text-xs text-slate-500">
+                  Ajuste os parâmetros, escopo do odontograma e formulários específicos deste estudo.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingProject(null)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveProjectEdit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                  Nome do Estudo
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editProjectName}
+                  onChange={(e) => setEditProjectName(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                  Descrição / Hipótese (Opcional)
+                </label>
+                <textarea
+                  rows={2}
+                  value={editProjectDesc}
+                  onChange={(e) => setEditProjectDesc(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                />
+              </div>
+
+              {/* Módulos Particulares do Projeto */}
+              <div className="pt-2 border-t border-slate-100 space-y-2.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                  Módulos Habilitados Para Este Estudo
+                </label>
+
+                <div className="space-y-2 text-xs">
+                  {/* Odontograma */}
+                  <div className="p-2.5 rounded-xl border border-slate-200 bg-slate-50/70 space-y-1.5">
+                    <label className="flex items-center space-x-2.5 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={editEnableOdontogram}
+                        onChange={(e) => setEditEnableOdontogram(e.target.checked)}
+                        className="w-4 h-4 text-blue-600 rounded"
+                      />
+                      <span className="font-bold text-slate-800">Odontograma Clínico Anatômico</span>
+                    </label>
+                    {editEnableOdontogram && (
+                      <div className="pl-6 flex items-center space-x-4 text-[11px] text-slate-600 pt-0.5">
+                        <label className="flex items-center space-x-1 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="editOdontogramScope"
+                            value="anterior"
+                            checked={editOdontogramScope === 'anterior'}
+                            onChange={() => setEditOdontogramScope('anterior')}
+                          />
+                          <span>Dentes Anteriores (13 a 23 e 33 a 43)</span>
+                        </label>
+                        <label className="flex items-center space-x-1 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="editOdontogramScope"
+                            value="full"
+                            checked={editOdontogramScope === 'full'}
+                            onChange={() => setEditOdontogramScope('full')}
+                          />
+                          <span>Arcada Completa</span>
+                        </label>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Periograma */}
+                  <div className="p-2.5 rounded-xl border border-slate-200 bg-slate-50/70">
+                    <label className="flex items-center space-x-2.5 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={editEnablePeriodontogram}
+                        onChange={(e) => setEditEnablePeriodontogram(e.target.checked)}
+                        className="w-4 h-4 text-blue-600 rounded"
+                      />
+                      <span className="font-bold text-slate-800">Exame Periodontal (Periograma - SS / IPV)</span>
+                    </label>
+                  </div>
+
+                  {/* Anamnese */}
+                  <div className="p-2.5 rounded-xl border border-slate-200 bg-slate-50/70">
+                    <label className="flex items-center space-x-2.5 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={editEnableAnamnesis}
+                        onChange={(e) => setEditEnableAnamnesis(e.target.checked)}
+                        className="w-4 h-4 text-blue-600 rounded"
+                      />
+                      <span className="font-bold text-slate-800">Anamnese & Critérios de Inclusão/Exclusão</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              {/* Ações Específicas dos Instrumentos */}
+              <div className="pt-2 border-t border-slate-100 space-y-2">
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                  Gerenciar Instrumentos e Formulários
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                  <Link
+                    href={`/anamnese?projectId=${editingProject.id}`}
+                    className="p-2.5 bg-blue-50/70 hover:bg-blue-100/80 border border-blue-200 rounded-xl text-blue-900 font-semibold transition flex items-center justify-between"
+                  >
+                    <span>Editar Perguntas & Critérios</span>
+                    <ArrowRight className="w-3.5 h-3.5 text-blue-600" />
+                  </Link>
+
+                  <Link
+                    href={`/construtor?projectId=${editingProject.id}`}
+                    className="p-2.5 bg-indigo-50/70 hover:bg-indigo-100/80 border border-indigo-200 rounded-xl text-indigo-900 font-semibold transition flex items-center justify-between"
+                  >
+                    <span>Construtor de eCRFs</span>
+                    <ArrowRight className="w-3.5 h-3.5 text-indigo-600" />
+                  </Link>
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-3 pt-4 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setEditingProject(null)}
+                  className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingEdit}
+                  className="px-5 py-2 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition disabled:opacity-50"
+                >
+                  {savingEdit ? 'Salvando...' : 'Salvar Configurações'}
                 </button>
               </div>
             </form>

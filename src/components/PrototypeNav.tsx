@@ -107,7 +107,6 @@ export default function PrototypeNav() {
     { href: '/', label: 'Central', icon: Home },
     { href: '/projetos', label: 'Meus Estudos', icon: FolderKanban },
     { href: `/dashboard?projectId=${activeProjectId}`, label: 'Prontuário & Dashboard', icon: LayoutDashboard },
-    { href: `/construtor?projectId=${activeProjectId}`, label: 'Prancheta eCRF', icon: ClipboardList },
     { href: `/paciente?code=${activeParticipantCode}`, label: 'Portal Paciente', icon: Smartphone },
     { href: `/tcle/${defaultParticipantId}`, label: 'TCLE Digital', icon: FileSignature },
     { href: `/relatorio-cep?projectId=${activeProjectId}`, label: 'Relatório CEP', icon: FileText },

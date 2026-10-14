@@ -1838,11 +1838,11 @@ function DashboardContent() {
             <div className="flex items-center flex-wrap gap-2">
               <Link
                 href={`/anamnese?projectId=${project.id}`}
-                className="px-3 py-1.5 bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100 text-xs font-bold rounded-lg transition flex items-center space-x-1.5 shadow-2xs"
-                title="Abrir e configurar Odontograma Clínico e Ficha de Triagem"
+                className="px-3 py-1.5 bg-slate-50 border border-slate-300 text-slate-700 hover:bg-slate-100 text-xs font-bold rounded-lg transition flex items-center space-x-1.5 shadow-2xs"
+                title="Configurar Odontograma, Critérios e Instrumentos do Estudo"
               >
-                <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
-                <span>Odontograma & Ficha</span>
+                <Settings className="w-3.5 h-3.5 text-slate-600" />
+                <span>Configurar Estudo</span>
               </Link>
 
               <Link
@@ -1851,14 +1851,6 @@ function DashboardContent() {
               >
                 <FileText className="w-3.5 h-3.5 text-slate-500" />
                 <span>Personalizar TCLE</span>
-              </Link>
-
-              <Link
-                href={`/construtor?projectId=${project.id}`}
-                className="px-3 py-1.5 border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-bold rounded-lg transition flex items-center space-x-1.5 shadow-2xs"
-              >
-                <FileSpreadsheet className="w-3.5 h-3.5 text-slate-500" />
-                <span>Construtor (eCRF)</span>
               </Link>
 
               <Link

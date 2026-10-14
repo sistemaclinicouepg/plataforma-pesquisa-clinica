@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Printer, ArrowLeft, ShieldCheck, CheckCircle2, Lock, FileCheck } from 'lucide-react';
 import { formatDisplayHash } from '@/lib/cryptoHash';
+import { formatUserAgent } from '@/lib/formatUserAgent';
 
 type TCLEPdfData = {
   consentForm: {
@@ -347,10 +348,19 @@ function TclePdfContent() {
                   <strong className="text-slate-900">Endereço IP Registrado:</strong>{' '}
                   {existingSignature.ipAddress || '127.0.0.1'}
                 </p>
-                <p className="sm:col-span-2 truncate">
-                  <strong className="text-slate-900">Dispositivo/Navegador:</strong>{' '}
-                  {existingSignature.userAgent || 'Web Browser'}
-                </p>
+                <div className="sm:col-span-2">
+                  <p>
+                    <strong className="text-slate-900">Dispositivo/Navegador:</strong>{' '}
+                    <span className="font-semibold text-slate-800">
+                      {formatUserAgent(existingSignature.userAgent)}
+                    </span>
+                  </p>
+                  {existingSignature.userAgent && (
+                    <p className="text-[9px] text-slate-400 font-mono truncate" title={existingSignature.userAgent}>
+                      String Técnica: {existingSignature.userAgent}
+                    </p>
+                  )}
+                </div>
                 <p className="sm:col-span-2 pt-1 border-t border-slate-200 break-all">
                   <strong className="text-slate-900">Hash SHA-256 de Integridade:</strong>{' '}
                   <span className="text-blue-900 font-bold">
