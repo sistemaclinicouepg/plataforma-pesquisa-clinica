@@ -69,19 +69,39 @@ export default function ProjetosPage() {
   const [enableAnamnesis, setEnableAnamnesis] = useState(true);
   const [creating, setCreating] = useState(false);
 
+  const fetchWithRetry = async (url: string, timeoutMs: number = 35000, maxRetries: number = 2): Promise<Response> => {
+    let lastError: any = null;
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        const res = await fetch(url, { signal: controller.signal, cache: 'no-store' });
+        clearTimeout(timer);
+        if (!res.ok && res.status >= 500 && attempt < maxRetries) {
+          console.warn(`[API] Tentativa ${attempt + 1} para ${url} retornou status ${res.status}. Tentando novamente em 1s...`);
+          await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
+          continue;
+        }
+        return res;
+      } catch (err: any) {
+        clearTimeout(timer);
+        lastError = err;
+        console.warn(`[API] Tentativa ${attempt + 1} para ${url} falhou: ${err.message || err.name}.`);
+        if (attempt < maxRetries) {
+          await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
+          continue;
+        }
+      }
+    }
+    throw lastError;
+  };
+
   const loadData = async (isManualRefresh: boolean = false) => {
     if (isManualRefresh) setIsRefreshing(true);
     setLoadError(null);
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 12000);
-
     try {
-      const res = await fetch('/api/projects', {
-        signal: controller.signal,
-        cache: 'no-store',
-      });
-      clearTimeout(timeoutId);
+      const res = await fetchWithRetry('/api/projects', 35000, 2);
 
       // Se a sessão expirou, redireciona para o login
       if (res.status === 401) {
@@ -132,7 +152,6 @@ export default function ProjetosPage() {
         setLoadError('Não foi possível conectar ao banco de dados no momento.');
       }
     } finally {
-      clearTimeout(timeoutId);
       setLoading(false);
       setIsRefreshing(false);
     }

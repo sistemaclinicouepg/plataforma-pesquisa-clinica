@@ -7,241 +7,223 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Nível 1 e 2: Usuários do Sistema (Admins e Pesquisadores)
 model User {
-  id         String   @id @default(uuid())
+  id         String          @id @default(uuid())
   name       String
-  email      String   @unique
+  email      String          @unique
   password   String
-  role       String   @default("RESEARCHER") // ADMIN, RESEARCHER
-  isApproved Boolean  @default(false)        // Requer aprovação do admin
-  createdAt  DateTime @default(now())
-  
+  role       String          @default("RESEARCHER")
+  isApproved Boolean         @default(false)
+  createdAt  DateTime        @default(now())
   projects   ProjectMember[]
 }
 
-// O Prontuário Central Global (LGPD: Dados Identificáveis)
 model Patient {
-  id            String   @id @default(uuid())
-  fullName      String
-  cpf           String   @unique
-  email         String?
-  phoneWhatsApp String
-  address       String?
-  dateOfBirth   DateTime
-  biologicalSex String
-  
-  // Anamnese Global Básica
+  id             String        @id @default(uuid())
+  fullName       String
+  cpf            String        @unique
+  email          String?
+  phoneWhatsApp  String
+  address        String?
+  dateOfBirth    DateTime
+  biologicalSex  String
   comorbidities  String?
   allergies      String?
   medications    String?
   chiefComplaint String?
   expectations   String?
-
-  createdAt      DateTime @default(now())
-
+  createdAt      DateTime      @default(now())
   participations Participant[]
 }
 
-// O Projeto de Pesquisa
 model Project {
-  id          String   @id @default(uuid())
-  name        String
-  description String?
-  createdAt   DateTime @default(now())
-
-  members           ProjectMember[]
-  participants      Participant[]
-  forms             Form[]
-  consentForm       ConsentForm?
-  anamnesisTemplate String? // JSON contendo as configurações de Odontograma, Periograma e Perguntas do projeto
-  alerts            ClinicalAlert[]
+  id                String          @id @default(uuid())
+  name              String
+  description       String?
+  createdAt         DateTime        @default(now())
+  anamnesisTemplate String?
   auditLogs         AuditLog[]
+  alerts            ClinicalAlert[]
+  consentForm       ConsentForm?
+  forms             Form[]
+  participants      Participant[]
+  members           ProjectMember[]
 }
 
-// Ligação entre Usuário (Pesquisador) e o Projeto
 model ProjectMember {
-  id        String   @id @default(uuid())
+  id        String  @id @default(uuid())
   userId    String
   projectId String
-  role      String   @default("OPERATOR") // COORDINATOR, OPERATOR, EVALUATOR
-  isBlinded Boolean  @default(false)      // O segredo do cegamento
+  role      String  @default("OPERATOR")
+  isBlinded Boolean @default(false)
+  project   Project @relation(fields: [projectId], references: [id])
+  user      User    @relation(fields: [userId], references: [id])
 
-  user      User     @relation(fields: [userId], references: [id])
-  project   Project  @relation(fields: [projectId], references: [id])
+  @@index([projectId], map: "idx_projectmember_project")
+  @@index([userId], map: "idx_projectmember_user")
 }
 
-// Avatar do Paciente dentro de uma Pesquisa Específica (LGPD: Dados Anonimizados)
 model Participant {
-  id              String   @id @default(uuid())
+  id              String             @id @default(uuid())
   patientId       String
   projectId       String
-  researchCode    String   // Ex: P001, P002
-  status          String   @default("PENDING") // PENDING, APPROVED, EXCLUDED
+  researchCode    String
+  status          String             @default("PENDING")
   exclusionReason String?
-  group           String?  // Ex: A, B (Oculto para quem é cego)
-  
-  // Regra Clínica: Trava de decisão pós-anamnese
-  anamnesisDone   Boolean  @default(false)
-  anamnesisData   String?  // JSON com as respostas da anamnese/ficha clínica preenchida
-  
-  createdAt       DateTime @default(now())
+  group           String?
+  anamnesisDone   Boolean            @default(false)
+  anamnesisData   String?
+  createdAt       DateTime           @default(now())
+  alerts          ClinicalAlert[]
+  sessions        ClinicalSession[]
+  signatures      ConsentSignature[]
+  responses       FormResponse[]
+  patient         Patient            @relation(fields: [patientId], references: [id])
+  project         Project            @relation(fields: [projectId], references: [id])
 
-  patient    Patient            @relation(fields: [patientId], references: [id])
-  project    Project            @relation(fields: [projectId], references: [id])
-  responses  FormResponse[]
-  signatures ConsentSignature[]
-  sessions   ClinicalSession[]
-  alerts     ClinicalAlert[]
-  
   @@unique([projectId, researchCode])
+  @@index([patientId], map: "idx_participant_patient")
+  @@index([projectId], map: "idx_participant_project")
+  @@index([status], map: "idx_participant_status")
 }
 
-// TCLE Personalizável por Projeto e Pesquisador Responsável
 model ConsentForm {
-  id                    String   @id @default(uuid())
-  projectId             String   @unique
+  id                    String             @id @default(uuid())
+  projectId             String             @unique
   title                 String
   responsibleResearcher String
   advisor               String?
-  institution           String   @default("Universidade Estadual de Ponta Grossa – UEPG")
-  ethicsNumber          String?  // Ex: CAAE ou Parecer do CEP
-  ethicsContacts        String?  // Contatos do CEP
-  contentMarkdown       String   // Texto completo personalizável
-  assentContentMarkdown String?  // Texto de assentimento (TALE) adaptado para menores de 18 anos
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
-
-  project    Project            @relation(fields: [projectId], references: [id])
-  signatures ConsentSignature[]
+  institution           String             @default("Universidade Estadual de Ponta Grossa – UEPG")
+  ethicsNumber          String?
+  ethicsContacts        String?
+  contentMarkdown       String
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+  assentContentMarkdown String?
+  project               Project            @relation(fields: [projectId], references: [id])
+  signatures            ConsentSignature[]
 }
 
-// Assinaturas Eletrônicas Seguras (Trilha de Auditoria e Conformidade Legal CNS 466/12 e LGPD)
 model ConsentSignature {
-  id                    String   @id @default(uuid())
+  id                    String      @id @default(uuid())
   consentFormId         String
   participantId         String
   participantName       String
   cpf                   String
-  signatureData         String   // Traçado do desenho da assinatura
-  signatureHash         String?  // Hash SHA-256 criptográfico para validação de autenticidade
+  signatureData         String
   ipAddress             String?
-  userAgent             String?  // Navegador/Dispositivo do paciente
-  isAssent              Boolean  @default(false) // Se é Termo de Assentimento (TALE)
-  guardianName          String?  // Nome do responsável legal (para menores de idade)
-  guardianCpf           String?  // CPF do responsável legal
-  guardianRelationship  String?  // Vínculo/Parentesco (Ex: Pai, Mãe, Tutor Legal)
-  guardianSignatureData String?  // Traçado da assinatura do responsável legal
-  signedAt              DateTime @default(now())
+  userAgent             String?
+  signedAt              DateTime    @default(now())
+  guardianCpf           String?
+  guardianName          String?
+  guardianRelationship  String?
+  guardianSignatureData String?
+  isAssent              Boolean     @default(false)
+  signatureHash         String?
+  consentForm           ConsentForm @relation(fields: [consentFormId], references: [id])
+  participant           Participant @relation(fields: [participantId], references: [id])
 
-  consentForm ConsentForm @relation(fields: [consentFormId], references: [id])
-  participant Participant @relation(fields: [participantId], references: [id])
+  @@index([consentFormId], map: "idx_consentsignature_form")
+  @@index([participantId], map: "idx_consentsignature_participant")
 }
 
-// Formulários Eletrônicos (eCRFs) criados no Construtor
 model Form {
-  id              String   @id @default(uuid())
+  id              String         @id @default(uuid())
   projectId       String
   title           String
   description     String?
-  questionsJson   String   // JSON com a estrutura das perguntas (VAS, Matriz, Sim/Não, etc.)
-  expirationHours Int      @default(24)
-  allowLate       Boolean  @default(false)
-  createdAt       DateTime @default(now())
-
-  project   Project        @relation(fields: [projectId], references: [id])
-  responses FormResponse[]
+  questionsJson   String
+  expirationHours Int            @default(24)
+  allowLate       Boolean        @default(false)
+  createdAt       DateTime       @default(now())
+  project         Project        @relation(fields: [projectId], references: [id])
+  responses       FormResponse[]
 }
 
-// Respostas enviadas pelos participantes (via Mobile/WhatsApp)
 model FormResponse {
-  id            String   @id @default(uuid())
+  id            String       @id @default(uuid())
   formId        String
   participantId String?
-  answersJson   String   // JSON com as respostas do paciente
-  signatureData String?  // Traçado da assinatura em Base64/SVG
-  isLate        Boolean  @default(false)
-  submittedAt   DateTime @default(now())
+  answersJson   String
+  signatureData String?
+  isLate        Boolean      @default(false)
+  submittedAt   DateTime     @default(now())
+  form          Form         @relation(fields: [formId], references: [id])
+  participant   Participant? @relation(fields: [participantId], references: [id])
 
-  form        Form         @relation(fields: [formId], references: [id])
-  participant Participant? @relation(fields: [participantId], references: [id])
+  @@index([formId], map: "idx_formresponse_form")
+  @@index([participantId], map: "idx_formresponse_participant")
 }
 
-// Sessões Clínicas e Acompanhamento Longitudinal (Baseline, Intervenções e Retornos)
 model ClinicalSession {
-  id                 String   @id @default(uuid())
+  id                 String          @id @default(uuid())
   participantId      String
-  sessionNumber      Int      // 1 (Baseline / Sessão 1), 2 (Sessão 2 - 7d), 3 (Retorno 14d), 4 (Retorno 30d)
-  sessionType        String   // "BASELINE_INTERVENTION_1", "INTERVENTION_2", "FOLLOW_UP_14D", "FOLLOW_UP_30D"
-  sessionDate        DateTime @default(now())
-  
-  // Aferição Cega de Cor (Escala Vita Classical / Bleachedguide)
-  shadeRight         String?  // Cor no hemiarco direito (ex: "A1", "A2")
-  shadeLeft          String?  // Cor no hemiarco esquerdo (ex: "B1", "B2")
-  
-  // Sensibilidade Dentinária (Escala EVA 0 a 10)
-  painScore0h        Float?   // Sensibilidade imediata durante/pós sessão
-  painScore1h        Float?   // Sensibilidade após 1 hora
-  painScore24h       Float?   // Sensibilidade após 24 horas
-  painScore48h       Float?   // Sensibilidade após 48 horas
-  
-  // Efeitos Adversos e Tecidos Moles
-  gingivalIrritation String?  // "Ausente", "Leve", "Moderada", "Severa"
-  adverseEvents      String?  // Descrição de eventuais intercorrências
-  
-  // Equipe Responsável
-  operatorName       String?  // Nome do Operador
-  evaluatorName      String?  // Nome do Avaliador (Cego)
-  notes              String?  // Parecer clínico geral da consulta
-  
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
-
-  participant        Participant     @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  sessionNumber      Int
+  sessionType        String
+  sessionDate        DateTime        @default(now())
+  shadeRight         String?
+  shadeLeft          String?
+  painScore0h        Float?
+  painScore1h        Float?
+  painScore24h       Float?
+  painScore48h       Float?
+  gingivalIrritation String?
+  adverseEvents      String?
+  operatorName       String?
+  evaluatorName      String?
+  notes              String?
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
   alerts             ClinicalAlert[]
+  participant        Participant     @relation(fields: [participantId], references: [id], onDelete: Cascade)
+
+  @@index([sessionNumber], map: "idx_clinicalsession_number")
+  @@index([participantId], map: "idx_clinicalsession_participant")
 }
 
-// Alertas de Farmacovigilância em Tempo Real (Alerta Vermelho para Sensibilidade Severa e Eventos Adversos)
 model ClinicalAlert {
-  id                String    @id @default(uuid())
+  id                String           @id @default(uuid())
   projectId         String
   participantId     String
   sessionId         String?
-  severity          String    @default("SEVERE") // SEVERE, MODERATE, CRITICAL
-  alertType         String    // SEVERE_PAIN, GINGIVAL_BURNING, SEVERE_PAIN_AND_BURNING, ADVERSE_EVENT
-  painScore         Float?    // Escore EVA (>= 7)
-  gingivalSensation String?   // "Leve", "Moderada", "Severa", etc.
-  timePoint         String?   // "0h", "1h", "24h", "48h"
-  description       String    // Mensagem descritiva do alerta
-  status            String    @default("PENDING") // PENDING, RESOLVED
+  severity          String           @default("SEVERE")
+  alertType         String
+  painScore         Float?
+  gingivalSensation String?
+  timePoint         String?
+  description       String
+  status            String           @default("PENDING")
   resolvedAt        DateTime?
-  resolvedBy        String?   // Nome do pesquisador que atendeu
-  resolutionNotes   String?   // Conduta clínica adotada
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-
-  project           Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  resolvedBy        String?
+  resolutionNotes   String?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
   participant       Participant      @relation(fields: [participantId], references: [id], onDelete: Cascade)
-  session           ClinicalSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  project           Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  session           ClinicalSession? @relation(fields: [sessionId], references: [id])
+
+  @@index([participantId], map: "idx_clinicalalert_participant")
+  @@index([projectId], map: "idx_clinicalalert_project")
 }
 
-// Trilha de Auditoria Regulatória (Audit Trail - GCP / ICH E6 e 21 CFR Part 11)
 model AuditLog {
-  id          String   @id @default(uuid())
-  projectId   String?
-  entityType  String   // "ClinicalSession", "Participant", "Patient", "ConsentSignature"
-  entityId    String
-  action      String   // "CREATE", "UPDATE", "DELETE"
-  changedBy   String   // Nome do usuário ou pesquisador
-  userEmail   String?
-  fieldName   String?  // Campo alterado ou "RECORD"
-  oldValue    String?  // Valor anterior
-  newValue    String?  // Novo valor
-  reason      String   // Justificativa clínica da alteração (obrigatória em GCP)
-  ipAddress   String?
-  userAgent   String?
-  createdAt   DateTime @default(now())
+  id         String   @id @default(uuid())
+  projectId  String?
+  entityType String
+  entityId   String
+  action     String
+  changedBy  String
+  userEmail  String?
+  fieldName  String?
+  oldValue   String?
+  newValue   String?
+  reason     String
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+  project    Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
-  project     Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  @@index([createdAt(sort: Desc)], map: "idx_auditlog_created")
+  @@index([entityType, entityId], map: "idx_auditlog_entity")
+  @@index([projectId], map: "idx_auditlog_project")
 }
-

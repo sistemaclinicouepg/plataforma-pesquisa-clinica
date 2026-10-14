@@ -654,6 +654,33 @@ function DashboardContent() {
     }
   };
 
+  const fetchWithRetry = async (url: string, timeoutMs: number = 35000, maxRetries: number = 2): Promise<Response> => {
+    let lastError: any = null;
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        const res = await fetch(url, { signal: controller.signal, cache: 'no-store' });
+        clearTimeout(timer);
+        if (!res.ok && res.status >= 500 && attempt < maxRetries) {
+          console.warn(`[API] Tentativa ${attempt + 1} para ${url} retornou status ${res.status}. Tentando novamente em 1s...`);
+          await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
+          continue;
+        }
+        return res;
+      } catch (err: any) {
+        clearTimeout(timer);
+        lastError = err;
+        console.warn(`[API] Tentativa ${attempt + 1} para ${url} falhou: ${err.message || err.name}.`);
+        if (attempt < maxRetries) {
+          await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
+          continue;
+        }
+      }
+    }
+    throw lastError;
+  };
+
   const loadProject = async (silent: boolean = false) => {
     setLoadError(null);
     try {
@@ -664,49 +691,70 @@ function DashboardContent() {
       }
       const pId = projectIdParam;
 
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 12000);
+      if (pId) {
+        // Dispara a lista de projetos em segundo plano sem bloquear a exibição do projeto atual
+        fetchWithRetry('/api/projects', 35000, 1)
+          .then(async (listRes) => {
+            if (listRes.status === 401 && typeof window !== 'undefined') {
+              window.location.href = `/login?from=${encodeURIComponent(window.location.pathname + window.location.search)}`;
+              return;
+            }
+            if (listRes.ok) {
+              const listData = await listRes.json();
+              if (listData.projects) {
+                setAllProjects(listData.projects.map((p: any) => ({ id: p.id, name: p.name })));
+              }
+              if (listData.currentUser) {
+                setCurrentUser(listData.currentUser);
+              }
+            }
+          })
+          .catch((e) => console.warn('Aviso: busca em segundo plano de projetos falhou:', e));
 
-      // Dispara as consultas em PARALELO simultâneo para máxima performance
-      const projectPromise = pId ? fetch(`/api/projects/${pId}`, { signal: controller.signal, cache: 'no-store' }) : null;
-      const listPromise = fetch('/api/projects', { signal: controller.signal, cache: 'no-store' });
+        const resProject = await fetchWithRetry(`/api/projects/${pId}`, 35000, 2);
 
-      const [resProject, listRes] = await Promise.all([projectPromise, listPromise]);
-      clearTimeout(timeoutId);
-
-      // Tratamento de sessão expirada (401): redirecionamento automático para login
-      if (resProject?.status === 401 || listRes.status === 401) {
-        if (typeof window !== 'undefined') {
-          window.location.href = `/login?from=${encodeURIComponent(window.location.pathname + window.location.search)}`;
-        }
-        return;
-      }
-
-      if (listRes.ok) {
-        const listData = await listRes.json();
-        if (listData.projects) {
-          setAllProjects(listData.projects.map((p: any) => ({ id: p.id, name: p.name })));
-        }
-        if (listData.currentUser) {
-          setCurrentUser(listData.currentUser);
-        }
-        // Se não havia pId na URL, carrega o primeiro projeto retornado
-        if (!pId && listData.projects?.[0]?.id) {
-          const firstRes = await fetch(`/api/projects/${listData.projects[0].id}`, { cache: 'no-store' });
-          if (firstRes.ok) {
-            const firstData = await firstRes.json();
-            applyProjectData(firstData);
+        if (resProject.status === 401) {
+          if (typeof window !== 'undefined') {
+            window.location.href = `/login?from=${encodeURIComponent(window.location.pathname + window.location.search)}`;
           }
+          return;
         }
-      }
 
-      if (resProject) {
         if (resProject.ok) {
           const data = await resProject.json();
           applyProjectData(data);
         } else {
           const errData = await resProject.json().catch(() => ({}));
           setLoadError(errData.error || 'Erro ao carregar dados do projeto.');
+        }
+      } else {
+        const listRes = await fetchWithRetry('/api/projects', 35000, 2);
+
+        if (listRes.status === 401) {
+          if (typeof window !== 'undefined') {
+            window.location.href = `/login?from=${encodeURIComponent(window.location.pathname + window.location.search)}`;
+          }
+          return;
+        }
+
+        if (listRes.ok) {
+          const listData = await listRes.json();
+          if (listData.projects) {
+            setAllProjects(listData.projects.map((p: any) => ({ id: p.id, name: p.name })));
+          }
+          if (listData.currentUser) {
+            setCurrentUser(listData.currentUser);
+          }
+          if (listData.projects?.[0]?.id) {
+            const firstRes = await fetchWithRetry(`/api/projects/${listData.projects[0].id}`, 35000, 2);
+            if (firstRes.ok) {
+              const firstData = await firstRes.json();
+              applyProjectData(firstData);
+            }
+          }
+        } else {
+          const errData = await listRes.json().catch(() => ({}));
+          setLoadError(errData.error || 'Erro ao carregar lista de projetos.');
         }
       }
     } catch (err: any) {
@@ -962,6 +1010,19 @@ function DashboardContent() {
           chiefComplaint: '',
           expectations: '',
         });
+
+        // Atualização otimista imediata no estado local do projeto para aparecer instantaneamente
+        if (result.participant) {
+          setProject((prev) => {
+            if (!prev) return prev;
+            const existing = prev.participants || [];
+            if (existing.some((p: any) => p.id === result.participant.id)) return prev;
+            return {
+              ...prev,
+              participants: [...existing, result.participant],
+            };
+          });
+        }
 
         // Alterna imediatamente para a aba de Triagem para exibir o voluntário recém-adicionado
         setActiveTab('triage');
