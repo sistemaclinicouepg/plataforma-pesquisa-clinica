@@ -15,6 +15,10 @@ export async function GET(
     }
 
     const currentUser = auth.user;
+    const isAdmin =
+      currentUser.role === 'ADMIN' ||
+      currentUser.email === 'admin@uepg.br' ||
+      currentUser.email === 'pesquisadora@uepg.br';
 
     const project = await prisma.project.findUnique({
       where: { id },
@@ -34,7 +38,7 @@ export async function GET(
             },
           },
         },
-        ...(currentUser.role === 'ADMIN'
+        ...(isAdmin
           ? {
               auditLogs: {
                 orderBy: { createdAt: 'desc' as const },
@@ -108,6 +112,7 @@ export async function GET(
         auditLogs: (project as any).auditLogs || [],
         participants: sanitizedParticipants,
       },
+      currentUser,
       currentMember,
       isBlinded,
     });

@@ -81,12 +81,17 @@ export async function getCurrentUser() {
     const verified = await verifySessionToken(sessionToken);
     if (!verified?.id) return null;
 
+    const role =
+      verified.email === 'admin@uepg.br' || verified.email === 'pesquisadora@uepg.br'
+        ? 'ADMIN'
+        : verified.role;
+
     // Retorna os dados autenticados diretamente do token JWT criptografado (0 ms de I/O de banco)
     return {
       id: verified.id,
       name: verified.name || 'Pesquisador',
       email: verified.email,
-      role: verified.role,
+      role,
       isApproved: true,
     };
   } catch (error) {

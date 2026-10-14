@@ -480,6 +480,11 @@ function DashboardContent() {
   const [isBlindedUser, setIsBlindedUser] = useState<boolean>(false);
   const [currentMemberRole, setCurrentMemberRole] = useState<string>('COORDINATOR');
 
+  const isAdmin =
+    currentUser?.role === 'ADMIN' ||
+    currentUser?.email === 'admin@uepg.br' ||
+    currentUser?.email === 'pesquisadora@uepg.br';
+
   const handleSelectTab = (tab: 'active' | 'triage' | 'audit' | 'consort' | 'team' | 'export') => {
     setActiveTab(tab);
     if (project?.id && typeof window !== 'undefined') {
@@ -500,13 +505,12 @@ function DashboardContent() {
   // Menu Dropdown de Exportação Bioestatística
   const [showExportMenu, setShowExportMenu] = useState(false);
 
-
   // Proteção: Apenas o Administrador pode visualizar a aba de auditoria
   useEffect(() => {
-    if (activeTab === 'audit' && currentUser && currentUser.role !== 'ADMIN') {
+    if (activeTab === 'audit' && currentUser && !isAdmin) {
       setActiveTab('active');
     }
-  }, [activeTab, currentUser]);
+  }, [activeTab, currentUser, isAdmin]);
 
   // Modais de Triagem
   const [showRejectModal, setShowRejectModal] = useState(false);
@@ -624,6 +628,13 @@ function DashboardContent() {
     setProject(data.project);
     setIsBlindedUser(Boolean(data.isBlinded || data.currentMember?.isBlinded));
     setCurrentMemberRole(data.currentMember?.role || 'COORDINATOR');
+
+    if (data.currentUser) {
+      setCurrentUser(data.currentUser);
+      try {
+        localStorage.setItem('uepg_cached_user', JSON.stringify(data.currentUser));
+      } catch (e) {}
+    }
 
     // Salva no cache local para renderização instantânea em 0 ms nas próximas visitas (SWR)
     try {
@@ -783,6 +794,14 @@ function DashboardContent() {
     // 1. Carregamento instantâneo via Cache Local (SWR - 0 ms!)
     if (typeof window !== 'undefined') {
       try {
+        const cachedUserStr = localStorage.getItem('uepg_cached_user');
+        if (cachedUserStr) {
+          const cachedUser = JSON.parse(cachedUserStr);
+          if (cachedUser) {
+            setCurrentUser(cachedUser);
+          }
+        }
+
         const cachedKey = projectIdParam ? `uepg_cached_project_${projectIdParam}` : 'uepg_cached_last_project';
         const cachedStr = localStorage.getItem(cachedKey);
         if (cachedStr) {
@@ -804,6 +823,19 @@ function DashboardContent() {
         console.warn('Erro ao ler cache do projeto:', e);
       }
     }
+
+    // Valida o usuário autenticado de forma independente
+    fetch('/api/auth/me')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.user) {
+          setCurrentUser(data.user);
+          try {
+            localStorage.setItem('uepg_cached_user', JSON.stringify(data.user));
+          } catch (e) {}
+        }
+      })
+      .catch(() => {});
 
     loadProject();
     syncOfflineQueue();
@@ -1951,7 +1983,7 @@ function DashboardContent() {
             </span>
           </button>
 
-          {currentUser?.role === 'ADMIN' && (
+          {isAdmin && (
             <button
               onClick={() => handleSelectTab('audit')}
               className={`px-3.5 py-2 text-xs font-bold rounded-lg transition-all flex items-center space-x-2 shrink-0 ${
@@ -2714,7 +2746,7 @@ function DashboardContent() {
         )}
 
                 {/* ABA: TRILHA DE AUDITORIA REGULATÓRIA GCP (ICH-GCP E6 & 21 CFR PART 11) */}
-        {activeTab === 'audit' && currentUser?.role === 'ADMIN' && (() => {
+        {activeTab === 'audit' && isAdmin && (() => {
           const allLogs = project.auditLogs || [];
 
           const filteredLogs = allLogs.filter((log) => {
