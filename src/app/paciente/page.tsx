@@ -1111,21 +1111,6 @@ function PacienteContent() {
                 />
               </div>
 
-              {/* Alerta Preventivo em Tempo Real caso EVA >= 7 ou Queimação gengival moderada a severa */}
-              {(painScore >= 7 || gingivalSensation === 'Queimação / dor gengival moderada a severa') && (
-                <div className="p-4 bg-red-50 border-2 border-red-500 rounded-2xl shadow-xs text-red-900 space-y-2 animate-pulse">
-                  <div className="flex items-center space-x-2">
-                    <AlertTriangle className="w-5 h-5 text-red-600 shrink-0" />
-                    <span className="font-extrabold text-xs uppercase tracking-wide text-red-700">
-                      Atenção: Sintoma Intenso Selecionado
-                    </span>
-                  </div>
-                  <p className="text-xs text-red-800 leading-relaxed">
-                    Você informou dor elevada (EVA {painScore}/10) ou queimação gengival. Ao clicar em enviar, um <strong>Alerta Vermelho</strong> será acionado imediatamente para a equipe clínica de suporte da UEPG.
-                  </p>
-                </div>
-              )}
-
               {/* Botão de Envio */}
               <div className="pt-2 pb-6">
                 <button
