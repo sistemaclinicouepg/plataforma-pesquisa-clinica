@@ -80,9 +80,19 @@ Seus dados pessoais serão rigorosamente protegidos nos termos da Lei Geral de P
     }
 
     const dob = participant.patient.dateOfBirth;
-    const isMinor = dob
-      ? (Date.now() - new Date(dob).getTime()) / (365.25 * 24 * 3600 * 1000) < 18
-      : false;
+    let isMinor = false;
+    if (dob) {
+      const birthDate = new Date(dob);
+      if (!isNaN(birthDate.getTime())) {
+        const today = new Date();
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const monthDiff = today.getMonth() - birthDate.getMonth();
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+          age--;
+        }
+        isMinor = age < 18;
+      }
+    }
 
     let consentForm = participant.project.consentForm;
 
@@ -121,7 +131,7 @@ Explicamos tudo para você e seus pais ou responsáveis. Se você tiver qualquer
       success: true,
       consentForm,
       isMinor,
-      requiresAssent: isMinor || Boolean(consentForm.assentContentMarkdown),
+      requiresAssent: isMinor, // Assentimento (TALE) exclusivo para menores de 18 anos
       existingSignature: latestSignature,
       participant: {
         id: participant.id,

@@ -134,3 +134,208 @@ export async function POST(req: Request) {
     );
   }
 }
+
+export async function PATCH(req: Request) {
+  try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      return NextResponse.json(
+        { error: 'Não autorizado. Autenticação de pesquisador necessária.' },
+        { status: 401 }
+      );
+    }
+
+    const body = await req.json();
+    const {
+      patientId,
+      projectId,
+      reason,
+      fullName,
+      cpf,
+      email,
+      phoneWhatsApp,
+      address,
+      dateOfBirth,
+      biologicalSex,
+      comorbidities,
+      allergies,
+      medications,
+      chiefComplaint,
+      expectations,
+    } = body;
+
+    if (!patientId) {
+      return NextResponse.json(
+        { error: 'patientId é obrigatório.' },
+        { status: 400 }
+      );
+    }
+
+    if (!reason || !reason.trim()) {
+      return NextResponse.json(
+        { error: 'A justificativa da alteração cadastral é obrigatória para a Trilha de Auditoria (GCP/ICH E6).' },
+        { status: 400 }
+      );
+    }
+
+    // Validação de permissão: usuário deve ser ADMIN ou membro do projeto
+    if (currentUser.role !== 'ADMIN') {
+      if (!projectId) {
+        return NextResponse.json(
+          { error: 'projectId é obrigatório para validação de permissão.' },
+          { status: 400 }
+        );
+      }
+      const member = await prisma.projectMember.findFirst({
+        where: { projectId, userId: currentUser.id },
+      });
+      if (!member) {
+        return NextResponse.json(
+          { error: 'Acesso negado. Você não possui permissão para editar dados de participantes deste estudo.' },
+          { status: 403 }
+        );
+      }
+    }
+
+    const currentPatient = await prisma.patient.findUnique({
+      where: { id: patientId },
+    });
+
+    if (!currentPatient) {
+      return NextResponse.json(
+        { error: 'Paciente não encontrado no prontuário.' },
+        { status: 404 }
+      );
+    }
+
+    // Se CPF foi alterado, verificar duplicidade
+    if (cpf && cpf.trim() !== currentPatient.cpf) {
+      const existingWithCpf = await prisma.patient.findFirst({
+        where: {
+          cpf: cpf.trim(),
+          id: { not: patientId },
+        },
+      });
+      if (existingWithCpf) {
+        return NextResponse.json(
+          { error: `Já existe outro paciente cadastrado com este CPF (${cpf.trim()}).` },
+          { status: 409 }
+        );
+      }
+    }
+
+    // Preparar objeto de atualização e registrar trilha de auditoria para cada campo modificado
+    const updates: Record<string, any> = {};
+    const auditEntries: Array<{
+      fieldName: string;
+      oldValue: string | null;
+      newValue: string | null;
+    }> = [];
+
+    const checkAndTrack = (
+      field: string,
+      oldVal: any,
+      newVal: any,
+      formatVal?: (v: any) => string | null
+    ) => {
+      if (newVal === undefined) return;
+      const formattedOld = formatVal ? formatVal(oldVal) : oldVal ? String(oldVal).trim() : null;
+      const formattedNew = formatVal ? formatVal(newVal) : newVal ? String(newVal).trim() : null;
+
+      if (formattedOld !== formattedNew) {
+        updates[field] = newVal;
+        auditEntries.push({
+          fieldName: field,
+          oldValue: formattedOld,
+          newValue: formattedNew,
+        });
+      }
+    };
+
+    checkAndTrack('fullName', currentPatient.fullName, fullName?.trim());
+    checkAndTrack('cpf', currentPatient.cpf, cpf?.trim());
+    checkAndTrack('email', currentPatient.email, email?.trim() || null);
+    checkAndTrack('phoneWhatsApp', currentPatient.phoneWhatsApp, phoneWhatsApp?.trim());
+    checkAndTrack('address', currentPatient.address, address?.trim() || null);
+    checkAndTrack('biologicalSex', currentPatient.biologicalSex, biologicalSex?.trim());
+    checkAndTrack('comorbidities', currentPatient.comorbidities, comorbidities?.trim() || null);
+    checkAndTrack('allergies', currentPatient.allergies, allergies?.trim() || null);
+    checkAndTrack('medications', currentPatient.medications, medications?.trim() || null);
+    checkAndTrack('chiefComplaint', currentPatient.chiefComplaint, chiefComplaint?.trim() || null);
+    checkAndTrack('expectations', currentPatient.expectations, expectations?.trim() || null);
+
+    if (dateOfBirth) {
+      const oldDobStr = currentPatient.dateOfBirth
+        ? new Date(currentPatient.dateOfBirth).toISOString().split('T')[0]
+        : null;
+      const newDobDate = new Date(dateOfBirth);
+      const newDobStr = !isNaN(newDobDate.getTime())
+        ? newDobDate.toISOString().split('T')[0]
+        : null;
+
+      if (oldDobStr !== newDobStr && newDobStr) {
+        updates.dateOfBirth = newDobDate;
+        auditEntries.push({
+          fieldName: 'dateOfBirth',
+          oldValue: oldDobStr,
+          newValue: newDobStr,
+        });
+      }
+    }
+
+    if (auditEntries.length === 0) {
+      return NextResponse.json({
+        success: true,
+        message: 'Nenhum dado cadastral foi modificado.',
+        patient: currentPatient,
+      });
+    }
+
+    // Executar atualização no banco
+    const updatedPatient = await prisma.patient.update({
+      where: { id: patientId },
+      data: updates,
+    });
+
+    // Registrar alterações no AuditLog (GCP / ICH E6)
+    const reqHeaders = req.headers;
+    const ipAddress =
+      reqHeaders.get('x-forwarded-for')?.split(',')[0] ||
+      reqHeaders.get('x-real-ip') ||
+      '127.0.0.1';
+    const userAgent = reqHeaders.get('user-agent') || 'Browser';
+
+    for (const entry of auditEntries) {
+      await prisma.auditLog.create({
+        data: {
+          projectId: projectId || null,
+          entityType: 'Patient',
+          entityId: patientId,
+          action: 'UPDATE',
+          changedBy: currentUser.name || currentUser.email,
+          userEmail: currentUser.email,
+          fieldName: entry.fieldName,
+          oldValue: entry.oldValue,
+          newValue: entry.newValue,
+          reason: reason.trim(),
+          ipAddress,
+          userAgent,
+        },
+      });
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: `${auditEntries.length} campo(s) cadastral(is) atualizado(s) com sucesso.`,
+      patient: updatedPatient,
+      changesCount: auditEntries.length,
+    });
+  } catch (error: any) {
+    console.error('Erro ao atualizar dados cadastrais do paciente:', error);
+    return NextResponse.json(
+      { error: error?.message || 'Erro ao atualizar dados cadastrais.' },
+      { status: 500 }
+    );
+  }
+}
+

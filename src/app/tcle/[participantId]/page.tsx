@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useRef, use } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
+import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { AlertTriangle, CheckCircle2, Lock, ShieldCheck, Printer, Users } from 'lucide-react';
 import { formatDisplayHash } from '@/lib/cryptoHash';
@@ -30,13 +31,10 @@ type AuditResult = {
   };
 };
 
-export default function PatientTclePage({
-  params,
-}: {
-  params: Promise<{ participantId: string }>;
-}) {
-  const resolvedParams = use(params);
-  const participantId = resolvedParams.participantId;
+function PatientTcleContent() {
+  const routeParams = useParams();
+  const rawId = routeParams?.participantId;
+  const participantId = typeof rawId === 'string' ? rawId : Array.isArray(rawId) ? rawId[0] : '';
 
   const [tcle, setTcle] = useState<TCLEData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -64,40 +62,50 @@ export default function PatientTclePage({
   const [hasGuardianSignature, setHasGuardianSignature] = useState(false);
 
   useEffect(() => {
+    if (!participantId) return;
+
+    let isMounted = true;
     const loadTCLE = async () => {
       try {
         setLoading(true);
         const res = await fetch(`/api/tcle/participant/${participantId}`);
         if (res.ok) {
           const data = await res.json();
-          setTcle(data.consentForm);
-          setIsMinor(Boolean(data.isMinor));
-          setRequiresAssent(Boolean(data.requiresAssent));
+          if (isMounted) {
+            setTcle(data.consentForm);
+            setIsMinor(Boolean(data.isMinor));
+            setRequiresAssent(Boolean(data.requiresAssent));
 
-          if (data.existingSignature) {
-            setAuditResult({
-              signatureId: data.existingSignature.id,
-              signedAt: data.existingSignature.signedAt,
-              signatureHash: data.existingSignature.signatureHash,
-              isAssent: data.existingSignature.isAssent,
-              guardianName: data.existingSignature.guardianName,
-              guardianRelationship: data.existingSignature.guardianRelationship,
-              audit: {
-                ipAddress: data.existingSignature.ipAddress || '127.0.0.1',
-                userAgent: data.existingSignature.userAgent || 'Navegador Web',
-                hash: data.existingSignature.signatureHash,
-              },
-            });
+            if (data.existingSignature) {
+              setAuditResult({
+                signatureId: data.existingSignature.id,
+                signedAt: data.existingSignature.signedAt,
+                signatureHash: data.existingSignature.signatureHash,
+                isAssent: data.existingSignature.isAssent,
+                guardianName: data.existingSignature.guardianName,
+                guardianRelationship: data.existingSignature.guardianRelationship,
+                audit: {
+                  ipAddress: data.existingSignature.ipAddress || '127.0.0.1',
+                  userAgent: data.existingSignature.userAgent || 'Navegador Web',
+                  hash: data.existingSignature.signatureHash,
+                },
+              });
+            }
           }
         }
       } catch (err) {
         console.error('Erro ao carregar TCLE:', err);
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
     loadTCLE();
+    return () => {
+      isMounted = false;
+    };
   }, [participantId]);
 
   // Funções do Canvas do Participante
@@ -201,7 +209,9 @@ export default function PatientTclePage({
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    if (requiresAssent) {
+    const isAssentSign = Boolean(isMinor && requiresAssent);
+
+    if (isAssentSign) {
       if (!guardianName.trim() || !guardianCpf.trim() || !hasGuardianSignature || !guardianConfirmed) {
         setSignError('Para menores de 18 anos, é obrigatório o preenchimento de todos os dados e assinatura do responsável legal.');
         return;
@@ -212,7 +222,7 @@ export default function PatientTclePage({
       setSigning(true);
       setSignError(null);
       const signatureDataUrl = canvas.toDataURL('image/png');
-      const guardianSignatureDataUrl = requiresAssent && guardianCanvasRef.current
+      const guardianSignatureDataUrl = isAssentSign && guardianCanvasRef.current
         ? guardianCanvasRef.current.toDataURL('image/png')
         : undefined;
 
@@ -222,10 +232,10 @@ export default function PatientTclePage({
         body: JSON.stringify({
           participantId: participantId,
           signatureData: signatureDataUrl,
-          isAssent: requiresAssent,
-          guardianName: requiresAssent ? guardianName.trim() : undefined,
-          guardianCpf: requiresAssent ? guardianCpf.trim() : undefined,
-          guardianRelationship: requiresAssent ? guardianRelationship : undefined,
+          isAssent: isAssentSign,
+          guardianName: isAssentSign ? guardianName.trim() : undefined,
+          guardianCpf: isAssentSign ? guardianCpf.trim() : undefined,
+          guardianRelationship: isAssentSign ? guardianRelationship : undefined,
           guardianSignatureData: guardianSignatureDataUrl,
         }),
       });
@@ -344,7 +354,7 @@ export default function PatientTclePage({
   }
 
   // TELA DE ASSINATURA ELETRÔNICA
-  const isAssentMode = requiresAssent;
+  const isAssentMode = Boolean(isMinor && requiresAssent);
 
   return (
     <div className="min-h-screen bg-slate-100 font-sans text-slate-800 py-6 px-3 sm:px-6 flex justify-center">
@@ -589,5 +599,20 @@ export default function PatientTclePage({
 
       </div>
     </div>
+  );
+}
+
+export default function PatientTclePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-slate-100 flex flex-col items-center justify-center p-6 text-center text-slate-500">
+          <div className="w-8 h-8 border-3 border-blue-600 border-t-transparent rounded-full animate-spin mb-3 mx-auto" />
+          <p className="animate-pulse text-sm font-semibold">Carregando Termo de Consentimento Livre e Esclarecido...</p>
+        </div>
+      }
+    >
+      <PatientTcleContent />
+    </Suspense>
   );
 }

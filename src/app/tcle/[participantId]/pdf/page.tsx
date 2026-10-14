@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, use } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
+import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Printer, ArrowLeft, ShieldCheck, CheckCircle2, Lock, FileCheck } from 'lucide-react';
 import { formatDisplayHash } from '@/lib/cryptoHash';
@@ -44,42 +45,56 @@ type TCLEPdfData = {
   };
 };
 
-export default function TclePdfPage({
-  params,
-}: {
-  params: Promise<{ participantId: string }>;
-}) {
-  const resolvedParams = use(params);
-  const participantId = resolvedParams.participantId;
+function TclePdfContent() {
+  const routeParams = useParams();
+  const rawId = routeParams?.participantId;
+  const participantId = typeof rawId === 'string' ? rawId : Array.isArray(rawId) ? rawId[0] : '';
 
   const [data, setData] = useState<TCLEPdfData | null>(null);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!participantId) return;
+
+    let isMounted = true;
     const fetchData = async () => {
       try {
         setLoading(true);
+        setErrorMsg(null);
         const res = await fetch(`/api/tcle/participant/${participantId}`);
         if (!res.ok) {
-          throw new Error('Não foi possível localizar os registros do termo.');
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || 'Não foi possível localizar os registros do termo.');
         }
         const json = await res.json();
-        setData(json);
+        if (isMounted) {
+          setData(json);
+        }
       } catch (err: unknown) {
-        setErrorMsg(err instanceof Error ? err.message : 'Erro ao carregar documento.');
+        if (isMounted) {
+          setErrorMsg(err instanceof Error ? err.message : 'Erro ao carregar documento.');
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
     fetchData();
+
+    return () => {
+      isMounted = false;
+    };
   }, [participantId]);
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center text-slate-500">
-        <p className="animate-pulse text-sm">Gerando visualização oficial do documento do TCLE...</p>
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-center text-slate-500">
+        <div className="w-8 h-8 border-3 border-blue-600 border-t-transparent rounded-full animate-spin mb-3 mx-auto" />
+        <p className="animate-pulse text-sm font-semibold">Gerando visualização oficial do documento do TCLE...</p>
+        <p className="text-xs text-slate-400 mt-1">Carregando autenticação criptográfica e registros éticos...</p>
       </div>
     );
   }
@@ -91,8 +106,8 @@ export default function TclePdfPage({
           <p className="text-red-600 font-bold mb-2">Erro ao carregar documento</p>
           <p className="text-xs text-slate-500 mb-6">{errorMsg || 'Dados indisponíveis.'}</p>
           <Link
-            href={`/tcle/${participantId}`}
-            className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold"
+            href={participantId ? `/tcle/${participantId}` : '/dashboard'}
+            className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold inline-block"
           >
             ← Voltar para a página do termo
           </Link>
@@ -102,7 +117,7 @@ export default function TclePdfPage({
   }
 
   const { consentForm, participant, existingSignature, isMinor, requiresAssent } = data;
-  const isAssentDoc = existingSignature?.isAssent || (requiresAssent && !existingSignature);
+  const isAssentDoc = Boolean(existingSignature?.isAssent || (isMinor && requiresAssent));
 
   return (
     <div className="min-h-screen bg-slate-200/70 py-6 px-2 sm:px-6 print:p-0 print:bg-white text-slate-900 font-serif">
@@ -354,5 +369,20 @@ export default function TclePdfPage({
 
       </div>
     </div>
+  );
+}
+
+export default function TclePdfPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-center text-slate-500">
+          <div className="w-8 h-8 border-3 border-blue-600 border-t-transparent rounded-full animate-spin mb-3 mx-auto" />
+          <p className="animate-pulse text-sm font-semibold">Gerando visualização oficial do documento do TCLE...</p>
+        </div>
+      }
+    >
+      <TclePdfContent />
+    </Suspense>
   );
 }

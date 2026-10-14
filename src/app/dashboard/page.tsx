@@ -62,7 +62,9 @@ type Patient = {
   id: string;
   fullName: string;
   cpf: string;
+  email?: string | null;
   phoneWhatsApp: string;
+  address?: string | null;
   dateOfBirth: string;
   biologicalSex: string;
   comorbidities: string | null;
@@ -576,6 +578,26 @@ function DashboardContent() {
     expectations: '',
   });
 
+  // Estados para Edição de Dados Cadastrais do Paciente (Audit Trail GCP / ICH E6)
+  const [showEditPatientModal, setShowEditPatientModal] = useState(false);
+  const [editingParticipant, setEditingParticipant] = useState<Participant | null>(null);
+  const [editPatientData, setEditPatientData] = useState({
+    fullName: '',
+    cpf: '',
+    email: '',
+    phoneWhatsApp: '',
+    address: '',
+    dateOfBirth: '1998-01-01',
+    biologicalSex: 'Feminino',
+    comorbidities: '',
+    allergies: '',
+    medications: '',
+    chiefComplaint: '',
+    expectations: '',
+  });
+  const [editPatientReason, setEditPatientReason] = useState('');
+  const [savingPatientEdit, setSavingPatientEdit] = useState(false);
+
   const loadProject = async (silent: boolean = false) => {
     try {
       if (!silent) {
@@ -877,6 +899,71 @@ function DashboardContent() {
       setSavingPatient(false);
     }
   };
+
+  // Abertura e Salvamento de Edição de Dados Cadastrais do Paciente
+  const handleOpenEditPatient = (part: Participant) => {
+    setEditingParticipant(part);
+    const p = part.patient;
+    const dobFormatted = p.dateOfBirth
+      ? new Date(p.dateOfBirth).toISOString().split('T')[0]
+      : '1998-01-01';
+
+    setEditPatientData({
+      fullName: p.fullName || '',
+      cpf: p.cpf || '',
+      email: p.email || '',
+      phoneWhatsApp: p.phoneWhatsApp || '',
+      address: p.address || '',
+      dateOfBirth: dobFormatted,
+      biologicalSex: p.biologicalSex || 'Feminino',
+      comorbidities: p.comorbidities || '',
+      allergies: p.allergies || '',
+      medications: p.medications || '',
+      chiefComplaint: p.chiefComplaint || '',
+      expectations: p.expectations || '',
+    });
+    setEditPatientReason('');
+    setShowEditPatientModal(true);
+  };
+
+  const handleSaveEditPatient = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingParticipant || !project) return;
+    if (!editPatientReason.trim()) {
+      alert('A justificativa da alteração é obrigatória para conformidade com a Trilha de Auditoria (GCP/ICH E6).');
+      return;
+    }
+
+    try {
+      setSavingPatientEdit(true);
+      const res = await fetch('/api/patients', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          patientId: editingParticipant.patient.id,
+          projectId: project.id,
+          reason: editPatientReason.trim(),
+          ...editPatientData,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Erro ao atualizar dados cadastrais.');
+      }
+
+      alert(data.message || 'Dados cadastrais atualizados com sucesso e registrados na trilha de auditoria.');
+      setShowEditPatientModal(false);
+      setEditingParticipant(null);
+      await loadProject(true);
+    } catch (err: any) {
+      console.error('Erro ao atualizar dados cadastrais do paciente:', err);
+      alert(err?.message || 'Erro de comunicação ao salvar alterações.');
+    } finally {
+      setSavingPatientEdit(false);
+    }
+  };
+
 
   // Abrir e Salvar Anamnese
   const openAnamnesisModal = (part: Participant) => {
@@ -2038,6 +2125,14 @@ function DashboardContent() {
                             <span className="font-bold text-slate-900 text-sm tracking-tight">
                               {part.patient.fullName}
                             </span>
+                            <button
+                              type="button"
+                              onClick={() => handleOpenEditPatient(part)}
+                              className="p-1 text-slate-400 hover:text-blue-600 rounded-lg hover:bg-blue-50 transition"
+                              title="Editar dados cadastrais do paciente (com justificativa de auditoria)"
+                            >
+                              <Edit className="w-3.5 h-3.5" />
+                            </button>
                             <span className="text-xs text-slate-500 font-mono">
                               • {part.patient.biologicalSex}
                             </span>
@@ -2219,6 +2314,17 @@ function DashboardContent() {
                             <span>TCLE (PDF)</span>
                           </Link>
 
+                          {/* Editar Dados Cadastrais */}
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditPatient(part)}
+                            className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-xl text-xs font-bold transition flex items-center space-x-1 shadow-2xs"
+                            title="Editar dados cadastrais do paciente (com registro obrigatório na Trilha de Auditoria)"
+                          >
+                            <Edit className="w-3.5 h-3.5 text-slate-600" />
+                            <span>Editar Cadastro</span>
+                          </button>
+
                           {/* WhatsApp de Agendamento */}
                           {next && (windows.overallAlert === 'OVERDUE' || windows.overallAlert === 'DUE_NOW') ? (
                             <button
@@ -2362,7 +2468,17 @@ function DashboardContent() {
                               <span className="px-2 py-0.5 bg-slate-800 text-white text-xs font-bold rounded">
                                 {part.researchCode}
                               </span>
-                              <h4 className="font-bold text-slate-900 text-base">{part.patient.fullName}</h4>
+                              <h4 className="font-bold text-slate-900 text-base flex items-center gap-1.5">
+                                <span>{part.patient.fullName}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenEditPatient(part)}
+                                  className="p-1 text-slate-400 hover:text-blue-600 rounded-lg hover:bg-blue-50 transition"
+                                  title="Editar dados cadastrais do paciente (com justificativa de auditoria)"
+                                >
+                                  <Edit className="w-3.5 h-3.5" />
+                                </button>
+                              </h4>
                               
                               {isAnamnesisDone ? (
                                 <span className="px-2.5 py-0.5 bg-emerald-100 text-emerald-800 text-[11px] font-bold rounded-full flex items-center space-x-1">
@@ -2422,6 +2538,16 @@ function DashboardContent() {
                             <FileText className="w-3.5 h-3.5 mr-1 text-slate-500" />
                             <span>TCLE (PDF)</span>
                           </Link>
+
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditPatient(part)}
+                            className="py-2 px-3 rounded-lg text-xs font-bold flex items-center justify-center space-x-1.5 border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 transition"
+                            title="Editar dados cadastrais do paciente (com justificativa de auditoria)"
+                          >
+                            <Edit className="w-3.5 h-3.5 mr-1 text-slate-500" />
+                            <span>Editar Cadastro</span>
+                          </button>
                         </div>
 
                         {/* Decisão de Inclusão / Exclusão */}
@@ -4509,6 +4635,257 @@ function DashboardContent() {
                     </>
                   ) : (
                     'Salvar Paciente'
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Edição de Dados Cadastrais do Paciente (Audit Trail GCP / ICH E6) */}
+      {showEditPatientModal && editingParticipant && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-xl w-full p-6 sm:p-7 border border-slate-200 my-8 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-5">
+              <div className="flex items-center space-x-3">
+                <div className="p-2.5 bg-blue-100 text-blue-700 rounded-2xl">
+                  <Edit className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900">
+                    Alteração de Dados Cadastrais do Paciente
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Código: <strong className="font-mono text-blue-700">{editingParticipant.researchCode}</strong> • Prontuário Central Global
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowEditPatientModal(false);
+                  setEditingParticipant(null);
+                }}
+                className="p-2 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Banner de Rastreabilidade Regulatória */}
+            <div className="mb-5 p-3.5 bg-indigo-50/70 border border-indigo-200 rounded-2xl text-xs text-indigo-900 flex items-start space-x-2.5">
+              <ShieldCheck className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
+              <div className="leading-relaxed">
+                <strong>Conformidade Ética & Regulatória (GCP / ICH E6 & 21 CFR Part 11):</strong>
+                <p className="text-indigo-800 text-[11px] mt-0.5">
+                  Cada campo alterado será gravado com valor anterior, novo valor, identificação do pesquisador, endereço IP e data/hora oficial na Trilha de Auditoria.
+                </p>
+              </div>
+            </div>
+
+            <form onSubmit={handleSaveEditPatient} className="space-y-4 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">
+                    Nome Completo *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editPatientData.fullName}
+                    onChange={(e) => setEditPatientData({ ...editPatientData, fullName: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">
+                    CPF *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editPatientData.cpf}
+                    onChange={(e) => setEditPatientData({ ...editPatientData, cpf: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">
+                    WhatsApp / Telefone *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editPatientData.phoneWhatsApp}
+                    onChange={(e) => setEditPatientData({ ...editPatientData, phoneWhatsApp: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">
+                    Data de Nascimento *
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={editPatientData.dateOfBirth}
+                    onChange={(e) => setEditPatientData({ ...editPatientData, dateOfBirth: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">
+                    Sexo Biológico *
+                  </label>
+                  <select
+                    value={editPatientData.biologicalSex}
+                    onChange={(e) => setEditPatientData({ ...editPatientData, biologicalSex: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  >
+                    <option value="Feminino">Feminino</option>
+                    <option value="Masculino">Masculino</option>
+                    <option value="Outro">Outro</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">
+                    E-mail
+                  </label>
+                  <input
+                    type="email"
+                    value={editPatientData.email}
+                    onChange={(e) => setEditPatientData({ ...editPatientData, email: e.target.value })}
+                    placeholder="email@exemplo.com"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">
+                    Endereço
+                  </label>
+                  <input
+                    type="text"
+                    value={editPatientData.address}
+                    onChange={(e) => setEditPatientData({ ...editPatientData, address: e.target.value })}
+                    placeholder="Rua, Número, Bairro, Cidade"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">
+                    Comorbidades
+                  </label>
+                  <input
+                    type="text"
+                    value={editPatientData.comorbidities}
+                    onChange={(e) => setEditPatientData({ ...editPatientData, comorbidities: e.target.value })}
+                    placeholder="Ex: Nenhuma, Hipertensão, Diabetes"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">
+                    Alergias Prévias
+                  </label>
+                  <input
+                    type="text"
+                    value={editPatientData.allergies}
+                    onChange={(e) => setEditPatientData({ ...editPatientData, allergies: e.target.value })}
+                    placeholder="Ex: Alergia a Dipirona, Nenhuma"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">
+                    Medicamentos de Uso Contínuo
+                  </label>
+                  <input
+                    type="text"
+                    value={editPatientData.medications}
+                    onChange={(e) => setEditPatientData({ ...editPatientData, medications: e.target.value })}
+                    placeholder="Ex: Anticoncepcional, Anti-hipertensivo"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">
+                    Queixa Principal
+                  </label>
+                  <input
+                    type="text"
+                    value={editPatientData.chiefComplaint}
+                    onChange={(e) => setEditPatientData({ ...editPatientData, chiefComplaint: e.target.value })}
+                    placeholder="Motivo da busca pelo tratamento"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Justificativa Obrigatória para a Trilha de Auditoria (GCP / ICH E6) */}
+              <div className="p-4 bg-amber-50/70 border border-amber-300 rounded-2xl space-y-1.5">
+                <label className="block font-bold text-amber-950 uppercase tracking-wider">
+                  Justificativa da Alteração Cadastral (Obrigatório - Trilha de Auditoria GCP) *
+                </label>
+                <textarea
+                  rows={3}
+                  required
+                  value={editPatientReason}
+                  onChange={(e) => setEditPatientReason(e.target.value)}
+                  placeholder="Descreva detalhadamente o motivo desta alteração: ex. Correção da data de nascimento para 1998-05-14 conforme conferência de RG na consulta presencial..."
+                  className="w-full px-3 py-2 border border-amber-300 rounded-xl text-xs bg-white text-slate-900 focus:ring-2 focus:ring-amber-500 focus:outline-none placeholder:text-slate-400"
+                />
+                <p className="text-[10px] text-amber-800">
+                  A justificativa é exigida pelas normas de Boas Práticas Clínicas e ficará permanentemente registrada no log de auditoria.
+                </p>
+              </div>
+
+              <div className="flex justify-end space-x-3 pt-4 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEditPatientModal(false);
+                    setEditingParticipant(null);
+                  }}
+                  disabled={savingPatientEdit}
+                  className="px-4 py-2.5 border border-slate-300 rounded-xl font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingPatientEdit || !editPatientReason.trim()}
+                  className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md transition disabled:opacity-50 flex items-center space-x-1.5"
+                >
+                  {savingPatientEdit ? (
+                    <>
+                      <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <span>Salvando Alterações...</span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="w-4 h-4" />
+                      <span>Salvar e Registrar na Auditoria</span>
+                    </>
                   )}
                 </button>
               </div>
