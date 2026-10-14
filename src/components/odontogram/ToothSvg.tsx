@@ -27,16 +27,16 @@ export const ToothSvg: React.FC<ToothSvgProps> = ({
     >
       {/* Imagem Anatômica Vetorial (Contorno de dentes com sobreposição exata na coroa) */}
       <picture className="w-full h-full flex items-center justify-center transition-all duration-150">
-        <source srcSet={`/teeth/tooth-${fdi}-${statusKey}.webp`} type="image/webp" />
+        <source srcSet={`/teeth/tooth-${fdi}-${statusKey}.webp?v=2`} type="image/webp" />
         <img
-          src={`/teeth/tooth-${fdi}-${statusKey}.png`}
+          src={`/teeth/tooth-${fdi}-${statusKey}.png?v=2`}
           alt={`Dente ${fdi} (${status})`}
           className="w-full h-full object-contain pointer-events-none drop-shadow-none"
           loading="lazy"
           onError={(e) => {
             const target = e.currentTarget;
-            if (!target.src.endsWith(`/teeth/tooth-${fdi}.png`)) {
-              target.src = `/teeth/tooth-${fdi}.png`;
+            if (!target.src.includes(`/teeth/tooth-${fdi}.png`)) {
+              target.src = `/teeth/tooth-${fdi}.png?v=2`;
             }
           }}
         />
