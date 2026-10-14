@@ -30,6 +30,13 @@ export const ToothSelectorModal: React.FC<ToothSelectorModalProps> = ({
   const [selectedTeeth, setSelectedTeeth] = useState<string[]>(initialSelected);
   const [statusMap, setStatusMap] = useState<Record<string, ToothStatus>>(initialStatusMap);
 
+  React.useEffect(() => {
+    if (isOpen) {
+      setSelectedTeeth(initialSelected || []);
+      setStatusMap(initialStatusMap || {});
+    }
+  }, [isOpen, initialSelected, initialStatusMap]);
+
   if (!isOpen) return null;
 
   const handleToggleSelect = (tooth: string) => {

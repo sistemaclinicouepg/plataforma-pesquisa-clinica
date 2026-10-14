@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   UPPER_PERMANENT_RIGHT,
   UPPER_PERMANENT_LEFT,
@@ -47,12 +47,12 @@ export const OdontogramChart: React.FC<OdontogramChartProps> = ({
   readOnly = false,
   allowDeciduous = true,
 }) => {
-  // Estado local dos dentes garantido para renderização instantânea
+  // Estado local dos dentes sincronizado com prop externa
   const [localStatusMap, setLocalStatusMap] = useState<Record<string, ToothStatus>>(statusMap || {});
-  
+
   // Pincel / Ferramenta de Status Ativo (permite selecionar o status e ir clicando nos dentes!)
   const [activeBrush, setActiveBrush] = useState<ToolMode>('CYCLE');
-  
+
   const [deciduousOpen, setDeciduousOpen] = useState(false);
   const [hoveredTooth, setHoveredTooth] = useState<string | null>(null);
 
@@ -85,9 +85,16 @@ export const OdontogramChart: React.FC<OdontogramChartProps> = ({
     // Modo Pincel Ativo: se o usuário escolheu Ausente, Cárie, Restaurado, etc.
     if (activeBrush !== 'CYCLE') {
       const current = localStatusMap[tooth] || 'HIGIDO';
-      // Se clicar com a mesma ferramenta em dente que já tem aquele status, reverte para Hígido
-      const nextStatus = current === activeBrush ? 'HIGIDO' : activeBrush;
-      applyToothStatus(tooth, nextStatus);
+      if (activeBrush === 'HIGIDO') {
+        // Se a ferramenta ativa é HÍGIDO, clicar em qualquer dente define imediatamente como HÍGIDO!
+        applyToothStatus(tooth, 'HIGIDO');
+      } else {
+        // Se a ferramenta ativa é AUSENTE, CARIE, etc.:
+        // Se já está com esse status, reverte para Hígido.
+        // Caso contrário, aplica o status ativo (ex: Ausente, Cárie)!
+        const nextStatus = current === activeBrush ? 'HIGIDO' : activeBrush;
+        applyToothStatus(tooth, nextStatus);
+      }
     } else {
       // Modo Ciclo Sequencial
       const current = localStatusMap[tooth] || 'HIGIDO';
@@ -134,6 +141,27 @@ export const OdontogramChart: React.FC<OdontogramChartProps> = ({
     return anterior.includes(tooth);
   };
 
+  // Estatísticas em tempo real da arcada
+  const stats = useMemo(() => {
+    let higido = 0;
+    let ausente = 0;
+    let restaurado = 0;
+    let carie = 0;
+    let faceta = 0;
+
+    ALL_PERMANENT_TEETH.forEach((t) => {
+      const s = localStatusMap[t] || 'HIGIDO';
+      if (s === 'HIGIDO') higido++;
+      else if (s === 'AUSENTE') ausente++;
+      else if (s === 'RESTAURADO') restaurado++;
+      else if (s === 'CARIE') carie++;
+      else if (s === 'FACETA') faceta++;
+    });
+
+    return { higido, ausente, restaurado, carie, faceta };
+  }, [localStatusMap]);
+
+  // Renderizador individual de cada dente
   const renderToothCard = (tooth: string) => {
     const meta = TEETH_METADATA[tooth];
     const status = localStatusMap[tooth] || 'HIGIDO';
@@ -143,7 +171,7 @@ export const OdontogramChart: React.FC<OdontogramChartProps> = ({
 
     if (!visible) {
       return (
-        <div key={tooth} className="w-7 sm:w-9 h-24 opacity-0 pointer-events-none" />
+        <div key={tooth} className="w-8 sm:w-11 h-28 opacity-0 pointer-events-none" />
       );
     }
 
@@ -153,42 +181,48 @@ export const OdontogramChart: React.FC<OdontogramChartProps> = ({
         onClick={() => handleToothClick(tooth)}
         onMouseEnter={() => setHoveredTooth(tooth)}
         onMouseLeave={() => setHoveredTooth(null)}
-        className={`group relative flex flex-col items-center justify-between p-1.5 sm:p-2 rounded-2xl transition-all duration-150 cursor-pointer ${
+        className={`group relative flex flex-col items-center justify-between p-1 sm:p-1.5 rounded-2xl transition-all duration-150 cursor-pointer min-w-[34px] sm:min-w-[42px] ${
           isSelected
-            ? 'bg-blue-100/80 ring-2 ring-blue-500 shadow-sm scale-105 z-10'
-            : 'hover:bg-slate-100/90 hover:scale-105 hover:shadow-xs active:scale-95'
+            ? 'bg-blue-100/90 ring-2 ring-blue-500 shadow-md scale-105 z-10'
+            : 'hover:bg-slate-200/80 hover:scale-105 hover:shadow-xs active:scale-95'
         }`}
         title={`${tooth} - ${meta?.name || 'Dente'}: ${statusCfg.label}. ${
           activeBrush !== 'CYCLE'
-            ? `Clique para aplicar status [${TOOTH_STATUS_CONFIG[activeBrush]?.label}]`
+            ? `Clique para aplicar [${TOOTH_STATUS_CONFIG[activeBrush]?.label}]`
             : 'Clique para alternar status'
         }`}
       >
-        {/* Ilustração Anatômica Hiper-realista do Dente */}
+        {/* Ilustração Anatômica 3D Hiper-realista do Dente */}
         <ToothSvg
           fdi={tooth}
           status={status}
           isSelected={isSelected}
-          width={30}
-          height={62}
-          className="transition-transform group-hover:drop-shadow-sm"
+          width={36}
+          height={72}
+          className="transition-transform group-hover:drop-shadow-md"
         />
 
-        {/* Número do dente no padrão FDI */}
+        {/* Número do dente no padrão internacional FDI */}
         <span className="text-[11px] sm:text-xs font-black text-slate-800 font-mono tracking-tight group-hover:text-blue-600 mt-1">
           {tooth}
         </span>
 
-        {/* Indicador de Status Clínico */}
+        {/* Indicador Clínico de Status */}
         {mode === 'clinical_status' && (
           <div className="mt-0.5 flex items-center justify-center">
             {status === 'HIGIDO' ? (
-              <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-2xs" title="Hígido" />
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-2xs" title="Hígido" />
             ) : (
               <span
-                className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded-full ${statusCfg.bg} ${statusCfg.text} border ${statusCfg.border}`}
+                className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded-full ${statusCfg.bg} ${statusCfg.text} border ${statusCfg.border} shadow-2xs whitespace-nowrap`}
               >
-                {status.slice(0, 4)}
+                {status === 'AUSENTE'
+                  ? 'AUS'
+                  : status === 'RESTAURADO'
+                  ? 'REST'
+                  : status === 'CARIE'
+                  ? 'CÁRIE'
+                  : 'FAC'}
               </span>
             )}
           </div>
@@ -205,45 +239,45 @@ export const OdontogramChart: React.FC<OdontogramChartProps> = ({
   };
 
   return (
-    <div className="w-full bg-white rounded-3xl border border-slate-200 shadow-xs p-3 sm:p-6 select-none space-y-5">
+    <div className="w-full bg-[#f8fafc] rounded-3xl border border-slate-200/80 shadow-sm p-3 sm:p-6 select-none space-y-5">
       
       {/* ============================================================ */}
       {/* BARRA DE FERRAMENTAS / MODO PINCEL CLÍNICO ATIVO             */}
       {/* Permite selecionar um status e ir clicando nos dentes!       */}
       {/* ============================================================ */}
       {!readOnly && mode === 'clinical_status' && (
-        <div className="p-3 bg-slate-900 text-white rounded-2xl shadow-md border border-slate-800 space-y-2.5 animate-fadeIn">
+        <div className="p-3.5 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white rounded-2xl shadow-md border border-slate-700/80 space-y-3 animate-fadeIn">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center space-x-2">
-              <span className="text-sm">🖌️</span>
+              <span className="text-base">🖌️</span>
               <span className="text-xs font-bold text-slate-200 uppercase tracking-wider">
-                Ferramenta / Pincel Clínico:
+                Pincel Clínico Ativo:
               </span>
             </div>
 
-            <span className="text-[11px] text-slate-300 font-semibold bg-slate-800 px-2.5 py-0.5 rounded-full border border-slate-700">
+            <span className="text-[11px] text-slate-200 font-semibold bg-slate-800 px-3 py-1 rounded-full border border-slate-600 shadow-inner">
               {activeBrush === 'CYCLE' ? (
                 '🔄 Modo Ciclo: Clique no dente para alternar sequencialmente'
               ) : (
                 <span>
-                  Pincel Ativo: <strong className="text-white underline">{TOOTH_STATUS_CONFIG[activeBrush]?.label}</strong> (Clique nos dentes para aplicar)
+                  Pincel Ativo: <strong className="text-amber-300 font-bold underline">{TOOTH_STATUS_CONFIG[activeBrush]?.label}</strong> (Clique nos dentes para aplicar em sequência)
                 </span>
               )}
             </span>
           </div>
 
           {/* Botões seletores de ferramenta/pincel */}
-          <div className="flex flex-wrap items-center gap-1.5 text-xs">
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-xs">
             <button
               type="button"
               onClick={() => setActiveBrush('AUSENTE')}
               className={`px-3 py-1.5 rounded-xl font-bold transition flex items-center space-x-1.5 cursor-pointer ${
                 activeBrush === 'AUSENTE'
-                  ? 'bg-slate-700 text-white ring-2 ring-red-400 shadow-xs scale-105'
-                  : 'bg-slate-800/80 hover:bg-slate-800 text-slate-300'
+                  ? 'bg-slate-700 text-white ring-2 ring-red-400 shadow-md scale-105'
+                  : 'bg-slate-800/90 hover:bg-slate-700 text-slate-300'
               }`}
             >
-              <span className="w-2.5 h-2.5 rounded-full bg-slate-400" />
+              <span className="w-2.5 h-2.5 rounded-full bg-red-400" />
               <span>⚪ Ausente (Extraído)</span>
             </button>
 
@@ -252,8 +286,8 @@ export const OdontogramChart: React.FC<OdontogramChartProps> = ({
               onClick={() => setActiveBrush('CARIE')}
               className={`px-3 py-1.5 rounded-xl font-bold transition flex items-center space-x-1.5 cursor-pointer ${
                 activeBrush === 'CARIE'
-                  ? 'bg-red-600 text-white ring-2 ring-red-300 shadow-xs scale-105'
-                  : 'bg-slate-800/80 hover:bg-slate-800 text-slate-300'
+                  ? 'bg-red-600 text-white ring-2 ring-red-300 shadow-md scale-105'
+                  : 'bg-slate-800/90 hover:bg-slate-700 text-slate-300'
               }`}
             >
               <span className="w-2.5 h-2.5 rounded-full bg-red-400" />
@@ -265,8 +299,8 @@ export const OdontogramChart: React.FC<OdontogramChartProps> = ({
               onClick={() => setActiveBrush('RESTAURADO')}
               className={`px-3 py-1.5 rounded-xl font-bold transition flex items-center space-x-1.5 cursor-pointer ${
                 activeBrush === 'RESTAURADO'
-                  ? 'bg-blue-600 text-white ring-2 ring-blue-300 shadow-xs scale-105'
-                  : 'bg-slate-800/80 hover:bg-slate-800 text-slate-300'
+                  ? 'bg-blue-600 text-white ring-2 ring-blue-300 shadow-md scale-105'
+                  : 'bg-slate-800/90 hover:bg-slate-700 text-slate-300'
               }`}
             >
               <span className="w-2.5 h-2.5 rounded-full bg-blue-400" />
@@ -278,8 +312,8 @@ export const OdontogramChart: React.FC<OdontogramChartProps> = ({
               onClick={() => setActiveBrush('FACETA')}
               className={`px-3 py-1.5 rounded-xl font-bold transition flex items-center space-x-1.5 cursor-pointer ${
                 activeBrush === 'FACETA'
-                  ? 'bg-purple-600 text-white ring-2 ring-purple-300 shadow-xs scale-105'
-                  : 'bg-slate-800/80 hover:bg-slate-800 text-slate-300'
+                  ? 'bg-purple-600 text-white ring-2 ring-purple-300 shadow-md scale-105'
+                  : 'bg-slate-800/90 hover:bg-slate-700 text-slate-300'
               }`}
             >
               <span className="w-2.5 h-2.5 rounded-full bg-purple-400" />
@@ -291,12 +325,12 @@ export const OdontogramChart: React.FC<OdontogramChartProps> = ({
               onClick={() => setActiveBrush('HIGIDO')}
               className={`px-3 py-1.5 rounded-xl font-bold transition flex items-center space-x-1.5 cursor-pointer ${
                 activeBrush === 'HIGIDO'
-                  ? 'bg-emerald-600 text-white ring-2 ring-emerald-300 shadow-xs scale-105'
-                  : 'bg-slate-800/80 hover:bg-slate-800 text-slate-300'
+                  ? 'bg-emerald-600 text-white ring-2 ring-emerald-300 shadow-md scale-105'
+                  : 'bg-slate-800/90 hover:bg-slate-700 text-slate-300'
               }`}
             >
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
-              <span>🟢 Hígido</span>
+              <span>🟢 Hígido (Normal)</span>
             </button>
 
             <button
@@ -304,8 +338,8 @@ export const OdontogramChart: React.FC<OdontogramChartProps> = ({
               onClick={() => setActiveBrush('CYCLE')}
               className={`px-3 py-1.5 rounded-xl font-bold transition flex items-center space-x-1.5 cursor-pointer ${
                 activeBrush === 'CYCLE'
-                  ? 'bg-amber-600 text-white ring-2 ring-amber-300 shadow-xs scale-105'
-                  : 'bg-slate-800/80 hover:bg-slate-800 text-slate-300'
+                  ? 'bg-amber-600 text-white ring-2 ring-amber-300 shadow-md scale-105'
+                  : 'bg-slate-800/90 hover:bg-slate-700 text-slate-300'
               }`}
             >
               <span>🔄</span>
@@ -315,68 +349,78 @@ export const OdontogramChart: React.FC<OdontogramChartProps> = ({
         </div>
       )}
 
-      {/* Barra de Ações Rápidas (Limpar | Aplicar Superior | Aplicar Inferior | Todos) */}
+      {/* Barra de Ações Rápidas e Resumo Estatístico */}
       {!readOnly && (
-        <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-100">
+        <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-200">
           <div className="inline-flex flex-wrap items-center gap-1.5 sm:gap-2">
             <button
               type="button"
               onClick={handleClearAll}
-              className="px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition shadow-2xs cursor-pointer active:scale-95"
+              className="px-3 py-1.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 text-xs font-bold transition shadow-2xs cursor-pointer active:scale-95"
             >
               Limpar (Todos Hígidos)
             </button>
             <button
               type="button"
               onClick={() => applyBrushToTeeth(ALL_PERMANENT_TEETH)}
-              className="px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition shadow-2xs cursor-pointer active:scale-95"
+              className="px-3 py-1.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 text-xs font-bold transition shadow-2xs cursor-pointer active:scale-95"
             >
-              {activeBrush === 'CYCLE' ? 'Todos' : `Aplicar em Todos`}
+              {activeBrush === 'CYCLE' ? 'Marcar Todos Hígidos' : `Aplicar [${TOOTH_STATUS_CONFIG[activeBrush]?.label}] em Todos`}
             </button>
             <button
               type="button"
               onClick={() => applyBrushToTeeth(UPPER_PERMANENT_TEETH)}
-              className="px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition shadow-2xs cursor-pointer active:scale-95"
+              className="px-3 py-1.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 text-xs font-bold transition shadow-2xs cursor-pointer active:scale-95"
             >
               Superior
             </button>
             <button
               type="button"
               onClick={() => applyBrushToTeeth(LOWER_PERMANENT_TEETH)}
-              className="px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition shadow-2xs cursor-pointer active:scale-95"
+              className="px-3 py-1.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 text-xs font-bold transition shadow-2xs cursor-pointer active:scale-95"
             >
               Inferior
             </button>
           </div>
 
-          {/* Dica interativa do dente sob o cursor */}
-          <div className="text-xs font-semibold text-slate-600 truncate max-w-xs sm:max-w-md h-5 flex items-center">
-            {hoveredTooth ? (
-              <span className="text-blue-700 animate-fadeIn">
-                <strong>Dente {hoveredTooth}:</strong> {TEETH_METADATA[hoveredTooth]?.name}
-                {mode === 'clinical_status' && (
-                  <span className="ml-2 font-bold text-slate-700">
-                    [{TOOTH_STATUS_CONFIG[localStatusMap[hoveredTooth] || 'HIGIDO']?.label}]
+          {/* Contadores da Arcada Permanente */}
+          {mode === 'clinical_status' && (
+            <div className="flex flex-wrap items-center gap-2 text-[11px] font-bold text-slate-600 bg-slate-100/90 px-3 py-1.5 rounded-xl border border-slate-200">
+              <span className="flex items-center text-emerald-700">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 mr-1" /> {stats.higido} Hígidos
+              </span>
+              <span>•</span>
+              <span className="flex items-center text-slate-600">
+                <span className="w-2 h-2 rounded-full bg-slate-400 mr-1" /> {stats.ausente} Ausentes
+              </span>
+              <span>•</span>
+              <span className="flex items-center text-blue-700">
+                <span className="w-2 h-2 rounded-full bg-blue-500 mr-1" /> {stats.restaurado} Rest.
+              </span>
+              <span>•</span>
+              <span className="flex items-center text-red-700">
+                <span className="w-2 h-2 rounded-full bg-red-500 mr-1" /> {stats.carie} Cáries
+              </span>
+              {stats.faceta > 0 && (
+                <>
+                  <span>•</span>
+                  <span className="flex items-center text-purple-700">
+                    <span className="w-2 h-2 rounded-full bg-purple-500 mr-1" /> {stats.faceta} Facetas
                   </span>
-                )}
-              </span>
-            ) : (
-              <span className="text-slate-400">
-                {activeBrush !== 'CYCLE'
-                  ? `👉 Clique em qualquer dente para aplicar [${TOOTH_STATUS_CONFIG[activeBrush]?.label}]`
-                  : '👉 Clique em qualquer dente para alternar o status clínico'}
-              </span>
-            )}
-          </div>
+                </>
+              )}
+            </div>
+          )}
         </div>
       )}
 
       {/* ============================================================ */}
       {/* SEÇÃO 1: ARCADA SUPERIOR - PERMANENTES                      */}
+      {/* Estilo fiel à imagem de referência dentes.jpeg              */}
       {/* ============================================================ */}
       <div className="space-y-3">
-        <div className="text-center">
-          <span className="text-[10px] sm:text-xs font-black tracking-wider uppercase text-slate-600 bg-slate-100 px-3.5 py-1.5 rounded-full border border-slate-200">
+        <div className="flex justify-center">
+          <span className="bg-[#1e3a5f] text-white px-6 py-1.5 rounded-full font-bold text-xs uppercase tracking-wider shadow-sm">
             Arcada Superior - Permanentes
           </span>
         </div>
@@ -389,7 +433,7 @@ export const OdontogramChart: React.FC<OdontogramChartProps> = ({
           </div>
 
           {/* Linha Média Sagital Divisória */}
-          <div className="h-24 w-[1.5px] bg-slate-300 mx-1.5 sm:mx-3 self-center rounded-full opacity-80" />
+          <div className="h-28 w-[2px] bg-slate-400/80 mx-1.5 sm:mx-3 self-center rounded-full" />
 
           {/* Quadrante 2 (Esquerdo do Paciente): 21 a 28 */}
           <div className="flex items-center space-x-0.5 sm:space-x-1">
@@ -398,15 +442,16 @@ export const OdontogramChart: React.FC<OdontogramChartProps> = ({
         </div>
       </div>
 
-      {/* Linha Oclusal Horizontal Sutil entre as duas arcadas */}
-      <div className="border-b border-dashed border-slate-200 my-2" />
+      {/* Linha Divisória Tracejada entre as Arcadas Superior e Inferior */}
+      <div className="border-t border-dashed border-slate-300 my-4" />
 
       {/* ============================================================ */}
       {/* SEÇÃO 2: ARCADA INFERIOR - PERMANENTES                      */}
+      {/* Estilo fiel à imagem de referência dentes.jpeg              */}
       {/* ============================================================ */}
       <div className="space-y-3">
-        <div className="text-center">
-          <span className="text-[10px] sm:text-xs font-black tracking-wider uppercase text-slate-600 bg-slate-100 px-3.5 py-1.5 rounded-full border border-slate-200">
+        <div className="flex justify-center">
+          <span className="bg-[#1e3a5f] text-white px-6 py-1.5 rounded-full font-bold text-xs uppercase tracking-wider shadow-sm">
             Arcada Inferior - Permanentes
           </span>
         </div>
@@ -419,7 +464,7 @@ export const OdontogramChart: React.FC<OdontogramChartProps> = ({
           </div>
 
           {/* Linha Média Sagital Divisória */}
-          <div className="h-24 w-[1.5px] bg-slate-300 mx-1.5 sm:mx-3 self-center rounded-full opacity-80" />
+          <div className="h-28 w-[2px] bg-slate-400/80 mx-1.5 sm:mx-3 self-center rounded-full" />
 
           {/* Quadrante 3 (Esquerdo do Paciente): 31 a 38 */}
           <div className="flex items-center space-x-0.5 sm:space-x-1">
@@ -521,7 +566,7 @@ export const OdontogramChart: React.FC<OdontogramChartProps> = ({
 
       {/* Legenda de Status Clínico */}
       {mode === 'clinical_status' && (
-        <div className="flex flex-wrap items-center justify-center gap-3 pt-3 border-t border-slate-100 text-[11px] text-slate-600">
+        <div className="flex flex-wrap items-center justify-center gap-3 pt-3 border-t border-slate-200 text-[11px] text-slate-600 font-semibold">
           <span className="flex items-center">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 mr-1.5 shadow-2xs" /> Hígido (Esmalte Natural)
           </span>
