@@ -9,5 +9,8 @@
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"
+  },
+  "vars": {
+    "AUTH_SECRET": "uepg-pesquisa-clinica-secret-jwt-key-2026"
   }
 }

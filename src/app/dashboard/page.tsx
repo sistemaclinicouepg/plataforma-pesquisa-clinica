@@ -676,11 +676,22 @@ function DashboardContent() {
 
   const fetchWithRetry = async (url: string, timeoutMs: number = 35000, maxRetries: number = 2): Promise<Response> => {
     let lastError: any = null;
+    const authToken = typeof window !== 'undefined' ? localStorage.getItem('uepg_auth_token') : null;
+    const reqHeaders: Record<string, string> = {};
+    if (authToken) {
+      reqHeaders['Authorization'] = `Bearer ${authToken}`;
+    }
+
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), timeoutMs);
       try {
-        const res = await fetch(url, { signal: controller.signal, cache: 'no-store' });
+        const res = await fetch(url, {
+          signal: controller.signal,
+          cache: 'no-store',
+          credentials: 'include',
+          headers: reqHeaders,
+        });
         clearTimeout(timer);
         if (!res.ok && res.status >= 500 && attempt < maxRetries) {
           console.warn(`[API] Tentativa ${attempt + 1} para ${url} retornou status ${res.status}. Tentando novamente em 1s...`);
@@ -716,6 +727,8 @@ function DashboardContent() {
         fetchWithRetry('/api/projects', 35000, 1)
           .then(async (listRes) => {
             if (listRes.status === 401 && typeof window !== 'undefined') {
+              localStorage.removeItem('uepg_auth_token');
+              localStorage.removeItem('uepg_cached_user');
               window.location.href = `/login?from=${encodeURIComponent(window.location.pathname + window.location.search)}`;
               return;
             }
@@ -735,6 +748,8 @@ function DashboardContent() {
 
         if (resProject.status === 401) {
           if (typeof window !== 'undefined') {
+            localStorage.removeItem('uepg_auth_token');
+            localStorage.removeItem('uepg_cached_user');
             window.location.href = `/login?from=${encodeURIComponent(window.location.pathname + window.location.search)}`;
           }
           return;
@@ -791,6 +806,23 @@ function DashboardContent() {
   };
 
   useEffect(() => {
+    // 0. Interceptar auth_token da URL se fornecido no redirecionamento do login
+    if (typeof window !== 'undefined') {
+      try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlToken = urlParams.get('auth_token');
+        if (urlToken) {
+          localStorage.setItem('uepg_auth_token', urlToken);
+          document.cookie = `auth_session=${urlToken}; path=/; max-age=604800; SameSite=Lax`;
+          document.cookie = `auth_token_client=${urlToken}; path=/; max-age=604800; SameSite=Lax`;
+          urlParams.delete('auth_token');
+          const cleanQuery = urlParams.toString();
+          const cleanPath = window.location.pathname + (cleanQuery ? `?${cleanQuery}` : '');
+          window.history.replaceState({}, '', cleanPath);
+        }
+      } catch (e) {}
+    }
+
     // 1. Carregamento instantâneo via Cache Local (SWR - 0 ms!)
     if (typeof window !== 'undefined') {
       try {
@@ -825,7 +857,11 @@ function DashboardContent() {
     }
 
     // Valida o usuário autenticado de forma independente
-    fetch('/api/auth/me')
+    const currentAuthToken = typeof window !== 'undefined' ? localStorage.getItem('uepg_auth_token') : null;
+    fetch('/api/auth/me', {
+      credentials: 'include',
+      headers: currentAuthToken ? { Authorization: `Bearer ${currentAuthToken}` } : {},
+    })
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (data?.user) {

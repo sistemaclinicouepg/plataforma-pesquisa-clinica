@@ -214,11 +214,22 @@ export default function HomePage() {
 
   const fetchWithRetry = async (url: string, timeoutMs: number = 35000, maxRetries: number = 2): Promise<Response> => {
     let lastError: any = null;
+    const authToken = typeof window !== 'undefined' ? localStorage.getItem('uepg_auth_token') : null;
+    const reqHeaders: Record<string, string> = {};
+    if (authToken) {
+      reqHeaders['Authorization'] = `Bearer ${authToken}`;
+    }
+
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), timeoutMs);
       try {
-        const res = await fetch(url, { signal: controller.signal, cache: 'no-store' });
+        const res = await fetch(url, {
+          signal: controller.signal,
+          cache: 'no-store',
+          credentials: 'include',
+          headers: reqHeaders,
+        });
         clearTimeout(timer);
         if (!res.ok && res.status >= 500 && attempt < maxRetries) {
           await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
@@ -247,6 +258,8 @@ export default function HomePage() {
       // Se a sessão expirou, redireciona para o login
       if (res.status === 401) {
         if (typeof window !== 'undefined') {
+          localStorage.removeItem('uepg_auth_token');
+          localStorage.removeItem('uepg_cached_user');
           window.location.href = '/login?from=/';
         }
         return;
@@ -270,7 +283,11 @@ export default function HomePage() {
 
         // Se for admin, carrega aprovações em segundo plano
         if (data.currentUser?.role === 'ADMIN') {
-          fetch('/api/admin/users')
+          const authToken = typeof window !== 'undefined' ? localStorage.getItem('uepg_auth_token') : null;
+          fetch('/api/admin/users', {
+            credentials: 'include',
+            headers: authToken ? { Authorization: `Bearer ${authToken}` } : {},
+          })
             .then((r) => (r.ok ? r.json() : null))
             .then((uData) => {
               if (uData?.users) {
@@ -298,7 +315,24 @@ export default function HomePage() {
   };
 
   useEffect(() => {
-    // 1. Carregamento instantâneo via Cache Local (SWR)
+    // 1. Interceptar e registrar auth_token da URL caso tenha vindo do redirecionamento do login
+    if (typeof window !== 'undefined') {
+      try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlToken = urlParams.get('auth_token');
+        if (urlToken) {
+          localStorage.setItem('uepg_auth_token', urlToken);
+          document.cookie = `auth_session=${urlToken}; path=/; max-age=604800; SameSite=Lax`;
+          document.cookie = `auth_token_client=${urlToken}; path=/; max-age=604800; SameSite=Lax`;
+          urlParams.delete('auth_token');
+          const cleanQuery = urlParams.toString();
+          const cleanPath = window.location.pathname + (cleanQuery ? `?${cleanQuery}` : '');
+          window.history.replaceState({}, '', cleanPath);
+        }
+      } catch (e) {}
+    }
+
+    // 2. Carregamento instantâneo via Cache Local (SWR)
     if (typeof window !== 'undefined') {
       try {
         const cached = localStorage.getItem('uepg_cached_projects');

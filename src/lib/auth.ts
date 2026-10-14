@@ -1,4 +1,4 @@
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { prisma } from './prisma';
 import bcrypt from 'bcryptjs';
 import * as jose from 'jose';
@@ -6,10 +6,15 @@ import * as jose from 'jose';
 export const SESSION_COOKIE_NAME = 'auth_session';
 
 const JWT_SECRET_STRING =
-  process.env.AUTH_SECRET ||
-  'uepg-pesquisa-clinica-jwt-secret-2026-chave-criptografica-super-segura';
+  process.env.AUTH_SECRET || 'uepg-pesquisa-clinica-secret-jwt-key-2026';
 
 const JWT_SECRET = new TextEncoder().encode(JWT_SECRET_STRING);
+
+const KNOWN_SECRETS = [
+  JWT_SECRET,
+  new TextEncoder().encode('uepg-pesquisa-clinica-secret-jwt-key-2026'),
+  new TextEncoder().encode('uepg-pesquisa-clinica-jwt-secret-2026-chave-criptografica-super-segura'),
+];
 
 export type SessionPayload = {
   id: string;
@@ -60,20 +65,39 @@ export async function createSessionToken(
 export async function verifySessionToken(
   token: string
 ): Promise<SessionPayload | null> {
-  try {
-    const { payload } = await jose.jwtVerify(token, JWT_SECRET);
-    return payload as unknown as SessionPayload;
-  } catch {
-    return null;
+  for (const sec of KNOWN_SECRETS) {
+    try {
+      const { payload } = await jose.jwtVerify(token, sec);
+      return payload as unknown as SessionPayload;
+    } catch {
+      continue;
+    }
   }
+  return null;
 }
 
 /**
- * Obtém o usuário atualmente autenticado com base no token da sessão nos cookies.
+ * Obtém o usuário atualmente autenticado com base no token da sessão nos cookies ou cabeçalho Authorization.
  */
 export async function getCurrentUser() {
-  const cookieStore = await cookies();
-  const sessionToken = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+  let sessionToken: string | undefined;
+
+  try {
+    const cookieStore = await cookies();
+    sessionToken =
+      cookieStore.get(SESSION_COOKIE_NAME)?.value ||
+      cookieStore.get('auth_token_client')?.value;
+  } catch {}
+
+  if (!sessionToken) {
+    try {
+      const headerList = await headers();
+      const authHeader = headerList.get('authorization');
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        sessionToken = authHeader.substring(7).trim();
+      }
+    } catch {}
+  }
 
   if (!sessionToken) return null;
 

@@ -29,70 +29,107 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [isPendingApproval, setIsPendingApproval] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [quickLoggingInUser, setQuickLoggingInUser] = useState<string | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const executeLogin = async (loginEmail: string, loginPass: string) => {
     setError(null);
     setIsPendingApproval(false);
     setSuccessMessage(null);
     setLoading(true);
 
     try {
-      if (isRequestingAccess) {
-        // Cadastro de novo pesquisador
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: loginEmail, password: loginPass }),
+        credentials: 'include',
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        if (data.isPendingApproval) {
+          setIsPendingApproval(true);
+        }
+        throw new Error(data.error || 'Credenciais inválidas. Verifique seu e-mail e senha.');
+      }
+
+      // Salva os dados do usuário e token nos storages locais para resiliência máxima
+      if (typeof window !== 'undefined') {
+        try {
+          if (data.user) {
+            localStorage.setItem('uepg_cached_user', JSON.stringify(data.user));
+          }
+          if (data.token) {
+            localStorage.setItem('uepg_auth_token', data.token);
+            document.cookie = `auth_session=${data.token}; path=/; max-age=604800; SameSite=Lax`;
+            document.cookie = `auth_token_client=${data.token}; path=/; max-age=604800; SameSite=Lax`;
+          }
+        } catch (e) {}
+      }
+
+      // Redireciona para o destino solicitado ou para a página inicial de Projetos
+      const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+      const fromParam = urlParams?.get('from');
+      const targetPath = fromParam && fromParam !== '/login' ? (fromParam === '/projetos' ? '/' : fromParam) : '/';
+
+      // Inclui token na query como fallback seguro para navegadores com cookies bloqueados em iframes
+      const separator = targetPath.includes('?') ? '&' : '?';
+      const safeTargetPath = data.token ? `${targetPath}${separator}auth_token=${encodeURIComponent(data.token)}` : targetPath;
+
+      if (typeof window !== 'undefined') {
+        window.location.href = safeTargetPath;
+      } else {
+        router.push(targetPath);
+      }
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Ocorreu um erro.');
+    } finally {
+      setLoading(false);
+      setQuickLoggingInUser(null);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isRequestingAccess) {
+      setError(null);
+      setIsPendingApproval(false);
+      setSuccessMessage(null);
+      setLoading(true);
+      try {
         const res = await fetch('/api/auth/register', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name, email, password }),
         });
         const data = await res.json();
-
         if (!res.ok) {
           throw new Error(data.error || 'Erro ao realizar cadastro.');
         }
-
         setSuccessMessage(data.message || 'Cadastro realizado! Aguarde a aprovação da Coordenação.');
         setIsRequestingAccess(false);
         setPassword('');
-      } else {
-        // Login
-        const res = await fetch('/api/auth/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password }),
-        });
-        const data = await res.json();
-
-        if (!res.ok) {
-          if (data.isPendingApproval) {
-            setIsPendingApproval(true);
-          }
-          throw new Error(data.error || 'Credenciais inválidas. Verifique seu e-mail e senha.');
-        }
-
-        // Redireciona para o destino solicitado ou para a página inicial de Projetos
-        const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
-        const fromParam = urlParams?.get('from');
-        const targetPath = fromParam && fromParam !== '/login' ? (fromParam === '/projetos' ? '/' : fromParam) : '/';
-        if (typeof window !== 'undefined') {
-          window.location.href = targetPath;
-        } else {
-          router.push(targetPath);
-        }
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : 'Ocorreu um erro.');
+      } finally {
+        setLoading(false);
       }
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Ocorreu um erro.');
-    } finally {
-      setLoading(false);
+    } else {
+      await executeLogin(email, password);
     }
   };
 
-  const handleQuickLogin = (quickEmail: string, quickPass: string) => {
+  const handleQuickLogin = async (quickEmail: string, quickPass: string, autoSubmit: boolean = true) => {
     setIsRequestingAccess(false);
     setEmail(quickEmail);
     setPassword(quickPass);
     setError(null);
     setIsPendingApproval(false);
+
+    if (autoSubmit) {
+      setQuickLoggingInUser(quickEmail);
+      await executeLogin(quickEmail, quickPass);
+    }
   };
 
   return (
@@ -253,10 +290,12 @@ export default function LoginPage() {
             </div>
 
             <div className="grid grid-cols-1 gap-2 text-xs">
+              {/* Dra. Roberta */}
               <button
                 type="button"
-                onClick={() => handleQuickLogin('pesquisadora@uepg.br', '123')}
-                className="w-full p-2.5 rounded-xl border border-blue-200 bg-blue-50/70 hover:bg-blue-100/90 text-blue-950 transition flex items-center justify-between text-left group"
+                disabled={loading}
+                onClick={() => handleQuickLogin('pesquisadora@uepg.br', '123', true)}
+                className="w-full p-2.5 rounded-xl border border-blue-200 bg-blue-50/70 hover:bg-blue-100/90 text-blue-950 transition flex items-center justify-between text-left group cursor-pointer disabled:opacity-60"
               >
                 <div>
                   <div className="font-bold flex items-center space-x-1.5">
@@ -267,15 +306,24 @@ export default function LoginPage() {
                     pesquisadora@uepg.br • senha: 123
                   </span>
                 </div>
-                <span className="text-[10px] bg-blue-600 group-hover:bg-blue-700 text-white font-bold px-2.5 py-1 rounded-md transition shadow-2xs">
-                  Preencher
+                <span className="text-[10px] bg-blue-600 group-hover:bg-blue-700 text-white font-bold px-2.5 py-1 rounded-md transition shadow-2xs flex items-center gap-1 shrink-0">
+                  {quickLoggingInUser === 'pesquisadora@uepg.br' ? (
+                    <>
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                      <span>Entrando...</span>
+                    </>
+                  ) : (
+                    <span>Entrar Direto →</span>
+                  )}
                 </span>
               </button>
 
+              {/* Carlos Eduardo */}
               <button
                 type="button"
-                onClick={() => handleQuickLogin('carlos@uepg.br', '123')}
-                className="w-full p-2.5 rounded-xl border border-amber-200 bg-amber-50/70 hover:bg-amber-100/90 text-amber-950 transition flex items-center justify-between text-left group"
+                disabled={loading}
+                onClick={() => handleQuickLogin('carlos@uepg.br', '123', true)}
+                className="w-full p-2.5 rounded-xl border border-amber-200 bg-amber-50/70 hover:bg-amber-100/90 text-amber-950 transition flex items-center justify-between text-left group cursor-pointer disabled:opacity-60"
               >
                 <div>
                   <div className="font-bold flex items-center space-x-1.5">
@@ -286,15 +334,24 @@ export default function LoginPage() {
                     carlos@uepg.br • senha: 123
                   </span>
                 </div>
-                <span className="text-[10px] bg-amber-600 group-hover:bg-amber-700 text-white font-bold px-2.5 py-1 rounded-md transition shadow-2xs">
-                  Preencher
+                <span className="text-[10px] bg-amber-600 group-hover:bg-amber-700 text-white font-bold px-2.5 py-1 rounded-md transition shadow-2xs flex items-center gap-1 shrink-0">
+                  {quickLoggingInUser === 'carlos@uepg.br' ? (
+                    <>
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                      <span>Entrando...</span>
+                    </>
+                  ) : (
+                    <span>Entrar Direto →</span>
+                  )}
                 </span>
               </button>
 
+              {/* Dra. Alessandra */}
               <button
                 type="button"
-                onClick={() => handleQuickLogin('admin@uepg.br', 'admin')}
-                className="w-full p-2.5 rounded-xl border border-purple-200 bg-purple-50/70 hover:bg-purple-100/90 text-purple-950 transition flex items-center justify-between text-left group"
+                disabled={loading}
+                onClick={() => handleQuickLogin('admin@uepg.br', 'admin', true)}
+                className="w-full p-2.5 rounded-xl border border-purple-200 bg-purple-50/70 hover:bg-purple-100/90 text-purple-950 transition flex items-center justify-between text-left group cursor-pointer disabled:opacity-60"
               >
                 <div>
                   <div className="font-bold flex items-center space-x-1.5">
@@ -305,15 +362,24 @@ export default function LoginPage() {
                     admin@uepg.br • senha: admin
                   </span>
                 </div>
-                <span className="text-[10px] bg-purple-600 group-hover:bg-purple-700 text-white font-bold px-2.5 py-1 rounded-md transition shadow-2xs">
-                  Preencher
+                <span className="text-[10px] bg-purple-600 group-hover:bg-purple-700 text-white font-bold px-2.5 py-1 rounded-md transition shadow-2xs flex items-center gap-1 shrink-0">
+                  {quickLoggingInUser === 'admin@uepg.br' ? (
+                    <>
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                      <span>Entrando...</span>
+                    </>
+                  ) : (
+                    <span>Entrar Direto →</span>
+                  )}
                 </span>
               </button>
 
+              {/* Lucas Penteado (Pendente) */}
               <button
                 type="button"
-                onClick={() => handleQuickLogin('pendente@uepg.br', '123')}
-                className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-800 transition flex items-center justify-between text-left group"
+                disabled={loading}
+                onClick={() => handleQuickLogin('pendente@uepg.br', '123', true)}
+                className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-800 transition flex items-center justify-between text-left group cursor-pointer disabled:opacity-60"
               >
                 <div>
                   <div className="font-bold flex items-center space-x-1.5 text-slate-700">
@@ -324,8 +390,15 @@ export default function LoginPage() {
                     pendente@uepg.br • senha: 123 (Bloqueio ético)
                   </span>
                 </div>
-                <span className="text-[10px] bg-slate-500 group-hover:bg-slate-600 text-white font-bold px-2.5 py-1 rounded-md transition shadow-2xs">
-                  Preencher
+                <span className="text-[10px] bg-slate-500 group-hover:bg-slate-600 text-white font-bold px-2.5 py-1 rounded-md transition shadow-2xs flex items-center gap-1 shrink-0">
+                  {quickLoggingInUser === 'pendente@uepg.br' ? (
+                    <>
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                      <span>Testando...</span>
+                    </>
+                  ) : (
+                    <span>Testar Bloqueio</span>
+                  )}
                 </span>
               </button>
             </div>

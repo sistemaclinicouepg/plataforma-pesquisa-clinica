@@ -73,8 +73,12 @@ export async function POST(req: Request) {
       role: user.role,
     });
 
+    const proto = req.headers.get('x-forwarded-proto');
+    const isHttps = proto === 'https' || req.url.startsWith('https:') || process.env.NODE_ENV === 'production';
+
     const response = NextResponse.json({
       success: true,
+      token: sessionToken,
       user: {
         id: user.id,
         name: user.name,
@@ -83,12 +87,22 @@ export async function POST(req: Request) {
       },
     });
 
+    // Cookie HttpOnly primário para proteção e segurança de sessão
     response.cookies.set(SESSION_COOKIE_NAME, sessionToken, {
       path: '/',
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      secure: isHttps,
+      sameSite: isHttps ? 'none' : 'lax',
       maxAge: 60 * 60 * 24 * 7, // 7 dias
+    });
+
+    // Cookie acessível pelo cliente para resiliência em iframes e ambientes embarcados
+    response.cookies.set('auth_token_client', sessionToken, {
+      path: '/',
+      httpOnly: false,
+      secure: isHttps,
+      sameSite: isHttps ? 'none' : 'lax',
+      maxAge: 60 * 60 * 24 * 7,
     });
 
     response.cookies.delete('auth_user_id');

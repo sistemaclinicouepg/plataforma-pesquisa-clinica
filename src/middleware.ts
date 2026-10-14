@@ -2,10 +2,11 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import * as jose from 'jose';
 
-const JWT_SECRET_STRING =
-  process.env.AUTH_SECRET ||
-  'uepg-pesquisa-clinica-jwt-secret-2026-chave-criptografica-super-segura';
-const JWT_SECRET = new TextEncoder().encode(JWT_SECRET_STRING);
+const KNOWN_SECRETS = [
+  new TextEncoder().encode(process.env.AUTH_SECRET || 'uepg-pesquisa-clinica-secret-jwt-key-2026'),
+  new TextEncoder().encode('uepg-pesquisa-clinica-secret-jwt-key-2026'),
+  new TextEncoder().encode('uepg-pesquisa-clinica-jwt-secret-2026-chave-criptografica-super-segura'),
+];
 const SESSION_COOKIE_NAME = 'auth_session';
 
 export async function middleware(request: NextRequest) {
@@ -33,32 +34,53 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/api/tcle') ||
     (pathname.startsWith('/api/responses') && request.method === 'POST');
 
-  // 3. Validar token assinado JWT da sessão
-  const token = request.cookies.get(SESSION_COOKIE_NAME)?.value;
-  let isAuthenticated = false;
+  // 3. Obter token de múltiplas fontes para máxima resiliência (Cookies, Header Bearer, Query param)
+  let token =
+    request.cookies.get(SESSION_COOKIE_NAME)?.value ||
+    request.cookies.get('auth_token_client')?.value;
 
-  if (token) {
-    try {
-      const { payload } = await jose.jwtVerify(token, JWT_SECRET);
-      if (payload && payload.id) {
-        isAuthenticated = true;
-      }
-    } catch {
-      isAuthenticated = false;
+  if (!token) {
+    const authHeader = request.headers.get('authorization');
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7).trim();
     }
   }
 
-  // 4. Se já estiver autenticado e tentar acessar /login, direcionar para Meus Estudos (Home)
+  if (!token) {
+    const queryToken = request.nextUrl.searchParams.get('auth_token');
+    if (queryToken) {
+      token = queryToken.trim();
+    }
+  }
+
+  // 4. Validar token assinado JWT da sessão contra os segredos conhecidos
+  let isAuthenticated = false;
+
+  if (token) {
+    for (const sec of KNOWN_SECRETS) {
+      try {
+        const { payload } = await jose.jwtVerify(token, sec);
+        if (payload && payload.id) {
+          isAuthenticated = true;
+          break;
+        }
+      } catch {
+        // Tenta o próximo segredo
+      }
+    }
+  }
+
+  // 5. Se já estiver autenticado e tentar acessar /login, direcionar para Meus Estudos (Home)
   if (isAuthenticated && pathname === '/login') {
     return NextResponse.redirect(new URL('/', request.url));
   }
 
-  // 5. Se for rota pública, liberar navegação
+  // 6. Se for rota pública, liberar navegação
   if (isPublicRoute) {
     return NextResponse.next();
   }
 
-  // 6. Rota protegida sem autenticação válida:
+  // 7. Rota protegida sem autenticação válida:
   if (!isAuthenticated) {
     // Se for uma requisição de API interna: responde 401 Unauthorized
     if (pathname.startsWith('/api/')) {
@@ -74,7 +96,20 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  return NextResponse.next();
+  // 8. Se autenticado e a requisição não tinha o cookie primário HttpOnly, sincroniza-o
+  const response = NextResponse.next();
+  if (token && !request.cookies.get(SESSION_COOKIE_NAME)) {
+    const isHttps = request.nextUrl.protocol === 'https:' || process.env.NODE_ENV === 'production';
+    response.cookies.set(SESSION_COOKIE_NAME, token, {
+      path: '/',
+      httpOnly: true,
+      secure: isHttps,
+      sameSite: isHttps ? 'none' : 'lax',
+      maxAge: 60 * 60 * 24 * 7,
+    });
+  }
+
+  return response;
 }
 
 export const config = {

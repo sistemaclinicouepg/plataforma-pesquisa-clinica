@@ -41,17 +41,43 @@ export default function AppNav() {
     pathname.startsWith('/tcle/');
 
   const fetchAuthUser = async () => {
+    // 1. Carregamento instantâneo a partir do cache local
+    if (typeof window !== 'undefined') {
+      try {
+        const cachedUserStr = localStorage.getItem('uepg_cached_user');
+        if (cachedUserStr) {
+          const cachedUser = JSON.parse(cachedUserStr);
+          if (cachedUser) {
+            setCurrentUser(cachedUser);
+            setLoading(false);
+          }
+        }
+      } catch (e) {}
+    }
+
     try {
-      setLoading(true);
-      const res = await fetch('/api/auth/me');
+      const authToken = typeof window !== 'undefined' ? localStorage.getItem('uepg_auth_token') : null;
+      const res = await fetch('/api/auth/me', {
+        credentials: 'include',
+        headers: authToken ? { Authorization: `Bearer ${authToken}` } : {},
+      });
       if (res.ok) {
         const data = await res.json();
         setCurrentUser(data.user || null);
+        if (data.user && typeof window !== 'undefined') {
+          try {
+            localStorage.setItem('uepg_cached_user', JSON.stringify(data.user));
+          } catch (e) {}
+        }
       } else {
-        setCurrentUser(null);
+        if (!localStorage.getItem('uepg_cached_user')) {
+          setCurrentUser(null);
+        }
       }
     } catch {
-      setCurrentUser(null);
+      if (!localStorage.getItem('uepg_cached_user')) {
+        setCurrentUser(null);
+      }
     } finally {
       setLoading(false);
     }
@@ -86,13 +112,18 @@ export default function AppNav() {
 
   const handleLogout = async () => {
     try {
-      await fetch('/api/auth/logout', { method: 'POST' });
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('uepg_auth_token');
+        localStorage.removeItem('uepg_cached_user');
+        document.cookie = 'auth_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+        document.cookie = 'auth_token_client=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+      }
+      await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
       setCurrentUser(null);
-      router.push('/login');
-      router.refresh();
+      window.location.href = '/login';
     } catch (err) {
       console.error('Erro ao sair:', err);
-      router.push('/login');
+      window.location.href = '/login';
     }
   };
 
