@@ -492,6 +492,11 @@ function DashboardContent() {
   const [auditSearch, setAuditSearch] = useState('');
   const [auditEntityFilter, setAuditEntityFilter] = useState('ALL');
 
+  // Estados de Busca e Filtro da Aba de Prontuários & Atendimento
+  const [activeSearch, setActiveSearch] = useState('');
+  const [activeFilter, setActiveFilter] = useState<'ALL' | 'PENDING' | 'COMPLETED'>('ALL');
+
+
   // Proteção: Apenas o Administrador pode visualizar a aba de auditoria
   useEffect(() => {
     if (activeTab === 'audit' && currentUser && currentUser.role !== 'ADMIN') {
@@ -1784,6 +1789,25 @@ function DashboardContent() {
     (pw) => pw.windows.overallAlert === 'UPCOMING'
   );
 
+  const filteredApprovedList = approvedList.filter((part) => {
+    if (activeSearch.trim()) {
+      const q = activeSearch.toLowerCase().trim();
+      const matchCode = part.researchCode?.toLowerCase().includes(q);
+      const matchName = part.patient?.fullName?.toLowerCase().includes(q);
+      const matchPhone = part.patient?.phoneWhatsApp?.toLowerCase().includes(q);
+      if (!matchCode && !matchName && !matchPhone) return false;
+    }
+    if (activeFilter === 'PENDING') {
+      const w = calculateSessionWindows(part);
+      return w.overallAlert === 'OVERDUE' || w.overallAlert === 'DUE_NOW';
+    }
+    if (activeFilter === 'COMPLETED') {
+      const w = calculateSessionWindows(part);
+      return w.overallAlert === 'COMPLETED';
+    }
+    return true;
+  });
+
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-800 pb-20">
       {/* Sub-Header do Estudo */}
@@ -1891,190 +1915,156 @@ function DashboardContent() {
           </div>
         )}
         
-        {/* Abas de Navegação do Projeto Organizadas por Função e Papel Clínico */}
-        <div className="flex flex-wrap gap-2 border-b border-slate-200 mb-8 bg-slate-100/70 p-1.5 rounded-2xl">
+        {/* Abas de Navegação do Projeto */}
+        <div className="flex items-center gap-1.5 border-b border-slate-200 mb-6 pb-2 overflow-x-auto no-scrollbar">
           <button
             onClick={() => handleSelectTab('active')}
-            className={`flex-1 min-w-[200px] px-4 py-3 text-xs font-bold rounded-xl transition flex items-center space-x-2.5 ${
+            className={`px-3.5 py-2 text-xs font-bold rounded-lg transition-all flex items-center space-x-2 shrink-0 ${
               activeTab === 'active'
-                ? 'bg-white text-blue-700 shadow-xs border border-slate-200/80 font-extrabold'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'bg-white text-slate-700 hover:text-slate-900 hover:bg-slate-100 border border-slate-200'
             }`}
           >
-            <div className={`p-2 rounded-lg ${activeTab === 'active' ? 'bg-blue-50 text-blue-600' : 'bg-slate-200/60 text-slate-500'}`}>
-              <Stethoscope className="w-4 h-4" />
-            </div>
-            <div className="text-left">
-              <div className="flex items-center space-x-1.5">
-                <span>Prontuários Ativos</span>
-                <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${activeTab === 'active' ? 'bg-blue-100 text-blue-800' : 'bg-slate-200 text-slate-700'}`}>
-                  {approvedList.length}
-                </span>
-                {(overdueVisits.length > 0 || dueNowVisits.length > 0) && (
-                  <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" title="Há retornos que requerem atenção" />
-                )}
-              </div>
-              <span className="text-[10px] font-normal text-slate-400 block">Sessões S1–S4 & Janelas Clínicas</span>
-            </div>
+            <Stethoscope className="w-3.5 h-3.5" />
+            <span>Prontuários & Atendimento</span>
+            <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+              activeTab === 'active' ? 'bg-blue-800 text-white' : 'bg-slate-100 text-slate-700'
+            }`}>
+              {approvedList.length}
+            </span>
+            {(overdueVisits.length > 0 || dueNowVisits.length > 0) && (
+              <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" title="Retornos pendentes" />
+            )}
           </button>
 
           <button
             onClick={() => handleSelectTab('triage')}
-            className={`flex-1 min-w-[200px] px-4 py-3 text-xs font-bold rounded-xl transition flex items-center space-x-2.5 ${
+            className={`px-3.5 py-2 text-xs font-bold rounded-lg transition-all flex items-center space-x-2 shrink-0 ${
               activeTab === 'triage'
-                ? 'bg-white text-blue-700 shadow-xs border border-slate-200/80 font-extrabold'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'bg-white text-slate-700 hover:text-slate-900 hover:bg-slate-100 border border-slate-200'
             }`}
           >
-            <div className={`p-2 rounded-lg ${activeTab === 'triage' ? 'bg-blue-50 text-blue-600' : 'bg-slate-200/60 text-slate-500'}`}>
-              <ClipboardList className="w-4 h-4" />
-            </div>
-            <div className="text-left">
-              <div className="flex items-center space-x-1.5">
-                <span>Triagem & Critérios</span>
-                <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${activeTab === 'triage' ? 'bg-blue-100 text-blue-800' : 'bg-slate-200 text-slate-700'}`}>
-                  {pendingList.length}
-                </span>
-              </div>
-              <span className="text-[10px] font-normal text-slate-400 block">Ficha Clínica, TCLE & Elegibilidade</span>
-            </div>
+            <ClipboardList className="w-3.5 h-3.5" />
+            <span>Triagem & Critérios</span>
+            <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+              activeTab === 'triage' ? 'bg-blue-800 text-white' : 'bg-slate-100 text-slate-700'
+            }`}>
+              {pendingList.length}
+            </span>
           </button>
 
-          {/* ABA TRILHA DE AUDITORIA GCP - EXCLUSIVA PARA O ADMINISTRADOR */}
           {currentUser?.role === 'ADMIN' && (
             <button
               onClick={() => handleSelectTab('audit')}
-              className={`flex-1 min-w-[190px] px-4 py-3 text-xs font-bold rounded-xl transition flex items-center space-x-2.5 ${
+              className={`px-3.5 py-2 text-xs font-bold rounded-lg transition-all flex items-center space-x-2 shrink-0 ${
                 activeTab === 'audit'
-                  ? 'bg-white text-indigo-700 shadow-xs border border-indigo-200 font-extrabold'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+                  ? 'bg-indigo-600 text-white shadow-xs'
+                  : 'bg-white text-slate-700 hover:text-slate-900 hover:bg-slate-100 border border-slate-200'
               }`}
             >
-              <div className={`p-2 rounded-lg ${activeTab === 'audit' ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-200/60 text-slate-500'}`}>
-                <ShieldCheck className="w-4 h-4" />
-              </div>
-              <div className="text-left">
-                <div className="flex items-center space-x-1.5">
-                  <span>Trilha de Auditoria GCP</span>
-                  <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${activeTab === 'audit' ? 'bg-indigo-100 text-indigo-800' : 'bg-slate-200 text-slate-700'}`}>
-                    {project.auditLogs?.length || 0}
-                  </span>
-                </div>
-                <span className="text-[10px] font-normal text-slate-400 block">Rastreabilidade & Justificativas (Admin)</span>
-              </div>
+              <ShieldCheck className="w-3.5 h-3.5" />
+              <span>Trilha de Auditoria GCP</span>
+              <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                activeTab === 'audit' ? 'bg-indigo-800 text-white' : 'bg-slate-100 text-slate-700'
+              }`}>
+                {project.auditLogs?.length || 0}
+              </span>
             </button>
           )}
 
           <button
             onClick={() => handleSelectTab('consort')}
-            className={`flex-1 min-w-[200px] px-4 py-3 text-xs font-bold rounded-xl transition flex items-center space-x-2.5 ${
+            className={`px-3.5 py-2 text-xs font-bold rounded-xl transition-all flex items-center space-x-2 shrink-0 ${
               activeTab === 'consort'
-                ? 'bg-white text-blue-700 shadow-xs border border-slate-200/80 font-extrabold'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'bg-white text-slate-700 hover:text-slate-900 hover:bg-slate-100 border border-slate-200'
             }`}
           >
-            <div className={`p-2 rounded-lg ${activeTab === 'consort' ? 'bg-blue-50 text-blue-600' : 'bg-slate-200/60 text-slate-500'}`}>
-              <BarChart3 className="w-4 h-4" />
-            </div>
-            <div className="text-left">
-              <div className="flex items-center space-x-1.5">
-                <span>Fluxo CONSORT & Excluídos</span>
-                <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${activeTab === 'consort' ? 'bg-blue-100 text-blue-800' : 'bg-slate-200 text-slate-700'}`}>
-                  {excludedList.length}
-                </span>
-              </div>
-              <span className="text-[10px] font-normal text-slate-400 block">Auditoria CEP & Justificativas</span>
-            </div>
+            <BarChart3 className="w-3.5 h-3.5" />
+            <span>Fluxo CONSORT</span>
+            <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+              activeTab === 'consort' ? 'bg-blue-800 text-white' : 'bg-slate-100 text-slate-700'
+            }`}>
+              {excludedList.length}
+            </span>
           </button>
 
           <button
             onClick={() => handleSelectTab('team')}
-            className={`flex-1 min-w-[180px] px-4 py-3 text-xs font-bold rounded-xl transition flex items-center space-x-2.5 ${
+            className={`px-3.5 py-2 text-xs font-bold rounded-xl transition-all flex items-center space-x-2 shrink-0 ${
               activeTab === 'team'
-                ? 'bg-white text-blue-700 shadow-xs border border-slate-200/80 font-extrabold'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'bg-white text-slate-700 hover:text-slate-900 hover:bg-slate-100 border border-slate-200'
             }`}
           >
-            <div className={`p-2 rounded-lg ${activeTab === 'team' ? 'bg-blue-50 text-blue-600' : 'bg-slate-200/60 text-slate-500'}`}>
-              <Users className="w-4 h-4" />
-            </div>
-            <div className="text-left">
-              <div className="flex items-center space-x-1.5">
-                <span>Equipe & Cegamento</span>
-                <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${activeTab === 'team' ? 'bg-blue-100 text-blue-800' : 'bg-slate-200 text-slate-700'}`}>
-                  {project.members?.length || 0}
-                </span>
-              </div>
-              <span className="text-[10px] font-normal text-slate-400 block">Membros, Papéis & Mascaramento</span>
-            </div>
+            <Users className="w-3.5 h-3.5" />
+            <span>Equipe</span>
+            <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+              activeTab === 'team' ? 'bg-blue-800 text-white' : 'bg-slate-100 text-slate-700'
+            }`}>
+              {project.members?.length || 0}
+            </span>
           </button>
 
           <button
             onClick={() => handleSelectTab('export')}
-            className={`flex-1 min-w-[180px] px-4 py-3 text-xs font-bold rounded-xl transition flex items-center space-x-2.5 ${
+            className={`px-3.5 py-2 text-xs font-bold rounded-xl transition-all flex items-center space-x-2 shrink-0 ${
               activeTab === 'export'
-                ? 'bg-white text-blue-700 shadow-xs border border-slate-200/80 font-extrabold'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'bg-white text-slate-700 hover:text-slate-900 hover:bg-slate-100 border border-slate-200'
             }`}
           >
-            <div className={`p-2 rounded-lg ${activeTab === 'export' ? 'bg-blue-50 text-blue-600' : 'bg-slate-200/60 text-slate-500'}`}>
-              <Download className="w-4 h-4" />
-            </div>
-            <div className="text-left">
-              <div className="flex items-center space-x-1.5">
-                <span>Resultados & Exportar</span>
-              </div>
-              <span className="text-[10px] font-normal text-slate-400 block">Dados Brutos (.CSV) p/ SPSS e R</span>
-            </div>
+            <Download className="w-3.5 h-3.5" />
+            <span>Bioestatística & Exportar</span>
           </button>
         </div>
 
-        {/* ABA 1: PRONTUÁRIOS ATIVOS & ACOMPANHAMENTO CLÍNICO */}
+        {/* ABA 1: PRONTUÁRIOS & ATENDIMENTO CLÍNICO */}
         {activeTab === 'active' && (
-          <div className="space-y-8">
-            {/* Banner de Contexto de Papel Clínico */}
-            {isBlindedUser ? (
-              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start space-x-3 text-xs text-amber-900 shadow-xs">
-                <Lock className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-bold text-sm">Modo Avaliador Cego Ativo ({currentUser?.name || currentUser?.email})</p>
-                  <p className="text-amber-800 mt-1 leading-relaxed">
-                    Você está autenticado como <strong>Avaliador(a) Cego(a)</strong>. Para garantir a integridade científica e evitar viés de aferição (CONSORT 2010), os grupos de intervenção (Gel A vs Gel B) e respostas subjetivas permanecem <strong>OCULTOS</strong>. Seus registros concentram-se nas escalas objetivas de cor (VITA Classical) e saúde periodontal.
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <div className="bg-blue-50/70 border border-blue-200/80 rounded-2xl p-4 flex items-start space-x-3 text-xs text-blue-900 shadow-xs">
-                <Stethoscope className="w-5 h-5 text-blue-700 shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-bold text-sm">Prontuários Ativos & Atendimento Clínico Longitudinal (Cadeira Odontológica)</p>
-                  <p className="text-blue-800 mt-1 leading-relaxed">
-                    Acompanhamento dos voluntários randomizados nas sessões <strong>S1 (Baseline)</strong>, <strong>S2 (7 dias)</strong>, <strong>R14d</strong> e <strong>R30d</strong>. Monitore as tolerâncias temporais regulatórias, acione o agendamento via WhatsApp e registre o prontuário clínico de cada consulta.
-                  </p>
-                </div>
+          <div className="space-y-4">
+            {/* Aviso Sutil de Mascaramento se Avaliador Cego */}
+            {isBlindedUser && (
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-center space-x-2.5 text-xs text-amber-900 shadow-2xs">
+                <Lock className="w-4 h-4 text-amber-700 shrink-0" />
+                <span>
+                  <strong>Modo Avaliador Cego Ativo ({currentUser?.name || currentUser?.email}):</strong> Os grupos de intervenção (Gel A vs Gel B) e respostas subjetivas permanecem mascarados conforme diretrizes CONSORT.
+                </span>
               </div>
             )}
 
-            {/* Estatísticas Rápidas de Prontuários */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="bg-white rounded-2xl shadow-xs border border-slate-200 p-5 flex items-center">
-                <div className="p-3 rounded-xl bg-blue-50 text-blue-700">
-                  <CheckCircle2 className="w-5 h-5" />
+            {/* Métricas Compactas de Atendimento */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="bg-white rounded-xl shadow-2xs border border-slate-200 p-3 flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Ativos no Estudo</p>
+                  <p className="text-xl font-black text-slate-900">{approvedList.length}</p>
                 </div>
-                <div className="ml-3.5">
-                  <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Participantes Ativos</p>
-                  <p className="text-2xl font-black text-slate-900">{approvedList.length}</p>
+                <div className="p-2 rounded-lg bg-blue-50 text-blue-700">
+                  <CheckCircle2 className="w-4 h-4" />
                 </div>
               </div>
 
-              <div className={`rounded-2xl shadow-xs border p-5 flex items-center transition ${
+              <div className={`rounded-xl shadow-2xs border p-3 flex items-center justify-between transition ${
                 overdueVisits.length > 0
                   ? 'bg-red-50/50 border-red-200'
                   : dueNowVisits.length > 0
                   ? 'bg-amber-50/50 border-amber-200'
                   : 'bg-white border-slate-200'
               }`}>
-                <div className={`p-3 rounded-xl ${
+                <div>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Retornos Clínicos</p>
+                  <p className="text-xl font-black text-slate-900">
+                    {overdueVisits.length + dueNowVisits.length}
+                  </p>
+                  <p className="text-[10px] text-slate-500">
+                    {overdueVisits.length > 0 ? `${overdueVisits.length} atrasado(s)` : ''}
+                    {overdueVisits.length > 0 && dueNowVisits.length > 0 ? ' • ' : ''}
+                    {dueNowVisits.length > 0 ? `${dueNowVisits.length} na janela` : ''}
+                    {overdueVisits.length === 0 && dueNowVisits.length === 0 ? 'Em dia' : ''}
+                  </p>
+                </div>
+                <div className={`p-2 rounded-lg ${
                   overdueVisits.length > 0
                     ? 'bg-red-100 text-red-700 animate-pulse'
                     : dueNowVisits.length > 0
@@ -2082,484 +2072,396 @@ function DashboardContent() {
                     : 'bg-emerald-100 text-emerald-700'
                 }`}>
                   {overdueVisits.length > 0 ? (
-                    <AlertCircle className="w-5 h-5" />
+                    <AlertCircle className="w-4 h-4" />
                   ) : dueNowVisits.length > 0 ? (
-                    <Clock className="w-5 h-5" />
+                    <Clock className="w-4 h-4" />
                   ) : (
-                    <Calendar className="w-5 h-5" />
+                    <Calendar className="w-4 h-4" />
                   )}
-                </div>
-                <div className="ml-3.5">
-                  <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Retornos Clínicos</p>
-                  <p className="text-2xl font-black text-slate-900">
-                    {overdueVisits.length + dueNowVisits.length}
-                  </p>
-                  <p className="text-[10px] text-slate-500">
-                    {overdueVisits.length} atrasado(s) • {dueNowVisits.length} na janela
-                  </p>
                 </div>
               </div>
 
-              <div className="bg-white rounded-2xl shadow-xs border border-slate-200 p-5 flex items-center">
-                <div className="p-3 rounded-xl bg-emerald-50 text-emerald-700">
-                  <CheckCircle2 className="w-5 h-5" />
-                </div>
-                <div className="ml-3.5">
-                  <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Protocolos Concluídos</p>
-                  <p className="text-2xl font-black text-slate-900">{allCompletedVisits.length}</p>
+              <div className="bg-white rounded-xl shadow-2xs border border-slate-200 p-3 flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Protocolos Concluídos</p>
+                  <p className="text-xl font-black text-emerald-600">{allCompletedVisits.length}</p>
                   <p className="text-[10px] text-slate-500">4 de 4 sessões finalizadas</p>
                 </div>
+                <div className="p-2 rounded-lg bg-emerald-50 text-emerald-700">
+                  <CheckCircle2 className="w-4 h-4" />
+                </div>
               </div>
 
-              <div className="bg-white rounded-2xl shadow-xs border border-slate-200 p-5 flex items-center">
-                <div className="p-3 rounded-xl bg-slate-100 text-slate-600">
-                  <Clock className="w-5 h-5" />
-                </div>
-                <div className="ml-3.5">
-                  <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Próximos Agendamentos</p>
-                  <p className="text-2xl font-black text-slate-900">{upcomingVisits.length}</p>
+              <div className="bg-white rounded-xl shadow-2xs border border-slate-200 p-3 flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Próximos Retornos</p>
+                  <p className="text-xl font-black text-slate-900">{upcomingVisits.length}</p>
                   <p className="text-[10px] text-slate-500">Dentro da janela futura</p>
                 </div>
+                <div className="p-2 rounded-lg bg-slate-100 text-slate-600">
+                  <Clock className="w-4 h-4" />
+                </div>
               </div>
             </div>
 
-            {/* Central de Monitoramento & Alertas de Janelas de Retorno Clínico */}
-            <div className="bg-white rounded-2xl shadow-xs border border-slate-200 overflow-hidden">
-              <div className="p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-slate-50/70">
-                <div className="flex items-center space-x-3">
-                  <div className={`p-2.5 rounded-xl ${
-                    overdueVisits.length > 0
-                      ? 'bg-red-100 text-red-700'
-                      : dueNowVisits.length > 0
-                      ? 'bg-amber-100 text-amber-800'
-                      : 'bg-emerald-100 text-emerald-800'
-                  }`}>
-                    {overdueVisits.length > 0 ? (
-                      <AlertCircle className="w-5 h-5" />
-                    ) : dueNowVisits.length > 0 ? (
-                      <Clock className="w-5 h-5" />
-                    ) : (
-                      <CheckCircle2 className="w-5 h-5" />
-                    )}
-                  </div>
-                  <div>
-                    <h3 className="text-base font-bold text-slate-900">
-                      Vigilância de Janelas Clínicas & Retornos (CONSORT / GCP)
-                    </h3>
-                    <p className="text-xs text-slate-500">
-                      Prazos regulatórios: S2 (7d ± 2d), R14d (14d ± 3d) e R30d (30d ± 5d).
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  {overdueVisits.length > 0 && (
-                    <span className="px-3 py-1 rounded-full text-xs font-bold bg-red-100 text-red-800 border border-red-300 animate-pulse flex items-center space-x-1">
-                      <AlertCircle className="w-3 h-3 mr-1 inline" />
-                      <span>{overdueVisits.length} Atrasado(s)</span>
-                    </span>
-                  )}
-                  {dueNowVisits.length > 0 && (
-                    <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300 flex items-center space-x-1">
-                      <Clock className="w-3 h-3 mr-1 inline" />
-                      <span>{dueNowVisits.length} Na Janela</span>
-                    </span>
-                  )}
-                  <span className="px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200 flex items-center space-x-1">
-                    <CheckCircle2 className="w-3 h-3 mr-1 inline text-emerald-600" />
-                    <span>{allCompletedVisits.length} Concluído(s)</span>
+            {/* Alerta de Retornos que Demandam Ação */}
+            {(overdueVisits.length > 0 || dueNowVisits.length > 0) && (
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs">
+                <div className="flex items-center space-x-2.5">
+                  <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                  <span className="text-amber-900">
+                    <strong>Atenção de Janela Clínica:</strong> {overdueVisits.length > 0 && `${overdueVisits.length} consulta(s) com prazo estourado.`}{' '}
+                    {dueNowVisits.length > 0 && `${dueNowVisits.length} consulta(s) dentro da janela regulatória de retorno.`}
                   </span>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveFilter(activeFilter === 'PENDING' ? 'ALL' : 'PENDING')}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition shrink-0 ${
+                    activeFilter === 'PENDING'
+                      ? 'bg-amber-600 text-white'
+                      : 'bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300'
+                  }`}
+                >
+                  {activeFilter === 'PENDING' ? 'Mostrar Todos os Participantes' : 'Filtrar Apenas Retornos Pendentes'}
+                </button>
+              </div>
+            )}
+
+            {/* Lista Principal de Prontuários no Formato Tabela Compacta */}
+            <div className="bg-white rounded-xl shadow-xs border border-slate-200 overflow-hidden flex flex-col">
+              {/* Barra Superior de Filtros e Busca Rápida */}
+              <div className="p-3.5 border-b border-slate-100 bg-slate-50/70 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <h3 className="text-sm font-bold text-slate-800 mr-2">Prontuários ({filteredApprovedList.length})</h3>
+                  <button
+                    onClick={() => setActiveFilter('ALL')}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition ${
+                      activeFilter === 'ALL'
+                        ? 'bg-slate-800 text-white'
+                        : 'bg-slate-200/70 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    Todos ({approvedList.length})
+                  </button>
+                  <button
+                    onClick={() => setActiveFilter('PENDING')}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition ${
+                      activeFilter === 'PENDING'
+                        ? 'bg-amber-600 text-white'
+                        : 'bg-slate-200/70 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    Retornos Pendentes ({overdueVisits.length + dueNowVisits.length})
+                  </button>
+                  <button
+                    onClick={() => setActiveFilter('COMPLETED')}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition ${
+                      activeFilter === 'COMPLETED'
+                        ? 'bg-emerald-600 text-white'
+                        : 'bg-slate-200/70 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    Concluídos ({allCompletedVisits.length})
+                  </button>
+                </div>
+
+                {/* Caixa de Busca */}
+                <div className="relative min-w-[200px] sm:max-w-xs w-full">
+                  <input
+                    type="text"
+                    placeholder="Buscar código, nome ou WhatsApp..."
+                    value={activeSearch}
+                    onChange={(e) => setActiveSearch(e.target.value)}
+                    className="w-full pl-8 pr-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2" />
+                  {activeSearch && (
+                    <button
+                      onClick={() => setActiveSearch('')}
+                      className="absolute right-2.5 top-1.5 text-slate-400 hover:text-slate-600 text-xs"
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
               </div>
 
-              {overdueVisits.length === 0 && dueNowVisits.length === 0 ? (
-                <div className="p-6 text-center text-xs text-slate-500 flex flex-col items-center space-y-1 bg-emerald-50/20">
-                  <CheckCircle2 className="w-6 h-6 text-emerald-600 mb-1" />
-                  <p className="font-bold text-slate-700">Todas as consultas de retorno estão sob controle no momento.</p>
-                  <p className="text-slate-400">
-                    Nenhum participante com retorno atrasado ou na janela imediata desta semana.
+              {/* Tabela ou Estado Vazio */}
+              {approvedList.length === 0 ? (
+                <div className="p-12 text-center text-slate-400 text-sm">
+                  <ClipboardList className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                  <p className="font-semibold text-slate-600">Nenhum participante ativo ainda.</p>
+                  <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
+                    Acesse a aba <strong>Triagem & Critérios</strong> para avaliar candidatos e aprovar participantes no estudo.
                   </p>
+                  {pendingList.length > 0 && (
+                    <button
+                      onClick={() => handleSelectTab('triage')}
+                      className="mt-4 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition inline-flex items-center space-x-1.5 shadow-xs"
+                    >
+                      <ClipboardList className="w-3.5 h-3.5" />
+                      <span>Acessar Fila de Triagem ({pendingList.length} aguardando)</span>
+                    </button>
+                  )}
                 </div>
               ) : (
-                <div className="divide-y divide-slate-100">
-                  {[...overdueVisits, ...dueNowVisits].map(({ part, windows }) => {
-                    const next = windows.nextStatus;
-                    if (!next) return null;
-                    const isOverdue = windows.overallAlert === 'OVERDUE';
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="border-b border-slate-100 bg-slate-50/50 text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                        <th className="py-2.5 px-3.5">Participante</th>
+                        <th className="py-2.5 px-3">Grupo</th>
+                        <th className="py-2.5 px-3">Sessões</th>
+                        <th className="py-2.5 px-3">Status da Janela</th>
+                        <th className="py-2.5 px-3.5 text-right">Ações</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {filteredApprovedList.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="py-8 text-center text-slate-400 text-xs">
+                            Nenhum participante encontrado com os filtros atuais.
+                          </td>
+                        </tr>
+                      ) : (
+                        filteredApprovedList.map((part) => {
+                          const sessionCount = part.sessions?.length || 0;
+                          const windows = calculateSessionWindows(part);
+                          const next = windows.nextStatus;
 
-                    return (
-                      <div
-                        key={part.id}
-                        className={`p-4 sm:p-5 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 transition ${
-                          isOverdue ? 'bg-red-50/40 hover:bg-red-50/70' : 'bg-amber-50/30 hover:bg-amber-50/60'
-                        }`}
-                      >
-                        <div className="flex items-start space-x-3.5">
-                          <span className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm shrink-0 shadow-xs ${
-                            isOverdue ? 'bg-red-600 text-white' : 'bg-amber-500 text-white'
-                          }`}>
-                            {next.config.shortName}
-                          </span>
+                          return (
+                            <tr key={part.id} className="hover:bg-slate-50/80 transition-colors">
+                              {/* 1. Identificação do Participante */}
+                              <td className="py-2.5 px-3.5 align-middle">
+                                <div className="flex items-center space-x-2">
+                                  <span className="px-2 py-0.5 bg-slate-900 text-white text-[11px] font-mono font-bold rounded">
+                                    {part.researchCode}
+                                  </span>
+                                  <span className="font-bold text-slate-900 text-xs">
+                                    {part.patient.fullName}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenEditPatient(part)}
+                                    className="p-1 text-slate-400 hover:text-blue-600 rounded hover:bg-blue-50 transition"
+                                    title="Editar dados cadastrais do paciente (com justificativa de auditoria)"
+                                  >
+                                    <Edit className="w-3 h-3" />
+                                  </button>
+                                </div>
+                                <div className="text-[10px] text-slate-400 mt-0.5 flex items-center space-x-1.5">
+                                  <span>{part.patient.biologicalSex}</span>
+                                  <span>•</span>
+                                  <span>{part.patient.phoneWhatsApp}</span>
+                                </div>
+                              </td>
 
-                          <div className="space-y-1">
-                            <div className="flex items-center space-x-2">
-                              <span className="px-2 py-0.5 bg-slate-800 text-white rounded text-xs font-mono font-bold">
-                                {part.researchCode}
-                              </span>
-                              <span className="font-bold text-slate-900 text-sm">{part.patient.fullName}</span>
-                              <span className="text-xs text-slate-400">({part.patient.phoneWhatsApp})</span>
-                            </div>
+                              {/* 2. Grupo de Alocação */}
+                              <td className="py-2.5 px-3 align-middle">
+                                <div className="inline-flex items-center space-x-1.5">
+                                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200">
+                                    {isBlindedUser ? (
+                                      <span className="flex items-center gap-1">
+                                        <Lock className="w-2.5 h-2.5 text-slate-400" />
+                                        <span>Oculto</span>
+                                      </span>
+                                    ) : (
+                                      part.group || 'Pendente'
+                                    )}
+                                  </span>
+                                  {!isBlindedUser && (
+                                    <button
+                                      onClick={() => handleOpenAllocation(part)}
+                                      className="text-[10px] text-blue-600 hover:text-blue-800 font-semibold underline"
+                                    >
+                                      {part.group ? 'Alterar' : 'Alocar'}
+                                    </button>
+                                  )}
+                                </div>
+                              </td>
 
-                            <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600">
-                              <span className="font-semibold text-slate-700">{next.config.name}</span>
-                              <span>•</span>
-                              <span>
-                                Janela Ideal:{' '}
-                                <strong>
-                                  {next.windowStart.toLocaleDateString('pt-BR')} a {next.windowEnd.toLocaleDateString('pt-BR')}
-                                </strong>{' '}
-                                (Alvo: {next.targetDate.toLocaleDateString('pt-BR')})
-                              </span>
-                            </div>
-                          </div>
-                        </div>
+                              {/* 3. Indicadores de Sessões S1-S4 */}
+                              <td className="py-2.5 px-3 align-middle">
+                                <div className="inline-flex items-center gap-1">
+                                  {[1, 2, 3, 4].map((num) => {
+                                    const done = part.sessions?.some((s) => s.sessionNumber === num);
+                                    const labels: Record<number, string> = { 1: 'S1', 2: 'S2', 3: '14d', 4: '30d' };
+                                    return (
+                                      <span
+                                        key={num}
+                                        className={`px-1.5 py-0.5 rounded text-[10px] font-bold font-mono transition inline-flex items-center gap-0.5 ${
+                                          done
+                                            ? 'bg-emerald-600 text-white'
+                                            : 'bg-slate-100 text-slate-400 border border-slate-200'
+                                        }`}
+                                        title={done ? `Sessão ${labels[num]} Realizada` : `Sessão ${labels[num]} Pendente`}
+                                      >
+                                        {done && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                                        <span>{labels[num]}</span>
+                                      </span>
+                                    );
+                                  })}
+                                </div>
+                              </td>
 
-                        <div className="flex items-center space-x-2.5 shrink-0 self-end lg:self-center">
-                          {isOverdue ? (
-                            <span className="px-3 py-1.5 rounded-lg text-xs font-black bg-red-100 text-red-800 border border-red-300 flex items-center space-x-1">
-                              <AlertCircle className="w-3.5 h-3.5 mr-1" />
-                              <span>Atrasado há {next.daysDiff} dia(s)</span>
-                            </span>
-                          ) : (
-                            <span className="px-3 py-1.5 rounded-lg text-xs font-black bg-amber-100 text-amber-800 border border-amber-300 flex items-center space-x-1">
-                              <Clock className="w-3.5 h-3.5 mr-1" />
-                              <span>Na Janela (Restam {next.daysDiff}d)</span>
-                            </span>
-                          )}
+                              {/* 4. Status da Janela de Retorno */}
+                              <td className="py-2.5 px-3 align-middle">
+                                {windows.overallAlert === 'OVERDUE' && next && (
+                                  <span className="px-2 py-0.5 bg-red-100 text-red-800 border border-red-300 rounded text-[11px] font-bold inline-flex items-center gap-1 animate-pulse">
+                                    <AlertCircle className="w-3 h-3 text-red-600" />
+                                    <span>{next.config.shortName} atrasada (+{next.daysDiff}d)</span>
+                                  </span>
+                                )}
+                                {windows.overallAlert === 'DUE_NOW' && next && (
+                                  <span className="px-2 py-0.5 bg-amber-100 text-amber-900 border border-amber-300 rounded text-[11px] font-bold inline-flex items-center gap-1">
+                                    <Clock className="w-3 h-3 text-amber-600" />
+                                    <span>{next.config.shortName} na janela ({next.daysDiff}d)</span>
+                                  </span>
+                                )}
+                                {windows.overallAlert === 'UPCOMING' && next && (
+                                  <span className="px-2 py-0.5 bg-blue-50 text-blue-800 border border-blue-200 rounded text-[11px] font-medium inline-flex items-center gap-1">
+                                    <Calendar className="w-3 h-3 text-blue-500" />
+                                    <span>{next.config.shortName} em {next.daysDiff}d</span>
+                                  </span>
+                                )}
+                                {windows.overallAlert === 'COMPLETED' && (
+                                  <span className="px-2 py-0.5 bg-emerald-50 text-emerald-800 border border-emerald-300 rounded text-[11px] font-bold inline-flex items-center gap-1">
+                                    <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                    <span>4/4 Concluído</span>
+                                  </span>
+                                )}
+                                {windows.overallAlert === 'WAITING_S1' && (
+                                  <span className="px-2 py-0.5 bg-slate-100 text-slate-600 border border-slate-200 rounded text-[11px] font-medium inline-flex items-center gap-1">
+                                    <Clock className="w-3 h-3 text-slate-400" />
+                                    <span>Aguardando S1</span>
+                                  </span>
+                                )}
+                              </td>
 
-                          <button
-                            type="button"
-                            onClick={() =>
-                              openWhatsAppAppointment(
-                                part.patient.phoneWhatsApp,
-                                part.researchCode,
-                                part.patient.fullName,
-                                next.config.name,
-                                next.windowStart,
-                                next.windowEnd
-                              )
-                            }
-                            className="px-3.5 py-2 bg-[#25D366] hover:bg-[#128C7E] text-white rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-xs"
-                            title="Enviar mensagem com período da janela para agendamento"
-                          >
-                            <MessageSquare className="w-3.5 h-3.5" />
-                            <span>Agendar no WhatsApp</span>
-                          </button>
+                              {/* 5. Ações Clínicas Rápidas (Botões Compactos) */}
+                              <td className="py-2.5 px-3.5 align-middle text-right">
+                                <div className="inline-flex items-center gap-1">
+                                  {/* Botão Primário: Registrar Sessão */}
+                                  {next ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => openSessionEditor(part, next.sessionNumber)}
+                                      className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-bold transition inline-flex items-center gap-1 shadow-2xs"
+                                      title={`Registrar atendimento clínico de ${next.config.name}`}
+                                    >
+                                      <Stethoscope className="w-3 h-3" />
+                                      <span>Registrar {next.config.shortName}</span>
+                                    </button>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setTimelineParticipant(part);
+                                        setShowTimelineModal(true);
+                                      }}
+                                      className="px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded text-xs font-semibold transition inline-flex items-center gap-1"
+                                      title="Ver histórico completo das 4 sessões"
+                                    >
+                                      <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                      <span>Ver 4/4</span>
+                                    </button>
+                                  )}
 
-                          <button
-                            type="button"
-                            onClick={() => openSessionEditor(part, next.sessionNumber)}
-                            className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-xs"
-                            title="Registrar atendimento clínico da sessão"
-                          >
-                            <Stethoscope className="w-3.5 h-3.5" />
-                            <span>Registrar</span>
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
+                                  {/* Histórico mini */}
+                                  {next && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setTimelineParticipant(part);
+                                        setShowTimelineModal(true);
+                                      }}
+                                      className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[11px] font-medium transition inline-flex items-center gap-1"
+                                      title="Ver linha do tempo e histórico das sessões"
+                                    >
+                                      <Clock className="w-3 h-3 text-slate-500" />
+                                      <span>{sessionCount}/4</span>
+                                    </button>
+                                  )}
+
+                                  {/* eCRF mini se houver respostas */}
+                                  {(part.responses?.length || 0) > 0 && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setResponsesParticipant(part);
+                                        setShowResponsesModal(true);
+                                      }}
+                                      className="px-2 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded text-[11px] font-semibold transition"
+                                      title="Ver questionários respondidos"
+                                    >
+                                      eCRF ({part.responses?.length})
+                                    </button>
+                                  )}
+
+                                  {/* Portal do Paciente */}
+                                  <a
+                                    href={`/paciente?code=${part.researchCode}&projectId=${project.id}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded text-[11px] font-semibold transition inline-flex items-center gap-1"
+                                    title="Abrir portal do paciente"
+                                  >
+                                    <ExternalLink className="w-3 h-3" />
+                                    <span>Portal</span>
+                                  </a>
+
+                                  {/* TCLE Assinado */}
+                                  <Link
+                                    href={`/tcle/${part.id}/pdf`}
+                                    target="_blank"
+                                    className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 rounded text-[11px] font-medium transition inline-flex items-center gap-1"
+                                    title="Baixar/Visualizar TCLE oficial em PDF"
+                                  >
+                                    <FileText className="w-3 h-3 text-slate-500" />
+                                    <span>TCLE</span>
+                                  </Link>
+
+                                  {/* WhatsApp */}
+                                  {next && (windows.overallAlert === 'OVERDUE' || windows.overallAlert === 'DUE_NOW') ? (
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        openWhatsAppAppointment(
+                                          part.patient.phoneWhatsApp,
+                                          part.researchCode,
+                                          part.patient.fullName,
+                                          next.config.name,
+                                          next.windowStart,
+                                          next.windowEnd
+                                        )
+                                      }
+                                      className="px-2 py-1 bg-amber-500 hover:bg-amber-600 text-white rounded text-[11px] font-bold transition inline-flex items-center gap-1 shadow-2xs"
+                                      title={`Agendar retorno ${next.config.name} no WhatsApp`}
+                                    >
+                                      <MessageSquare className="w-3 h-3" />
+                                      <span>Agendar</span>
+                                    </button>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      onClick={() => openWhatsApp(part.patient.phoneWhatsApp, part.researchCode)}
+                                      className="p-1.5 bg-[#25D366] hover:bg-[#128C7E] text-white rounded transition shadow-2xs"
+                                      title="Conversar no WhatsApp com o participante"
+                                    >
+                                      <svg className="w-3 h-3 fill-current" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                                    </button>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
                 </div>
               )}
-            </div>
-
-            {/* Lista Principal de Prontuários Ativos */}
-            <div className="bg-white rounded-2xl shadow-xs border border-slate-200 overflow-hidden flex flex-col">
-              <div className="px-6 py-4 border-b border-slate-200 bg-slate-50/70 flex justify-between items-center">
-                <div>
-                  <h3 className="text-base font-bold text-slate-800">Prontuários dos Participantes Ativos</h3>
-                  <p className="text-xs text-slate-500">Registro longitudinal das 4 sessões clínicas, diários eCRF e portais individuais.</p>
-                </div>
-                <span className="px-2.5 py-1 bg-emerald-100 text-emerald-800 rounded-full text-xs font-bold">
-                  {approvedList.length} ativos
-                </span>
-              </div>
-
-              <div className="divide-y divide-slate-100 flex-1">
-                {approvedList.length === 0 ? (
-                  <div className="p-12 text-center text-slate-400 text-sm">
-                    <ClipboardList className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-                    <p className="font-semibold text-slate-600">Nenhum participante ativo ainda.</p>
-                    <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
-                      Acesse a aba <strong>Triagem & Critérios</strong> para avaliar candidatos e aprovar participantes no estudo.
-                    </p>
-                    {pendingList.length > 0 && (
-                      <button
-                        onClick={() => handleSelectTab('triage')}
-                        className="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition inline-flex items-center space-x-1.5 shadow-xs"
-                      >
-                        <ClipboardList className="w-3.5 h-3.5" />
-                        <span>Acessar Fila de Triagem ({pendingList.length} aguardando)</span>
-                      </button>
-                    )}
-                  </div>
-                ) : (
-                  approvedList.map((part) => {
-                    const sessionCount = part.sessions?.length || 0;
-                    const windows = calculateSessionWindows(part);
-                    const next = windows.nextStatus;
-
-                    return (
-                      <div
-                        key={part.id}
-                        className="p-5 hover:bg-slate-50/70 transition-colors flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 border-b border-slate-100 last:border-b-0"
-                      >
-                        {/* Identificação e Prontuário do Voluntário */}
-                        <div className="space-y-2 flex-1">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="px-2.5 py-1 bg-slate-900 text-white text-xs font-mono font-bold rounded-lg shadow-2xs">
-                              {part.researchCode}
-                            </span>
-                            <span className="font-bold text-slate-900 text-sm tracking-tight">
-                              {part.patient.fullName}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => handleOpenEditPatient(part)}
-                              className="p-1 text-slate-400 hover:text-blue-600 rounded-lg hover:bg-blue-50 transition"
-                              title="Editar dados cadastrais do paciente (com justificativa de auditoria)"
-                            >
-                              <Edit className="w-3.5 h-3.5" />
-                            </button>
-                            <span className="text-xs text-slate-500 font-mono">
-                              • {part.patient.biologicalSex}
-                            </span>
-
-                            {/* Grupo de Alocação */}
-                            <div className="inline-flex items-center space-x-1.5 ml-1">
-                              <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200 inline-flex items-center space-x-1">
-                                {isBlindedUser ? (
-                                  <>
-                                    <Lock className="w-3 h-3 text-slate-500 mr-1" />
-                                    <span>OCULTO (Avaliador Cego)</span>
-                                  </>
-                                ) : (
-                                  part.group || 'Aguardando Randomização'
-                                )}
-                              </span>
-                              {!isBlindedUser && (
-                                <button
-                                  onClick={() => handleOpenAllocation(part)}
-                                  className="text-[11px] text-blue-600 hover:text-blue-800 font-bold underline inline-flex items-center space-x-1"
-                                >
-                                  {!part.group && <Shuffle className="w-3 h-3 mr-0.5 inline" />}
-                                  <span>{part.group ? 'Alterar' : 'Alocar'}</span>
-                                </button>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Linha de Indicadores Clínicos e Status de Janela */}
-                          <div className="flex flex-wrap items-center gap-2 text-xs">
-                            {/* Checklist Visual das 4 Sessões */}
-                            <div className="inline-flex items-center bg-slate-100/90 border border-slate-200 rounded-lg p-0.5">
-                              {[1, 2, 3, 4].map((num) => {
-                                const done = part.sessions?.some((s) => s.sessionNumber === num);
-                                const labels: Record<number, string> = { 1: 'S1', 2: 'S2', 3: '14d', 4: '30d' };
-                                return (
-                                  <span
-                                    key={num}
-                                    className={`px-2 py-0.5 rounded-md text-[11px] font-bold font-mono transition inline-flex items-center gap-1 ${
-                                      done
-                                        ? 'bg-emerald-600 text-white shadow-2xs'
-                                        : 'text-slate-400'
-                                    }`}
-                                    title={done ? `Sessão ${labels[num]} Realizada` : `Sessão ${labels[num]} Pendente`}
-                                  >
-                                    {done && <Check className="w-2.5 h-2.5 stroke-[3]" />}
-                                    <span>{labels[num]}</span>
-                                  </span>
-                                );
-                              })}
-                            </div>
-
-                            {/* Alerta / Status Clínico do Retorno */}
-                            {windows.overallAlert === 'OVERDUE' && next && (
-                              <span className="px-2.5 py-0.5 bg-red-100 text-red-800 border border-red-300 rounded-lg font-bold text-xs flex items-center space-x-1 animate-pulse">
-                                <AlertCircle className="w-3.5 h-3.5" />
-                                <span>{next.config.shortName} atrasada (+{next.daysDiff}d)</span>
-                              </span>
-                            )}
-                            {windows.overallAlert === 'DUE_NOW' && next && (
-                              <span className="px-2.5 py-0.5 bg-amber-100 text-amber-900 border border-amber-300 rounded-lg font-bold text-xs flex items-center space-x-1">
-                                <Clock className="w-3.5 h-3.5" />
-                                <span>{next.config.shortName} na janela (restam {next.daysDiff}d)</span>
-                              </span>
-                            )}
-                            {windows.overallAlert === 'UPCOMING' && next && (
-                              <span className="px-2.5 py-0.5 bg-blue-50 text-blue-800 border border-blue-200 rounded-lg font-semibold text-xs flex items-center space-x-1">
-                                <Calendar className="w-3.5 h-3.5" />
-                                <span>{next.config.shortName} em {next.daysDiff}d</span>
-                              </span>
-                            )}
-                            {windows.overallAlert === 'COMPLETED' && (
-                              <span className="px-2.5 py-0.5 bg-emerald-50 text-emerald-800 border border-emerald-300 rounded-lg font-bold text-xs flex items-center space-x-1">
-                                <CheckCircle2 className="w-3.5 h-3.5" />
-                                <span>Protocolo Concluído (4/4)</span>
-                              </span>
-                            )}
-                            {windows.overallAlert === 'WAITING_S1' && (
-                              <span className="px-2.5 py-0.5 bg-slate-100 text-slate-700 border border-slate-200 rounded-lg font-semibold text-xs flex items-center space-x-1">
-                                <Clock className="w-3.5 h-3.5 text-slate-400" />
-                                <span>Aguardando S1 Inicial</span>
-                              </span>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Ações Clínicas Rápidas (Ergonomia no Consultório) */}
-                        <div className="flex flex-wrap items-center gap-1.5 shrink-0">
-                          {/* Ação Primária: Prontuário / Registro da Sessão */}
-                          {next ? (
-                            <button
-                              type="button"
-                              onClick={() => openSessionEditor(part, next.sessionNumber)}
-                              className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-xs"
-                              title={`Registrar atendimento clínico de ${next.config.name}`}
-                            >
-                              <Stethoscope className="w-3.5 h-3.5" />
-                              <span>Registrar {next.config.shortName}</span>
-                            </button>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setTimelineParticipant(part);
-                                setShowTimelineModal(true);
-                              }}
-                              className="px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-2xs"
-                              title="Ver histórico completo das 4 sessões clínicas"
-                            >
-                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700" />
-                              <span>Ver 4/4 Sessões</span>
-                            </button>
-                          )}
-
-                          {/* Linha do Tempo Longitudinal */}
-                          {next && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setTimelineParticipant(part);
-                                setShowTimelineModal(true);
-                              }}
-                              className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition flex items-center space-x-1"
-                              title="Ver linha do tempo com tolerâncias de datas e desvios"
-                            >
-                              <span>Histórico ({sessionCount}/4)</span>
-                            </button>
-                          )}
-
-                          {/* Odontograma Anatômico & Ficha */}
-                          <button
-                            type="button"
-                            onClick={() => openAnamnesisModal(part)}
-                            className="px-3 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl text-xs font-bold transition flex items-center space-x-1 shadow-2xs"
-                            title="Abrir Odontograma Anatômico e Ficha Clínica do participante"
-                          >
-                            <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
-                            <span>Odontograma</span>
-                          </button>
-
-                          {/* Questionários eCRF */}
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setResponsesParticipant(part);
-                              setShowResponsesModal(true);
-                            }}
-                            className={`px-3 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1 border ${
-                              (part.responses?.length || 0) > 0
-                                ? 'bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200'
-                                : 'bg-white hover:bg-slate-100 text-slate-600 border-slate-200'
-                            }`}
-                            title="Ver respostas dos questionários preenchidos"
-                          >
-                            <ClipboardList className="w-3.5 h-3.5" />
-                            <span>eCRF ({part.responses?.length || 0})</span>
-                          </button>
-
-                          {/* Portal do Paciente */}
-                          <a
-                            href={`/paciente?code=${part.researchCode}&projectId=${project.id}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center space-x-1 shadow-xs"
-                            title={`Abrir portal do voluntário ${part.researchCode}`}
-                          >
-                            <ExternalLink className="w-3.5 h-3.5" />
-                            <span>Portal</span>
-                          </a>
-
-                          {/* TCLE Assinado (PDF Oficial) */}
-                          <Link
-                            href={`/tcle/${part.id}/pdf`}
-                            target="_blank"
-                            className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-xl text-xs font-bold transition flex items-center space-x-1 shadow-2xs"
-                            title="Baixar ou visualizar cópia oficial do TCLE/TALE em PDF com autenticação digital SHA-256"
-                          >
-                            <FileText className="w-3.5 h-3.5 text-slate-600" />
-                            <span>TCLE (PDF)</span>
-                          </Link>
-
-                          {/* Editar Dados Cadastrais */}
-                          <button
-                            type="button"
-                            onClick={() => handleOpenEditPatient(part)}
-                            className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-xl text-xs font-bold transition flex items-center space-x-1 shadow-2xs"
-                            title="Editar dados cadastrais do paciente (com registro obrigatório na Trilha de Auditoria)"
-                          >
-                            <Edit className="w-3.5 h-3.5 text-slate-600" />
-                            <span>Editar Cadastro</span>
-                          </button>
-
-                          {/* WhatsApp de Agendamento */}
-                          {next && (windows.overallAlert === 'OVERDUE' || windows.overallAlert === 'DUE_NOW') ? (
-                            <button
-                              type="button"
-                              onClick={() =>
-                                openWhatsAppAppointment(
-                                  part.patient.phoneWhatsApp,
-                                  part.researchCode,
-                                  part.patient.fullName,
-                                  next.config.name,
-                                  next.windowStart,
-                                  next.windowEnd
-                                )
-                              }
-                              className="px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold transition flex items-center space-x-1 shadow-xs"
-                              title={`Agendar retorno ${next.config.name} no WhatsApp`}
-                            >
-                              <MessageSquare className="w-3.5 h-3.5" />
-                              <span>Agendar {next.config.shortName}</span>
-                            </button>
-                          ) : (
-                            <button 
-                              type="button"
-                              onClick={() => openWhatsApp(part.patient.phoneWhatsApp, part.researchCode)}
-                              className="px-3 py-2 bg-[#25D366] hover:bg-[#128C7E] text-white rounded-xl font-bold text-xs shadow-xs transition flex items-center space-x-1"
-                              title="Abrir conversa no WhatsApp com o voluntário"
-                            >
-                              <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-                              <span>WhatsApp</span>
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
             </div>
           </div>
         )}
