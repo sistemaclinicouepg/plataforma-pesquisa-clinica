@@ -8,3 +8,7 @@ export async function GET() {
   }
   return NextResponse.json({ user });
 }
+
+export async function HEAD() {
+  return new Response(null, { status: 200 });
+}

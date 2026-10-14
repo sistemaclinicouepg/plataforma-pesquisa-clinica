@@ -132,9 +132,9 @@ export async function checkServerConnectivity(): Promise<boolean> {
   if (typeof window === 'undefined') return true;
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 4000);
-    const res = await fetch('/api/alerts?limit=1', {
-      method: 'GET',
+    const timeout = setTimeout(() => controller.abort(), 2000);
+    const res = await fetch('/api/auth/me', {
+      method: 'HEAD',
       signal: controller.signal,
       cache: 'no-store',
     });

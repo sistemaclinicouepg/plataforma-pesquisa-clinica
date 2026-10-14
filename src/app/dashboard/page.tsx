@@ -575,36 +575,42 @@ function DashboardContent() {
     expectations: '',
   });
 
-  const loadProject = async () => {
+  const loadProject = async (silent: boolean = false) => {
     try {
-      setLoading(true);
-      let pId = projectIdParam;
+      if (!silent) {
+        setLoading(true);
+      }
+      const pId = projectIdParam;
 
-      // Buscar lista de todos os projetos para o seletor rápido
-      const listRes = await fetch('/api/projects');
+      // Dispara as consultas em PARALELO simultâneo para máxima performance
+      const projectPromise = pId ? fetch(`/api/projects/${pId}`) : null;
+      const listPromise = fetch('/api/projects');
+
+      const [resProject, listRes] = await Promise.all([projectPromise, listPromise]);
+
       if (listRes.ok) {
         const listData = await listRes.json();
         if (listData.projects) {
           setAllProjects(listData.projects.map((p: any) => ({ id: p.id, name: p.name })));
         }
-        if (!pId) {
-          pId = listData.projects?.[0]?.id;
+        if (listData.currentUser) {
+          setCurrentUser(listData.currentUser);
+        }
+        // Se não havia pId na URL, carrega o primeiro projeto retornado
+        if (!pId && listData.projects?.[0]?.id) {
+          const firstRes = await fetch(`/api/projects/${listData.projects[0].id}`);
+          if (firstRes.ok) {
+            const firstData = await firstRes.json();
+            setProject(firstData.project);
+            setIsBlindedUser(Boolean(firstData.isBlinded || firstData.currentMember?.isBlinded));
+            setCurrentMemberRole(firstData.currentMember?.role || 'COORDINATOR');
+          }
         }
       }
 
-      // Buscar usuário logado
-      try {
-        const userRes = await fetch('/api/auth/me');
-        if (userRes.ok) {
-          const uData = await userRes.json();
-          setCurrentUser(uData.user);
-        }
-      } catch {}
-
-      if (pId) {
-        const res = await fetch(`/api/projects/${pId}`);
-        if (res.ok) {
-          const data = await res.json();
+      if (resProject && resProject.ok) {
+        const data = await resProjectProjectJson(resProject);
+        if (data?.project) {
           setProject(data.project);
           setIsBlindedUser(Boolean(data.isBlinded || data.currentMember?.isBlinded));
           setCurrentMemberRole(data.currentMember?.role || 'COORDINATOR');
@@ -631,16 +637,20 @@ function DashboardContent() {
     }
   };
 
+  const resProjectProjectJson = async (res: Response) => {
+    try {
+      return await res.json();
+    } catch {
+      return null;
+    }
+  };
+
   useEffect(() => {
     loadProject();
-    syncOfflineQueue().then((res) => {
-      if (res.synced > 0) {
-        loadProject();
-      }
-    });
+    syncOfflineQueue();
 
     const handleSync = () => {
-      loadProject();
+      loadProject(true);
     };
 
     window.addEventListener('uepg_offline_synced', handleSync);
@@ -801,7 +811,7 @@ function DashboardContent() {
       if (res.ok) {
         setShowAllocationModal(false);
         setAllocatingParticipant(null);
-        await loadProject();
+        await loadProject(true);
       } else {
         const errorData = await res.json().catch(() => ({}));
         alert(errorData.error || 'Erro ao salvar alocação de grupo.');
@@ -845,7 +855,7 @@ function DashboardContent() {
           expectations: '',
         });
 
-        await loadProject();
+        await loadProject(true);
 
         if (openAnamnesisAfterCreate && result.participant) {
           openAnamnesisModal(result.participant);
@@ -908,7 +918,7 @@ function DashboardContent() {
       if (res.ok) {
         setShowAnamnesisModal(false);
         setCurrentAnamnesisPart(null);
-        await loadProject();
+        await loadProject(true);
       } else {
         const errorData = await res.json().catch(() => ({}));
         alert(errorData.error || 'Erro ao salvar ficha clínica / anamnese.');
@@ -970,7 +980,7 @@ function DashboardContent() {
       if (res.ok) {
         setShowSessionModal(false);
         removeOfflineItemByEndpoint(`/api/participants/${currentSessionForm.participantId}/sessions`);
-        await loadProject();
+        await loadProject(true);
       } else {
         const errorData = await res.json().catch(() => ({}));
         alert(errorData.error || 'Erro ao registrar sessão clínica.');
@@ -1516,7 +1526,7 @@ function DashboardContent() {
     window.open(`https://wa.me/${fullPhone}?text=${text}`, '_blank');
   };
 
-  if (loading) {
+  if (loading && !project) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center text-slate-400">
         <p className="animate-pulse">Carregando dados da pesquisa clínica...</p>

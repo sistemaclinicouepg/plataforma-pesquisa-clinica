@@ -58,7 +58,7 @@ export async function GET(
             responses: {
               include: {
                 form: {
-                  select: { id: true, title: true, questionsJson: true, description: true },
+                  select: { id: true, title: true, description: true },
                 },
               },
               orderBy: { submittedAt: 'desc' },

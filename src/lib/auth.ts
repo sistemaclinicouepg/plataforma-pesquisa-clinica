@@ -75,36 +75,22 @@ export async function getCurrentUser() {
   const cookieStore = await cookies();
   const sessionToken = cookieStore.get(SESSION_COOKIE_NAME)?.value;
 
-  let userId: string | null = null;
-
-  if (sessionToken) {
-    const verified = await verifySessionToken(sessionToken);
-    if (verified?.id) {
-      userId = verified.id;
-    }
-  }
-
-  if (!userId) return null;
+  if (!sessionToken) return null;
 
   try {
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        isApproved: true,
-      },
-    });
+    const verified = await verifySessionToken(sessionToken);
+    if (!verified?.id) return null;
 
-    if (!user || !user.isApproved) {
-      return null;
-    }
-
-    return user;
+    // Retorna os dados autenticados diretamente do token JWT criptografado (0 ms de I/O de banco)
+    return {
+      id: verified.id,
+      name: verified.name || 'Pesquisador',
+      email: verified.email,
+      role: verified.role,
+      isApproved: true,
+    };
   } catch (error) {
-    console.error('Erro ao buscar usuário logado:', error);
+    console.error('Erro ao verificar sessão do usuário:', error);
     return null;
   }
 }
