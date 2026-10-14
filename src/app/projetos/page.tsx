@@ -15,6 +15,7 @@ import {
   ArrowRight,
   FolderPlus,
   Users,
+  Sparkles,
 } from 'lucide-react';
 
 type Project = {
@@ -53,10 +54,14 @@ export default function ProjetosPage() {
   const [pendingUsers, setPendingUsers] = useState<PendingUser[]>([]);
   const [loading, setLoading] = useState(true);
   
-  // Modal de criação de projeto
+  // Modal de criação de projeto com particularidades da pesquisa
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
   const [newProjectDesc, setNewProjectDesc] = useState('');
+  const [enableOdontogram, setEnableOdontogram] = useState(true);
+  const [odontogramScope, setOdontogramScope] = useState<'anterior' | 'full'>('anterior');
+  const [enablePeriodontogram, setEnablePeriodontogram] = useState(false);
+  const [enableAnamnesis, setEnableAnamnesis] = useState(true);
   const [creating, setCreating] = useState(false);
 
   const loadData = async () => {
@@ -95,12 +100,27 @@ export default function ProjetosPage() {
 
     try {
       setCreating(true);
+      const initialTemplate = {
+        enableOdontogram,
+        odontogramScope,
+        enablePeriodontogram,
+        periodontogramFields: {
+          bleedingOnProbing: true,
+          visiblePlaque: true,
+          probingDepth: false,
+          gingivalRecession: true,
+          furcationOrMobility: false,
+        },
+        questions: [],
+      };
+
       const res = await fetch('/api/projects', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: newProjectName,
           description: newProjectDesc,
+          anamnesisTemplate: initialTemplate,
         }),
       });
 
@@ -110,7 +130,8 @@ export default function ProjetosPage() {
         setNewProjectName('');
         setNewProjectDesc('');
         if (data.project?.id) {
-          router.push(`/dashboard?projectId=${data.project.id}`);
+          // Direciona imediatamente para configurar os itens particulares desta pesquisa!
+          router.push(`/anamnese?projectId=${data.project.id}&new=true`);
         } else {
           loadData();
         }
@@ -364,12 +385,98 @@ export default function ProjetosPage() {
                   Descrição / Hipótese do Estudo (Opcional)
                 </label>
                 <textarea
-                  rows={3}
+                  rows={2}
                   value={newProjectDesc}
                   onChange={(e) => setNewProjectDesc(e.target.value)}
                   placeholder="Breve resumo da metodologia, grupos e intervenções..."
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
                 />
+              </div>
+
+              {/* Seleção de Módulos & Particularidades do Projeto */}
+              <div className="pt-2 border-t border-slate-100 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                    Módulos & Instrumentos Deste Estudo
+                  </label>
+                  <span className="text-[10px] text-blue-700 font-bold bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
+                    Exclusivo deste projeto
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-500 leading-tight">
+                  Selecione os módulos necessários para esta pesquisa. As configurações ficam isoladas por projeto:
+                </p>
+
+                <div className="space-y-2 text-xs">
+                  {/* Odontograma */}
+                  <div className="p-2.5 rounded-xl border border-slate-200 bg-slate-50/70 space-y-1.5">
+                    <label className="flex items-center space-x-2.5 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={enableOdontogram}
+                        onChange={(e) => setEnableOdontogram(e.target.checked)}
+                        className="w-4 h-4 text-blue-600 rounded"
+                      />
+                      <span className="font-bold text-slate-800">Odontograma Clínico Anatômico</span>
+                    </label>
+                    {enableOdontogram && (
+                      <div className="pl-6 flex items-center space-x-4 text-[11px] text-slate-600 pt-0.5">
+                        <label className="flex items-center space-x-1 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="odontogramScopeModal"
+                            value="anterior"
+                            checked={odontogramScope === 'anterior'}
+                            onChange={() => setOdontogramScope('anterior')}
+                          />
+                          <span>Dentes Anteriores (13 a 23 e 33 a 43)</span>
+                        </label>
+                        <label className="flex items-center space-x-1 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="odontogramScopeModal"
+                            value="full"
+                            checked={odontogramScope === 'full'}
+                            onChange={() => setOdontogramScope('full')}
+                          />
+                          <span>Arcada Completa</span>
+                        </label>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Periograma */}
+                  <div className="p-2.5 rounded-xl border border-slate-200 bg-slate-50/70">
+                    <label className="flex items-center space-x-2.5 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={enablePeriodontogram}
+                        onChange={(e) => setEnablePeriodontogram(e.target.checked)}
+                        className="w-4 h-4 text-blue-600 rounded"
+                      />
+                      <span className="font-bold text-slate-800">Exame Periodontal (Periograma - SS / IPV)</span>
+                    </label>
+                  </div>
+
+                  {/* Anamnese & Critérios */}
+                  <div className="p-2.5 rounded-xl border border-slate-200 bg-slate-50/70">
+                    <label className="flex items-center space-x-2.5 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={enableAnamnesis}
+                        onChange={(e) => setEnableAnamnesis(e.target.checked)}
+                        className="w-4 h-4 text-blue-600 rounded"
+                      />
+                      <span className="font-bold text-slate-800">Anamnese & Critérios de Inclusão/Exclusão</span>
+                    </label>
+                  </div>
+
+                  {/* Questionários */}
+                  <div className="p-2.5 rounded-xl border border-blue-200 bg-blue-50/50 text-[11px] text-blue-900 flex items-start space-x-2">
+                    <Sparkles className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                    <span>Após salvar, você será direcionado para selecionar e validar os itens e questionários deste estudo.</span>
+                  </div>
+                </div>
               </div>
 
               <div className="flex justify-end space-x-3 pt-4 border-t border-slate-100">
@@ -385,7 +492,7 @@ export default function ProjetosPage() {
                   disabled={creating}
                   className="px-5 py-2 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition disabled:opacity-50"
                 >
-                  {creating ? 'Salvando...' : 'Criar Projeto'}
+                  {creating ? 'Criando Projeto...' : 'Criar Estudo & Configurar Itens'}
                 </button>
               </div>
             </form>

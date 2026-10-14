@@ -17,7 +17,10 @@ import {
   ClipboardList,
   AlertTriangle,
   Clock,
-  Folder
+  Folder,
+  FileText,
+  ArrowRight,
+  ExternalLink,
 } from 'lucide-react';
 
 export type QuestionType =
@@ -176,6 +179,7 @@ const CLINICAL_LIBRARY_PRESETS: Array<{
 function AnamnesisBuilderContent() {
   const searchParams = useSearchParams();
   const projectId = searchParams.get('projectId') || '';
+  const isNewProject = searchParams.get('new') === 'true';
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -184,7 +188,7 @@ function AnamnesisBuilderContent() {
   const [projectsList, setProjectsList] = useState<Array<{ id: string; name: string }>>([]);
 
   // Configuração Principal da Ficha Clínica
-  const [activeTab, setActiveTab] = useState<'odontogram' | 'periodontogram' | 'questions'>('odontogram');
+  const [activeTab, setActiveTab] = useState<'odontogram' | 'periodontogram' | 'questions' | 'forms'>('odontogram');
 
   const [enableOdontogram, setEnableOdontogram] = useState(true);
   const [odontogramScope, setOdontogramScope] = useState<'anterior' | 'full'>('anterior');
@@ -201,6 +205,39 @@ function AnamnesisBuilderContent() {
 
   const [questions, setQuestions] = useState<AnamnesisQuestion[]>([]);
   const [showLibraryModal, setShowLibraryModal] = useState(false);
+
+  // Formulários / eCRFs vinculados a este projeto
+  const [projectForms, setProjectForms] = useState<Array<{
+    id: string;
+    title: string;
+    description: string | null;
+    questionsJson: string;
+    expirationHours: number;
+    allowLate: boolean;
+    _count?: { responses: number };
+  }>>([]);
+  const [loadingForms, setLoadingForms] = useState(false);
+  const [creatingFormPreset, setCreatingFormPreset] = useState<string | null>(null);
+
+  const loadProjectForms = async () => {
+    if (!projectId) return;
+    try {
+      setLoadingForms(true);
+      const res = await fetch(`/api/forms?projectId=${projectId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setProjectForms(data.forms || []);
+      }
+    } catch (e) {
+      console.error('Erro ao buscar formulários do projeto:', e);
+    } finally {
+      setLoadingForms(false);
+    }
+  };
+
+  useEffect(() => {
+    loadProjectForms();
+  }, [projectId]);
 
   // Carregar dados do projeto
   useEffect(() => {
@@ -265,7 +302,7 @@ function AnamnesisBuilderContent() {
   }, [projectId]);
 
   // Salvar no Banco de Dados
-  const handleSave = async () => {
+  const handleSave = async (redirectAfter: boolean = false) => {
     if (!projectId) {
       alert('Por favor, selecione um projeto válido.');
       return;
@@ -291,6 +328,10 @@ function AnamnesisBuilderContent() {
 
       if (res.ok) {
         setSaveSuccess(true);
+        if (redirectAfter) {
+          window.location.href = `/dashboard?projectId=${projectId}`;
+          return;
+        }
         setTimeout(() => setSaveSuccess(false), 4000);
       } else {
         alert('Erro ao gravar configuração da anamnese.');
@@ -300,6 +341,127 @@ function AnamnesisBuilderContent() {
       alert('Ocorreu um erro ao salvar a ficha clínica.');
     } finally {
       setSaving(false);
+    }
+  };
+
+  // Criação rápida de questionários validados (1 clique)
+  const handleCreateFormPreset = async (presetType: 'eva' | 'ohip' | 'satisfaction') => {
+    if (!projectId) return;
+    try {
+      setCreatingFormPreset(presetType);
+      let title = '';
+      let description = '';
+      let questionsPayload: any[] = [];
+
+      if (presetType === 'eva') {
+        title = 'Escala Visual Analógica de Sensibilidade (EVA)';
+        description = 'Monitoramento longitudinal de sensibilidade dentinária (0h, 1h, 24h, 48h).';
+        questionsPayload = [
+          {
+            id: 'q_sens_vas',
+            type: 'vas',
+            title: 'Qual a intensidade da sua sensibilidade dentária neste exato momento?',
+            minLabel: '0 - Sem Dor',
+            maxLabel: '10 - Dor Severa',
+            required: true,
+          },
+          {
+            id: 'q_sens_desc',
+            type: 'choice',
+            title: 'Qual a principal sensação observada?',
+            required: false,
+            options: [
+              { label: 'Dor rápida em pontada', value: 'pontada' },
+              { label: 'Latejamento persistente', value: 'latejamento' },
+              { label: 'Sensibilidade com água/vento frio', value: 'frio' },
+              { label: 'Ardência ou queimação gengival', value: 'gengival' },
+            ],
+          },
+          {
+            id: 'q_medication',
+            type: 'boolean',
+            title: 'Precisou tomar algum analgésico nas últimas 12 horas?',
+            required: true,
+          },
+        ];
+      } else if (presetType === 'ohip') {
+        title = 'OHIP-14 (Qualidade de Vida em Saúde Bucal)';
+        description = 'Oral Health Impact Profile reduzido para avaliar impactos psicossociais e funcionais.';
+        questionsPayload = [
+          { id: 'ohip_1', type: 'likert', title: '1. Teve problemas para pronunciar palavras por causa dos dentes ou da boca?', required: true, options: [{ label: 'Nunca', value: '0' }, { label: 'Raramente', value: '1' }, { label: 'Às vezes', value: '2' }, { label: 'Repetidamente', value: '3' }, { label: 'Sempre', value: '4' }] },
+          { id: 'ohip_2', type: 'likert', title: '2. Sentiu que o sabor dos alimentos piorou por causa de seus dentes ou boca?', required: true, options: [{ label: 'Nunca', value: '0' }, { label: 'Raramente', value: '1' }, { label: 'Às vezes', value: '2' }, { label: 'Repetidamente', value: '3' }, { label: 'Sempre', value: '4' }] },
+          { id: 'ohip_3', type: 'likert', title: '3. Já sentiu dores agudas ou dolorimentos em sua boca ou dentes?', required: true, options: [{ label: 'Nunca', value: '0' }, { label: 'Raramente', value: '1' }, { label: 'Às vezes', value: '2' }, { label: 'Repetidamente', value: '3' }, { label: 'Sempre', value: '4' }] },
+          { id: 'ohip_4', type: 'likert', title: '4. Achou desconfortável comer algum alimento por causa de seus dentes ou boca?', required: true, options: [{ label: 'Nunca', value: '0' }, { label: 'Raramente', value: '1' }, { label: 'Às vezes', value: '2' }, { label: 'Repetidamente', value: '3' }, { label: 'Sempre', value: '4' }] },
+          { id: 'ohip_5', type: 'likert', title: '5. Já se sentiu preocupado(a) por causa de problemas em seus dentes ou boca?', required: true, options: [{ label: 'Nunca', value: '0' }, { label: 'Raramente', value: '1' }, { label: 'Às vezes', value: '2' }, { label: 'Repetidamente', value: '3' }, { label: 'Sempre', value: '4' }] },
+          { id: 'ohip_6', type: 'likert', title: '6. Já se sentiu tenso(a) ou estressado(a) por causa de dentes ou boca?', required: true, options: [{ label: 'Nunca', value: '0' }, { label: 'Raramente', value: '1' }, { label: 'Às vezes', value: '2' }, { label: 'Repetidamente', value: '3' }, { label: 'Sempre', value: '4' }] },
+          { id: 'ohip_7', type: 'likert', title: '7. Sua alimentação ficou prejudicada por causa de seus dentes ou boca?', required: true, options: [{ label: 'Nunca', value: '0' }, { label: 'Raramente', value: '1' }, { label: 'Às vezes', value: '2' }, { label: 'Repetidamente', value: '3' }, { label: 'Sempre', value: '4' }] },
+          { id: 'ohip_8', type: 'likert', title: '8. Teve que interromper suas refeições por causa de problemas bucais?', required: true, options: [{ label: 'Nunca', value: '0' }, { label: 'Raramente', value: '1' }, { label: 'Às vezes', value: '2' }, { label: 'Repetidamente', value: '3' }, { label: 'Sempre', value: '4' }] },
+          { id: 'ohip_9', type: 'likert', title: '9. Achou difícil relaxar por causa de desconforto em dentes ou boca?', required: true, options: [{ label: 'Nunca', value: '0' }, { label: 'Raramente', value: '1' }, { label: 'Às vezes', value: '2' }, { label: 'Repetidamente', value: '3' }, { label: 'Sempre', value: '4' }] },
+          { id: 'ohip_10', type: 'likert', title: '10. Já se sentiu envergonhado(a) ao sorrir ou falar por causa de seus dentes?', required: true, options: [{ label: 'Nunca', value: '0' }, { label: 'Raramente', value: '1' }, { label: 'Às vezes', value: '2' }, { label: 'Repetidamente', value: '3' }, { label: 'Sempre', value: '4' }] },
+          { id: 'ohip_11', type: 'likert', title: '11. Foi um pouco intolerante com familiares ou amigos por causa de incômodo bucal?', required: true, options: [{ label: 'Nunca', value: '0' }, { label: 'Raramente', value: '1' }, { label: 'Às vezes', value: '2' }, { label: 'Repetidamente', value: '3' }, { label: 'Sempre', value: '4' }] },
+          { id: 'ohip_12', type: 'likert', title: '12. Teve dificuldades para realizar seu trabalho ou estudos por causa de dentes?', required: true, options: [{ label: 'Nunca', value: '0' }, { label: 'Raramente', value: '1' }, { label: 'Às vezes', value: '2' }, { label: 'Repetidamente', value: '3' }, { label: 'Sempre', value: '4' }] },
+          { id: 'ohip_13', type: 'likert', title: '13. Sentiu que a vida em geral ficou menos satisfatória por causa dos dentes?', required: true, options: [{ label: 'Nunca', value: '0' }, { label: 'Raramente', value: '1' }, { label: 'Às vezes', value: '2' }, { label: 'Repetidamente', value: '3' }, { label: 'Sempre', value: '4' }] },
+          { id: 'ohip_14', type: 'likert', title: '14. Ficou totalmente incapaz de exercer suas funções diárias normais?', required: true, options: [{ label: 'Nunca', value: '0' }, { label: 'Raramente', value: '1' }, { label: 'Às vezes', value: '2' }, { label: 'Repetidamente', value: '3' }, { label: 'Sempre', value: '4' }] },
+        ];
+      } else if (presetType === 'satisfaction') {
+        title = 'Avaliação de Satisfação Estética do Sorriso';
+        description = 'Percepção do participante quanto à estética dental, clareamento e impacto no sorriso.';
+        questionsPayload = [
+          {
+            id: 'q_sat_color',
+            type: 'vas',
+            title: 'O quanto você está satisfeito(a) com a cor obtida em seus dentes?',
+            minLabel: '0 - Totalmente Insatisfeito',
+            maxLabel: '10 - Extremamente Satisfeito',
+            required: true,
+          },
+          {
+            id: 'q_sat_conf',
+            type: 'vas',
+            title: 'O tratamento clareador melhorou sua autoconfiança ao sorrir?',
+            minLabel: '0 - Não mudou',
+            maxLabel: '10 - Melhorou significativamente',
+            required: true,
+          },
+          {
+            id: 'q_sat_rec',
+            type: 'boolean',
+            title: 'Você recomendaria este procedimento clínico para amigos ou familiares?',
+            required: true,
+          },
+          {
+            id: 'q_sat_com',
+            type: 'text',
+            title: 'Comentários ou impressões pessoais sobre sua experiência no estudo:',
+            required: false,
+          },
+        ];
+      }
+
+      const res = await fetch('/api/forms', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          projectId,
+          title,
+          description,
+          questions: questionsPayload,
+          expirationHours: 24,
+          allowLate: false,
+        }),
+      });
+
+      if (res.ok) {
+        await loadProjectForms();
+        alert(`Questionário "${title}" adicionado a este projeto com sucesso!`);
+      } else {
+        alert('Erro ao criar o modelo de questionário.');
+      }
+    } catch (err) {
+      console.error('Erro ao adicionar questionário padrão:', err);
+      alert('Erro de conexão ao criar formulário.');
+    } finally {
+      setCreatingFormPreset(null);
     }
   };
 
@@ -406,12 +568,21 @@ function AnamnesisBuilderContent() {
           </button>
 
           <button
-            onClick={handleSave}
+            onClick={() => handleSave(false)}
             disabled={saving || loading}
-            className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-xs transition disabled:opacity-50 flex items-center space-x-2"
+            className="px-4 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-bold transition disabled:opacity-50 flex items-center space-x-1.5"
           >
             {saving ? <Clock className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-            <span>{saving ? 'Gravando...' : 'Salvar Ficha Clínica'}</span>
+            <span>{saving ? 'Gravando...' : 'Salvar Ficha'}</span>
+          </button>
+
+          <button
+            onClick={() => handleSave(true)}
+            disabled={saving || loading}
+            className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-xs transition disabled:opacity-50 flex items-center space-x-1.5"
+          >
+            <span>Concluir & Abrir Painel</span>
+            <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </div>
       </header>
@@ -458,13 +629,54 @@ function AnamnesisBuilderContent() {
             }`}
           >
             <ClipboardList className="w-4 h-4" />
-            <span>Anamnese & Critérios de Elegibilidade ({questions.length})</span>
+            <span>Anamnese & Critérios ({questions.length})</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('forms')}
+            className={`px-5 py-3 text-sm font-bold border-b-2 transition flex items-center space-x-2 shrink-0 ${
+              activeTab === 'forms'
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <FileText className="w-4 h-4" />
+            <span>Questionários & eCRFs ({projectForms.length})</span>
           </button>
         </div>
       </div>
 
       {/* Conteúdo Principal */}
       <main className="w-full px-4 sm:px-6 lg:px-8 xl:px-10">
+        {isNewProject && (
+          <div className="mb-6 p-4 sm:p-5 bg-gradient-to-r from-blue-50 via-indigo-50 to-blue-50 border border-blue-200 rounded-2xl flex flex-col md:flex-row items-start md:md-center justify-between gap-4 shadow-xs">
+            <div className="flex items-start gap-3.5">
+              <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-lg shrink-0 shadow-sm">
+                ✨
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-blue-950 flex items-center gap-2">
+                  <span>Configuração Inicial do Estudo</span>
+                  <span className="px-2 py-0.5 bg-blue-200 text-blue-800 text-[10px] uppercase tracking-wider font-extrabold rounded-full">Novo</span>
+                </h3>
+                <p className="text-xs text-blue-800 mt-1 leading-relaxed">
+                  Defina os módulos clínicos ativos nesta pesquisa (Odontograma, Periograma, Anamnese e Questionários). Cada estudo possui suas escolhas isoladas e vinculadas exclusivamente a ele.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0 w-full md:w-auto justify-end">
+              <button
+                onClick={() => handleSave(true)}
+                disabled={saving || loading}
+                className="w-full md:w-auto px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center justify-center gap-2"
+              >
+                <span>Concluir e Abrir Painel</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="bg-white rounded-b-2xl border-x border-b border-slate-200 p-4 sm:p-8 shadow-sm">
           {/* ===================== ABA 1: ODONTOGRAMA ===================== */}
           {activeTab === 'odontogram' && (
@@ -932,6 +1144,226 @@ function AnamnesisBuilderContent() {
               )}
             </div>
           )}
+
+          {/* ===================== ABA 4: QUESTIONÁRIOS / eCRFs ===================== */}
+          {activeTab === 'forms' && (
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-50 p-5 rounded-xl border border-slate-200 gap-4">
+                <div>
+                  <h3 className="text-base font-bold text-slate-800 flex items-center">
+                    <FileText className="w-4 h-4 text-blue-600 mr-2" /> Questionários Eletrônicos & eCRFs (PROMs)
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Formulários preenchidos remotamente pelos voluntários (via WhatsApp ou Portal do Paciente) ou pela equipe de pesquisa.
+                  </p>
+                </div>
+                <Link
+                  href={`/construtor?projectId=${projectId}`}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-xs transition flex items-center gap-1.5 shrink-0"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Novo Formulário Personalizado</span>
+                </Link>
+              </div>
+
+              {/* Modelos Científicos Rápidos (1-Clique) */}
+              <div>
+                <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3">
+                  Adicionar Instrumentos Científicos Validados (1 Clique):
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Preset 1: EVA */}
+                  <div className="p-4 bg-white border border-slate-200 rounded-xl hover:border-blue-400 hover:shadow-xs transition flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="w-2.5 h-2.5 rounded-full bg-blue-600 inline-block"></span>
+                        <h5 className="font-bold text-slate-800 text-sm">Escala Visual Analógica (EVA)</h5>
+                      </div>
+                      <p className="text-xs text-slate-500 mb-4 leading-relaxed">
+                        Mensuração de dor e sensibilidade dentinária (0 a 10), tipo de sensação e uso de analgésicos nos intervalos de 0h, 1h, 24h e 48h.
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => handleCreateFormPreset('eva')}
+                      disabled={creatingFormPreset !== null}
+                      className="w-full py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 disabled:opacity-50"
+                    >
+                      {creatingFormPreset === 'eva' ? (
+                        <>
+                          <Clock className="w-3.5 h-3.5 animate-spin" />
+                          <span>Adicionando...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>Adicionar EVA ao Estudo</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  {/* Preset 2: OHIP-14 */}
+                  <div className="p-4 bg-white border border-slate-200 rounded-xl hover:border-indigo-400 hover:shadow-xs transition flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="w-2.5 h-2.5 rounded-full bg-indigo-600 inline-block"></span>
+                        <h5 className="font-bold text-slate-800 text-sm">OHIP-14 Odontológico</h5>
+                      </div>
+                      <p className="text-xs text-slate-500 mb-4 leading-relaxed">
+                        Oral Health Impact Profile com 14 itens validados internacionalmente (Slade, 1997) para avaliar qualidade de vida relacionada à saúde bucal.
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => handleCreateFormPreset('ohip')}
+                      disabled={creatingFormPreset !== null}
+                      className="w-full py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 disabled:opacity-50"
+                    >
+                      {creatingFormPreset === 'ohip' ? (
+                        <>
+                          <Clock className="w-3.5 h-3.5 animate-spin" />
+                          <span>Adicionando...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>Adicionar OHIP-14</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  {/* Preset 3: Satisfação */}
+                  <div className="p-4 bg-white border border-slate-200 rounded-xl hover:border-emerald-400 hover:shadow-xs transition flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 inline-block"></span>
+                        <h5 className="font-bold text-slate-800 text-sm">Satisfação & Estética</h5>
+                      </div>
+                      <p className="text-xs text-slate-500 mb-4 leading-relaxed">
+                        Avaliação da percepção estética do sorriso, contentamento com a alteração de cor, autoconfiança e recomendação do tratamento.
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => handleCreateFormPreset('satisfaction')}
+                      disabled={creatingFormPreset !== null}
+                      className="w-full py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 disabled:opacity-50"
+                    >
+                      {creatingFormPreset === 'satisfaction' ? (
+                        <>
+                          <Clock className="w-3.5 h-3.5 animate-spin" />
+                          <span>Adicionando...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>Adicionar Satisfação</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Formulários Existentes */}
+              <div className="pt-4 border-t border-slate-100">
+                <div className="flex justify-between items-center mb-3">
+                  <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                    Questionários Ativos Neste Projeto ({projectForms.length}):
+                  </h4>
+                  <button
+                    onClick={loadProjectForms}
+                    className="text-xs text-blue-600 hover:underline font-semibold"
+                  >
+                    Atualizar lista
+                  </button>
+                </div>
+
+                {loadingForms ? (
+                  <div className="p-8 text-center text-slate-500 text-xs">Carregando questionários do projeto...</div>
+                ) : projectForms.length === 0 ? (
+                  <div className="p-8 bg-slate-50 rounded-xl border border-dashed border-slate-300 text-center">
+                    <FileText className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+                    <p className="text-sm font-bold text-slate-700">Nenhum questionário vinculado a este estudo ainda</p>
+                    <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
+                      Clique em um dos modelos padronizados acima (como a escala EVA ou OHIP-14) ou abra o Construtor para criar formulários personalizados.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {projectForms.map((form) => {
+                      let qCount = 0;
+                      try {
+                        const parsed = JSON.parse(form.questionsJson);
+                        qCount = Array.isArray(parsed) ? parsed.length : 0;
+                      } catch (e) {}
+
+                      return (
+                        <div
+                          key={form.id}
+                          className="p-5 bg-white border border-slate-200 rounded-xl shadow-xs hover:border-blue-400 transition flex flex-col justify-between"
+                        >
+                          <div>
+                            <div className="flex justify-between items-start gap-2 mb-1">
+                              <h5 className="font-bold text-slate-900 text-sm">{form.title}</h5>
+                              <span className="px-2 py-0.5 bg-blue-50 text-blue-700 text-[11px] font-bold rounded">
+                                {qCount} questões
+                              </span>
+                            </div>
+                            {form.description && (
+                              <p className="text-xs text-slate-500 mb-3">{form.description}</p>
+                            )}
+                            <div className="text-[11px] text-slate-500 space-x-3 mb-4">
+                              <span>Janela de resposta: <strong>{form.expirationHours}h</strong></span>
+                              <span>•</span>
+                              <span>Envios recebidos: <strong>{form._count?.responses || 0}</strong></span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 pt-3 border-t border-slate-100">
+                            <Link
+                              href={`/construtor?projectId=${projectId}&formId=${form.id}`}
+                              className="flex-1 text-center py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5"
+                            >
+                              <span>Editar no Construtor</span>
+                              <ExternalLink className="w-3.5 h-3.5" />
+                            </Link>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Barra de Conclusão / Salvar Rodapé */}
+          <div className="mt-8 pt-6 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-50 p-4 rounded-xl">
+            <div className="text-xs text-slate-600">
+              {isNewProject ? (
+                <span>As opções selecionadas acima ficam registradas exclusivamente no estudo <strong>{projectName}</strong>.</span>
+              ) : (
+                <span>Altere os módulos a qualquer momento conforme as especificidades do projeto <strong>{projectName}</strong>.</span>
+              )}
+            </div>
+            <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+              <button
+                onClick={() => handleSave(false)}
+                disabled={saving || loading}
+                className="px-4 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-bold transition disabled:opacity-50"
+              >
+                {saving ? 'Gravando...' : 'Salvar Alterações'}
+              </button>
+              <button
+                onClick={() => handleSave(true)}
+                disabled={saving || loading}
+                className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-sm transition disabled:opacity-50 flex items-center gap-1.5"
+              >
+                <span>Salvar e Ir para o Painel do Estudo</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
         </div>
       </main>
 

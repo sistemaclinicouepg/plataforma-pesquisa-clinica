@@ -562,6 +562,7 @@ function DashboardContent() {
   const [savingSession, setSavingSession] = useState(false);
 
   // Form Novo Paciente
+  const [savingPatient, setSavingPatient] = useState(false);
   const [newPatientData, setNewPatientData] = useState({
     fullName: '',
     cpf: '',
@@ -830,6 +831,7 @@ function DashboardContent() {
     if (!project) return;
 
     try {
+      setSavingPatient(true);
       const res = await fetch('/api/patients', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -855,6 +857,10 @@ function DashboardContent() {
           expectations: '',
         });
 
+        // Alterna imediatamente para a aba de Triagem para exibir o voluntário recém-adicionado
+        setActiveTab('triage');
+
+        // Recarrega os dados do projeto
         await loadProject(true);
 
         if (openAnamnesisAfterCreate && result.participant) {
@@ -867,6 +873,8 @@ function DashboardContent() {
     } catch (e) {
       console.error('Erro ao cadastrar paciente:', e);
       alert('Erro de rede ao cadastrar paciente.');
+    } finally {
+      setSavingPatient(false);
     }
   };
 
@@ -4196,17 +4204,12 @@ function DashboardContent() {
           }
         }
 
-        const isConfigured = Boolean(
-          templateConfig &&
-            (templateConfig.enableOdontogram ||
-              templateConfig.enablePeriodontogram ||
-              (templateConfig.questions && templateConfig.questions.length > 0))
-        );
+        const isConfigured = Boolean(templateConfig);
 
-        const config: AnamnesisConfig = (templateConfig && isConfigured) ? {
-          ...templateConfig,
-          enableOdontogram: templateConfig.enableOdontogram !== undefined ? templateConfig.enableOdontogram : true,
+        const config: AnamnesisConfig = templateConfig ? {
+          enableOdontogram: Boolean(templateConfig.enableOdontogram),
           odontogramScope: templateConfig.odontogramScope || 'full',
+          enablePeriodontogram: Boolean(templateConfig.enablePeriodontogram),
           periodontogramFields: templateConfig.periodontogramFields || {
             bleedingOnProbing: true,
             visiblePlaque: true,
@@ -4214,6 +4217,7 @@ function DashboardContent() {
             gingivalRecession: true,
             furcationOrMobility: false,
           },
+          questions: Array.isArray(templateConfig.questions) ? templateConfig.questions : [],
         } : {
           enableOdontogram: true,
           odontogramScope: 'full',
@@ -4898,7 +4902,7 @@ function DashboardContent() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                   <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">WhatsApp</label>
                   <input
@@ -4907,6 +4911,16 @@ function DashboardContent() {
                     value={newPatientData.phoneWhatsApp}
                     onChange={(e) => setNewPatientData({ ...newPatientData, phoneWhatsApp: e.target.value })}
                     placeholder="(42) 99999-9999"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">Data Nascimento</label>
+                  <input
+                    type="date"
+                    required
+                    value={newPatientData.dateOfBirth}
+                    onChange={(e) => setNewPatientData({ ...newPatientData, dateOfBirth: e.target.value })}
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
                   />
                 </div>
@@ -4968,15 +4982,24 @@ function DashboardContent() {
                 <button
                   type="button"
                   onClick={() => setShowNewPatientModal(false)}
-                  className="px-4 py-2 border border-slate-300 rounded-lg font-bold text-slate-600 hover:bg-slate-50"
+                  disabled={savingPatient}
+                  className="px-4 py-2 border border-slate-300 rounded-lg font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-50"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow-sm transition"
+                  disabled={savingPatient}
+                  className="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg font-bold shadow-sm transition flex items-center gap-2"
                 >
-                  Salvar Paciente
+                  {savingPatient ? (
+                    <>
+                      <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                      Salvando Candidato...
+                    </>
+                  ) : (
+                    'Salvar Paciente'
+                  )}
                 </button>
               </div>
             </form>

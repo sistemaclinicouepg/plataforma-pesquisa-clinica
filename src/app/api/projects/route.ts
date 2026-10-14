@@ -63,7 +63,7 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const currentUser = await getCurrentUser();
-    const { name, description } = await req.json();
+    const { name, description, anamnesisTemplate } = await req.json();
 
     if (!name) {
       return NextResponse.json({ error: 'O nome do projeto é obrigatório.' }, { status: 400 });
@@ -80,6 +80,9 @@ export async function POST(req: Request) {
       data: {
         name: name.trim(),
         description: description?.trim() || null,
+        anamnesisTemplate: anamnesisTemplate
+          ? (typeof anamnesisTemplate === 'string' ? anamnesisTemplate : JSON.stringify(anamnesisTemplate))
+          : null,
       },
     });
 
