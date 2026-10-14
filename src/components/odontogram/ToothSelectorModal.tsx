@@ -83,7 +83,7 @@ export const ToothSelectorModal: React.FC<ToothSelectorModalProps> = ({
       <div className="bg-slate-100 rounded-3xl shadow-2xl border border-slate-300 w-full max-w-4xl overflow-hidden my-auto max-h-[95vh] flex flex-col">
         
         {/* Cabeçalho Azul Institucional idêntico ao da imagem */}
-        <div className="bg-[#004799] text-white px-6 py-4 flex items-center justify-between shrink-0 shadow-sm">
+        <div className="bg-[#004799] text-white px-6 py-4 flex items-center justify-between shrink-0">
           <div className="flex items-center space-x-3">
             <span className="text-2xl">🦷</span>
             <div>
@@ -128,7 +128,7 @@ export const ToothSelectorModal: React.FC<ToothSelectorModalProps> = ({
           <button
             type="button"
             onClick={handleNA}
-            className="px-5 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition shadow-2xs cursor-pointer"
+            className="px-5 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition cursor-pointer"
           >
             N/A
           </button>
@@ -145,7 +145,7 @@ export const ToothSelectorModal: React.FC<ToothSelectorModalProps> = ({
             <button
               type="button"
               onClick={handleConfirm}
-              className="px-6 py-2.5 rounded-xl bg-[#2e3b4e] hover:bg-[#1e293b] text-white text-xs font-bold shadow-sm transition flex items-center space-x-2 cursor-pointer"
+              className="px-6 py-2.5 rounded-xl bg-[#2e3b4e] hover:bg-[#1e293b] text-white text-xs font-bold transition flex items-center space-x-2 cursor-pointer"
             >
               <span>Confirmar</span>
               {mode === 'selection' && (
