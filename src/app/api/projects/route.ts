@@ -2,11 +2,33 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/auth';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     const currentUser = await getCurrentUser();
 
     // Se estiver logado, busca os projetos vinculados; caso contrário, busca todos para modo demonstração
+    const selectFields = {
+      id: true,
+      name: true,
+      description: true,
+      createdAt: true,
+      members: {
+        include: {
+          user: {
+            select: { id: true, name: true, email: true },
+          },
+        },
+      },
+      participants: {
+        select: { id: true, status: true },
+      },
+      forms: {
+        select: { id: true, title: true },
+      },
+    };
+
     let projects;
     if (currentUser) {
       projects = await prisma.project.findMany({
@@ -15,40 +37,12 @@ export async function GET() {
             some: { userId: currentUser.id },
           },
         },
-        include: {
-          members: {
-            include: {
-              user: {
-                select: { id: true, name: true, email: true },
-              },
-            },
-          },
-          participants: {
-            select: { id: true, status: true },
-          },
-          forms: {
-            select: { id: true, title: true },
-          },
-        },
+        select: selectFields,
         orderBy: { createdAt: 'desc' },
       });
     } else {
       projects = await prisma.project.findMany({
-        include: {
-          members: {
-            include: {
-              user: {
-                select: { id: true, name: true, email: true },
-              },
-            },
-          },
-          participants: {
-            select: { id: true, status: true },
-          },
-          forms: {
-            select: { id: true, title: true },
-          },
-        },
+        select: selectFields,
         orderBy: { createdAt: 'desc' },
       });
     }

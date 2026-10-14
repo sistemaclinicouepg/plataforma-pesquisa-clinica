@@ -16,6 +16,9 @@ import {
   FolderPlus,
   Users,
   Sparkles,
+  RefreshCw,
+  AlertTriangle,
+  LogIn,
 } from 'lucide-react';
 
 type Project = {
@@ -53,6 +56,8 @@ export default function ProjetosPage() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [pendingUsers, setPendingUsers] = useState<PendingUser[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   
   // Modal de criação de projeto com particularidades da pesquisa
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -64,33 +69,96 @@ export default function ProjetosPage() {
   const [enableAnamnesis, setEnableAnamnesis] = useState(true);
   const [creating, setCreating] = useState(false);
 
-  const loadData = async () => {
+  const loadData = async (isManualRefresh: boolean = false) => {
+    if (isManualRefresh) setIsRefreshing(true);
+    setLoadError(null);
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 12000);
+
     try {
-      setLoading(true);
-      const res = await fetch('/api/projects');
+      const res = await fetch('/api/projects', {
+        signal: controller.signal,
+        cache: 'no-store',
+      });
+      clearTimeout(timeoutId);
+
+      // Se a sessão expirou, redireciona para o login
+      if (res.status === 401) {
+        if (typeof window !== 'undefined') {
+          window.location.href = '/login?from=/projetos';
+        }
+        return;
+      }
+
       if (res.ok) {
         const data = await res.json();
-        setProjects(data.projects || []);
+        const projectList = data.projects || [];
+        setProjects(projectList);
         setCurrentUser(data.currentUser || null);
 
-        // Se for admin, busca usuários pendentes de aprovação
-        if (data.currentUser?.role === 'ADMIN') {
-          const usersRes = await fetch('/api/admin/users');
-          if (usersRes.ok) {
-            const usersData = await usersRes.json();
-            const pending = (usersData.users || []).filter((u: any) => !u.isApproved);
-            setPendingUsers(pending);
+        // Salva no cache local para renderização instantânea nas próximas visitas
+        try {
+          localStorage.setItem('uepg_cached_projects', JSON.stringify(projectList));
+          if (data.currentUser) {
+            localStorage.setItem('uepg_cached_user', JSON.stringify(data.currentUser));
           }
+        } catch (e) {}
+
+        // Libera loading imediatamente para os projetos aparecerem
+        setLoading(false);
+
+        // Se for admin, carrega aprovações em segundo plano de forma não-bloqueante
+        if (data.currentUser?.role === 'ADMIN') {
+          fetch('/api/admin/users')
+            .then((r) => (r.ok ? r.json() : null))
+            .then((uData) => {
+              if (uData?.users) {
+                const pending = uData.users.filter((u: any) => !u.isApproved);
+                setPendingUsers(pending);
+              }
+            })
+            .catch(() => {});
         }
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        setLoadError(errData.error || 'Não foi possível carregar os dados mais recentes do servidor.');
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error('Erro ao carregar projetos:', e);
+      if (e.name === 'AbortError') {
+        setLoadError('A conexão com o banco de dados demorou para responder. Clique para tentar novamente.');
+      } else {
+        setLoadError('Não foi possível conectar ao banco de dados no momento.');
+      }
     } finally {
+      clearTimeout(timeoutId);
       setLoading(false);
+      setIsRefreshing(false);
     }
   };
 
   useEffect(() => {
+    // 1. Carregamento instantâneo via Cache Local (SWR)
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = localStorage.getItem('uepg_cached_projects');
+        const cachedUser = localStorage.getItem('uepg_cached_user');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setProjects(parsed);
+            setLoading(false); // Exibe imediatamente em 0 ms!
+          }
+        }
+        if (cachedUser) {
+          setCurrentUser(JSON.parse(cachedUser));
+        }
+      } catch (e) {
+        console.warn('Erro ao ler cache local de projetos:', e);
+      }
+    }
+
     loadData();
   }, []);
 
@@ -213,7 +281,17 @@ export default function ProjetosPage() {
 
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
           <div>
-            <h1 className="text-3xl font-extrabold text-slate-900">Meus Projetos</h1>
+            <h1 className="text-3xl font-extrabold text-slate-900 flex items-center gap-3">
+              <span>Meus Projetos</span>
+              <button
+                onClick={() => loadData(true)}
+                disabled={isRefreshing || loading}
+                title="Recarregar projetos do banco de dados"
+                className="p-1.5 text-slate-400 hover:text-blue-600 rounded-lg hover:bg-slate-100 transition disabled:opacity-50"
+              >
+                <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-blue-600' : ''}`} />
+              </button>
+            </h1>
             <p className="text-slate-500 mt-1">
               Selecione uma pesquisa para acessar a triagem, disparar mensagens de acompanhamento ou editar formulários.
             </p>
@@ -227,20 +305,69 @@ export default function ProjetosPage() {
           </button>
         </div>
 
-        {/* Estado de Carregamento */}
-        {loading && (
-          <div className="py-16 text-center text-slate-400">
-            <p className="animate-pulse">Carregando projetos do banco de dados...</p>
+        {/* Alerta de Erro de Conexão (quando temos versão em cache) */}
+        {loadError && projects.length > 0 && (
+          <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-amber-900 shadow-xs">
+            <div className="flex items-center space-x-2">
+              <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+              <span>{loadError} Exibindo versão local em cache.</span>
+            </div>
+            <button
+              onClick={() => loadData(true)}
+              className="px-3 py-1.5 bg-amber-200 hover:bg-amber-300 font-bold rounded-lg transition shrink-0"
+            >
+              Tentar Novamente
+            </button>
+          </div>
+        )}
+
+        {/* Estado de Carregamento Inicial (Apenas se não houver projetos em cache) */}
+        {loading && projects.length === 0 && (
+          <div className="py-20 text-center text-slate-500 bg-white rounded-2xl border border-slate-200 p-8 shadow-xs max-w-md mx-auto my-8">
+            <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 mx-auto flex items-center justify-center mb-4">
+              <RefreshCw className="w-6 h-6 animate-spin text-blue-600" />
+            </div>
+            <h3 className="text-base font-bold text-slate-800">Carregando projetos de pesquisa...</h3>
+            <p className="text-xs text-slate-400 mt-1 max-w-xs mx-auto">
+              Conectando com segurança ao banco de dados clínico da UEPG.
+            </p>
+          </div>
+        )}
+
+        {/* Estado de Erro Grave (Sem cache e falha de conexão) */}
+        {!loading && loadError && projects.length === 0 && (
+          <div className="py-12 text-center text-slate-700 bg-white rounded-2xl border border-red-200 p-8 shadow-xs max-w-lg mx-auto my-8">
+            <div className="w-12 h-12 rounded-2xl bg-red-50 text-red-600 mx-auto flex items-center justify-center mb-4">
+              <AlertTriangle className="w-6 h-6 text-red-600" />
+            </div>
+            <h3 className="text-base font-bold text-slate-900 mb-1">Não foi possível carregar os projetos</h3>
+            <p className="text-xs text-slate-500 mb-6">{loadError}</p>
+            <div className="flex justify-center gap-3">
+              <button
+                onClick={() => loadData(true)}
+                className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-2"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span>Tentar Novamente</span>
+              </button>
+              <Link
+                href="/login?from=/projetos"
+                className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition flex items-center gap-1.5"
+              >
+                <LogIn className="w-3.5 h-3.5" />
+                <span>Entrar Novamente</span>
+              </Link>
+            </div>
           </div>
         )}
 
         {/* Grid de Projetos */}
-        {!loading && (
+        {(projects.length > 0 || (!loading && !loadError)) && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             
             {projects.map((project) => {
-              const myMember = project.members.find(
-                (m) => m.user.id === currentUser?.id
+              const myMember = (project.members || []).find(
+                (m) => m.user?.id === currentUser?.id
               );
               const roleLabels: Record<string, string> = {
                 COORDINATOR: 'Coordenador',
@@ -250,8 +377,8 @@ export default function ProjetosPage() {
               };
               const roleName = roleLabels[myMember?.role || ''] || 'Coordenador';
               const isBlinded = myMember?.isBlinded ?? false;
-              const approvedCount = project.participants.filter(p => p.status === 'APPROVED').length;
-              const pendingCount = project.participants.filter(p => p.status === 'PENDING').length;
+              const approvedCount = (project.participants || []).filter(p => p.status === 'APPROVED').length;
+              const pendingCount = (project.participants || []).filter(p => p.status === 'PENDING').length;
 
               return (
                 <div
