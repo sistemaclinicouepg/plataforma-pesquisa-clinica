@@ -63,13 +63,13 @@ export const TOOTH_STATUS_CONFIG: Record<
     badge: 'bg-slate-400',
   },
   FACETA: {
-    label: 'Faceta / Coroa',
-    bg: 'bg-purple-50',
-    text: 'text-purple-700',
-    border: 'border-purple-300',
-    fill: '#faf5ff',
-    stroke: '#9333ea',
-    badge: 'bg-purple-500',
+    label: 'Prótese',
+    bg: 'bg-amber-50',
+    text: 'text-amber-800',
+    border: 'border-amber-300',
+    fill: '#fef3c7',
+    stroke: '#d97706',
+    badge: 'bg-amber-500',
   },
 };
 

@@ -4255,13 +4255,13 @@ function DashboardContent() {
           HIGIDO: { label: 'Hígido', bg: 'bg-emerald-100', text: 'text-emerald-800', border: 'border-emerald-300' },
           RESTAURADO: { label: 'Restaurado', bg: 'bg-blue-100', text: 'text-blue-800', border: 'border-blue-300' },
           CARIE: { label: 'Cárie', bg: 'bg-red-100', text: 'text-red-800', border: 'border-red-300' },
+          FACETA: { label: 'Prótese', bg: 'bg-amber-100', text: 'text-amber-900', border: 'border-amber-300' },
           AUSENTE: { label: 'Ausente', bg: 'bg-slate-200', text: 'text-slate-700', border: 'border-slate-300' },
-          FACETA: { label: 'Faceta/Coroa', bg: 'bg-purple-100', text: 'text-purple-800', border: 'border-purple-300' },
         };
 
         const cycleToothStatus = (tooth: string) => {
           const current = anamnesisData.odontogram[tooth] || 'HIGIDO';
-          const order = ['HIGIDO', 'RESTAURADO', 'CARIE', 'AUSENTE', 'FACETA'];
+          const order = ['HIGIDO', 'RESTAURADO', 'CARIE', 'FACETA', 'AUSENTE'];
           const nextIdx = (order.indexOf(current) + 1) % order.length;
           setAnamnesisData({
             ...anamnesisData,

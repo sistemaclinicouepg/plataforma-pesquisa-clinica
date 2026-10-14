@@ -99,7 +99,7 @@ export const OdontogramChart: React.FC<OdontogramChartProps> = ({
     } else {
       // Modo Ciclo Sequencial
       const current = localStatusMap[tooth] || 'HIGIDO';
-      const sequence: ToothStatus[] = ['HIGIDO', 'RESTAURADO', 'CARIE', 'AUSENTE', 'FACETA'];
+      const sequence: ToothStatus[] = ['HIGIDO', 'RESTAURADO', 'CARIE', 'FACETA', 'AUSENTE'];
       const nextIdx = (sequence.indexOf(current) + 1) % sequence.length;
       applyToothStatus(tooth, sequence[nextIdx]);
     }
@@ -223,7 +223,7 @@ export const OdontogramChart: React.FC<OdontogramChartProps> = ({
                   ? 'REST'
                   : status === 'CARIE'
                   ? 'CÁRIE'
-                  : 'FAC'}
+                  : 'PRÓT'}
               </span>
             )}
           </div>
@@ -247,103 +247,109 @@ export const OdontogramChart: React.FC<OdontogramChartProps> = ({
       {/* Permite selecionar um status e ir clicando nos dentes!       */}
       {/* ============================================================ */}
       {!readOnly && mode === 'clinical_status' && (
-        <div className="p-3.5 bg-slate-900 text-white rounded-2xl border border-slate-800 space-y-3 animate-fadeIn">
+        <div className="p-3.5 bg-white text-slate-800 rounded-2xl border border-slate-200/90 shadow-xs space-y-3 animate-fadeIn">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center space-x-2">
-              <Paintbrush className="w-4 h-4 text-slate-300" />
-              <span className="text-xs font-bold text-slate-200 uppercase tracking-wider">
+              <Paintbrush className="w-4 h-4 text-blue-600" />
+              <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
                 Pincel Clínico Ativo:
               </span>
             </div>
 
-            <span className="text-[11px] text-slate-200 font-semibold bg-slate-800 px-3 py-1 rounded-full border border-slate-700">
+            <span className="text-[11px] text-slate-600 font-semibold bg-slate-100 px-3 py-1 rounded-full border border-slate-200">
               {activeBrush === 'CYCLE' ? (
                 'Modo Ciclo: Clique no dente para alternar sequencialmente'
               ) : (
                 <span>
-                  Pincel Ativo: <strong className="text-amber-300 font-bold underline">{TOOTH_STATUS_CONFIG[activeBrush]?.label}</strong> (Clique nos dentes para aplicar em sequência)
+                  Pincel Ativo: <strong className="text-slate-900 font-bold underline decoration-blue-500">{TOOTH_STATUS_CONFIG[activeBrush]?.label}</strong> (Clique nos dentes para aplicar)
                 </span>
               )}
             </span>
           </div>
 
-          {/* Botões seletores de ferramenta/pincel */}
+          {/* Botões seletores de ferramenta/pincel ordenados conforme a sequência clínica */}
           <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-xs">
-            <button
-              type="button"
-              onClick={() => setActiveBrush('AUSENTE')}
-              className={`px-3 py-1.5 rounded-xl font-bold transition flex items-center space-x-1.5 cursor-pointer ${
-                activeBrush === 'AUSENTE'
-                  ? 'bg-slate-700 text-white ring-2 ring-red-400 scale-105'
-                  : 'bg-slate-800/90 hover:bg-slate-700 text-slate-300'
-              }`}
-            >
-              <span className="w-2.5 h-2.5 rounded-full bg-slate-400" />
-              <span>Ausente (Extraído)</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveBrush('CARIE')}
-              className={`px-3 py-1.5 rounded-xl font-bold transition flex items-center space-x-1.5 cursor-pointer ${
-                activeBrush === 'CARIE'
-                  ? 'bg-red-600 text-white ring-2 ring-red-300 scale-105'
-                  : 'bg-slate-800/90 hover:bg-slate-700 text-slate-300'
-              }`}
-            >
-              <span className="w-2.5 h-2.5 rounded-full bg-red-400" />
-              <span>Cárie</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveBrush('RESTAURADO')}
-              className={`px-3 py-1.5 rounded-xl font-bold transition flex items-center space-x-1.5 cursor-pointer ${
-                activeBrush === 'RESTAURADO'
-                  ? 'bg-blue-600 text-white ring-2 ring-blue-300 scale-105'
-                  : 'bg-slate-800/90 hover:bg-slate-700 text-slate-300'
-              }`}
-            >
-              <span className="w-2.5 h-2.5 rounded-full bg-blue-400" />
-              <span>Restaurado</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveBrush('FACETA')}
-              className={`px-3 py-1.5 rounded-xl font-bold transition flex items-center space-x-1.5 cursor-pointer ${
-                activeBrush === 'FACETA'
-                  ? 'bg-purple-600 text-white ring-2 ring-purple-300 scale-105'
-                  : 'bg-slate-800/90 hover:bg-slate-700 text-slate-300'
-              }`}
-            >
-              <span className="w-2.5 h-2.5 rounded-full bg-purple-400" />
-              <span>Faceta / Coroa</span>
-            </button>
-
+            {/* 1. Hígido (Normal) */}
             <button
               type="button"
               onClick={() => setActiveBrush('HIGIDO')}
               className={`px-3 py-1.5 rounded-xl font-bold transition flex items-center space-x-1.5 cursor-pointer ${
                 activeBrush === 'HIGIDO'
-                  ? 'bg-emerald-600 text-white ring-2 ring-emerald-300 scale-105'
-                  : 'bg-slate-800/90 hover:bg-slate-700 text-slate-300'
+                  ? 'bg-emerald-50 text-emerald-900 border-2 border-emerald-500 shadow-xs scale-105'
+                  : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200'
               }`}
             >
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
               <span>Hígido (Normal)</span>
             </button>
 
+            {/* 2. Restaurado */}
+            <button
+              type="button"
+              onClick={() => setActiveBrush('RESTAURADO')}
+              className={`px-3 py-1.5 rounded-xl font-bold transition flex items-center space-x-1.5 cursor-pointer ${
+                activeBrush === 'RESTAURADO'
+                  ? 'bg-blue-50 text-blue-900 border-2 border-blue-500 shadow-xs scale-105'
+                  : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200'
+              }`}
+            >
+              <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
+              <span>Restaurado</span>
+            </button>
+
+            {/* 3. Cárie */}
+            <button
+              type="button"
+              onClick={() => setActiveBrush('CARIE')}
+              className={`px-3 py-1.5 rounded-xl font-bold transition flex items-center space-x-1.5 cursor-pointer ${
+                activeBrush === 'CARIE'
+                  ? 'bg-red-50 text-red-900 border-2 border-red-500 shadow-xs scale-105'
+                  : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200'
+              }`}
+            >
+              <span className="w-2.5 h-2.5 rounded-full bg-red-500" />
+              <span>Cárie</span>
+            </button>
+
+            {/* 4. Prótese (Dourado / Âmbar acessível para daltônicos) */}
+            <button
+              type="button"
+              onClick={() => setActiveBrush('FACETA')}
+              className={`px-3 py-1.5 rounded-xl font-bold transition flex items-center space-x-1.5 cursor-pointer ${
+                activeBrush === 'FACETA'
+                  ? 'bg-amber-50 text-amber-950 border-2 border-amber-500 shadow-xs scale-105'
+                  : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200'
+              }`}
+            >
+              <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+              <span>Prótese</span>
+            </button>
+
+            {/* 5. Ausente (Extraído) */}
+            <button
+              type="button"
+              onClick={() => setActiveBrush('AUSENTE')}
+              className={`px-3 py-1.5 rounded-xl font-bold transition flex items-center space-x-1.5 cursor-pointer ${
+                activeBrush === 'AUSENTE'
+                  ? 'bg-slate-200 text-slate-900 border-2 border-slate-500 shadow-xs scale-105'
+                  : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200'
+              }`}
+            >
+              <span className="w-2.5 h-2.5 rounded-full bg-slate-500" />
+              <span>Ausente (Extraído)</span>
+            </button>
+
+            {/* 6. Alternar (Ciclo) */}
             <button
               type="button"
               onClick={() => setActiveBrush('CYCLE')}
               className={`px-3 py-1.5 rounded-xl font-bold transition flex items-center space-x-1.5 cursor-pointer ${
                 activeBrush === 'CYCLE'
-                  ? 'bg-amber-600 text-white ring-2 ring-amber-300 scale-105'
-                  : 'bg-slate-800/90 hover:bg-slate-700 text-slate-300'
+                  ? 'bg-indigo-50 text-indigo-950 border-2 border-indigo-500 shadow-xs scale-105'
+                  : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200'
               }`}
             >
-              <RotateCcw className="w-3.5 h-3.5 text-amber-300" />
+              <RotateCcw className="w-3.5 h-3.5 text-indigo-600" />
               <span>Alternar (Ciclo)</span>
             </button>
           </div>
@@ -391,10 +397,6 @@ export const OdontogramChart: React.FC<OdontogramChartProps> = ({
                 <span className="w-2 h-2 rounded-full bg-emerald-500 mr-1" /> {stats.higido} Hígidos
               </span>
               <span>•</span>
-              <span className="flex items-center text-slate-600">
-                <span className="w-2 h-2 rounded-full bg-slate-400 mr-1" /> {stats.ausente} Ausentes
-              </span>
-              <span>•</span>
               <span className="flex items-center text-blue-700">
                 <span className="w-2 h-2 rounded-full bg-blue-500 mr-1" /> {stats.restaurado} Rest.
               </span>
@@ -405,11 +407,15 @@ export const OdontogramChart: React.FC<OdontogramChartProps> = ({
               {stats.faceta > 0 && (
                 <>
                   <span>•</span>
-                  <span className="flex items-center text-purple-700">
-                    <span className="w-2 h-2 rounded-full bg-purple-500 mr-1" /> {stats.faceta} Facetas
+                  <span className="flex items-center text-amber-800">
+                    <span className="w-2 h-2 rounded-full bg-amber-500 mr-1" /> {stats.faceta} Próteses
                   </span>
                 </>
               )}
+              <span>•</span>
+              <span className="flex items-center text-slate-600">
+                <span className="w-2 h-2 rounded-full bg-slate-400 mr-1" /> {stats.ausente} Ausentes
+              </span>
             </div>
           )}
         </div>
@@ -583,13 +589,13 @@ export const OdontogramChart: React.FC<OdontogramChartProps> = ({
             <span className="w-2.5 h-2.5 rounded-full bg-blue-500 mr-1.5" /> Restaurado (Resina Azul)
           </span>
           <span className="flex items-center">
-            <span className="w-2.5 h-2.5 rounded-full bg-red-500 mr-1.5" /> Cárie (Lesão Vermelha)
+            <span className="w-2.5 h-2.5 rounded-full bg-red-500 mr-1.5" /> Cárie (Lesão Ativa)
           </span>
           <span className="flex items-center">
-            <span className="w-2.5 h-2.5 rounded-full bg-slate-400 mr-1.5" /> Ausente (Cruz Vermelha)
+            <span className="w-2.5 h-2.5 rounded-full bg-amber-500 mr-1.5" /> Prótese (Âmbar / Dourado)
           </span>
           <span className="flex items-center">
-            <span className="w-2.5 h-2.5 rounded-full bg-purple-500 mr-1.5" /> Faceta / Coroa (Roxo)
+            <span className="w-2.5 h-2.5 rounded-full bg-slate-400 mr-1.5" /> Ausente (Extraído)
           </span>
         </div>
       )}
