@@ -3,6 +3,21 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import {
+  CheckCircle2,
+  Clock,
+  AlertTriangle,
+  Stethoscope,
+  EyeOff,
+  ShieldCheck,
+  Smartphone,
+  KeyRound,
+  ArrowRight,
+  Mail,
+  Lock,
+  Loader2,
+} from 'lucide-react';
+
 
 export default function LoginPage() {
   const router = useRouter();
@@ -102,7 +117,7 @@ export default function LoginPage() {
           {successMessage && (
             <div className="p-4 bg-emerald-50 border border-emerald-300 rounded-2xl text-xs text-emerald-800 font-semibold space-y-1 animate-fadeIn">
               <p className="font-bold flex items-center space-x-1.5 text-sm">
-                <span>✓</span>
+                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                 <span>Solicitação Enviada!</span>
               </p>
               <p>{successMessage}</p>
@@ -113,7 +128,7 @@ export default function LoginPage() {
           {isPendingApproval && (
             <div className="p-4 bg-amber-50 border border-amber-300 rounded-2xl text-xs text-amber-900 font-semibold space-y-1 animate-fadeIn">
               <p className="font-bold flex items-center space-x-1.5 text-sm">
-                <span>⏳</span>
+                <Clock className="w-4 h-4 text-amber-600" />
                 <span>Conta Aguardando Aprovação</span>
               </p>
               <p>
@@ -124,8 +139,9 @@ export default function LoginPage() {
 
           {/* Mensagem de Erro */}
           {error && !isPendingApproval && (
-            <div className="p-4 bg-red-50 border border-red-300 rounded-2xl text-xs text-red-800 font-bold animate-fadeIn">
-              ⚠️ {error}
+            <div className="p-4 bg-red-50 border border-red-300 rounded-2xl text-xs text-red-800 font-bold flex items-center space-x-1.5 animate-fadeIn">
+              <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
+              <span>{error}</span>
             </div>
           )}
 
@@ -183,7 +199,13 @@ export default function LoginPage() {
                 disabled={loading}
                 className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-xs transition disabled:opacity-50 flex items-center justify-center space-x-2"
               >
-                <span>{loading ? '⏳' : isRequestingAccess ? '📨' : '🔐'}</span>
+                {loading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : isRequestingAccess ? (
+                  <Mail className="w-4 h-4" />
+                ) : (
+                  <Lock className="w-4 h-4" />
+                )}
                 <span>
                   {loading
                     ? 'Validando...'
@@ -215,8 +237,9 @@ export default function LoginPage() {
           {/* Atalhos para Testes e Demonstração */}
           <div className="pt-4 border-t border-slate-100 space-y-2.5">
             <div className="flex items-center justify-between">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                🧪 Credenciais de Teste (Atalhos Rápidos):
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center space-x-1">
+                <KeyRound className="w-3 h-3 text-slate-400" />
+                <span>Credenciais de Demonstração:</span>
               </p>
               <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full">
                 Ativo no Banco Neon
@@ -231,7 +254,7 @@ export default function LoginPage() {
               >
                 <div>
                   <div className="font-bold flex items-center space-x-1.5">
-                    <span>👩‍⚕️</span>
+                    <Stethoscope className="w-3.5 h-3.5 text-blue-700" />
                     <span>Dra. Roberta (Coordenadora de Estudos)</span>
                   </div>
                   <span className="text-[10px] text-blue-700 block mt-0.5">
@@ -250,7 +273,7 @@ export default function LoginPage() {
               >
                 <div>
                   <div className="font-bold flex items-center space-x-1.5">
-                    <span>🎓</span>
+                    <EyeOff className="w-3.5 h-3.5 text-amber-700" />
                     <span>Carlos Eduardo (Avaliador Cego)</span>
                   </div>
                   <span className="text-[10px] text-amber-700 block mt-0.5">
@@ -269,7 +292,7 @@ export default function LoginPage() {
               >
                 <div>
                   <div className="font-bold flex items-center space-x-1.5">
-                    <span>👑</span>
+                    <ShieldCheck className="w-3.5 h-3.5 text-purple-700" />
                     <span>Dra. Alessandra (Administradora Geral)</span>
                   </div>
                   <span className="text-[10px] text-purple-700 block mt-0.5">
@@ -288,11 +311,11 @@ export default function LoginPage() {
               >
                 <div>
                   <div className="font-bold flex items-center space-x-1.5 text-slate-700">
-                    <span>⏳</span>
+                    <Clock className="w-3.5 h-3.5 text-slate-500" />
                     <span>Lucas Penteado (Pendente de Aprovação)</span>
                   </div>
                   <span className="text-[10px] text-slate-500 block mt-0.5">
-                    pendente@uepg.br • senha: 123 (Testa bloqueio ético)
+                    pendente@uepg.br • senha: 123 (Bloqueio ético)
                   </span>
                 </div>
                 <span className="text-[10px] bg-slate-500 group-hover:bg-slate-600 text-white font-bold px-2.5 py-1 rounded-md transition shadow-2xs">
@@ -306,9 +329,9 @@ export default function LoginPage() {
           <div className="pt-2 text-center border-t border-slate-100">
             <Link
               href="/paciente"
-              className="text-xs text-emerald-700 hover:text-emerald-900 font-semibold inline-flex items-center space-x-1"
+              className="text-xs text-emerald-700 hover:text-emerald-900 font-semibold inline-flex items-center space-x-1.5"
             >
-              <span>📱</span>
+              <Smartphone className="w-3.5 h-3.5 text-emerald-600" />
               <span>Você é voluntário(a) de uma pesquisa? Acesse o Portal do Paciente →</span>
             </Link>
           </div>

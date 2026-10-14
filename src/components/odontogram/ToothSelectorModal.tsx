@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { OdontogramChart } from './OdontogramChart';
 import { ToothStatus } from './teethData';
+import { X } from 'lucide-react';
 
 export interface ToothSelectorModalProps {
   isOpen: boolean;
@@ -85,7 +86,11 @@ export const ToothSelectorModal: React.FC<ToothSelectorModalProps> = ({
         {/* Cabeçalho Azul Institucional idêntico ao da imagem */}
         <div className="bg-[#004799] text-white px-6 py-4 flex items-center justify-between shrink-0">
           <div className="flex items-center space-x-3">
-            <span className="text-2xl">🦷</span>
+            <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
+              <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 8c0-3 2-6 8-6s8 3 8 6c0 3-1 6-2 9s-2 5-4 5c-1.5 0-2-2-2-3 0 1-.5 3-2 3-2 0-3-2-4-5S4 11 4 8z"/>
+              </svg>
+            </div>
             <div>
               <h2 className="text-lg sm:text-xl font-bold tracking-tight text-white leading-tight">
                 {title}
@@ -102,10 +107,10 @@ export const ToothSelectorModal: React.FC<ToothSelectorModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="w-9 h-9 rounded-full bg-blue-800/80 hover:bg-blue-700 text-white flex items-center justify-center font-bold text-lg transition cursor-pointer"
+            className="w-9 h-9 rounded-full bg-blue-800/80 hover:bg-blue-700 text-white flex items-center justify-center transition cursor-pointer"
             title="Fechar"
           >
-            ✕
+            <X className="w-5 h-5" />
           </button>
         </div>
 

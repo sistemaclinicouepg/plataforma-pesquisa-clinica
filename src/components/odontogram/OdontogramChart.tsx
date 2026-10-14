@@ -21,6 +21,7 @@ import {
   TOOTH_STATUS_CONFIG,
 } from './teethData';
 import { ToothSvg } from './ToothSvg';
+import { Paintbrush, RotateCcw, Check, Sparkles, ChevronDown, ChevronUp } from 'lucide-react';
 
 export type ToolMode = ToothStatus | 'CYCLE';
 
@@ -230,8 +231,8 @@ export const OdontogramChart: React.FC<OdontogramChartProps> = ({
 
         {/* Checkmark no modo seleção */}
         {mode === 'selection' && isSelected && (
-          <span className="absolute -top-1 -right-1 w-4 h-4 bg-blue-600 text-white rounded-full text-[9px] font-bold flex items-center justify-center">
-            ✓
+          <span className="absolute -top-1 -right-1 w-4 h-4 bg-blue-600 text-white rounded-full flex items-center justify-center shadow-xs">
+            <Check className="w-2.5 h-2.5 stroke-[3]" />
           </span>
         )}
       </div>
@@ -249,7 +250,7 @@ export const OdontogramChart: React.FC<OdontogramChartProps> = ({
         <div className="p-3.5 bg-slate-900 text-white rounded-2xl border border-slate-800 space-y-3 animate-fadeIn">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center space-x-2">
-              <span className="text-base">🖌️</span>
+              <Paintbrush className="w-4 h-4 text-slate-300" />
               <span className="text-xs font-bold text-slate-200 uppercase tracking-wider">
                 Pincel Clínico Ativo:
               </span>
@@ -257,7 +258,7 @@ export const OdontogramChart: React.FC<OdontogramChartProps> = ({
 
             <span className="text-[11px] text-slate-200 font-semibold bg-slate-800 px-3 py-1 rounded-full border border-slate-700">
               {activeBrush === 'CYCLE' ? (
-                '🔄 Modo Ciclo: Clique no dente para alternar sequencialmente'
+                'Modo Ciclo: Clique no dente para alternar sequencialmente'
               ) : (
                 <span>
                   Pincel Ativo: <strong className="text-amber-300 font-bold underline">{TOOTH_STATUS_CONFIG[activeBrush]?.label}</strong> (Clique nos dentes para aplicar em sequência)
@@ -277,8 +278,8 @@ export const OdontogramChart: React.FC<OdontogramChartProps> = ({
                   : 'bg-slate-800/90 hover:bg-slate-700 text-slate-300'
               }`}
             >
-              <span className="w-2.5 h-2.5 rounded-full bg-red-400" />
-              <span>⚪ Ausente (Extraído)</span>
+              <span className="w-2.5 h-2.5 rounded-full bg-slate-400" />
+              <span>Ausente (Extraído)</span>
             </button>
 
             <button
@@ -291,7 +292,7 @@ export const OdontogramChart: React.FC<OdontogramChartProps> = ({
               }`}
             >
               <span className="w-2.5 h-2.5 rounded-full bg-red-400" />
-              <span>🔴 Cárie</span>
+              <span>Cárie</span>
             </button>
 
             <button
@@ -304,7 +305,7 @@ export const OdontogramChart: React.FC<OdontogramChartProps> = ({
               }`}
             >
               <span className="w-2.5 h-2.5 rounded-full bg-blue-400" />
-              <span>🔵 Restaurado</span>
+              <span>Restaurado</span>
             </button>
 
             <button
@@ -317,7 +318,7 @@ export const OdontogramChart: React.FC<OdontogramChartProps> = ({
               }`}
             >
               <span className="w-2.5 h-2.5 rounded-full bg-purple-400" />
-              <span>🟣 Faceta / Coroa</span>
+              <span>Faceta / Coroa</span>
             </button>
 
             <button
@@ -330,7 +331,7 @@ export const OdontogramChart: React.FC<OdontogramChartProps> = ({
               }`}
             >
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
-              <span>🟢 Hígido (Normal)</span>
+              <span>Hígido (Normal)</span>
             </button>
 
             <button
@@ -342,7 +343,7 @@ export const OdontogramChart: React.FC<OdontogramChartProps> = ({
                   : 'bg-slate-800/90 hover:bg-slate-700 text-slate-300'
               }`}
             >
-              <span>🔄</span>
+              <RotateCcw className="w-3.5 h-3.5 text-amber-300" />
               <span>Alternar (Ciclo)</span>
             </button>
           </div>
@@ -485,11 +486,11 @@ export const OdontogramChart: React.FC<OdontogramChartProps> = ({
               className="w-full px-5 py-3.5 bg-gradient-to-r from-purple-500 to-fuchsia-600 hover:from-purple-600 hover:to-fuchsia-700 text-white font-bold text-xs sm:text-sm flex items-center justify-between transition cursor-pointer"
             >
               <div className="flex items-center space-x-2">
-                <span>🍼</span>
+                <Sparkles className="w-4 h-4 text-white" />
                 <span>Dentes Decíduos (de leite)</span>
               </div>
-              <span className="text-lg transition-transform duration-200">
-                {deciduousOpen ? '▲' : '▼'}
+              <span className="transition-transform duration-200">
+                {deciduousOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
               </span>
             </button>
 

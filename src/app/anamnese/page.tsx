@@ -4,6 +4,21 @@ import React, { useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { OdontogramChart, ToothStatus } from '@/components/odontogram';
+import {
+  ArrowLeft,
+  CheckCircle2,
+  BookOpen,
+  Save,
+  Plus,
+  Trash2,
+  X,
+  Sparkles,
+  Stethoscope,
+  ClipboardList,
+  AlertTriangle,
+  Clock,
+  Folder
+} from 'lucide-react';
 
 export type QuestionType =
   | 'boolean'
@@ -335,15 +350,16 @@ function AnamnesisBuilderContent() {
               <Link
                 key={p.id}
                 href={`/anamnese?projectId=${p.id}`}
-                className="block p-4 rounded-xl border border-slate-200 hover:border-blue-500 hover:bg-blue-50 text-left font-bold text-slate-800 transition"
+                className="flex items-center gap-2 p-4 rounded-xl border border-slate-200 hover:border-blue-500 hover:bg-blue-50 text-left font-bold text-slate-800 transition"
               >
-                📁 {p.name}
+                <Folder className="w-5 h-5 text-blue-600 flex-shrink-0" />
+                <span>{p.name}</span>
               </Link>
             ))}
           </div>
           <div className="mt-6">
-            <Link href="/projetos" className="text-sm font-bold text-blue-600 hover:underline">
-              ← Voltar para Todos os Projetos
+            <Link href="/projetos" className="inline-flex items-center gap-1.5 text-sm font-bold text-blue-600 hover:underline">
+              <ArrowLeft className="w-4 h-4" /> Voltar para Todos os Projetos
             </Link>
           </div>
         </div>
@@ -354,21 +370,23 @@ function AnamnesisBuilderContent() {
   return (
     <div className="min-h-screen bg-slate-100 font-sans text-slate-800 pb-20">
       {/* Barra Superior */}
-      <header className="bg-white border-b border-slate-200 px-6 py-4 sticky top-0 z-20 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <header className="bg-white border-b border-slate-200 px-6 py-4 relative shadow-xs flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex items-center space-x-3">
           <Link
             href={`/dashboard?projectId=${projectId}`}
-            className="text-slate-500 hover:text-blue-600 transition text-sm font-bold"
+            className="text-slate-500 hover:text-blue-600 transition text-sm font-bold inline-flex items-center"
           >
-            ← Painel da Pesquisa
+            <ArrowLeft className="w-3.5 h-3.5 mr-1" />
+            <span>Painel da Pesquisa</span>
           </Link>
           <span className="text-slate-300">|</span>
           <div>
             <h1 className="text-xl font-bold text-slate-900 flex items-center">
               <span>Construtor de Ficha Clínica & Anamnese</span>
               {saveSuccess && (
-                <span className="ml-3 px-3 py-0.5 bg-green-100 text-green-800 text-xs font-bold rounded-full animate-pulse">
-                  ✓ Configuração Salva!
+                <span className="ml-3 px-3 py-0.5 bg-green-100 text-green-800 text-xs font-bold rounded-full inline-flex items-center">
+                  <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
+                  <span>Configuração Salva!</span>
                 </span>
               )}
             </h1>
@@ -383,16 +401,16 @@ function AnamnesisBuilderContent() {
             onClick={() => setShowLibraryModal(true)}
             className="px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl text-xs font-bold transition flex items-center space-x-1.5"
           >
-            <span>📚</span>
+            <BookOpen className="w-3.5 h-3.5" />
             <span>Biblioteca de Perguntas Clínicas</span>
           </button>
 
           <button
             onClick={handleSave}
             disabled={saving || loading}
-            className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-md transition disabled:opacity-50 flex items-center space-x-2"
+            className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-xs transition disabled:opacity-50 flex items-center space-x-2"
           >
-            <span>💾</span>
+            {saving ? <Clock className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
             <span>{saving ? 'Gravando...' : 'Salvar Ficha Clínica'}</span>
           </button>
         </div>
@@ -409,7 +427,7 @@ function AnamnesisBuilderContent() {
                 : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
-            <span>🦷</span>
+            <Sparkles className="w-4 h-4" />
             <span>Odontograma</span>
             {enableOdontogram && (
               <span className="w-2 h-2 rounded-full bg-green-500 inline-block"></span>
@@ -424,7 +442,7 @@ function AnamnesisBuilderContent() {
                 : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
-            <span>🩺</span>
+            <Stethoscope className="w-4 h-4" />
             <span>Periograma (Exame Periodontal)</span>
             {enablePeriodontogram && (
               <span className="w-2 h-2 rounded-full bg-green-500 inline-block"></span>
@@ -439,7 +457,7 @@ function AnamnesisBuilderContent() {
                 : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
-            <span>📋</span>
+            <ClipboardList className="w-4 h-4" />
             <span>Anamnese & Critérios de Elegibilidade ({questions.length})</span>
           </button>
         </div>
@@ -454,7 +472,7 @@ function AnamnesisBuilderContent() {
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-50 p-5 rounded-xl border border-slate-200 gap-4">
                 <div>
                   <h3 className="text-base font-bold text-slate-800 flex items-center">
-                    <span className="mr-2">🦷</span> Módulo de Odontograma Interativo
+                    <Sparkles className="w-4 h-4 text-blue-600 mr-2" /> Módulo de Odontograma Interativo
                   </h3>
                   <p className="text-xs text-slate-500 mt-1">
                     Permite ao examinador marcar dentes hígidos, restaurados, ausentes ou cariados durante a triagem.
@@ -585,7 +603,7 @@ function AnamnesisBuilderContent() {
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-50 p-5 rounded-xl border border-slate-200 gap-4">
                 <div>
                   <h3 className="text-base font-bold text-slate-800 flex items-center">
-                    <span className="mr-2">🩺</span> Módulo de Periograma (Exame Periodontal)
+                    <Stethoscope className="w-4 h-4 text-blue-600 mr-2" /> Módulo de Periograma (Exame Periodontal)
                   </h3>
                   <p className="text-xs text-slate-500 mt-1">
                     Configure quais parâmetros de saúde periodontal e gengival o examinador deverá aferir na triagem.
@@ -751,7 +769,7 @@ function AnamnesisBuilderContent() {
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-50 p-5 rounded-xl border border-slate-200 gap-4">
                 <div>
                   <h3 className="text-base font-bold text-slate-800 flex items-center">
-                    <span className="mr-2">📋</span> Perguntas de Anamnese & Critérios de Elegibilidade
+                    <ClipboardList className="w-4 h-4 text-blue-600 mr-2" /> Perguntas de Anamnese & Critérios de Elegibilidade
                   </h3>
                   <p className="text-xs text-slate-500 mt-1">
                     Crie perguntas personalizadas ou selecione da biblioteca clínica. Defina se a resposta atua como critério de exclusão imediato.
@@ -761,16 +779,16 @@ function AnamnesisBuilderContent() {
                 <div className="flex space-x-2">
                   <button
                     onClick={() => setShowLibraryModal(true)}
-                    className="px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl text-xs font-bold transition flex items-center space-x-1"
+                    className="px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl text-xs font-bold transition flex items-center space-x-1.5"
                   >
-                    <span>📚</span>
+                    <BookOpen className="w-3.5 h-3.5" />
                     <span>Inserir da Biblioteca</span>
                   </button>
                   <button
                     onClick={addCustomQuestion}
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-sm transition flex items-center space-x-1"
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-sm transition flex items-center space-x-1.5"
                   >
-                    <span>+</span>
+                    <Plus className="w-3.5 h-3.5" />
                     <span>Nova Pergunta</span>
                   </button>
                 </div>
@@ -803,18 +821,20 @@ function AnamnesisBuilderContent() {
                             Pergunta Clínica
                           </span>
                           {q.isCriterion && (
-                            <span className="px-2 py-0.5 bg-amber-100 text-amber-800 text-[10px] font-bold rounded-full border border-amber-300">
-                              ⚠️ Critério de Elegibilidade (Desqualifica se: {q.disqualifyIf?.toUpperCase()})
+                            <span className="px-2 py-0.5 bg-amber-100 text-amber-800 text-[10px] font-bold rounded-full border border-amber-300 inline-flex items-center gap-1">
+                              <AlertTriangle className="w-3 h-3 text-amber-700" />
+                              <span>Critério de Elegibilidade (Desqualifica se: {q.disqualifyIf?.toUpperCase()})</span>
                             </span>
                           )}
                         </div>
 
                         <button
                           onClick={() => removeQuestion(q.id)}
-                          className="text-slate-400 hover:text-red-600 text-xs font-bold transition"
+                          className="text-slate-400 hover:text-red-600 text-xs font-bold transition inline-flex items-center gap-1"
                           title="Remover pergunta"
                         >
-                          ✕ Excluir
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Excluir</span>
                         </button>
                       </div>
 
@@ -922,7 +942,7 @@ function AnamnesisBuilderContent() {
             <div className="flex justify-between items-center pb-3 border-b border-slate-100 mb-4">
               <div>
                 <h3 className="text-lg font-bold text-slate-800 flex items-center">
-                  <span className="mr-2">📚</span> Biblioteca Odontológica de Perguntas
+                  <BookOpen className="w-4 h-4 text-indigo-600 mr-2" /> Biblioteca Odontológica de Perguntas
                 </h3>
                 <p className="text-xs text-slate-500">
                   Clique para adicionar qualquer pergunta ou critério relevante ao seu estudo.
@@ -930,9 +950,9 @@ function AnamnesisBuilderContent() {
               </div>
               <button
                 onClick={() => setShowLibraryModal(false)}
-                className="text-slate-400 hover:text-slate-600 font-bold text-lg"
+                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 transition"
               >
-                ✕
+                <X className="w-5 h-5" />
               </button>
             </div>
 

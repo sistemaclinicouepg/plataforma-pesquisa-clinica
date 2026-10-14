@@ -3,6 +3,7 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { ArrowLeft, CheckCircle2, Eye, Save, Clock } from 'lucide-react';
 
 function TcleEditorContent() {
   const searchParams = useSearchParams();
@@ -101,36 +102,40 @@ function TcleEditorContent() {
   return (
     <div className="min-h-screen bg-slate-100 font-sans text-slate-800 pb-20">
       {/* Topbar */}
-      <div className="bg-white border-b border-slate-200 px-6 py-4 flex justify-between items-center sticky top-0 z-20 shadow-xs">
+      <div className="bg-white border-b border-slate-200 px-6 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 relative shadow-xs">
         <div className="flex items-center space-x-4">
-          <Link href={`/dashboard?projectId=${projectId}`} className="text-slate-500 hover:text-blue-600 text-sm font-semibold transition">
-            ← Voltar ao Painel
+          <Link href={`/dashboard?projectId=${projectId}`} className="text-slate-500 hover:text-blue-600 text-sm font-semibold transition inline-flex items-center">
+            <ArrowLeft className="w-3.5 h-3.5 mr-1" />
+            <span>Voltar ao Painel</span>
           </Link>
           <div className="h-5 w-px bg-slate-200" />
           <h1 className="text-xl font-bold text-slate-900">
             Personalizador de TCLE (Consentimento Livre e Esclarecido)
           </h1>
           {savedSuccess && (
-            <span className="px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full text-xs font-bold animate-bounce">
-              ✓ Termo Atualizado com Sucesso!
+            <span className="px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full text-xs font-bold inline-flex items-center gap-1">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700" />
+              <span>Termo Atualizado com Sucesso!</span>
             </span>
           )}
         </div>
 
-        <div className="flex space-x-3">
+        <div className="flex items-center space-x-3">
           <Link
             href={`/tcle/demo?projectId=${projectId}`}
             target="_blank"
-            className="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg text-xs font-bold hover:bg-slate-50 transition"
+            className="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg text-xs font-bold hover:bg-slate-50 transition inline-flex items-center gap-1.5"
           >
-            👁️ Ver Visão do Paciente
+            <Eye className="w-3.5 h-3.5" />
+            <span>Ver Visão do Paciente</span>
           </Link>
           <button
             onClick={handleSave}
             disabled={saving}
-            className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold shadow-sm transition disabled:opacity-50"
+            className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold shadow-xs transition disabled:opacity-50 inline-flex items-center gap-1.5"
           >
-            {saving ? 'Salvando...' : 'Salvar Termo do Estudo'}
+            {saving ? <Clock className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+            <span>{saving ? 'Salvando...' : 'Salvar Termo do Estudo'}</span>
           </button>
         </div>
       </div>

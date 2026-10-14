@@ -3,6 +3,19 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import {
+  FolderKanban,
+  Activity,
+  FileEdit,
+  FileSpreadsheet,
+  ExternalLink,
+  ShieldCheck,
+  EyeOff,
+  Stethoscope,
+  LogOut,
+  AlertTriangle,
+  ArrowRight,
+} from 'lucide-react';
 
 type CurrentUser = {
   id: string;
@@ -97,64 +110,68 @@ export default function AppNav() {
 
   if (!loading && !currentUser && isProtectedPath) {
     return (
-      <div className="bg-amber-500 text-white px-4 py-2 text-xs font-bold flex items-center justify-between shadow-xs sticky top-0 z-50">
+      <div className="bg-amber-600 text-white px-4 py-2 text-xs font-semibold flex items-center justify-between shadow-xs sticky top-0 z-50">
         <div className="flex items-center space-x-2">
-          <span>⚠️</span>
+          <AlertTriangle className="w-4 h-4 text-amber-200 shrink-0" />
           <span>Acesso Restrito ao Pesquisador: Você não está autenticado.</span>
         </div>
         <Link
           href="/login"
-          className="px-3 py-1 bg-white text-amber-900 rounded-lg font-bold shadow-2xs hover:bg-amber-50 transition"
+          className="px-3 py-1 bg-white text-amber-900 rounded-lg font-bold shadow-2xs hover:bg-amber-50 transition flex items-center space-x-1"
         >
-          Fazer Login com Minha Conta →
+          <span>Fazer Login</span>
+          <ArrowRight className="w-3.5 h-3.5" />
         </Link>
       </div>
     );
   }
 
   // Links de navegação baseados na função
-  const isEvaluator = currentUser?.email === 'carlos@uepg.br'; // Identificado como avaliador cego
+  const isEvaluator = currentUser?.email === 'carlos@uepg.br';
   const isAdmin = currentUser?.role === 'ADMIN';
 
   const navLinks = [
-    { href: '/projetos', label: '🏢 Meus Estudos' },
-    { href: `/dashboard?projectId=${activeProjectId}`, label: '📊 Prontuário & Atendimento' },
+    { href: '/projetos', label: 'Estudos', icon: FolderKanban },
+    { href: `/dashboard?projectId=${activeProjectId}`, label: 'Prontuário & Atendimento', icon: Activity },
     {
       href: `/construtor?projectId=${activeProjectId}`,
-      label: '📋 Construtor eCRF',
+      label: 'Construtor eCRF',
+      icon: FileEdit,
       roleBadge: isEvaluator ? 'Leitura' : 'Coordenação',
     },
-    { href: `/relatorio-cep?projectId=${activeProjectId}`, label: '📑 Relatório CEP' },
+    { href: `/relatorio-cep?projectId=${activeProjectId}`, label: 'Relatório CEP', icon: FileSpreadsheet },
   ];
 
   return (
-    <header className="bg-white/95 text-slate-800 border-b border-slate-200/90 text-xs sticky top-0 z-40 shadow-2xs backdrop-blur-md">
-      <div className="max-w-7xl mx-auto px-4 py-2.5 flex flex-col md:flex-row md:items-center justify-between gap-3">
+    <header className="bg-white/95 text-slate-800 border-b border-slate-200/90 text-xs sticky top-0 z-40 shadow-xs backdrop-blur-md">
+      <div className="max-w-7xl mx-auto px-4 py-2 flex flex-col md:flex-row md:items-center justify-between gap-2.5">
         
         {/* Identificação Oficial do Sistema */}
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <Link
             href="/"
-            className="flex items-center space-x-2 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-3 py-1.5 rounded-xl text-blue-900 font-bold tracking-tight text-xs transition"
+            className="flex items-center space-x-2 bg-blue-50/80 hover:bg-blue-100/90 border border-blue-200/80 px-2.5 py-1.5 rounded-lg text-blue-900 font-bold tracking-tight text-xs transition"
           >
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span>ODONTO-PESQUISA UEPG</span>
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="tracking-wide text-[11px] font-black">ODONTO-PESQUISA UEPG</span>
           </Link>
 
           {/* Links Principais da Aplicação */}
           <nav className="flex flex-wrap items-center gap-1">
             {navLinks.map((link) => {
+              const Icon = link.icon;
               const isActive = pathname === link.href.split('?')[0];
               return (
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`px-3 py-1.5 rounded-xl transition-all font-semibold text-xs flex items-center space-x-1.5 ${
+                  className={`px-2.5 py-1.5 rounded-lg transition-all font-semibold text-xs flex items-center space-x-1.5 ${
                     isActive
-                      ? 'bg-blue-600 text-white font-bold shadow-2xs'
+                      ? 'bg-blue-600 text-white font-bold shadow-xs'
                       : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                   }`}
                 >
+                  <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-white' : 'text-slate-500'}`} />
                   <span>{link.label}</span>
                   {link.roleBadge && !isActive && (
                     <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-100 text-slate-500 font-mono">
@@ -168,32 +185,31 @@ export default function AppNav() {
         </div>
 
         {/* Lado Direito: Perfil Autêntico Logado e Controle de Sessão */}
-        <div className="flex items-center space-x-2.5 shrink-0 self-end md:self-center">
-          
+        <div className="flex items-center space-x-2 shrink-0 self-end md:self-center">
           {currentUser ? (
-            <div className="flex items-center space-x-2 bg-slate-50 border border-slate-200 p-1.5 rounded-2xl">
+            <div className="flex items-center space-x-2 bg-slate-50 border border-slate-200 p-1 rounded-xl">
               
               {/* Badge de Função e Cegamento */}
               {isAdmin ? (
-                <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-200 flex items-center space-x-1">
-                  <span>👑</span>
+                <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-200 flex items-center space-x-1">
+                  <ShieldCheck className="w-3 h-3 text-purple-700" />
                   <span>Administrador</span>
                 </span>
               ) : isEvaluator ? (
-                <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300 flex items-center space-x-1">
-                  <span>🔒</span>
+                <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300 flex items-center space-x-1">
+                  <EyeOff className="w-3 h-3 text-amber-700" />
                   <span>Avaliador Cego</span>
                 </span>
               ) : (
-                <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-blue-100 text-blue-900 border border-blue-200 flex items-center space-x-1">
-                  <span>👩‍⚕️</span>
-                  <span>Coordenadora</span>
+                <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-100 text-blue-900 border border-blue-200 flex items-center space-x-1">
+                  <Stethoscope className="w-3 h-3 text-blue-700" />
+                  <span>Coordenação</span>
                 </span>
               )}
 
               {/* Nome do Usuário */}
               <div className="text-left px-1">
-                <span className="block font-bold text-slate-800 text-xs truncate max-w-[130px] sm:max-w-[180px]">
+                <span className="block font-bold text-slate-800 text-xs truncate max-w-[120px] sm:max-w-[160px]">
                   {currentUser.name}
                 </span>
               </div>
@@ -202,19 +218,21 @@ export default function AppNav() {
               <button
                 type="button"
                 onClick={handleLogout}
-                className="px-2.5 py-1 text-slate-500 hover:text-red-700 hover:bg-red-50 rounded-lg text-xs font-bold transition"
+                className="px-2 py-1 text-slate-500 hover:text-red-700 hover:bg-red-50 rounded-md text-xs font-semibold transition flex items-center space-x-1"
                 title="Encerrar sessão"
               >
-                Sair ⎋
+                <LogOut className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Sair</span>
               </button>
             </div>
           ) : (
             <div className="flex items-center space-x-2">
               <Link
                 href="/login"
-                className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-2xs transition"
+                className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold shadow-xs transition flex items-center space-x-1"
               >
-                Entrar com Minha Conta →
+                <span>Entrar</span>
+                <ArrowRight className="w-3.5 h-3.5" />
               </Link>
             </div>
           )}
@@ -224,12 +242,11 @@ export default function AppNav() {
             href={`/paciente?code=${activeParticipantCode}&projectId=${activeProjectId}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold transition flex items-center space-x-1"
+            className="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-lg text-xs font-bold transition flex items-center space-x-1.5"
             title="Abrir a tela externa que o paciente visualiza"
           >
-            <span>📱</span>
+            <ExternalLink className="w-3.5 h-3.5 text-emerald-600" />
             <span className="hidden sm:inline">Portal Paciente</span>
-            <span>↗</span>
           </a>
 
         </div>
@@ -238,3 +255,4 @@ export default function AppNav() {
     </header>
   );
 }
+

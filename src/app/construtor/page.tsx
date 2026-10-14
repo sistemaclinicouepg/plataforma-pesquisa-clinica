@@ -3,6 +3,33 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import {
+  FileText,
+  FilePlus,
+  Save,
+  Eye,
+  BookOpen,
+  ArrowLeft,
+  CheckCircle2,
+  AlertTriangle,
+  AlertCircle,
+  Clock,
+  Zap,
+  BarChart2,
+  CheckSquare,
+  CircleDot,
+  Type,
+  Hash,
+  X,
+  ExternalLink,
+  ChevronDown,
+  LayoutDashboard,
+  Smartphone,
+  Copy,
+  ChevronUp,
+  Sliders,
+  Check
+} from 'lucide-react';
 
 type QuestionType =
   | 'vas'
@@ -384,7 +411,7 @@ function FormBuilderContent() {
   return (
     <div className="min-h-screen bg-slate-100/80 font-sans text-slate-800 pb-28">
       {/* Barra Superior de Comando Clínico */}
-      <header className="bg-white border-b border-slate-200/90 sticky top-0 z-30 shadow-xs backdrop-blur-md">
+      <header className="bg-white border-b border-slate-200/90 relative shadow-xs">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           
           <div className="flex items-center space-x-3">
@@ -392,7 +419,7 @@ function FormBuilderContent() {
               href={selectedProjectId ? `/dashboard?projectId=${selectedProjectId}` : '/projetos'}
               className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition flex items-center space-x-1.5"
             >
-              <span>←</span>
+              <ArrowLeft className="w-3.5 h-3.5" />
               <span>Painel</span>
             </Link>
 
@@ -418,25 +445,25 @@ function FormBuilderContent() {
               <button
                 type="button"
                 onClick={() => setViewMode('edit')}
-                className={`px-3 py-1.5 rounded-lg transition flex items-center space-x-1 ${
+                className={`px-3 py-1.5 rounded-lg transition flex items-center space-x-1.5 ${
                   viewMode === 'edit'
                     ? 'bg-white text-slate-900 shadow-xs'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                <span>📝</span>
+                <FileText className="w-3.5 h-3.5" />
                 <span>Modo Edição</span>
               </button>
               <button
                 type="button"
                 onClick={() => setViewMode('preview')}
-                className={`px-3 py-1.5 rounded-lg transition flex items-center space-x-1 ${
+                className={`px-3 py-1.5 rounded-lg transition flex items-center space-x-1.5 ${
                   viewMode === 'preview'
                     ? 'bg-blue-600 text-white shadow-xs'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                <span>👁️</span>
+                <Eye className="w-3.5 h-3.5" />
                 <span>Prévia do Paciente</span>
               </button>
             </div>
@@ -445,10 +472,10 @@ function FormBuilderContent() {
             <button
               type="button"
               onClick={() => setShowLibraryModal(true)}
-              className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-bold rounded-xl transition flex items-center space-x-1"
+              className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-bold rounded-xl transition flex items-center space-x-1.5"
               title="Carregar questionários validados da literatura (OHIP-14, Hábitos Cromogênicos...)"
             >
-              <span>📚</span>
+              <BookOpen className="w-3.5 h-3.5" />
               <span className="hidden md:inline">Modelos Validados</span>
             </button>
 
@@ -456,10 +483,11 @@ function FormBuilderContent() {
             <button
               type="button"
               onClick={handleClearForm}
-              className="px-2.5 py-1.5 text-slate-500 hover:text-slate-700 hover:bg-slate-100 border border-slate-200 text-xs font-semibold rounded-xl transition"
+              className="px-2.5 py-1.5 text-slate-500 hover:text-slate-700 hover:bg-slate-100 border border-slate-200 text-xs font-semibold rounded-xl transition flex items-center space-x-1.5"
               title="Limpar e criar ficha em branco"
             >
-              📄 Em Branco
+              <FilePlus className="w-3.5 h-3.5" />
+              <span>Em Branco</span>
             </button>
 
             {/* Salvar Ficha */}
@@ -468,7 +496,7 @@ function FormBuilderContent() {
               disabled={saving}
               className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-xs transition disabled:opacity-50 flex items-center space-x-1.5"
             >
-              <span>{saving ? '⏳' : '💾'}</span>
+              {saving ? <Clock className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
               <span>{saving ? 'Salvando...' : 'Salvar Ficha'}</span>
             </button>
           </div>
@@ -481,7 +509,7 @@ function FormBuilderContent() {
         <div className="max-w-4xl mx-auto px-4 mt-6">
           <div className="p-4 bg-emerald-50 border border-emerald-300 rounded-2xl text-emerald-900 text-xs font-bold space-y-2 animate-fadeIn shadow-sm">
             <div className="flex items-center space-x-2">
-              <span className="text-lg">✓</span>
+              <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
               <span>Ficha Clínica salva com sucesso no banco de dados e vinculada ao estudo!</span>
             </div>
             <div className="flex flex-wrap items-center gap-2 pt-1">
@@ -489,14 +517,14 @@ function FormBuilderContent() {
                 href={selectedProjectId ? `/dashboard?projectId=${selectedProjectId}` : '/dashboard'}
                 className="px-3.5 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-xs"
               >
-                <span>📊</span>
+                <LayoutDashboard className="w-3.5 h-3.5" />
                 <span>Ver no Dashboard de Pacientes</span>
               </Link>
               <Link
                 href="/paciente"
                 className="px-3.5 py-1.5 bg-white hover:bg-slate-50 text-emerald-900 border border-emerald-300 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-xs"
               >
-                <span>📱</span>
+                <Smartphone className="w-3.5 h-3.5" />
                 <span>Testar no Portal do Paciente</span>
               </Link>
             </div>
@@ -507,8 +535,9 @@ function FormBuilderContent() {
       {/* Alerta de Erro */}
       {errorMessage && (
         <div className="max-w-4xl mx-auto px-4 mt-6">
-          <div className="p-4 bg-red-50 border border-red-300 rounded-2xl text-red-800 text-xs font-bold">
-            ⚠️ {errorMessage}
+          <div className="p-4 bg-red-50 border border-red-300 rounded-2xl text-red-800 text-xs font-bold flex items-center space-x-2">
+            <AlertCircle className="w-5 h-5 text-red-600 shrink-0" />
+            <span>{errorMessage}</span>
           </div>
         </div>
       )}
@@ -583,7 +612,7 @@ function FormBuilderContent() {
 
                   {/* Validade */}
                   <div className="flex items-center space-x-1.5 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5">
-                    <span className="text-slate-400 font-bold">⏱️ Prazo:</span>
+                    <span className="text-slate-400 font-bold">Prazo:</span>
                     <select
                       value={expirationHours}
                       onChange={(e) => setExpirationHours(e.target.value)}
@@ -621,8 +650,8 @@ function FormBuilderContent() {
             <div className="space-y-5">
               {questions.length === 0 ? (
                 <div className="py-14 text-center border-2 border-dashed border-slate-200 rounded-3xl p-8 space-y-4">
-                  <div className="w-14 h-14 bg-slate-100 rounded-2xl mx-auto flex items-center justify-center text-2xl text-slate-400">
-                    📋
+                  <div className="w-14 h-14 bg-slate-100 rounded-2xl mx-auto flex items-center justify-center text-slate-400">
+                    <FileText className="w-8 h-8 text-slate-300" />
                   </div>
                   <div>
                     <h3 className="text-base font-bold text-slate-800">
@@ -638,7 +667,7 @@ function FormBuilderContent() {
                       onClick={() => setShowLibraryModal(true)}
                       className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center space-x-1.5"
                     >
-                      <span>📚</span>
+                      <BookOpen className="w-3.5 h-3.5" />
                       <span>Carregar Modelo Pronto (OHIP-14...)</span>
                     </button>
                     <button
@@ -646,7 +675,7 @@ function FormBuilderContent() {
                       onClick={() => addCustomQuestion('vas')}
                       className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center space-x-1.5"
                     >
-                      <span>⚡</span>
+                      <Zap className="w-3.5 h-3.5" />
                       <span>Adicionar Escala EVA (Dor)</span>
                     </button>
                   </div>
@@ -670,12 +699,12 @@ function FormBuilderContent() {
                           onChange={(e) => updateQuestionType(q.id, e.target.value as QuestionType)}
                           className="px-2.5 py-1 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-700 focus:ring-1 focus:ring-blue-500 focus:outline-none cursor-pointer"
                         >
-                          <option value="vas">⚡ Escala EVA (Dor / Sensibilidade)</option>
-                          <option value="likert">📊 Escala Likert (Frequência / Acordo)</option>
-                          <option value="boolean">☑️ Sim ou Não (Binário)</option>
-                          <option value="choice">🔘 Múltipla Escolha</option>
-                          <option value="text">✍️ Texto Aberto</option>
-                          <option value="number">🔢 Valor Numérico</option>
+                          <option value="vas">Escala EVA (Dor / Sensibilidade)</option>
+                          <option value="likert">Escala Likert (Frequência / Acordo)</option>
+                          <option value="boolean">Sim ou Não (Binário)</option>
+                          <option value="choice">Múltipla Escolha</option>
+                          <option value="text">Texto Aberto</option>
+                          <option value="number">Valor Numérico</option>
                         </select>
 
                         {q.required ? (
@@ -698,7 +727,7 @@ function FormBuilderContent() {
                           className="w-7 h-7 flex items-center justify-center hover:bg-slate-200 text-slate-600 rounded-lg transition disabled:opacity-20"
                           title="Mover para cima"
                         >
-                          ▲
+                          <ChevronUp className="w-4 h-4" />
                         </button>
                         <button
                           type="button"
@@ -707,7 +736,7 @@ function FormBuilderContent() {
                           className="w-7 h-7 flex items-center justify-center hover:bg-slate-200 text-slate-600 rounded-lg transition disabled:opacity-20"
                           title="Mover para baixo"
                         >
-                          ▼
+                          <ChevronDown className="w-4 h-4" />
                         </button>
                         <button
                           type="button"
@@ -715,7 +744,7 @@ function FormBuilderContent() {
                           className="w-7 h-7 flex items-center justify-center hover:bg-slate-200 text-slate-600 rounded-lg transition"
                           title="Duplicar este item clínico"
                         >
-                          📋
+                          <Copy className="w-3.5 h-3.5" />
                         </button>
                         <button
                           type="button"
@@ -723,7 +752,7 @@ function FormBuilderContent() {
                           className="w-7 h-7 flex items-center justify-center hover:bg-red-50 text-red-500 rounded-lg transition font-bold"
                           title="Excluir este item"
                         >
-                          ✕
+                          <X className="w-4 h-4" />
                         </button>
                       </div>
                     </div>
@@ -890,7 +919,7 @@ function FormBuilderContent() {
                                 className="w-7 h-7 text-slate-400 hover:text-red-500 rounded flex items-center justify-center font-bold"
                                 title="Remover opção"
                               >
-                                ✕
+                                <X className="w-3.5 h-3.5" />
                               </button>
                             </div>
                           ))}
@@ -911,11 +940,11 @@ function FormBuilderContent() {
                       <div className="bg-white rounded-xl p-3.5 border border-slate-200 flex items-center space-x-4">
                         <span className="text-xs text-slate-500 font-semibold">Formato de Resposta:</span>
                         <div className="flex items-center space-x-2">
-                          <span className="px-3.5 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-slate-700 text-xs font-bold">
-                            ✓ Sim
+                          <span className="px-3.5 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-slate-700 text-xs font-bold inline-flex items-center gap-1">
+                            <Check className="w-3 h-3 text-emerald-600" /> Sim
                           </span>
-                          <span className="px-3.5 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-slate-700 text-xs font-bold">
-                            ✕ Não
+                          <span className="px-3.5 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-slate-700 text-xs font-bold inline-flex items-center gap-1">
+                            <X className="w-3 h-3 text-slate-400" /> Não
                           </span>
                         </div>
                       </div>
@@ -975,7 +1004,7 @@ function FormBuilderContent() {
                   onClick={() => addCustomQuestion('vas')}
                   className="p-3 bg-white hover:bg-blue-50 border border-slate-200 hover:border-blue-400 rounded-2xl text-center transition flex flex-col items-center justify-center space-y-1 shadow-2xs group"
                 >
-                  <span className="text-xl group-hover:scale-110 transition">⚡</span>
+                  <Zap className="w-5 h-5 text-amber-500 group-hover:scale-110 transition" />
                   <span className="text-xs font-bold text-slate-800">Escala EVA</span>
                   <span className="text-[10px] text-slate-400 font-medium">Dor / Sensib.</span>
                 </button>
@@ -985,7 +1014,7 @@ function FormBuilderContent() {
                   onClick={() => addCustomQuestion('likert')}
                   className="p-3 bg-white hover:bg-blue-50 border border-slate-200 hover:border-blue-400 rounded-2xl text-center transition flex flex-col items-center justify-center space-y-1 shadow-2xs group"
                 >
-                  <span className="text-xl group-hover:scale-110 transition">📊</span>
+                  <BarChart2 className="w-5 h-5 text-indigo-500 group-hover:scale-110 transition" />
                   <span className="text-xs font-bold text-slate-800">Likert</span>
                   <span className="text-[10px] text-slate-400 font-medium">1-5 / Níveis</span>
                 </button>
@@ -995,7 +1024,7 @@ function FormBuilderContent() {
                   onClick={() => addCustomQuestion('boolean')}
                   className="p-3 bg-white hover:bg-blue-50 border border-slate-200 hover:border-blue-400 rounded-2xl text-center transition flex flex-col items-center justify-center space-y-1 shadow-2xs group"
                 >
-                  <span className="text-xl group-hover:scale-110 transition">☑️</span>
+                  <CheckSquare className="w-5 h-5 text-emerald-500 group-hover:scale-110 transition" />
                   <span className="text-xs font-bold text-slate-800">Sim / Não</span>
                   <span className="text-[10px] text-slate-400 font-medium">Binário</span>
                 </button>
@@ -1005,7 +1034,7 @@ function FormBuilderContent() {
                   onClick={() => addCustomQuestion('choice')}
                   className="p-3 bg-white hover:bg-blue-50 border border-slate-200 hover:border-blue-400 rounded-2xl text-center transition flex flex-col items-center justify-center space-y-1 shadow-2xs group"
                 >
-                  <span className="text-xl group-hover:scale-110 transition">🔘</span>
+                  <CircleDot className="w-5 h-5 text-blue-500 group-hover:scale-110 transition" />
                   <span className="text-xs font-bold text-slate-800">Múltipla</span>
                   <span className="text-[10px] text-slate-400 font-medium">Opções rádio</span>
                 </button>
@@ -1015,7 +1044,7 @@ function FormBuilderContent() {
                   onClick={() => addCustomQuestion('text')}
                   className="p-3 bg-white hover:bg-blue-50 border border-slate-200 hover:border-blue-400 rounded-2xl text-center transition flex flex-col items-center justify-center space-y-1 shadow-2xs group"
                 >
-                  <span className="text-xl group-hover:scale-110 transition">✍️</span>
+                  <Type className="w-5 h-5 text-slate-600 group-hover:scale-110 transition" />
                   <span className="text-xs font-bold text-slate-800">Texto</span>
                   <span className="text-[10px] text-slate-400 font-medium">Livre relato</span>
                 </button>
@@ -1025,7 +1054,7 @@ function FormBuilderContent() {
                   onClick={() => addCustomQuestion('number')}
                   className="p-3 bg-white hover:bg-blue-50 border border-slate-200 hover:border-blue-400 rounded-2xl text-center transition flex flex-col items-center justify-center space-y-1 shadow-2xs group"
                 >
-                  <span className="text-xl group-hover:scale-110 transition">🔢</span>
+                  <Hash className="w-5 h-5 text-purple-500 group-hover:scale-110 transition" />
                   <span className="text-xs font-bold text-slate-800">Número</span>
                   <span className="text-[10px] text-slate-400 font-medium">Valor exato</span>
                 </button>
@@ -1036,9 +1065,9 @@ function FormBuilderContent() {
                 <button
                   type="button"
                   onClick={() => setShowLibraryModal(true)}
-                  className="text-xs font-bold text-indigo-700 hover:text-indigo-900 flex items-center space-x-1"
+                  className="text-xs font-bold text-indigo-700 hover:text-indigo-900 flex items-center space-x-1.5"
                 >
-                  <span>📚</span>
+                  <BookOpen className="w-3.5 h-3.5" />
                   <span>Ver Modelos Validados da Odontologia</span>
                 </button>
 
@@ -1048,7 +1077,7 @@ function FormBuilderContent() {
                   disabled={saving}
                   className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-sm transition disabled:opacity-50 flex items-center space-x-2"
                 >
-                  <span>💾</span>
+                  {saving ? <Clock className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
                   <span>{saving ? 'Publicando...' : 'Salvar Ficha Clínica'}</span>
                 </button>
               </div>
@@ -1062,7 +1091,7 @@ function FormBuilderContent() {
             {/* Faixa Informativa de Prévia */}
             <div className="p-4 bg-blue-50 border border-blue-200 rounded-2xl flex items-center justify-between text-xs">
               <div className="flex items-center space-x-2 text-blue-900 font-semibold">
-                <span className="text-base">👁️</span>
+                <Eye className="w-4 h-4 text-blue-600 shrink-0" />
                 <span>
                   <strong>Prévia do Voluntário:</strong> Esta é a experiência exata de resposta no Portal do Paciente.
                 </span>
@@ -1132,7 +1161,7 @@ function FormBuilderContent() {
                         className="w-full h-3 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
                       />
                       <p className="text-[10px] text-center text-slate-400">
-                        ↔️ Deslize o marcador para a posição que melhor reflete sua dor
+                        Deslize o marcador para a posição que melhor reflete sua dor
                       </p>
                     </div>
                   )}
@@ -1203,13 +1232,14 @@ function FormBuilderContent() {
                             onClick={() =>
                               setPreviewAnswers({ ...previewAnswers, [q.id]: opt })
                             }
-                            className={`px-5 py-2 rounded-xl border text-xs font-bold transition ${
+                            className={`px-5 py-2 rounded-xl border text-xs font-bold transition flex items-center gap-1.5 ${
                               isSelected
                                 ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
                                 : 'bg-white text-slate-700 border-slate-200 hover:border-blue-300'
                             }`}
                           >
-                            {opt === 'Sim' ? '✓ Sim' : '✕ Não'}
+                            {opt === 'Sim' ? <Check className="w-3.5 h-3.5" /> : <X className="w-3.5 h-3.5" />}
+                            <span>{opt}</span>
                           </button>
                         );
                       })}
@@ -1289,9 +1319,9 @@ function FormBuilderContent() {
               <button
                 type="button"
                 onClick={() => setShowLibraryModal(false)}
-                className="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-700 font-bold transition"
+                className="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-700 transition"
               >
-                ✕
+                <X className="w-5 h-5" />
               </button>
             </div>
 

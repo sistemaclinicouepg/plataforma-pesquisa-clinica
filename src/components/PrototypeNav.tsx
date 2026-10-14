@@ -3,6 +3,20 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import {
+  Stethoscope,
+  Home,
+  FolderKanban,
+  LayoutDashboard,
+  ClipboardList,
+  Smartphone,
+  FileSignature,
+  FileText,
+  X,
+  User,
+  Shield,
+  GraduationCap
+} from 'lucide-react';
 
 export default function PrototypeNav() {
   const pathname = usePathname();
@@ -83,19 +97,20 @@ export default function PrototypeNav() {
         title="Abrir barra de navegação clínica"
       >
         <span className="w-2.5 h-2.5 rounded-full bg-blue-600 animate-pulse" />
-        <span>🩺 Menu Clínico</span>
+        <Stethoscope className="w-3.5 h-3.5 text-blue-600" />
+        <span>Menu Clínico</span>
       </button>
     );
   }
 
   const links = [
-    { href: '/', label: '🏠 Central' },
-    { href: '/projetos', label: '🏢 Meus Estudos' },
-    { href: `/dashboard?projectId=${activeProjectId}`, label: '📊 Prontuário & Dashboard' },
-    { href: `/construtor?projectId=${activeProjectId}`, label: '📋 Prancheta eCRF' },
-    { href: `/paciente?code=${activeParticipantCode}`, label: '📱 Portal Paciente' },
-    { href: `/tcle/${defaultParticipantId}`, label: '✍️ TCLE Digital' },
-    { href: `/relatorio-cep?projectId=${activeProjectId}`, label: '📑 Relatório CEP' },
+    { href: '/', label: 'Central', icon: Home },
+    { href: '/projetos', label: 'Meus Estudos', icon: FolderKanban },
+    { href: `/dashboard?projectId=${activeProjectId}`, label: 'Prontuário & Dashboard', icon: LayoutDashboard },
+    { href: `/construtor?projectId=${activeProjectId}`, label: 'Prancheta eCRF', icon: ClipboardList },
+    { href: `/paciente?code=${activeParticipantCode}`, label: 'Portal Paciente', icon: Smartphone },
+    { href: `/tcle/${defaultParticipantId}`, label: 'TCLE Digital', icon: FileSignature },
+    { href: `/relatorio-cep?projectId=${activeProjectId}`, label: 'Relatório CEP', icon: FileText },
   ];
 
   return (
@@ -110,18 +125,20 @@ export default function PrototypeNav() {
 
           <div className="flex flex-wrap items-center gap-1">
             {links.map((link) => {
+              const Icon = link.icon;
               const isActive = pathname === link.href.split('?')[0];
               return (
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`px-2.5 py-1 rounded-lg transition-colors font-semibold text-[11px] ${
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg transition-colors font-semibold text-[11px] ${
                     isActive
                       ? 'bg-blue-600 text-white font-bold shadow-2xs'
                       : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                   }`}
                 >
-                  {link.label}
+                  <Icon className="w-3.5 h-3.5" />
+                  <span>{link.label}</span>
                 </Link>
               );
             })}
@@ -137,42 +154,45 @@ export default function PrototypeNav() {
               type="button"
               disabled={switching}
               onClick={() => handleQuickSwitch('pesquisadora@uepg.br', '123')}
-              className={`px-2 py-0.5 rounded-md transition ${
+              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md transition ${
                 currentUser?.email === 'pesquisadora@uepg.br'
                   ? 'bg-white text-blue-700 font-bold shadow-2xs'
                   : 'text-slate-600 hover:bg-white/60'
               }`}
               title="Pesquisadora Responsável (Dra. Roberta)"
             >
-              👩‍⚕️ Dra. Roberta
+              <User className="w-3 h-3 text-blue-600" />
+              <span>Dra. Roberta</span>
             </button>
 
             <button
               type="button"
               disabled={switching}
               onClick={() => handleQuickSwitch('admin@uepg.br', 'admin')}
-              className={`px-2 py-0.5 rounded-md transition ${
+              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md transition ${
                 currentUser?.email === 'admin@uepg.br'
                   ? 'bg-white text-purple-700 font-bold shadow-2xs'
                   : 'text-slate-600 hover:bg-white/60'
               }`}
               title="Coordenação / Admin (Dra. Alessandra)"
             >
-              👑 Admin
+              <Shield className="w-3 h-3 text-purple-600" />
+              <span>Admin</span>
             </button>
 
             <button
               type="button"
               disabled={switching}
               onClick={() => handleQuickSwitch('carlos@uepg.br', '123')}
-              className={`px-2 py-0.5 rounded-md transition ${
+              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md transition ${
                 currentUser?.email === 'carlos@uepg.br'
                   ? 'bg-white text-amber-700 font-bold shadow-2xs'
                   : 'text-slate-600 hover:bg-white/60'
               }`}
               title="Avaliador Cego (Carlos)"
             >
-              🎓 Avaliador Cego
+              <GraduationCap className="w-3 h-3 text-amber-600" />
+              <span>Avaliador Cego</span>
             </button>
           </div>
 
@@ -181,7 +201,7 @@ export default function PrototypeNav() {
             className="p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition"
             title="Ocultar barra superior"
           >
-            ✕
+            <X className="w-4 h-4" />
           </button>
         </div>
       </div>

@@ -5,6 +5,44 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import type { AnamnesisConfig, AnamnesisQuestion } from '@/app/anamnese/page';
 import { OdontogramChart, ToothSelectorModal, ToothStatus } from '@/components/odontogram';
+import {
+  Stethoscope,
+  ClipboardList,
+  BarChart3,
+  Users,
+  Download,
+  Lock,
+  Unlock,
+  CheckCircle2,
+  AlertTriangle,
+  AlertCircle,
+  Clock,
+  Calendar,
+  Check,
+  X,
+  FileText,
+  FileSpreadsheet,
+  Award,
+  Sparkles,
+  Shuffle,
+  MessageSquare,
+  Search,
+  Eye,
+  EyeOff,
+  Edit,
+  Plus,
+  Send,
+  Zap,
+  Info,
+  Settings,
+  HelpCircle,
+  ChevronRight,
+  ChevronLeft,
+  ExternalLink,
+  ShieldCheck,
+  CheckCircle,
+  Phone
+} from 'lucide-react';
 
 type Patient = {
   id: string;
@@ -1081,11 +1119,17 @@ function DashboardContent() {
     URL.revokeObjectURL(url);
   };
 
+  const getPatientUrl = (code: string) => {
+    const origin = typeof window !== 'undefined' && window.location?.origin ? window.location.origin : '';
+    return `${origin}/paciente?code=${code}`;
+  };
+
   const openWhatsApp = (phone: string, code: string) => {
     const cleanPhone = phone.replace(/\D/g, '');
     const fullPhone = cleanPhone.startsWith('55') ? cleanPhone : `55${cleanPhone}`;
+    const link = getPatientUrl(code);
     const text = encodeURIComponent(
-      `Olá! Aqui é da equipe de pesquisa da UEPG. Segue seu link seguro para preenchimento de diário e questionários (Código: ${code}): http://localhost:3000/paciente?code=${code}`
+      `Olá! Aqui é da equipe de pesquisa da UEPG. Segue seu link seguro para preenchimento de diário e questionários (Código: ${code}): ${link}`
     );
     window.open(`https://wa.me/${fullPhone}?text=${text}`, '_blank');
   };
@@ -1095,8 +1139,9 @@ function DashboardContent() {
     const fullPhone = cleanPhone.startsWith('55') ? cleanPhone : `55${cleanPhone}`;
     const firstName = patientName ? patientName.split(' ')[0] : '';
     const greeting = firstName ? `Olá, ${firstName}!` : 'Olá!';
+    const link = getPatientUrl(code);
     const text = encodeURIComponent(
-      `${greeting} Aqui é da equipe de pesquisa clínica da UEPG. Notamos que o questionário "${formTitle}" da sua pesquisa ainda não foi preenchido. Segue seu link seguro para responder pelo celular: http://localhost:3000/paciente?code=${code}\n\nLeva poucos minutos e é fundamental para o estudo. Muito obrigado!`
+      `${greeting} Aqui é da equipe de pesquisa clínica da UEPG. Notamos que o questionário "${formTitle}" da sua pesquisa ainda não foi preenchido. Segue seu link seguro para responder pelo celular: ${link}\n\nLeva poucos minutos e é fundamental para o estudo. Muito obrigado!`
     );
     window.open(`https://wa.me/${fullPhone}?text=${text}`, '_blank');
   };
@@ -1117,7 +1162,7 @@ function DashboardContent() {
     const text = encodeURIComponent(
       `Olá, ${firstName}! Aqui é da equipe da pesquisa clínica da UEPG.\n\n` +
       `Gostaríamos de confirmar o agendamento da sua próxima consulta: *${sessionTitle}* (Código: ${code}).\n\n` +
-      `📅 *Período ideal pelo protocolo da pesquisa:* entre *${startStr}* e *${endStr}*.\n\n` +
+      `*Período ideal pelo protocolo da pesquisa:* entre *${startStr}* e *${endStr}*.\n\n` +
       `Por favor, nos responda informando o melhor dia e horário para seu comparecimento à clínica odontológica. Muito obrigado!`
     );
     window.open(`https://wa.me/${fullPhone}?text=${text}`, '_blank');
@@ -1166,17 +1211,21 @@ function DashboardContent() {
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-800 pb-20">
-      {/* Navegação Superior */}
-      <nav className="bg-white border-b border-slate-200 sticky top-0 z-20 shadow-xs">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
+      {/* Sub-Header do Estudo */}
+      <div className="bg-white border-b border-slate-200 shadow-xs relative">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 min-h-12">
             <div className="flex items-center space-x-3">
-              <Link href="/projetos" className="text-slate-400 hover:text-blue-600 text-sm font-semibold transition flex items-center space-x-1" title="Ver todos os projetos">
-                <span>←</span>
+              <Link
+                href="/projetos"
+                className="text-slate-500 hover:text-blue-600 text-xs font-semibold transition flex items-center space-x-1 px-2 py-1.5 rounded-lg hover:bg-slate-100"
+                title="Ver todos os projetos"
+              >
+                <ChevronLeft className="w-4 h-4" />
                 <span className="hidden sm:inline">Meus Projetos</span>
               </Link>
-              <div className="h-6 w-px bg-slate-200" />
-              
+              <div className="h-5 w-px bg-slate-200" />
+
               {allProjects.length > 1 ? (
                 <div className="flex items-center space-x-2">
                   <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider hidden lg:inline">Estudo:</span>
@@ -1202,48 +1251,51 @@ function DashboardContent() {
                 </span>
               )}
             </div>
-            
-            <div className="flex items-center space-x-3">
+
+            <div className="flex items-center flex-wrap gap-2">
               <Link
                 href={`/anamnese?projectId=${project.id}`}
-                className="px-3.5 py-1.5 bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100 text-xs font-bold rounded-lg transition flex items-center space-x-1"
+                className="px-3 py-1.5 bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100 text-xs font-bold rounded-lg transition flex items-center space-x-1.5 shadow-2xs"
               >
-                <span>🦷</span>
+                <Stethoscope className="w-3.5 h-3.5" />
                 <span>Ficha & Anamnese</span>
               </Link>
 
               <Link
                 href={`/tcle/editor?projectId=${project.id}`}
-                className="px-3.5 py-1.5 border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-bold rounded-lg transition flex items-center space-x-1"
+                className="px-3 py-1.5 border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-bold rounded-lg transition flex items-center space-x-1.5 shadow-2xs"
               >
-                <span>📄</span>
+                <FileText className="w-3.5 h-3.5 text-slate-500" />
                 <span>Personalizar TCLE</span>
               </Link>
 
               <Link
                 href={`/construtor?projectId=${project.id}`}
-                className="px-3.5 py-1.5 border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-bold rounded-lg transition"
+                className="px-3 py-1.5 border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-bold rounded-lg transition flex items-center space-x-1.5 shadow-2xs"
               >
-                Construtor (eCRF)
+                <FileSpreadsheet className="w-3.5 h-3.5 text-slate-500" />
+                <span>Construtor (eCRF)</span>
               </Link>
 
               <Link
                 href={`/relatorio-cep?projectId=${project.id}`}
-                className="px-3.5 py-1.5 bg-emerald-50 border border-emerald-300 text-emerald-800 hover:bg-emerald-100 text-xs font-bold rounded-lg transition flex items-center space-x-1"
+                className="px-3 py-1.5 bg-emerald-50 border border-emerald-300 text-emerald-800 hover:bg-emerald-100 text-xs font-bold rounded-lg transition flex items-center space-x-1.5 shadow-2xs"
               >
-                <span>📑</span>
+                <Award className="w-3.5 h-3.5 text-emerald-700" />
                 <span>Relatório CEP / CONSORT</span>
               </Link>
+
               <button
                 onClick={() => setShowNewPatientModal(true)}
-                className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow-sm transition"
+                className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow-xs transition flex items-center space-x-1.5"
               >
-                + Cadastrar Paciente
+                <Plus className="w-3.5 h-3.5" />
+                <span>Cadastrar Paciente</span>
               </button>
             </div>
           </div>
         </div>
-      </nav>
+      </div>
 
       {/* Conteúdo Principal */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -1258,7 +1310,9 @@ function DashboardContent() {
                 : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
             }`}
           >
-            <span className="text-lg">🩺</span>
+            <div className={`p-2 rounded-lg ${activeTab === 'active' ? 'bg-blue-50 text-blue-600' : 'bg-slate-200/60 text-slate-500'}`}>
+              <Stethoscope className="w-4 h-4" />
+            </div>
             <div className="text-left">
               <div className="flex items-center space-x-1.5">
                 <span>Prontuários Ativos</span>
@@ -1281,7 +1335,9 @@ function DashboardContent() {
                 : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
             }`}
           >
-            <span className="text-lg">📋</span>
+            <div className={`p-2 rounded-lg ${activeTab === 'triage' ? 'bg-blue-50 text-blue-600' : 'bg-slate-200/60 text-slate-500'}`}>
+              <ClipboardList className="w-4 h-4" />
+            </div>
             <div className="text-left">
               <div className="flex items-center space-x-1.5">
                 <span>Triagem & Critérios</span>
@@ -1301,7 +1357,9 @@ function DashboardContent() {
                 : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
             }`}
           >
-            <span className="text-lg">📊</span>
+            <div className={`p-2 rounded-lg ${activeTab === 'consort' ? 'bg-blue-50 text-blue-600' : 'bg-slate-200/60 text-slate-500'}`}>
+              <BarChart3 className="w-4 h-4" />
+            </div>
             <div className="text-left">
               <div className="flex items-center space-x-1.5">
                 <span>Fluxo CONSORT & Excluídos</span>
@@ -1321,7 +1379,9 @@ function DashboardContent() {
                 : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
             }`}
           >
-            <span className="text-lg">👥</span>
+            <div className={`p-2 rounded-lg ${activeTab === 'team' ? 'bg-blue-50 text-blue-600' : 'bg-slate-200/60 text-slate-500'}`}>
+              <Users className="w-4 h-4" />
+            </div>
             <div className="text-left">
               <div className="flex items-center space-x-1.5">
                 <span>Equipe & Cegamento</span>
@@ -1341,7 +1401,9 @@ function DashboardContent() {
                 : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
             }`}
           >
-            <span className="text-lg">📥</span>
+            <div className={`p-2 rounded-lg ${activeTab === 'export' ? 'bg-blue-50 text-blue-600' : 'bg-slate-200/60 text-slate-500'}`}>
+              <Download className="w-4 h-4" />
+            </div>
             <div className="text-left">
               <div className="flex items-center space-x-1.5">
                 <span>Resultados & Exportar</span>
@@ -1357,7 +1419,7 @@ function DashboardContent() {
             {/* Banner de Contexto de Papel Clínico */}
             {isBlindedUser ? (
               <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start space-x-3 text-xs text-amber-900 shadow-xs">
-                <span className="text-2xl">🔒</span>
+                <Lock className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
                 <div>
                   <p className="font-bold text-sm">Modo Avaliador Cego Ativo ({currentUser?.name || currentUser?.email})</p>
                   <p className="text-amber-800 mt-1 leading-relaxed">
@@ -1367,7 +1429,7 @@ function DashboardContent() {
               </div>
             ) : (
               <div className="bg-blue-50/70 border border-blue-200/80 rounded-2xl p-4 flex items-start space-x-3 text-xs text-blue-900 shadow-xs">
-                <span className="text-2xl">🩺</span>
+                <Stethoscope className="w-5 h-5 text-blue-700 shrink-0 mt-0.5" />
                 <div>
                   <p className="font-bold text-sm">Prontuários Ativos & Atendimento Clínico Longitudinal (Cadeira Odontológica)</p>
                   <p className="text-blue-800 mt-1 leading-relaxed">
@@ -1380,7 +1442,9 @@ function DashboardContent() {
             {/* Estatísticas Rápidas de Prontuários */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="bg-white rounded-2xl shadow-xs border border-slate-200 p-5 flex items-center">
-                <div className="p-3 rounded-xl bg-blue-100 text-blue-700 font-bold text-lg">✓</div>
+                <div className="p-3 rounded-xl bg-blue-50 text-blue-700">
+                  <CheckCircle2 className="w-5 h-5" />
+                </div>
                 <div className="ml-3.5">
                   <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Participantes Ativos</p>
                   <p className="text-2xl font-black text-slate-900">{approvedList.length}</p>
@@ -1394,14 +1458,20 @@ function DashboardContent() {
                   ? 'bg-amber-50/50 border-amber-200'
                   : 'bg-white border-slate-200'
               }`}>
-                <div className={`p-3 rounded-xl font-bold text-lg ${
+                <div className={`p-3 rounded-xl ${
                   overdueVisits.length > 0
                     ? 'bg-red-100 text-red-700 animate-pulse'
                     : dueNowVisits.length > 0
                     ? 'bg-amber-100 text-amber-700'
                     : 'bg-emerald-100 text-emerald-700'
                 }`}>
-                  {overdueVisits.length > 0 ? '🚨' : dueNowVisits.length > 0 ? '🟡' : '📅'}
+                  {overdueVisits.length > 0 ? (
+                    <AlertCircle className="w-5 h-5" />
+                  ) : dueNowVisits.length > 0 ? (
+                    <Clock className="w-5 h-5" />
+                  ) : (
+                    <Calendar className="w-5 h-5" />
+                  )}
                 </div>
                 <div className="ml-3.5">
                   <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Retornos Clínicos</p>
@@ -1415,7 +1485,9 @@ function DashboardContent() {
               </div>
 
               <div className="bg-white rounded-2xl shadow-xs border border-slate-200 p-5 flex items-center">
-                <div className="p-3 rounded-xl bg-emerald-100 text-emerald-700 font-bold text-lg">🏁</div>
+                <div className="p-3 rounded-xl bg-emerald-50 text-emerald-700">
+                  <CheckCircle2 className="w-5 h-5" />
+                </div>
                 <div className="ml-3.5">
                   <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Protocolos Concluídos</p>
                   <p className="text-2xl font-black text-slate-900">{allCompletedVisits.length}</p>
@@ -1424,7 +1496,9 @@ function DashboardContent() {
               </div>
 
               <div className="bg-white rounded-2xl shadow-xs border border-slate-200 p-5 flex items-center">
-                <div className="p-3 rounded-xl bg-slate-100 text-slate-600 font-bold text-lg">⏳</div>
+                <div className="p-3 rounded-xl bg-slate-100 text-slate-600">
+                  <Clock className="w-5 h-5" />
+                </div>
                 <div className="ml-3.5">
                   <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Próximos Agendamentos</p>
                   <p className="text-2xl font-black text-slate-900">{upcomingVisits.length}</p>
@@ -1437,14 +1511,20 @@ function DashboardContent() {
             <div className="bg-white rounded-2xl shadow-xs border border-slate-200 overflow-hidden">
               <div className="p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-slate-50/70">
                 <div className="flex items-center space-x-3">
-                  <div className={`p-2.5 rounded-xl font-bold text-lg ${
+                  <div className={`p-2.5 rounded-xl ${
                     overdueVisits.length > 0
                       ? 'bg-red-100 text-red-700'
                       : dueNowVisits.length > 0
                       ? 'bg-amber-100 text-amber-800'
                       : 'bg-emerald-100 text-emerald-800'
                   }`}>
-                    {overdueVisits.length > 0 ? '🚨' : dueNowVisits.length > 0 ? '🟡' : '✓'}
+                    {overdueVisits.length > 0 ? (
+                      <AlertCircle className="w-5 h-5" />
+                    ) : dueNowVisits.length > 0 ? (
+                      <Clock className="w-5 h-5" />
+                    ) : (
+                      <CheckCircle2 className="w-5 h-5" />
+                    )}
                   </div>
                   <div>
                     <h3 className="text-base font-bold text-slate-900">
@@ -1458,24 +1538,27 @@ function DashboardContent() {
 
                 <div className="flex items-center space-x-2">
                   {overdueVisits.length > 0 && (
-                    <span className="px-3 py-1 rounded-full text-xs font-bold bg-red-100 text-red-800 border border-red-300 animate-pulse">
-                      {overdueVisits.length} Atrasado(s)
+                    <span className="px-3 py-1 rounded-full text-xs font-bold bg-red-100 text-red-800 border border-red-300 animate-pulse flex items-center space-x-1">
+                      <AlertCircle className="w-3 h-3 mr-1 inline" />
+                      <span>{overdueVisits.length} Atrasado(s)</span>
                     </span>
                   )}
                   {dueNowVisits.length > 0 && (
-                    <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300">
-                      {dueNowVisits.length} Na Janela
+                    <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300 flex items-center space-x-1">
+                      <Clock className="w-3 h-3 mr-1 inline" />
+                      <span>{dueNowVisits.length} Na Janela</span>
                     </span>
                   )}
-                  <span className="px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
-                    {allCompletedVisits.length} Concluído(s)
+                  <span className="px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200 flex items-center space-x-1">
+                    <CheckCircle2 className="w-3 h-3 mr-1 inline text-emerald-600" />
+                    <span>{allCompletedVisits.length} Concluído(s)</span>
                   </span>
                 </div>
               </div>
 
               {overdueVisits.length === 0 && dueNowVisits.length === 0 ? (
                 <div className="p-6 text-center text-xs text-slate-500 flex flex-col items-center space-y-1 bg-emerald-50/20">
-                  <span className="text-xl">✅</span>
+                  <CheckCircle2 className="w-6 h-6 text-emerald-600 mb-1" />
                   <p className="font-bold text-slate-700">Todas as consultas de retorno estão sob controle no momento.</p>
                   <p className="text-slate-400">
                     Nenhum participante com retorno atrasado ou na janela imediata desta semana.
@@ -1527,12 +1610,14 @@ function DashboardContent() {
 
                         <div className="flex items-center space-x-2.5 shrink-0 self-end lg:self-center">
                           {isOverdue ? (
-                            <span className="px-3 py-1.5 rounded-lg text-xs font-black bg-red-100 text-red-800 border border-red-300">
-                              🚨 Atrasado há {next.daysDiff} dia(s)
+                            <span className="px-3 py-1.5 rounded-lg text-xs font-black bg-red-100 text-red-800 border border-red-300 flex items-center space-x-1">
+                              <AlertCircle className="w-3.5 h-3.5 mr-1" />
+                              <span>Atrasado há {next.daysDiff} dia(s)</span>
                             </span>
                           ) : (
-                            <span className="px-3 py-1.5 rounded-lg text-xs font-black bg-amber-100 text-amber-800 border border-amber-300">
-                              🟡 Na Janela (Restam {next.daysDiff}d)
+                            <span className="px-3 py-1.5 rounded-lg text-xs font-black bg-amber-100 text-amber-800 border border-amber-300 flex items-center space-x-1">
+                              <Clock className="w-3.5 h-3.5 mr-1" />
+                              <span>Na Janela (Restam {next.daysDiff}d)</span>
                             </span>
                           )}
 
@@ -1551,19 +1636,17 @@ function DashboardContent() {
                             className="px-3.5 py-2 bg-[#25D366] hover:bg-[#128C7E] text-white rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-xs"
                             title="Enviar mensagem com período da janela para agendamento"
                           >
-                            <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
-                              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
-                            </svg>
+                            <MessageSquare className="w-3.5 h-3.5" />
                             <span>Agendar no WhatsApp</span>
                           </button>
 
                           <button
                             type="button"
                             onClick={() => openSessionEditor(part, next.sessionNumber)}
-                            className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition flex items-center space-x-1 shadow-xs"
+                            className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-xs"
                             title="Registrar atendimento clínico da sessão"
                           >
-                            <span>🩺</span>
+                            <Stethoscope className="w-3.5 h-3.5" />
                             <span>Registrar</span>
                           </button>
                         </div>
@@ -1589,7 +1672,7 @@ function DashboardContent() {
               <div className="divide-y divide-slate-100 flex-1">
                 {approvedList.length === 0 ? (
                   <div className="p-12 text-center text-slate-400 text-sm">
-                    <p className="text-2xl mb-2">📋</p>
+                    <ClipboardList className="w-8 h-8 text-slate-300 mx-auto mb-2" />
                     <p className="font-semibold text-slate-600">Nenhum participante ativo ainda.</p>
                     <p className="text-xs text-slate-400 mt-1">Acesse a aba <strong>Triagem & Critérios</strong> para avaliar candidatos e aprovar participantes no estudo.</p>
                   </div>
@@ -1619,15 +1702,23 @@ function DashboardContent() {
 
                             {/* Grupo de Alocação */}
                             <div className="inline-flex items-center space-x-1.5 ml-1">
-                              <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200">
-                                {isBlindedUser ? '🔒 OCULTO (Avaliador Cego)' : (part.group || 'Aguardando Randomização')}
+                              <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200 inline-flex items-center space-x-1">
+                                {isBlindedUser ? (
+                                  <>
+                                    <Lock className="w-3 h-3 text-slate-500 mr-1" />
+                                    <span>OCULTO (Avaliador Cego)</span>
+                                  </>
+                                ) : (
+                                  part.group || 'Aguardando Randomização'
+                                )}
                               </span>
                               {!isBlindedUser && (
                                 <button
                                   onClick={() => handleOpenAllocation(part)}
-                                  className="text-[11px] text-blue-600 hover:text-blue-800 font-bold underline"
+                                  className="text-[11px] text-blue-600 hover:text-blue-800 font-bold underline inline-flex items-center space-x-1"
                                 >
-                                  {part.group ? 'Alterar' : '🎲 Alocar'}
+                                  {!part.group && <Shuffle className="w-3 h-3 mr-0.5 inline" />}
+                                  <span>{part.group ? 'Alterar' : 'Alocar'}</span>
                                 </button>
                               )}
                             </div>
@@ -1643,14 +1734,15 @@ function DashboardContent() {
                                 return (
                                   <span
                                     key={num}
-                                    className={`px-2 py-0.5 rounded-md text-[11px] font-bold font-mono transition ${
+                                    className={`px-2 py-0.5 rounded-md text-[11px] font-bold font-mono transition inline-flex items-center gap-1 ${
                                       done
                                         ? 'bg-emerald-600 text-white shadow-2xs'
                                         : 'text-slate-400'
                                     }`}
                                     title={done ? `Sessão ${labels[num]} Realizada` : `Sessão ${labels[num]} Pendente`}
                                   >
-                                    {done ? '✓ ' : ''}{labels[num]}
+                                    {done && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                                    <span>{labels[num]}</span>
                                   </span>
                                 );
                               })}
@@ -1659,31 +1751,31 @@ function DashboardContent() {
                             {/* Alerta / Status Clínico do Retorno */}
                             {windows.overallAlert === 'OVERDUE' && next && (
                               <span className="px-2.5 py-0.5 bg-red-100 text-red-800 border border-red-300 rounded-lg font-bold text-xs flex items-center space-x-1 animate-pulse">
-                                <span>🚨</span>
+                                <AlertCircle className="w-3.5 h-3.5" />
                                 <span>{next.config.shortName} atrasada (+{next.daysDiff}d)</span>
                               </span>
                             )}
                             {windows.overallAlert === 'DUE_NOW' && next && (
                               <span className="px-2.5 py-0.5 bg-amber-100 text-amber-900 border border-amber-300 rounded-lg font-bold text-xs flex items-center space-x-1">
-                                <span>⏰</span>
+                                <Clock className="w-3.5 h-3.5" />
                                 <span>{next.config.shortName} na janela (restam {next.daysDiff}d)</span>
                               </span>
                             )}
                             {windows.overallAlert === 'UPCOMING' && next && (
                               <span className="px-2.5 py-0.5 bg-blue-50 text-blue-800 border border-blue-200 rounded-lg font-semibold text-xs flex items-center space-x-1">
-                                <span>📅</span>
+                                <Calendar className="w-3.5 h-3.5" />
                                 <span>{next.config.shortName} em {next.daysDiff}d</span>
                               </span>
                             )}
                             {windows.overallAlert === 'COMPLETED' && (
                               <span className="px-2.5 py-0.5 bg-emerald-50 text-emerald-800 border border-emerald-300 rounded-lg font-bold text-xs flex items-center space-x-1">
-                                <span>🏁</span>
+                                <CheckCircle2 className="w-3.5 h-3.5" />
                                 <span>Protocolo Concluído (4/4)</span>
                               </span>
                             )}
                             {windows.overallAlert === 'WAITING_S1' && (
                               <span className="px-2.5 py-0.5 bg-slate-100 text-slate-700 border border-slate-200 rounded-lg font-semibold text-xs flex items-center space-x-1">
-                                <span>⏳</span>
+                                <Clock className="w-3.5 h-3.5 text-slate-400" />
                                 <span>Aguardando S1 Inicial</span>
                               </span>
                             )}
@@ -1700,7 +1792,7 @@ function DashboardContent() {
                               className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-xs"
                               title={`Registrar atendimento clínico de ${next.config.name}`}
                             >
-                              <span>🩺</span>
+                              <Stethoscope className="w-3.5 h-3.5" />
                               <span>Registrar {next.config.shortName}</span>
                             </button>
                           ) : (
@@ -1713,7 +1805,7 @@ function DashboardContent() {
                               className="px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-2xs"
                               title="Ver histórico completo das 4 sessões clínicas"
                             >
-                              <span>🏁</span>
+                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700" />
                               <span>Ver 4/4 Sessões</span>
                             </button>
                           )}
@@ -1747,7 +1839,7 @@ function DashboardContent() {
                             }`}
                             title="Ver respostas dos questionários preenchidos"
                           >
-                            <span>📋</span>
+                            <ClipboardList className="w-3.5 h-3.5" />
                             <span>eCRF ({part.responses?.length || 0})</span>
                           </button>
 
@@ -1759,7 +1851,7 @@ function DashboardContent() {
                             className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center space-x-1 shadow-xs"
                             title={`Abrir portal do voluntário ${part.researchCode}`}
                           >
-                            <span>📱</span>
+                            <ExternalLink className="w-3.5 h-3.5" />
                             <span>Portal</span>
                           </a>
 
@@ -1780,7 +1872,7 @@ function DashboardContent() {
                               className="px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold transition flex items-center space-x-1 shadow-xs"
                               title={`Agendar retorno ${next.config.name} no WhatsApp`}
                             >
-                              <span>💬</span>
+                              <MessageSquare className="w-3.5 h-3.5" />
                               <span>Agendar {next.config.shortName}</span>
                             </button>
                           ) : (
@@ -1810,7 +1902,7 @@ function DashboardContent() {
             {/* Banner de Contexto de Triagem */}
             <div className="bg-gradient-to-r from-slate-50 to-indigo-50/50 border border-slate-200 rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div className="flex items-start space-x-3.5">
-                <span className="text-2xl">📋</span>
+                <ClipboardList className="w-5 h-5 text-indigo-700 mt-0.5 shrink-0" />
                 <div>
                   <h3 className="text-base font-bold text-slate-900">
                     Triagem de Candidatos & Validação de Critérios Clínicos
@@ -1825,7 +1917,7 @@ function DashboardContent() {
                 onClick={() => setShowNewPatientModal(true)}
                 className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center space-x-1.5 shrink-0"
               >
-                <span>+</span>
+                <Plus className="w-3.5 h-3.5" />
                 <span>Cadastrar Candidato</span>
               </button>
             </div>
@@ -1833,7 +1925,9 @@ function DashboardContent() {
             {/* Métricas de Triagem */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="bg-white rounded-2xl shadow-xs border border-slate-200 p-5 flex items-center">
-                <div className="p-3 rounded-xl bg-slate-100 text-slate-700 font-bold text-lg">👥</div>
+                <div className="p-3 rounded-xl bg-slate-100 text-slate-700">
+                  <Users className="w-5 h-5" />
+                </div>
                 <div className="ml-3.5">
                   <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total de Inscritos</p>
                   <p className="text-2xl font-black text-slate-900">{project.participants.length}</p>
@@ -1841,7 +1935,9 @@ function DashboardContent() {
               </div>
 
               <div className="bg-white rounded-2xl shadow-xs border border-slate-200 p-5 flex items-center">
-                <div className="p-3 rounded-xl bg-amber-100 text-amber-700 font-bold text-lg">⏳</div>
+                <div className="p-3 rounded-xl bg-amber-50 text-amber-700">
+                  <Clock className="w-5 h-5" />
+                </div>
                 <div className="ml-3.5">
                   <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Aguardando Triagem</p>
                   <p className="text-2xl font-black text-slate-900">{pendingList.length}</p>
@@ -1849,7 +1945,9 @@ function DashboardContent() {
               </div>
 
               <div className="bg-white rounded-2xl shadow-xs border border-slate-200 p-5 flex items-center">
-                <div className="p-3 rounded-xl bg-emerald-100 text-emerald-700 font-bold text-lg">✓</div>
+                <div className="p-3 rounded-xl bg-emerald-50 text-emerald-700">
+                  <CheckCircle2 className="w-5 h-5" />
+                </div>
                 <div className="ml-3.5">
                   <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Ficha Preenchida</p>
                   <p className="text-2xl font-black text-slate-900">{pendingList.filter(p => p.anamnesisDone).length}</p>
@@ -1857,7 +1955,9 @@ function DashboardContent() {
               </div>
 
               <div className="bg-white rounded-2xl shadow-xs border border-slate-200 p-5 flex items-center">
-                <div className="p-3 rounded-xl bg-red-100 text-red-700 font-bold text-lg">✕</div>
+                <div className="p-3 rounded-xl bg-red-50 text-red-700">
+                  <X className="w-5 h-5" />
+                </div>
                 <div className="ml-3.5">
                   <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Excluídos na Triagem</p>
                   <p className="text-2xl font-black text-slate-900">{excludedList.length}</p>
@@ -1882,7 +1982,7 @@ function DashboardContent() {
               <div className="divide-y divide-slate-100 flex-1">
                 {pendingList.length === 0 ? (
                   <div className="p-12 text-center text-slate-400 text-sm">
-                    <p className="text-2xl mb-2">🎉</p>
+                    <ClipboardList className="w-8 h-8 text-slate-300 mx-auto mb-2" />
                     <p className="font-semibold text-slate-600">Nenhum voluntário aguardando triagem neste momento.</p>
                     <p className="text-xs text-slate-400 mt-1">Clique em "Cadastrar Candidato" acima para incluir um novo paciente na fila.</p>
                   </div>
@@ -1901,12 +2001,14 @@ function DashboardContent() {
                               <h4 className="font-bold text-slate-900 text-base">{part.patient.fullName}</h4>
                               
                               {isAnamnesisDone ? (
-                                <span className="px-2.5 py-0.5 bg-emerald-100 text-emerald-800 text-[11px] font-bold rounded-full">
-                                  ✓ Ficha Clínica Preenchida
+                                <span className="px-2.5 py-0.5 bg-emerald-100 text-emerald-800 text-[11px] font-bold rounded-full flex items-center space-x-1">
+                                  <CheckCircle2 className="w-3 h-3 mr-1 inline" />
+                                  <span>Ficha Clínica Preenchida</span>
                                 </span>
                               ) : (
-                                <span className="px-2.5 py-0.5 bg-amber-100 text-amber-800 text-[11px] font-bold rounded-full">
-                                  ⚠️ Ficha Pendente
+                                <span className="px-2.5 py-0.5 bg-amber-100 text-amber-800 text-[11px] font-bold rounded-full flex items-center space-x-1">
+                                  <AlertTriangle className="w-3 h-3 mr-1 inline text-amber-700" />
+                                  <span>Ficha Pendente</span>
                                 </span>
                               )}
                             </div>
@@ -1932,7 +2034,7 @@ function DashboardContent() {
                                 : 'bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200'
                             }`}
                           >
-                            <span>{isAnamnesisDone ? '🔍' : '📋'}</span>
+                            {isAnamnesisDone ? <Search className="w-3.5 h-3.5 mr-1" /> : <ClipboardList className="w-3.5 h-3.5 mr-1" />}
                             <span className="truncate">
                               {isAnamnesisDone ? 'Ficha Clínica Preenchida' : 'Preencher Ficha & Anamnese'}
                             </span>
@@ -1943,7 +2045,7 @@ function DashboardContent() {
                             target="_blank"
                             className="py-2 px-3 rounded-lg text-xs font-bold flex items-center justify-center space-x-1.5 border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 transition"
                           >
-                            <span>🖋️</span>
+                            <FileText className="w-3.5 h-3.5 mr-1 text-indigo-600" />
                             <span>Abrir TCLE Digital</span>
                           </Link>
                         </div>
@@ -1955,32 +2057,36 @@ function DashboardContent() {
                               <button
                                 onClick={() => handleApprove(part.id)}
                                 disabled={!isAnamnesisDone}
-                                className={`w-full py-2.5 rounded-lg font-bold text-xs shadow-xs transition ${
+                                className={`w-full py-2.5 rounded-lg font-bold text-xs shadow-xs transition flex items-center justify-center space-x-1.5 ${
                                   isAnamnesisDone
                                     ? 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer'
                                     : 'bg-slate-200 text-slate-400 cursor-not-allowed'
                                 }`}
                               >
-                                ✓ Incluir na Pesquisa ({part.researchCode})
+                                <CheckCircle2 className="w-3.5 h-3.5" />
+                                <span>Incluir na Pesquisa ({part.researchCode})</span>
                               </button>
                             </div>
 
                             <button 
                               onClick={() => handleOpenReject(part)}
-                              className="px-4 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 py-2.5 rounded-lg font-bold text-xs transition"
+                              className="px-4 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 py-2.5 rounded-lg font-bold text-xs transition flex items-center space-x-1"
                             >
-                              ✕ Excluir
+                              <X className="w-3.5 h-3.5" />
+                              <span>Excluir</span>
                             </button>
                           </div>
 
                           {/* Mensagem Explicativa Clara */}
                           {!isAnamnesisDone ? (
-                            <p className="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-md p-2 mt-2 text-center font-medium">
-                              🔒 <strong>Etapa Obrigatória do Protocolo:</strong> Preencha a <em>Ficha & Anamnese</em> acima para validar os critérios de elegibilidade antes de incluir o participante.
+                            <p className="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-md p-2 mt-2 text-center font-medium flex items-center justify-center space-x-1.5">
+                              <Lock className="w-3.5 h-3.5 inline mr-1 text-amber-800 shrink-0" />
+                              <span><strong>Etapa Obrigatória do Protocolo:</strong> Preencha a <em>Ficha & Anamnese</em> acima para validar os critérios de elegibilidade antes de incluir o participante.</span>
                             </p>
                           ) : (
-                            <p className="text-[11px] text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-md p-1.5 mt-2 text-center font-medium">
-                              ✓ Critérios clínicos validados na ficha. Clique acima para confirmar a inclusão e gerar o termo.
+                            <p className="text-[11px] text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-md p-1.5 mt-2 text-center font-medium flex items-center justify-center space-x-1.5">
+                              <CheckCircle2 className="w-3.5 h-3.5 inline mr-1 text-emerald-800 shrink-0" />
+                              <span>Critérios clínicos validados na ficha. Clique acima para confirmar a inclusão e gerar o termo.</span>
                             </p>
                           )}
                         </div>
@@ -1999,7 +2105,7 @@ function DashboardContent() {
             {/* Banner de Contexto Metodológico */}
             <div className="bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div className="flex items-start space-x-3.5">
-                <span className="text-2xl">📊</span>
+                <BarChart3 className="w-5 h-5 text-emerald-800 mt-0.5 shrink-0" />
                 <div>
                   <h3 className="text-base font-bold text-emerald-950">
                     Fluxograma CONSORT 2010 & Auditoria Ética (CEP/CONEP)
@@ -2014,7 +2120,7 @@ function DashboardContent() {
                 href={`/relatorio-cep?projectId=${project.id}`}
                 className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center space-x-1.5 shrink-0"
               >
-                <span>📑</span>
+                <Award className="w-3.5 h-3.5" />
                 <span>Relatório Oficial CEP/CONSORT</span>
               </Link>
             </div>
@@ -2199,7 +2305,7 @@ function DashboardContent() {
             {/* Banner Educativo Metodológico */}
             <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-6">
               <div className="flex items-start space-x-3">
-                <span className="text-2xl">🛡️</span>
+                <ShieldCheck className="w-5 h-5 text-blue-700 mt-0.5 shrink-0" />
                 <div>
                   <h3 className="text-base font-bold text-blue-900">
                     Controle Metodológico de Cegamento (Blinding)
@@ -2207,7 +2313,7 @@ function DashboardContent() {
                   <p className="text-xs text-blue-800 mt-1 leading-relaxed">
                     Em ensaios clínicos randomizados de boca dividida (split-mouth), os avaliadores que medem a cor ou examinam o paciente 
                     <strong> nunca devem saber qual gel ou grupo foi aplicado em qual lado</strong>. 
-                    Membros marcados como <strong>'Avaliador Cego'</strong> verão os grupos alocados como <span className="font-mono bg-blue-100 px-1 py-0.5 rounded font-bold">🔒 OCULTO</span>.
+                    Membros marcados como <strong>'Avaliador Cego'</strong> verão os grupos alocados como <span className="font-mono bg-blue-100 px-1 py-0.5 rounded font-bold inline-flex items-center"><Lock className="w-3 h-3 mr-1 inline" />OCULTO</span>.
                   </p>
                 </div>
               </div>
@@ -2227,7 +2333,7 @@ function DashboardContent() {
                   onClick={() => setShowAddMemberModal(true)}
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow-sm transition flex items-center space-x-1.5"
                 >
-                  <span>+</span>
+                  <Plus className="w-3.5 h-3.5" />
                   <span>Adicionar Pesquisador</span>
                 </button>
               </div>
@@ -2274,7 +2380,11 @@ function DashboardContent() {
                             }`}
                             title="Clique para alternar o status de cegamento deste pesquisador"
                           >
-                            <span>{member.isBlinded ? '👁️‍🗨️' : '🔓'}</span>
+                            {member.isBlinded ? (
+                              <EyeOff className="w-3.5 h-3.5 text-purple-700" />
+                            ) : (
+                              <Eye className="w-3.5 h-3.5 text-slate-500" />
+                            )}
                             <span>{member.isBlinded ? 'Avaliador Cego (Ativo)' : 'Não Cego (Visualiza Grupos)'}</span>
                           </button>
                         </td>
@@ -2297,6 +2407,7 @@ function DashboardContent() {
 
           </div>
         )}
+
 
         {/* ABA 3: RESULTADOS E EXPORTAÇÃO DE DADOS (.CSV) */}
         {activeTab === 'export' && (() => {
@@ -2385,7 +2496,7 @@ function DashboardContent() {
                       className="px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl border border-slate-300 transition flex items-center space-x-1.5 shrink-0"
                       title="Exportar cadastro completo de pacientes (Restrito à Coordenação)"
                     >
-                      <span>📋</span>
+                      <ClipboardList className="w-3.5 h-3.5" />
                       <span>Cadastro (Identificado)</span>
                     </button>
                   )}
@@ -2429,7 +2540,7 @@ function DashboardContent() {
                   <div>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-2">
-                        <span className="text-xl">⚡</span>
+                        <Zap className="w-5 h-5 text-amber-600" />
                         <h3 className="text-base font-bold text-slate-900">Cinética da Sensibilidade (EVA)</h3>
                       </div>
                       <span className="text-xs font-semibold text-slate-400">Escala 0 a 10</span>
@@ -2503,8 +2614,9 @@ function DashboardContent() {
                     </div>
                   )}
 
-                  <div className="mt-4 p-3 bg-slate-50 border border-slate-100 rounded-xl text-[11px] text-slate-600">
-                    💡 <strong>Interpretação Clínica:</strong> O perfil cinético da dor em clareamento reflete a difusão dos radicais livres através dos túbulos dentinários, sensibilizando as fibras nociceptivas A-delta pulpares.
+                  <div className="mt-4 p-3 bg-slate-50 border border-slate-100 rounded-xl text-[11px] text-slate-600 flex items-start space-x-1.5">
+                    <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                    <span><strong>Interpretação Clínica:</strong> O perfil cinético da dor em clareamento reflete a difusão dos radicais livres através dos túbulos dentinários, sensibilizando as fibras nociceptivas A-delta pulpares.</span>
                   </div>
                 </div>
 
@@ -2513,7 +2625,7 @@ function DashboardContent() {
                   <div>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-2">
-                        <span className="text-xl">🦷</span>
+                        <Sparkles className="w-5 h-5 text-blue-600" />
                         <h3 className="text-base font-bold text-slate-900">Eficácia Clareadora (ΔSGU Vita)</h3>
                       </div>
                       <span className="text-xs font-semibold text-slate-400">Escala Vita Classical</span>
@@ -2572,8 +2684,9 @@ function DashboardContent() {
                     </div>
                   )}
 
-                  <div className="mt-4 p-3 bg-slate-50 border border-slate-100 rounded-xl text-[11px] text-slate-600">
-                    🔬 <strong>Padrão de Pesquisa:</strong> A ordem dos 16 tons da Vita Classical por luminosidade é: B1 (1), A1 (2), B2 (3), D2 (4), A2 (5), C1 (6), C2 (7), D4 (8), A3 (9), D3 (10), B3 (11), A3.5 (12), B4 (13), C3 (14), A4 (15), C4 (16).
+                  <div className="mt-4 p-3 bg-slate-50 border border-slate-100 rounded-xl text-[11px] text-slate-600 flex items-start space-x-1.5">
+                    <Info className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
+                    <span><strong>Padrão de Pesquisa:</strong> A ordem dos 16 tons da Vita Classical por luminosidade é: B1 (1), A1 (2), B2 (3), D2 (4), A2 (5), C1 (6), C2 (7), D4 (8), A3 (9), D3 (10), B3 (11), A3.5 (12), B4 (13), C3 (14), A4 (15), C4 (16).</span>
                   </div>
                 </div>
 
@@ -2620,20 +2733,22 @@ function DashboardContent() {
                             if (win?.pendingStatus === 'OVERDUE') {
                               return (
                                 <span
-                                  className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-red-100 text-red-700 border border-red-200 animate-pulse"
+                                  className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-red-100 text-red-700 border border-red-200 animate-pulse space-x-1"
                                   title={`Atrasada há ${win.daysDiff} dias`}
                                 >
-                                  🚨 Atrasada
+                                  <AlertCircle className="w-2.5 h-2.5" />
+                                  <span>Atrasada</span>
                                 </span>
                               );
                             }
                             if (win?.pendingStatus === 'DUE_NOW') {
                               return (
                                 <span
-                                  className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-800 border border-amber-300"
+                                  className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-800 border border-amber-300 space-x-1"
                                   title={`Janela Aberta (Restam ${win.daysDiff}d)`}
                                 >
-                                  ⏰ Janela
+                                  <Clock className="w-2.5 h-2.5" />
+                                  <span>Janela</span>
                                 </span>
                               );
                             }
@@ -2656,17 +2771,18 @@ function DashboardContent() {
                                 {win && (
                                   win.completedStatus === 'ON_TIME' ? (
                                     <span
-                                      className="text-[9px] px-1 py-0.2 rounded bg-emerald-100 text-emerald-800 border border-emerald-300 font-sans font-bold"
+                                      className="text-[9px] px-1 py-0.2 rounded bg-emerald-100 text-emerald-800 border border-emerald-300 font-sans font-bold inline-flex items-center"
                                       title="Realizada dentro da janela clínica do protocolo"
                                     >
-                                      ✓
+                                      <Check className="w-2.5 h-2.5" />
                                     </span>
                                   ) : (
                                     <span
-                                      className="text-[9px] px-1 py-0.2 rounded bg-amber-100 text-amber-900 border border-amber-300 font-sans font-bold"
+                                      className="text-[9px] px-1 py-0.2 rounded bg-amber-100 text-amber-900 border border-amber-300 font-sans font-bold inline-flex items-center space-x-0.5"
                                       title={`Desvio de janela clínica (${win.completedStatus === 'DEVIATION_EARLY' ? `-${win.deviationDays}d` : `+${win.deviationDays}d`})`}
                                     >
-                                      ⚠️ {win.completedStatus === 'DEVIATION_EARLY' ? `-${win.deviationDays}d` : `+${win.deviationDays}d`}
+                                      <AlertTriangle className="w-2.5 h-2.5 mr-0.5" />
+                                      <span>{win.completedStatus === 'DEVIATION_EARLY' ? `-${win.deviationDays}d` : `+${win.deviationDays}d`}</span>
                                     </span>
                                   )
                                 )}
@@ -2683,8 +2799,15 @@ function DashboardContent() {
                             <td className="p-3.5 font-bold font-mono text-blue-700">{p.researchCode}</td>
                             <td className="p-3.5 font-medium text-slate-900">{p.patient.fullName}</td>
                             <td className="p-3.5">
-                              <span className="bg-slate-100 px-2 py-0.5 rounded border border-slate-200 text-slate-700 font-medium">
-                                {project.isBlinded ? '🔒 Oculto' : (p.group || 'Aguardando')}
+                              <span className="bg-slate-100 px-2 py-0.5 rounded border border-slate-200 text-slate-700 font-medium inline-flex items-center space-x-1">
+                                {project.isBlinded ? (
+                                  <>
+                                    <Lock className="w-2.5 h-2.5 text-slate-500 mr-1" />
+                                    <span>Oculto</span>
+                                  </>
+                                ) : (
+                                  p.group || 'Aguardando'
+                                )}
                               </span>
                             </td>
                             <td className="p-3.5">{renderSessionBadge(s1, 1)}</td>
@@ -2697,9 +2820,10 @@ function DashboardContent() {
                                   setTimelineParticipant(p);
                                   setShowTimelineModal(true);
                                 }}
-                                className="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded font-bold transition text-[11px]"
+                                className="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded font-bold transition text-[11px] inline-flex items-center space-x-1"
                               >
-                                🩺 Ver Linha
+                                <Stethoscope className="w-3 h-3" />
+                                <span>Ver Linha</span>
                               </button>
                             </td>
                           </tr>
@@ -2715,7 +2839,7 @@ function DashboardContent() {
                 <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-slate-50/50">
                   <div>
                     <div className="flex items-center space-x-2">
-                      <span className="text-xl">📋</span>
+                      <ClipboardList className="w-5 h-5 text-indigo-600" />
                       <h3 className="text-base font-bold text-slate-900">
                         Questionários Clínicos Eletrônicos (eCRFs / PROMs)
                       </h3>
@@ -2836,7 +2960,7 @@ function DashboardContent() {
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-slate-200">
             <div className="flex items-center space-x-2 mb-2">
-              <span className="text-xl">🎲</span>
+              <Shuffle className="w-5 h-5 text-indigo-600" />
               <h3 className="text-lg font-bold text-slate-900">Alocação de Randomização</h3>
             </div>
             <p className="text-xs text-slate-500 mb-5">
@@ -3026,14 +3150,14 @@ function DashboardContent() {
                   <button
                     type="button"
                     onClick={() => setShowAnamnesisModal(false)}
-                    className="text-slate-400 hover:text-slate-600 font-bold text-lg"
+                    className="text-slate-400 hover:text-slate-600 p-1 rounded-lg"
                   >
-                    ✕
+                    <X className="w-5 h-5" />
                   </button>
                 </div>
 
                 <div className="text-center py-10 px-4 bg-amber-50/50 border border-amber-200 rounded-2xl space-y-4">
-                  <span className="text-4xl block">⚙️</span>
+                  <Settings className="w-10 h-10 text-amber-500 mx-auto block mb-2" />
                   <h3 className="text-base font-bold text-slate-800">
                     Nenhuma Ficha Clínica configurada para este projeto
                   </h3>
@@ -3045,7 +3169,7 @@ function DashboardContent() {
                       href={`/anamnese?projectId=${project.id}`}
                       className="inline-flex items-center space-x-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow transition"
                     >
-                      <span>🛠️</span>
+                      <Settings className="w-3.5 h-3.5" />
                       <span>Configurar Ficha Clínica Agora</span>
                     </Link>
                   </div>
@@ -3122,9 +3246,9 @@ function DashboardContent() {
                 <button
                   type="button"
                   onClick={() => setShowAnamnesisModal(false)}
-                  className="text-slate-400 hover:text-slate-600 font-bold text-lg"
+                  className="text-slate-400 hover:text-slate-600 p-1 rounded-lg"
                 >
-                  ✕
+                  <X className="w-5 h-5" />
                 </button>
               </div>
 
@@ -3133,7 +3257,7 @@ function DashboardContent() {
                 {activeExclusions.length > 0 && (
                   <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-xl">
                     <div className="flex items-start">
-                      <span className="text-red-500 font-bold mr-2 text-base">⚠️</span>
+                      <AlertTriangle className="w-4 h-4 text-red-500 mr-2 shrink-0 mt-0.5" />
                       <div>
                         <h4 className="text-xs font-bold text-red-900 uppercase tracking-wider">
                           Critério de Inelegibilidade Violado ({activeExclusions.length})
@@ -3156,7 +3280,8 @@ function DashboardContent() {
                     <div className="flex flex-wrap justify-between items-center gap-2">
                       <div>
                         <h4 className="font-bold text-slate-800 text-sm flex items-center">
-                          <span className="mr-2">🦷</span> Mapeamento Anatômico Dental (Odontograma Clínico)
+                          <Stethoscope className="w-4 h-4 text-indigo-600 mr-2 inline" />
+                          <span>Mapeamento Anatômico Dental (Odontograma Clínico)</span>
                         </h4>
                         <p className="text-[11px] text-slate-500">
                           Escopo: {config.odontogramScope === 'anterior' ? 'Dentes Anteriores (13 a 23 e 33 a 43)' : 'Arcada Completa'} • Clique no dente para alterar o status
@@ -3168,7 +3293,7 @@ function DashboardContent() {
                         onClick={() => setShowToothSelectorModal(true)}
                         className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs transition flex items-center space-x-1.5 cursor-pointer"
                       >
-                        <span>🔍</span>
+                        <Search className="w-3.5 h-3.5" />
                         <span>Abrir Seletor de Elementos</span>
                       </button>
                     </div>
@@ -3196,7 +3321,8 @@ function DashboardContent() {
                 {config.enablePeriodontogram && (
                   <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl space-y-3">
                     <h4 className="font-bold text-slate-800 text-sm flex items-center">
-                      <span className="mr-2">🩺</span> Exame Periodontal (Periograma)
+                      <Stethoscope className="w-4 h-4 text-blue-600 mr-2 inline" />
+                      <span>Exame Periodontal (Periograma)</span>
                     </h4>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -3331,7 +3457,8 @@ function DashboardContent() {
                 {config.questions && config.questions.length > 0 && (
                   <div className="space-y-3">
                     <h4 className="font-bold text-slate-800 text-sm flex items-center">
-                      <span className="mr-2">📋</span> Perguntas de Anamnese & Elegibilidade
+                      <ClipboardList className="w-4 h-4 text-slate-700 mr-2 inline" />
+                      <span>Perguntas de Anamnese & Elegibilidade</span>
                     </h4>
 
                     <div className="space-y-3">
@@ -3514,9 +3641,10 @@ function DashboardContent() {
                 <button
                   type="submit"
                   disabled={savingAnamnesis}
-                  className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow-sm transition disabled:opacity-50"
+                  className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow-sm transition disabled:opacity-50 flex items-center space-x-1.5"
                 >
-                  {savingAnamnesis ? 'Gravando Ficha...' : '✓ Salvar Ficha Clínica'}
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>{savingAnamnesis ? 'Gravando Ficha...' : 'Salvar Ficha Clínica'}</span>
                 </button>
               </div>
             </form>
@@ -3725,16 +3853,22 @@ function DashboardContent() {
                 <p className="text-xs text-slate-500 mt-1">
                   Paciente: <strong>{timelineParticipant.patient.fullName}</strong> • Grupo:{' '}
                   <span className="font-semibold text-slate-700">
-                    {project.isBlinded ? '🔒 Oculto (Avaliador Cego)' : (timelineParticipant.group || 'Aguardando')}
+                    {project.isBlinded ? (
+                      <span className="inline-flex items-center gap-1 text-slate-600">
+                        <Lock className="w-3 h-3 text-slate-500" /> Oculto (Avaliador Cego)
+                      </span>
+                    ) : (
+                      timelineParticipant.group || 'Aguardando'
+                    )}
                   </span>
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setShowTimelineModal(false)}
-                className="text-slate-400 hover:text-slate-600 font-bold text-lg"
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition"
               >
-                ✕
+                <X className="w-5 h-5" />
               </button>
             </div>
 
@@ -3783,7 +3917,7 @@ function DashboardContent() {
                                 : 'bg-slate-200 text-slate-600'
                             }`}
                           >
-                            {isCompleted ? '✓' : sNum}
+                            {isCompleted ? <Check className="w-4 h-4" /> : sNum}
                           </div>
                           <div>
                             <div className="flex flex-wrap items-center gap-1.5">
@@ -3801,12 +3935,12 @@ function DashboardContent() {
                               {/* Badges de Auditoria de Janela Clínica */}
                               {isCompleted && winStatus && (
                                 winStatus.completedStatus === 'ON_TIME' ? (
-                                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
-                                    ✓ No Prazo
+                                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 inline-flex items-center gap-1">
+                                    <CheckCircle2 className="w-3 h-3 text-emerald-700" /> No Prazo
                                   </span>
                                 ) : (
-                                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300">
-                                    ⚠️ Desvio de Janela ({winStatus.completedStatus === 'DEVIATION_EARLY' ? `-${winStatus.deviationDays}d` : `+${winStatus.deviationDays}d`})
+                                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 inline-flex items-center gap-1">
+                                    <AlertTriangle className="w-3 h-3 text-amber-700" /> Desvio ({winStatus.completedStatus === 'DEVIATION_EARLY' ? `-${winStatus.deviationDays}d` : `+${winStatus.deviationDays}d`})
                                   </span>
                                 )
                               )}
@@ -3814,26 +3948,26 @@ function DashboardContent() {
                               {!isCompleted && winStatus && (
                                 <>
                                   {winStatus.pendingStatus === 'OVERDUE' && (
-                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-800 border border-red-300 animate-pulse">
-                                      🚨 Atrasada (+{winStatus.daysDiff}d)
+                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-800 border border-red-300 animate-pulse inline-flex items-center gap-1">
+                                      <AlertCircle className="w-3 h-3 text-red-700" /> Atrasada (+{winStatus.daysDiff}d)
                                     </span>
                                   )}
                                   {winStatus.pendingStatus === 'DUE_NOW' && (
-                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300">
-                                      ⏰ Janela Aberta (Restam {winStatus.daysDiff}d)
+                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300 inline-flex items-center gap-1">
+                                      <Clock className="w-3 h-3 text-amber-700" /> Janela Aberta ({winStatus.daysDiff}d)
                                     </span>
                                   )}
                                   {winStatus.pendingStatus === 'UPCOMING' && (
-                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
-                                      📅 Prevista (em {winStatus.daysDiff}d)
+                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 inline-flex items-center gap-1">
+                                      <Calendar className="w-3 h-3 text-blue-600" /> Prevista (em {winStatus.daysDiff}d)
                                     </span>
                                   )}
                                 </>
                               )}
 
                               {!isCompleted && !winStatus && sNum === 1 && (
-                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200">
-                                  ⏳ Baseline Pendente
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200 inline-flex items-center gap-1">
+                                  <Clock className="w-3 h-3 text-blue-700" /> Baseline Pendente
                                 </span>
                               )}
                             </div>
@@ -3843,13 +3977,23 @@ function DashboardContent() {
 
                         <button
                           onClick={() => openSessionEditor(timelineParticipant, sNum)}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition shrink-0 ${
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition shrink-0 inline-flex items-center gap-1.5 ${
                             isCompleted
                               ? 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-300'
                               : 'bg-blue-600 hover:bg-blue-700 text-white shadow-xs'
                           }`}
                         >
-                          {isCompleted ? '✏️ Editar Registro' : '+ Registrar Sessão'}
+                          {isCompleted ? (
+                            <>
+                              <Edit className="w-3.5 h-3.5 text-slate-500" />
+                              <span>Editar</span>
+                            </>
+                          ) : (
+                            <>
+                              <Plus className="w-3.5 h-3.5" />
+                              <span>Registrar</span>
+                            </>
+                          )}
                         </button>
                       </div>
 
@@ -3888,8 +4032,8 @@ function DashboardContent() {
                             className="flex items-center space-x-1.5 px-2.5 py-1 bg-[#25D366] hover:bg-[#128C7E] text-white rounded-md font-bold text-xs shadow-xs transition shrink-0"
                             title="Enviar convite de retorno com datas da janela clínica pelo WhatsApp"
                           >
-                            <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-                            <span>💬 Convidar no WhatsApp</span>
+                            <MessageSquare className="w-3.5 h-3.5" />
+                            <span>Convidar no WhatsApp</span>
                           </button>
                         </div>
                       )}
@@ -3937,10 +4081,12 @@ function DashboardContent() {
                               </div>
                               <div>
                                 {winStatus.completedStatus === 'ON_TIME' ? (
-                                  <span className="text-emerald-700 font-bold">✓ Executada em conformidade</span>
+                                  <span className="text-emerald-700 font-bold inline-flex items-center gap-1">
+                                    <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Executada em conformidade
+                                  </span>
                                 ) : (
-                                  <span className="text-amber-800 font-bold">
-                                    ⚠️ Desvio de protocolo ({winStatus.completedStatus === 'DEVIATION_EARLY' ? `-${winStatus.deviationDays}d` : `+${winStatus.deviationDays}d`})
+                                  <span className="text-amber-800 font-bold inline-flex items-center gap-1">
+                                    <AlertTriangle className="w-3 h-3 text-amber-700" /> Desvio de protocolo ({winStatus.completedStatus === 'DEVIATION_EARLY' ? `-${winStatus.deviationDays}d` : `+${winStatus.deviationDays}d`})
                                   </span>
                                 )}
                               </div>
@@ -3987,9 +4133,9 @@ function DashboardContent() {
                 <button
                   type="button"
                   onClick={() => setShowSessionModal(false)}
-                  className="text-slate-400 hover:text-slate-600 font-bold text-lg"
+                  className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition"
                 >
-                  ✕
+                  <X className="w-5 h-5" />
                 </button>
               </div>
 
@@ -4013,7 +4159,10 @@ function DashboardContent() {
                 {/* Registro de Cor Escala VITA Classical */}
                 <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="font-bold text-slate-800 text-xs">🦷 Escala de Cor VITA Classical (Boca Dividida)</span>
+                    <span className="font-bold text-slate-800 text-xs inline-flex items-center gap-1.5">
+                      <Sparkles className="w-4 h-4 text-amber-500" />
+                      <span>Escala de Cor VITA Classical (Boca Dividida)</span>
+                    </span>
                     <span className="text-[11px] text-slate-500">16 tons (B1 mais claro a C4 mais escuro)</span>
                   </div>
 
@@ -4061,8 +4210,9 @@ function DashboardContent() {
                 {/* Escala Visual Analógica (EVA) de Sensibilidade Dentinária */}
                 <div className="p-4 bg-blue-50/60 border border-blue-200 rounded-xl space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="font-bold text-blue-950 text-xs">
-                      ⚡ Sensibilidade Dentinária - Escala Visual Analógica (EVA 0-10)
+                    <span className="font-bold text-blue-950 text-xs inline-flex items-center gap-1.5">
+                      <Zap className="w-4 h-4 text-blue-600" />
+                      <span>Sensibilidade Dentinária - Escala Visual Analógica (EVA 0-10)</span>
                     </span>
                     <span className="text-[11px] text-blue-700">0 = Sem dor | 10 = Pior dor imaginável</span>
                   </div>
@@ -4238,9 +4388,10 @@ function DashboardContent() {
                   <button
                     type="submit"
                     disabled={savingSession}
-                    className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow-sm transition disabled:opacity-50"
+                    className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow-sm transition disabled:opacity-50 inline-flex items-center gap-1.5"
                   >
-                    {savingSession ? 'Gravando...' : '✓ Salvar Sessão Clínica'}
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>{savingSession ? 'Gravando...' : 'Salvar Sessão Clínica'}</span>
                   </button>
                 </div>
               </form>
@@ -4289,7 +4440,7 @@ function DashboardContent() {
                       }`}
                       title="Simular Pesquisador Não-Cego ou Coordenador (visualiza todas as respostas)"
                     >
-                      <span>👁️</span>
+                      <Eye className="w-3.5 h-3.5" />
                       <span>Pesquisador Não-Cego (Ver Respostas)</span>
                     </button>
                     <button
@@ -4302,7 +4453,7 @@ function DashboardContent() {
                       }`}
                       title="Simular Avaliador Cego (respostas mascaradas conforme protocolo)"
                     >
-                      <span>🔒</span>
+                      <Lock className="w-3.5 h-3.5" />
                       <span>Avaliador Cego (Mascarado)</span>
                     </button>
                     {overrideBlindedView !== null && (
@@ -4319,9 +4470,9 @@ function DashboardContent() {
                 </div>
                 <button
                   onClick={() => setShowResponsesModal(false)}
-                  className="text-slate-400 hover:text-slate-600 p-2 rounded-xl hover:bg-slate-100 transition"
+                  className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 transition"
                 >
-                  ✕
+                  <X className="w-5 h-5" />
                 </button>
               </div>
 
@@ -4329,7 +4480,7 @@ function DashboardContent() {
               <div className="p-6 overflow-y-auto space-y-6 flex-1">
                 {projectForms.length === 0 ? (
                   <div className="text-center py-10 text-slate-400">
-                    <span className="text-3xl block mb-2">📋</span>
+                    <ClipboardList className="w-10 h-10 text-slate-300 mx-auto mb-2" />
                     <p className="text-sm font-medium">Nenhum questionário cadastrado para este projeto.</p>
                     <Link
                       href="/construtor"
@@ -4383,7 +4534,7 @@ function DashboardContent() {
                           <div>
                             {resp ? (
                               <span className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
-                                <span>✓</span>
+                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700" />
                                 <span>
                                   Respondido em{' '}
                                   {new Date(resp.submittedAt).toLocaleDateString('pt-BR', {
@@ -4398,7 +4549,7 @@ function DashboardContent() {
                             ) : (
                               <div className="flex items-center space-x-2">
                                 <span className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300">
-                                  <span>⏳</span>
+                                  <Clock className="w-3.5 h-3.5 text-amber-700" />
                                   <span>Pendente</span>
                                 </span>
                                 <button
@@ -4414,7 +4565,7 @@ function DashboardContent() {
                                   className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-lg text-xs font-bold bg-[#25D366] hover:bg-[#128C7E] text-white shadow-xs transition"
                                   title="Enviar cobrança ou lembrete via WhatsApp"
                                 >
-                                  <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                                  <MessageSquare className="w-3.5 h-3.5" />
                                   <span>Lembrar no WhatsApp</span>
                                 </button>
                               </div>
@@ -4427,7 +4578,7 @@ function DashboardContent() {
                           isCurrentBlinded ? (
                             <div className="bg-amber-50/80 border border-amber-200 rounded-xl p-4 text-left">
                               <div className="flex items-start space-x-3">
-                                <span className="text-2xl shrink-0">🔒</span>
+                                <Lock className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
                                 <div>
                                   <h4 className="text-sm font-bold text-amber-900">
                                     Conteúdo Mascarado — Avaliador Cego
@@ -4436,15 +4587,16 @@ function DashboardContent() {
                                     Conforme as normas de ensaio clínico duplo-cego (GCP / ICH E6), avaliadores cegos não têm acesso aos escores de dor (EVA contínua) ou respostas relatadas pelo paciente para evitar quebra de imparcialidade na avaliação clínica.
                                   </p>
                                   <div className="mt-3 flex flex-wrap items-center gap-2">
-                                    <span className="text-[11px] font-semibold text-emerald-800 bg-emerald-100/80 px-2.5 py-1 rounded-md border border-emerald-300">
-                                      ✓ Status confirmado: Respondido ({new Date(resp.submittedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })})
+                                    <span className="text-[11px] font-semibold text-emerald-800 bg-emerald-100/80 px-2.5 py-1 rounded-md border border-emerald-300 inline-flex items-center gap-1">
+                                      <CheckCircle2 className="w-3 h-3 text-emerald-700" /> Status confirmado: Respondido ({new Date(resp.submittedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })})
                                     </span>
                                     <button
                                       type="button"
                                       onClick={() => setOverrideBlindedView(false)}
-                                      className="text-xs font-bold text-blue-700 hover:text-blue-900 underline"
+                                      className="text-xs font-bold text-blue-700 hover:text-blue-900 underline inline-flex items-center gap-1"
                                     >
-                                      👁️ Clique aqui para alternar para visão Não-Cego e testar as respostas
+                                      <Eye className="w-3.5 h-3.5" />
+                                      <span>Alternar para visão Não-Cego e ver respostas</span>
                                     </button>
                                   </div>
                                 </div>
@@ -4454,7 +4606,7 @@ function DashboardContent() {
                             <div className="space-y-4">
                               <div className="flex items-center justify-between bg-blue-50/60 border border-blue-200 rounded-lg px-3 py-1.5 text-xs text-blue-800">
                                 <span className="font-semibold flex items-center space-x-1.5">
-                                  <span>👁️</span>
+                                  <Eye className="w-3.5 h-3.5 text-blue-700" />
                                   <span>Acesso Não-Cego / Coordenação: Visualização integral das respostas</span>
                                 </span>
                                 <span className="font-mono text-[11px] text-blue-600">ID: {resp.id.slice(0, 8)}</span>
@@ -4549,9 +4701,10 @@ function DashboardContent() {
                               href={`/paciente?code=${part.researchCode}&tab=forms&formId=${form.id}`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="inline-flex items-center space-x-1 text-emerald-600 hover:text-emerald-800 font-bold underline ml-2"
+                              className="inline-flex items-center space-x-1.5 text-emerald-600 hover:text-emerald-800 font-bold underline ml-2"
                             >
-                              <span>📱 Testar resposta agora →</span>
+                              <ExternalLink className="w-3.5 h-3.5" />
+                              <span>Testar resposta agora</span>
                             </a>
                           </div>
                         )}

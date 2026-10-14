@@ -2,6 +2,18 @@
 
 import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
+import {
+  Activity,
+  ClipboardList,
+  AlertTriangle,
+  CheckCircle2,
+  Calendar,
+  Clock,
+  ArrowRight,
+  Info,
+  ShieldCheck,
+  Search,
+} from 'lucide-react';
 
 type ParticipantSession = {
   id: string;
@@ -346,7 +358,7 @@ function PacienteContent() {
 
             <div className="p-4 bg-blue-50 border border-blue-200 rounded-2xl text-left text-xs space-y-2">
               <h4 className="font-bold text-blue-900 flex items-center space-x-1.5">
-                <span>🛡️</span>
+                <ShieldCheck className="w-4 h-4 text-blue-600 flex-shrink-0" />
                 <span>Suporte Clínico aos Participantes</span>
               </h4>
               <p className="text-blue-800 text-[11px] leading-relaxed">
@@ -389,8 +401,8 @@ function PacienteContent() {
       <div className="min-h-screen bg-slate-50 font-sans text-slate-800 flex items-center justify-center p-4">
         <div className="w-full max-w-lg bg-white rounded-3xl shadow-xl border border-slate-200 p-6 sm:p-8">
           <div className="text-center mb-6">
-            <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 mb-2 text-xl shadow-xs">
-              🔍
+            <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 mb-2 shadow-xs">
+              <Search className="w-6 h-6" />
             </div>
             <h1 className="text-lg font-bold text-slate-900">Selecione seu Estudo Clínico</h1>
             <p className="text-xs text-slate-500 mt-1">
@@ -400,7 +412,7 @@ function PacienteContent() {
 
           {errorMsg && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 flex items-center space-x-2">
-              <span>⚠️</span>
+              <AlertTriangle className="w-4 h-4 flex-shrink-0" />
               <span>{errorMsg}</span>
             </div>
           )}
@@ -512,19 +524,21 @@ function PacienteContent() {
       <div className="min-h-screen bg-slate-50 font-sans text-slate-800 flex items-center justify-center p-4">
         <div className="w-full max-w-md bg-white rounded-3xl shadow-xl border border-slate-200 p-6 sm:p-8">
           <div className="text-center mb-6">
-            <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-blue-50 text-blue-600 mb-3 text-2xl shadow-xs">
-              🦷
+            <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-blue-50 text-blue-600 mb-3 shadow-xs">
+              <svg className="w-7 h-7 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 8c0-3 2-6 8-6s8 3 8 6c0 3-1 6-2 9s-2 5-4 5c-1.5 0-2-2-2-3 0 1-.5 3-2 3-2 0-3-2-4-5S4 11 4 8z"/>
+              </svg>
             </div>
             <h1 className="text-xl font-bold text-slate-900">Portal do Participante</h1>
             <p className="text-xs text-slate-500 mt-1">
               Universidade Estadual de Ponta Grossa • UEPG <br />
-              Pesquisa Clínica em Clareamento Dental
+              Pesquisa Clínica em Odontologia
             </p>
           </div>
 
           {errorMsg && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 flex items-center space-x-2">
-              <span>⚠️</span>
+              <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
               <span>{errorMsg}</span>
             </div>
           )}
@@ -550,9 +564,10 @@ function PacienteContent() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md transition disabled:opacity-50"
+              className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md transition disabled:opacity-50 flex items-center justify-center space-x-2"
             >
-              {loading ? 'Identificando...' : 'Acessar Meu Diário de Pesquisa →'}
+              <span>{loading ? 'Identificando...' : 'Acessar Meu Diário de Pesquisa'}</span>
+              <ArrowRight className="w-4 h-4" />
             </button>
           </form>
 
@@ -608,7 +623,7 @@ function PacienteContent() {
                 : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-200'
             }`}
           >
-            <span>⚡</span>
+            <Activity className="w-3.5 h-3.5" />
             <span>Diário de Dor</span>
           </button>
 
@@ -625,7 +640,7 @@ function PacienteContent() {
                 : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-200'
             }`}
           >
-            <span>📋</span>
+            <ClipboardList className="w-3.5 h-3.5" />
             <span>Questionários</span>
             {pendingFormsCount > 0 && (
               <span className="w-4 h-4 bg-amber-500 text-white rounded-full text-[9px] flex items-center justify-center font-black">
@@ -642,7 +657,7 @@ function PacienteContent() {
           <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 flex items-center justify-between gap-2 shadow-xs">
             <div>
               <p className="font-bold text-slate-800 text-xs">
-                Olá, {participant.patientName.split(' ')[0]}! 👋
+                Olá, {participant.patientName.split(' ')[0]}!
               </p>
               <p className="text-[11px] text-slate-500 mt-0.5">
                 {activeTab === 'diary'
@@ -655,11 +670,12 @@ function PacienteContent() {
               <button
                 type="button"
                 onClick={() => setActiveTab('forms')}
-                className="px-2.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-[11px] font-bold shrink-0 transition shadow-xs flex items-center space-x-1"
+                className="px-2.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-[11px] font-bold shrink-0 transition shadow-xs flex items-center space-x-1.5"
                 title="Você tem questionários aguardando resposta"
               >
-                <span>📋</span>
-                <span>{pendingFormsCount} Pendente{pendingFormsCount > 1 ? 's' : ''} →</span>
+                <ClipboardList className="w-3 h-3" />
+                <span>{pendingFormsCount} Pendente{pendingFormsCount > 1 ? 's' : ''}</span>
+                <ArrowRight className="w-3 h-3" />
               </button>
             )}
           </div>
@@ -775,10 +791,10 @@ function PacienteContent() {
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {[
-                    { val: 'Normal', label: '✓ Normal e confortável' },
-                    { val: 'Leve queimação ou ardência', label: '⚠️ Leve ardência ou queimação' },
-                    { val: 'Vermelhidão perceptível', label: '⚠️ Vermelhidão perceptível' },
-                    { val: 'Pequena afta ou mancha branca', label: '⚠️ Pequena afta / mancha branca' },
+                    { val: 'Normal', label: 'Normal e confortável' },
+                    { val: 'Leve queimação ou ardência', label: 'Leve ardência ou queimação' },
+                    { val: 'Vermelhidão perceptível', label: 'Vermelhidão perceptível' },
+                    { val: 'Pequena afta ou mancha branca', label: 'Pequena afta / mancha branca' },
                   ].map((item) => (
                     <button
                       key={item.val}
@@ -869,7 +885,7 @@ function PacienteContent() {
                     <span>Gravando Relato...</span>
                   ) : (
                     <>
-                      <span>✓</span>
+                      <CheckCircle2 className="w-4 h-4" />
                       <span>Enviar Meu Diário Clínico</span>
                     </>
                   )}
@@ -887,15 +903,15 @@ function PacienteContent() {
             <div>
               {formError && (
                 <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 flex items-center space-x-2">
-                  <span>⚠️</span>
+                  <AlertTriangle className="w-4 h-4 flex-shrink-0" />
                   <span>{formError}</span>
                 </div>
               )}
 
               {formSuccessMessage && (
                 <div className="p-6 bg-white rounded-2xl border border-emerald-200 text-center space-y-4 shadow-sm animate-fadeIn">
-                  <div className="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto text-2xl font-bold">
-                    ✓
+                  <div className="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto">
+                    <CheckCircle2 className="w-8 h-8" />
                   </div>
                   <div>
                     <h3 className="text-lg font-black text-slate-900">Questionário Gravado!</h3>
@@ -927,7 +943,7 @@ function PacienteContent() {
 
                   {(!participant.forms || participant.forms.length === 0) ? (
                     <div className="p-8 bg-slate-50 border border-slate-200 rounded-2xl text-center text-xs text-slate-400 space-y-1">
-                      <span className="text-2xl block mb-2">📋</span>
+                      <ClipboardList className="w-8 h-8 text-slate-300 mx-auto mb-2" />
                       <p className="font-semibold text-slate-600">Nenhum questionário complementar ativo.</p>
                       <p className="text-[11px] text-slate-400">Quando a equipe cadastrar novos formulários (OHIP-14, Hábitos, Estética), eles aparecerão aqui.</p>
                     </div>
@@ -953,13 +969,23 @@ function PacienteContent() {
                               </span>
                             </div>
                             <span
-                              className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                              className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 flex items-center space-x-1 ${
                                 f.isCompleted
                                   ? 'bg-emerald-100 text-emerald-800'
                                   : 'bg-amber-100 text-amber-800'
                               }`}
                             >
-                              {f.isCompleted ? '✓ Concluído' : '⏳ Pendente'}
+                              {f.isCompleted ? (
+                                <>
+                                  <CheckCircle2 className="w-3 h-3 text-emerald-700" />
+                                  <span>Concluído</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Clock className="w-3 h-3 text-amber-700" />
+                                  <span>Pendente</span>
+                                </>
+                              )}
                             </span>
                           </div>
 
@@ -1017,8 +1043,9 @@ function PacienteContent() {
                             {idx + 1}. {q.title} {q.required && <span className="text-red-500 font-bold">*</span>}
                           </h4>
                           {q.observation && (
-                            <p className="text-[11px] text-slate-600 mt-1.5 bg-white p-2.5 rounded-lg border border-slate-200 leading-relaxed">
-                              💡 <strong>Orientação:</strong> {q.observation}
+                            <p className="text-[11px] text-slate-600 mt-1.5 bg-white p-2.5 rounded-lg border border-slate-200 leading-relaxed flex items-start space-x-1.5">
+                              <Info className="w-3.5 h-3.5 text-blue-600 shrink-0 mt-0.5" />
+                              <span><strong>Orientação:</strong> {q.observation}</span>
                             </p>
                           )}
                         </div>
@@ -1040,7 +1067,7 @@ function PacienteContent() {
                                   }`}
                                 >
                                   <span>{opt.label}</span>
-                                  {isSelected && <span>✓</span>}
+                                  {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-white" />}
                                 </button>
                               );
                             })}
@@ -1064,7 +1091,7 @@ function PacienteContent() {
                                   }`}
                                 >
                                   <span>{opt.label}</span>
-                                  {isSelected && <span>✓</span>}
+                                  {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-white" />}
                                 </button>
                               );
                             })}
@@ -1098,7 +1125,7 @@ function PacienteContent() {
                         {q.type === 'vas' && (
                           <div className="py-3 px-1 space-y-2">
                             <p className="text-[11px] text-slate-500 text-center font-medium italic">
-                              ↔️ Deslize o marcador para o ponto que melhor representa sua sensação
+                              Deslize o marcador para o ponto que melhor representa sua sensação
                             </p>
                             <div className="relative flex items-center">
                               <div className="w-1 h-6 bg-slate-400 rounded-full shrink-0 -mr-1 z-10" />
@@ -1155,7 +1182,7 @@ function PacienteContent() {
                         <span>Gravando Respostas...</span>
                       ) : (
                         <>
-                          <span>✓</span>
+                          <CheckCircle2 className="w-4 h-4" />
                           <span>Enviar Respostas do Questionário</span>
                         </>
                       )}

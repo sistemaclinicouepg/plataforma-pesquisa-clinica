@@ -4,6 +4,19 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
+import {
+  Clock,
+  Plus,
+  Check,
+  Activity,
+  FileEdit,
+  FileSpreadsheet,
+  EyeOff,
+  ArrowRight,
+  FolderPlus,
+  Users,
+} from 'lucide-react';
+
 type Project = {
   id: string;
   name: string;
@@ -140,7 +153,9 @@ export default function ProjetosPage() {
           <div className="mb-8 bg-amber-50 border border-amber-200 rounded-2xl p-6 shadow-sm">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center space-x-3">
-                <span className="text-2xl">⏳</span>
+                <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center">
+                  <Clock className="w-5 h-5 text-amber-800" />
+                </div>
                 <div>
                   <h2 className="text-lg font-bold text-amber-900">
                     Novos Pesquisadores Aguardando Sua Aprovação
@@ -164,9 +179,10 @@ export default function ProjetosPage() {
                   </div>
                   <button
                     onClick={() => handleApproveUser(u.id)}
-                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-sm transition"
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-sm transition flex items-center space-x-1.5"
                   >
-                    ✓ Aprovar Acesso
+                    <Check className="w-4 h-4" />
+                    <span>Aprovar Acesso</span>
                   </button>
                 </div>
               ))}
@@ -185,7 +201,7 @@ export default function ProjetosPage() {
             onClick={() => setIsCreateModalOpen(true)}
             className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl shadow-md transition flex items-center space-x-2"
           >
-            <span>+</span>
+            <Plus className="w-4 h-4" />
             <span>Novo Projeto</span>
           </button>
         </div>
@@ -229,8 +245,9 @@ export default function ProjetosPage() {
                         </span>
                         
                         {isBlinded ? (
-                          <span className="px-3 py-1 bg-purple-100 text-purple-700 text-xs font-bold rounded-full flex items-center">
-                            <span className="mr-1">👁️‍🗨️</span> Avaliador (Cego)
+                          <span className="px-3 py-1 bg-purple-100 text-purple-700 text-xs font-bold rounded-full flex items-center space-x-1">
+                            <EyeOff className="w-3.5 h-3.5" />
+                            <span>Avaliador (Cego)</span>
                           </span>
                         ) : (
                           <span className="px-3 py-1 bg-slate-100 text-slate-600 text-xs font-bold rounded-full">
@@ -260,9 +277,10 @@ export default function ProjetosPage() {
                         </div>
                         <Link
                           href={`/dashboard?projectId=${project.id}`}
-                          className="text-blue-600 font-bold text-xs hover:underline flex items-center"
+                          className="text-blue-600 font-bold text-xs hover:underline flex items-center space-x-1"
                         >
-                          Acessar →
+                          <span>Acessar</span>
+                          <ArrowRight className="w-3.5 h-3.5" />
                         </Link>
                       </div>
 
@@ -271,23 +289,26 @@ export default function ProjetosPage() {
                         <Link
                           href={`/dashboard?projectId=${project.id}`}
                           onClick={(e) => e.stopPropagation()}
-                          className="py-1.5 px-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-center border border-blue-200 transition"
+                          className="py-1.5 px-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-center border border-blue-200 transition flex items-center justify-center space-x-1"
                         >
-                          📊 Dashboard
+                          <Activity className="w-3 h-3 text-blue-600" />
+                          <span>Painel</span>
                         </Link>
                         <Link
                           href={`/construtor?projectId=${project.id}`}
                           onClick={(e) => e.stopPropagation()}
-                          className="py-1.5 px-2 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-lg text-center border border-slate-200 transition"
+                          className="py-1.5 px-2 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-lg text-center border border-slate-200 transition flex items-center justify-center space-x-1"
                         >
-                          🛠️ eCRF
+                          <FileEdit className="w-3 h-3 text-slate-600" />
+                          <span>eCRF</span>
                         </Link>
                         <Link
                           href={`/relatorio-cep?projectId=${project.id}`}
                           onClick={(e) => e.stopPropagation()}
-                          className="py-1.5 px-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-lg text-center border border-emerald-200 transition"
+                          className="py-1.5 px-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-lg text-center border border-emerald-200 transition flex items-center justify-center space-x-1"
                         >
-                          📑 CEP
+                          <FileSpreadsheet className="w-3 h-3 text-emerald-600" />
+                          <span>CEP</span>
                         </Link>
                       </div>
                     </div>

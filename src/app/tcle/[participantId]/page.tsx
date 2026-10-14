@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, use } from 'react';
 import Link from 'next/link';
+import { AlertTriangle, CheckCircle2, Lock, ShieldCheck } from 'lucide-react';
 
 type TCLEData = {
   title: string;
@@ -163,8 +164,8 @@ export default function PatientTclePage({
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-slate-800">
         <div className="max-w-md w-full bg-white rounded-3xl shadow-xl p-8 border border-slate-200 text-center">
-          <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
-            ⚠️
+          <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+            <AlertTriangle className="w-8 h-8" />
           </div>
           <h2 className="text-xl font-bold text-slate-900 mb-2">Termo Não Encontrado</h2>
           <p className="text-xs text-slate-500 mb-6">
@@ -301,14 +302,15 @@ export default function PatientTclePage({
                 </div>
               )}
             </div>
-            <p className="text-[10px] text-slate-400 text-center">
-              🔒 Sua assinatura será vinculada com segurança ao seu IP, data/hora e identificador do estudo.
+            <p className="text-[10px] text-slate-400 text-center flex items-center justify-center gap-1">
+              <Lock className="w-3 h-3 text-slate-400" />
+              <span>Sua assinatura será vinculada com segurança ao seu IP, data/hora e identificador do estudo.</span>
             </p>
           </div>
 
           {signError && (
             <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl font-medium flex items-center space-x-2">
-              <span>⚠️</span>
+              <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
               <span>{signError}</span>
             </div>
           )}
@@ -316,9 +318,10 @@ export default function PatientTclePage({
           <button
             onClick={handleSign}
             disabled={!hasSignature || !readConfirmed || signing}
-            className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm rounded-xl shadow-lg shadow-emerald-600/30 transition disabled:opacity-40 disabled:cursor-not-allowed"
+            className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm rounded-xl shadow-lg shadow-emerald-600/30 transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
-            {signing ? 'Registrando Consentimento...' : '✓ Confirmar e Assinar Eletronicamente'}
+            <CheckCircle2 className="w-4 h-4" />
+            <span>{signing ? 'Registrando Consentimento...' : 'Confirmar e Assinar Eletronicamente'}</span>
           </button>
 
         </div>

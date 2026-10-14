@@ -3,6 +3,7 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { CheckCircle2, XCircle, Check } from 'lucide-react';
 
 type ParticipantSession = {
   id: string;
@@ -246,8 +247,9 @@ function RelatorioCepContent() {
               
               {/* Caixa 2A: Excluídos */}
               <div className="bg-red-50/70 border border-red-300 rounded-xl p-4 text-xs space-y-2">
-                <span className="font-bold text-red-900 uppercase tracking-wider block text-[11px]">
-                  ✕ Excluídos na Triagem ({excludedList.length})
+                <span className="font-bold text-red-900 uppercase tracking-wider block text-[11px] inline-flex items-center gap-1.5">
+                  <XCircle className="w-3.5 h-3.5 text-red-700" />
+                  <span>Excluídos na Triagem ({excludedList.length})</span>
                 </span>
                 <p className="text-slate-600 text-[11px]">
                   Candidatos que não preencheram os critérios éticos/clínicos de inclusão:
@@ -267,8 +269,9 @@ function RelatorioCepContent() {
 
               {/* Caixa 2B: Incluídos / TCLE */}
               <div className="bg-emerald-50/70 border border-emerald-300 rounded-xl p-4 text-xs space-y-2">
-                <span className="font-bold text-emerald-900 uppercase tracking-wider block text-[11px]">
-                  ✓ Incluídos no Protocolo ({approvedList.length})
+                <span className="font-bold text-emerald-900 uppercase tracking-wider block text-[11px] inline-flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700" />
+                  <span>Incluídos no Protocolo ({approvedList.length})</span>
                 </span>
                 <p className="text-slate-600 text-[11px]">
                   Todos os participantes incluídos consentiram formalmente:
@@ -332,8 +335,9 @@ function RelatorioCepContent() {
                 </div>
               </div>
 
-              <div className="p-2 bg-emerald-50 text-emerald-800 rounded text-center text-[11px] font-semibold border border-emerald-200">
-                ✓ Taxa de Perda Amostral (Drop-out): 0% (Nenhuma evasão relatada até a presente data)
+              <div className="p-2 bg-emerald-50 text-emerald-800 rounded text-center text-[11px] font-semibold border border-emerald-200 flex items-center justify-center gap-1.5">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700" />
+                <span>Taxa de Perda Amostral (Drop-out): 0% (Nenhuma evasão relatada até a presente data)</span>
               </div>
             </div>
 
@@ -420,8 +424,8 @@ function RelatorioCepContent() {
                         SHA-256: VALIDADO (Trilha Ativa)
                       </td>
                       <td className="p-2.5 text-right">
-                        <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded font-bold text-[10px]">
-                          ✓ Conforme
+                        <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded font-bold text-[10px] inline-flex items-center gap-1">
+                          <Check className="w-3 h-3 text-emerald-700" /> Conforme
                         </span>
                       </td>
                     </tr>
