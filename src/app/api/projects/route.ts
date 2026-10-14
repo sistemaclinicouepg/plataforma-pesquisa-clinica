@@ -80,20 +80,23 @@ export async function POST(req: Request) {
       data: {
         name: name.trim(),
         description: description?.trim() || null,
-        members: userId ? {
-          create: {
-            userId: userId,
-            role: 'COORDINATOR',
-            isBlinded: false,
-          },
-        } : undefined,
-      },
-      include: {
-        members: true,
       },
     });
 
-    return NextResponse.json({ success: true, project: newProject });
+    let members: unknown[] = [];
+    if (userId) {
+      const coordinator = await prisma.projectMember.create({
+        data: {
+          projectId: newProject.id,
+          userId: userId,
+          role: 'COORDINATOR',
+          isBlinded: false,
+        },
+      });
+      members = [coordinator];
+    }
+
+    return NextResponse.json({ success: true, project: { ...newProject, members } });
   } catch (error) {
     console.error('Erro ao criar projeto:', error);
     return NextResponse.json({ error: 'Erro ao criar projeto.' }, { status: 500 });

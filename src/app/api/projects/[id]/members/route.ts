@@ -78,14 +78,15 @@ export async function POST(
         role: role || 'EVALUATOR',
         isBlinded: Boolean(isBlinded),
       },
-      include: {
-        user: {
-          select: { id: true, name: true, email: true, role: true },
-        },
-      },
     });
 
-    return NextResponse.json({ success: true, member: newMember });
+    return NextResponse.json({
+      success: true,
+      member: {
+        ...newMember,
+        user: { id: user.id, name: user.name, email: user.email, role: user.role },
+      },
+    });
   } catch (error) {
     console.error('Erro ao adicionar membro:', error);
     return NextResponse.json({ error: 'Erro ao adicionar membro à equipe.' }, { status: 500 });
@@ -112,14 +113,14 @@ export async function PATCH(
         ...(role && { role }),
         ...(isBlinded !== undefined && { isBlinded }),
       },
-      include: {
-        user: {
-          select: { id: true, name: true, email: true, role: true },
-        },
-      },
     });
 
-    return NextResponse.json({ success: true, member: updated });
+    const user = await prisma.user.findUnique({
+      where: { id: updated.userId },
+      select: { id: true, name: true, email: true, role: true },
+    });
+
+    return NextResponse.json({ success: true, member: { ...updated, user } });
   } catch (error) {
     console.error('Erro ao atualizar membro:', error);
     return NextResponse.json({ error: 'Erro ao atualizar membro.' }, { status: 500 });

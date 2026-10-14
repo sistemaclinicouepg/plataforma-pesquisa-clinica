@@ -110,20 +110,6 @@ export async function PATCH(req: Request) {
         resolvedBy: resolvedByName,
         resolutionNotes: resolutionNotes || 'Atendimento clínico e suporte prestado ao participante.',
       },
-      include: {
-        participant: {
-          select: {
-            id: true,
-            researchCode: true,
-            patient: {
-              select: {
-                fullName: true,
-                phoneWhatsApp: true,
-              },
-            },
-          },
-        },
-      },
     });
 
     // Registrar ação na Trilha de Auditoria (Audit Trail - GCP / 21 CFR Part 11)
@@ -142,7 +128,11 @@ export async function PATCH(req: Request) {
       },
     });
 
-    return NextResponse.json({ success: true, alert: updated, auditLog });
+    return NextResponse.json({
+      success: true,
+      alert: { ...updated, participant: existingAlert.participant },
+      auditLog,
+    });
   } catch (error) {
     console.error('Erro ao atualizar alerta clínico:', error);
     return NextResponse.json(

@@ -53,15 +53,17 @@ export async function PATCH(
         ...(anamnesisDone !== undefined && { anamnesisDone }),
         ...(anamnesisData !== undefined && { anamnesisData }),
       },
-      include: {
-        patient: true,
-      },
     });
 
-    // Se o usuário atual for avaliador cego, mascara o atributo group
-    if (isBlinded) {
-      updated.group = 'OCULTO (Avaliador Cego)';
-    }
+    const patient = await prisma.patient.findUnique({
+      where: { id: updated.patientId },
+    });
+
+    const participantResponse = {
+      ...updated,
+      patient,
+      ...(isBlinded && { group: 'OCULTO (Avaliador Cego)' }),
+    };
 
     // Registrar na Trilha de Auditoria (Audit Trail - GCP / ICH E6)
     const reqHeaders = req.headers;
@@ -90,7 +92,7 @@ export async function PATCH(
       },
     });
 
-    return NextResponse.json({ success: true, participant: updated });
+    return NextResponse.json({ success: true, participant: participantResponse });
   } catch (error) {
     console.error('Erro ao atualizar participante:', error);
     return NextResponse.json(

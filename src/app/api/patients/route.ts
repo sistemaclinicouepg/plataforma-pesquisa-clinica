@@ -68,12 +68,9 @@ export async function POST(req: Request) {
         researchCode: researchCode,
         status: 'PENDING', // Inicia aguardando triagem
       },
-      include: {
-        patient: true,
-      },
     });
 
-    return NextResponse.json({ success: true, participant });
+    return NextResponse.json({ success: true, participant: { ...participant, patient } });
   } catch (error) {
     console.error('Erro ao cadastrar paciente:', error);
     return NextResponse.json(
