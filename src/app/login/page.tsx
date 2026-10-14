@@ -37,13 +37,18 @@ export default function LoginPage() {
     setSuccessMessage(null);
     setLoading(true);
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
     try {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: loginEmail, password: loginPass }),
         credentials: 'include',
+        signal: controller.signal,
       });
+      clearTimeout(timeoutId);
       const data = await res.json();
 
       if (!res.ok) {
@@ -76,14 +81,27 @@ export default function LoginPage() {
       const separator = targetPath.includes('?') ? '&' : '?';
       const safeTargetPath = data.token ? `${targetPath}${separator}auth_token=${encodeURIComponent(data.token)}` : targetPath;
 
-      if (typeof window !== 'undefined') {
-        window.location.href = safeTargetPath;
-      } else {
-        router.push(targetPath);
-      }
+      // Executa transição instantânea de rota via Next.js router
+      try {
+        router.push(safeTargetPath);
+        router.refresh();
+      } catch {}
+
+      // Fallback garantido caso a transição do cliente não ocorra em 250ms
+      setTimeout(() => {
+        if (typeof window !== 'undefined' && window.location.pathname === '/login') {
+          window.location.href = safeTargetPath;
+        }
+      }, 250);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Ocorreu um erro.');
+      clearTimeout(timeoutId);
+      if (err instanceof Error && err.name === 'AbortError') {
+        setError('A conexão com o servidor demorou para responder. Tente novamente.');
+      } else {
+        setError(err instanceof Error ? err.message : 'Ocorreu um erro ao processar o login.');
+      }
     } finally {
+      clearTimeout(timeoutId);
       setLoading(false);
       setQuickLoggingInUser(null);
     }
