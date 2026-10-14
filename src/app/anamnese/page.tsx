@@ -3,7 +3,7 @@
 import React, { useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { OdontogramChart } from '@/components/odontogram';
+import { OdontogramChart, ToothStatus } from '@/components/odontogram';
 
 export type QuestionType =
   | 'boolean'
@@ -173,6 +173,7 @@ function AnamnesisBuilderContent() {
 
   const [enableOdontogram, setEnableOdontogram] = useState(false);
   const [odontogramScope, setOdontogramScope] = useState<'anterior' | 'full'>('anterior');
+  const [previewOdontogram, setPreviewOdontogram] = useState<Record<string, ToothStatus>>({});
 
   const [enablePeriodontogram, setEnablePeriodontogram] = useState(false);
   const [periodontogramFields, setPeriodontogramFields] = useState<PeriodontogramConfig>({
@@ -554,6 +555,13 @@ function AnamnesisBuilderContent() {
 
                     <OdontogramChart
                       mode="clinical_status"
+                      statusMap={previewOdontogram}
+                      onChangeStatus={(tooth, newStatus) => {
+                        setPreviewOdontogram((prev) => ({
+                          ...prev,
+                          [tooth]: newStatus,
+                        }));
+                      }}
                       scope={odontogramScope}
                       allowDeciduous={true}
                       readOnly={false}
