@@ -22,7 +22,6 @@ export async function middleware(request: NextRequest) {
 
   // 2. Rotas públicas permitidas (Login, Portal do Paciente, TCLE e APIs do voluntário)
   const isPublicRoute =
-    pathname === '/' ||
     pathname === '/login' ||
     pathname === '/paciente' ||
     (pathname.startsWith('/tcle') && !pathname.startsWith('/tcle/editor')) ||
@@ -49,9 +48,9 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // 4. Se já estiver autenticado e tentar acessar /login, direcionar para Meus Estudos
+  // 4. Se já estiver autenticado e tentar acessar /login, direcionar para Meus Estudos (Home)
   if (isAuthenticated && pathname === '/login') {
-    return NextResponse.redirect(new URL('/projetos', request.url));
+    return NextResponse.redirect(new URL('/', request.url));
   }
 
   // 5. Se for rota pública, liberar navegação

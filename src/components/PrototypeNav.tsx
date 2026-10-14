@@ -104,8 +104,7 @@ export default function PrototypeNav() {
   }
 
   const links = [
-    { href: '/', label: 'Central', icon: Home },
-    { href: '/projetos', label: 'Meus Estudos', icon: FolderKanban },
+    { href: '/', label: 'Meus Projetos', icon: FolderKanban },
     { href: `/dashboard?projectId=${activeProjectId}`, label: 'Prontuário & Dashboard', icon: LayoutDashboard },
     { href: `/paciente?code=${activeParticipantCode}`, label: 'Portal Paciente', icon: Smartphone },
     { href: `/tcle/${defaultParticipantId}`, label: 'TCLE Digital', icon: FileSignature },

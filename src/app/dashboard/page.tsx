@@ -1760,7 +1760,7 @@ function DashboardContent() {
             <span>Tentar Novamente</span>
           </button>
           <Link
-            href="/projetos"
+            href="/"
             className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition flex items-center gap-1.5"
           >
             <ChevronLeft className="w-3.5 h-3.5" />
@@ -1820,7 +1820,7 @@ function DashboardContent() {
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 min-h-12">
             <div className="flex items-center space-x-3">
               <Link
-                href="/projetos"
+                href="/"
                 className="text-slate-500 hover:text-blue-600 text-xs font-semibold transition flex items-center space-x-1 px-2 py-1.5 rounded-lg hover:bg-slate-100"
                 title="Ver todos os projetos"
               >

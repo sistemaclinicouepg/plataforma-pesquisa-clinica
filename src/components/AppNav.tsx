@@ -101,8 +101,9 @@ export default function AppNav() {
     return null;
   }
 
-  // Se estiver em rota protegida e não autenticado (e não for a home `/`)
+  // Se estiver em rota protegida e não autenticado
   const isProtectedPath =
+    pathname === '/' ||
     pathname.startsWith('/projetos') ||
     pathname.startsWith('/dashboard') ||
     pathname.startsWith('/construtor') ||
@@ -137,7 +138,7 @@ export default function AppNav() {
     icon: React.ComponentType<{ className?: string }>;
     roleBadge?: string;
   }> = [
-    { href: '/projetos', label: 'Estudos', icon: FolderKanban },
+    { href: '/', label: 'Meus Projetos', icon: FolderKanban },
     { href: `/dashboard?projectId=${activeProjectId}`, label: 'Prontuário & Atendimento', icon: Activity },
     { href: `/relatorio-cep?projectId=${activeProjectId}`, label: 'Relatório CEP', icon: FileSpreadsheet },
   ];
@@ -160,7 +161,8 @@ export default function AppNav() {
           <nav className="flex flex-wrap items-center gap-1">
             {navLinks.map((link) => {
               const Icon = link.icon;
-              const isActive = pathname === link.href.split('?')[0];
+              const linkBase = link.href.split('?')[0];
+              const isActive = pathname === linkBase || (link.href === '/' && pathname === '/projetos');
               return (
                 <Link
                   key={link.href}

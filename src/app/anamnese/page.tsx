@@ -520,8 +520,8 @@ function AnamnesisBuilderContent() {
             ))}
           </div>
           <div className="mt-6">
-            <Link href="/projetos" className="inline-flex items-center gap-1.5 text-sm font-bold text-blue-600 hover:underline">
-              <ArrowLeft className="w-4 h-4" /> Voltar para Todos os Projetos
+            <Link href="/" className="inline-flex items-center gap-1.5 text-sm font-bold text-blue-600 hover:underline">
+              <ArrowLeft className="w-4 h-4" /> Voltar para Meus Projetos
             </Link>
           </div>
         </div>

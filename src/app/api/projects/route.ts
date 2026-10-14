@@ -13,6 +13,7 @@ export async function GET() {
       id: true,
       name: true,
       description: true,
+      status: true,
       anamnesisTemplate: true,
       createdAt: true,
       members: {
@@ -58,7 +59,7 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const currentUser = await getCurrentUser();
-    const { name, description, anamnesisTemplate } = await req.json();
+    const { name, description, status, anamnesisTemplate } = await req.json();
 
     if (!name) {
       return NextResponse.json({ error: 'O nome do projeto é obrigatório.' }, { status: 400 });
@@ -71,10 +72,16 @@ export async function POST(req: Request) {
       userId = fallbackUser?.id;
     }
 
+    const projectStatus =
+      typeof status === 'string' && ['ACTIVE', 'COMPLETED', 'CANCELLED'].includes(status.toUpperCase())
+        ? status.toUpperCase()
+        : 'ACTIVE';
+
     const newProject = await prisma.project.create({
       data: {
         name: name.trim(),
         description: description?.trim() || null,
+        status: projectStatus,
         anamnesisTemplate: anamnesisTemplate
           ? (typeof anamnesisTemplate === 'string' ? anamnesisTemplate : JSON.stringify(anamnesisTemplate))
           : null,

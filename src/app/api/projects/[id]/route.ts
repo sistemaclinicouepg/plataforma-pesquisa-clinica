@@ -132,7 +132,7 @@ export async function PATCH(
     }
 
     const body = await req.json();
-    const { name, description, anamnesisTemplate } = body;
+    const { name, description, status, anamnesisTemplate } = body;
 
     const dataToUpdate: Record<string, any> = {};
     if (typeof name === 'string' && name.trim()) {
@@ -140,6 +140,9 @@ export async function PATCH(
     }
     if (typeof description !== 'undefined') {
       dataToUpdate.description = description?.trim() || null;
+    }
+    if (typeof status === 'string' && ['ACTIVE', 'COMPLETED', 'CANCELLED'].includes(status.toUpperCase())) {
+      dataToUpdate.status = status.toUpperCase();
     }
     if (typeof anamnesisTemplate !== 'undefined') {
       dataToUpdate.anamnesisTemplate =
@@ -162,4 +165,85 @@ export async function PATCH(
     );
   }
 }
+
+export async function DELETE(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const auth = await checkProjectPermission(id, true);
+    if (!auth.authorized) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
+
+    // Apenas Administradores do sistema podem excluir um projeto
+    if (auth.user?.role !== 'ADMIN') {
+      return NextResponse.json(
+        { error: 'Apenas o Administrador do sistema possui permissão para excluir um projeto.' },
+        { status: 403 }
+      );
+    }
+
+    const existingProject = await prisma.project.findUnique({
+      where: { id },
+      select: { id: true, name: true },
+    });
+
+    if (!existingProject) {
+      return NextResponse.json({ error: 'Projeto não encontrado.' }, { status: 404 });
+    }
+
+    // Exclusão atômica de todas as dependências e do projeto
+    await prisma.$transaction(async (tx) => {
+      // 1. Excluir respostas e formulários eCRF
+      const forms = await tx.form.findMany({ where: { projectId: id }, select: { id: true } });
+      const formIds = forms.map((f) => f.id);
+      if (formIds.length > 0) {
+        await tx.formResponse.deleteMany({ where: { formId: { in: formIds } } });
+        await tx.form.deleteMany({ where: { id: { in: formIds } } });
+      }
+
+      // 2. Excluir assinaturas e formulário de consentimento TCLE
+      const consent = await tx.consentForm.findUnique({ where: { projectId: id }, select: { id: true } });
+      if (consent) {
+        await tx.consentSignature.deleteMany({ where: { consentFormId: consent.id } });
+        await tx.consentForm.delete({ where: { id: consent.id } });
+      }
+
+      // 3. Excluir participantes e seus dados clínicos vinculados
+      const participants = await tx.participant.findMany({ where: { projectId: id }, select: { id: true } });
+      const participantIds = participants.map((p) => p.id);
+      if (participantIds.length > 0) {
+        await tx.clinicalAlert.deleteMany({ where: { participantId: { in: participantIds } } });
+        await tx.clinicalSession.deleteMany({ where: { participantId: { in: participantIds } } });
+        await tx.consentSignature.deleteMany({ where: { participantId: { in: participantIds } } });
+        await tx.formResponse.deleteMany({ where: { participantId: { in: participantIds } } });
+        await tx.participant.deleteMany({ where: { id: { in: participantIds } } });
+      }
+
+      // 4. Excluir alertas e auditorias restantes vinculadas ao projeto
+      await tx.clinicalAlert.deleteMany({ where: { projectId: id } });
+      await tx.auditLog.deleteMany({ where: { projectId: id } });
+
+      // 5. Excluir membros vinculados
+      await tx.projectMember.deleteMany({ where: { projectId: id } });
+
+      // 6. Excluir o projeto
+      await tx.project.delete({ where: { id } });
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: `Projeto "${existingProject.name}" excluído com sucesso.`,
+    });
+  } catch (error) {
+    console.error('Erro ao excluir projeto:', error);
+    return NextResponse.json(
+      { error: 'Erro ao excluir projeto e suas dependências.' },
+      { status: 500 }
+    );
+  }
+}
+
 

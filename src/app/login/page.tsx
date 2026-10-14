@@ -70,8 +70,11 @@ export default function LoginPage() {
           throw new Error(data.error || 'Credenciais inválidas. Verifique seu e-mail e senha.');
         }
 
-        // Redireciona para os projetos do pesquisador logado
-        router.push('/projetos');
+        // Redireciona para o destino solicitado ou para a página inicial de Projetos
+        const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+        const fromParam = urlParams?.get('from');
+        const targetPath = fromParam && fromParam !== '/login' ? (fromParam === '/projetos' ? '/' : fromParam) : '/';
+        router.push(targetPath);
         router.refresh();
       }
     } catch (err: unknown) {

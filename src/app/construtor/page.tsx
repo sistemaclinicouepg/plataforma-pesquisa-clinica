@@ -416,7 +416,7 @@ function FormBuilderContent() {
           
           <div className="flex items-center space-x-3">
             <Link
-              href={selectedProjectId ? `/dashboard?projectId=${selectedProjectId}` : '/projetos'}
+              href={selectedProjectId ? `/dashboard?projectId=${selectedProjectId}` : '/'}
               className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition flex items-center space-x-1.5"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
