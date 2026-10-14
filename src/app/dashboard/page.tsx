@@ -2449,7 +2449,7 @@ function DashboardContent() {
                 </span>
               </div>
 
-              <div className="divide-y divide-slate-100 flex-1">
+              <div className="flex-1">
                 {pendingList.length === 0 ? (
                   <div className="p-12 text-center text-slate-400 text-sm">
                     <ClipboardList className="w-8 h-8 text-slate-300 mx-auto mb-2" />
@@ -2457,149 +2457,166 @@ function DashboardContent() {
                     <p className="text-xs text-slate-400 mt-1">Clique em "Cadastrar Candidato" acima para incluir um novo paciente na fila.</p>
                   </div>
                 ) : (
-                  pendingList.map((part) => {
-                    const isAnamnesisDone = Boolean(part.anamnesisDone);
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead className="bg-slate-50 text-slate-600 font-bold uppercase tracking-wider border-b border-slate-200">
+                        <tr>
+                          <th className="py-2.5 px-4">Candidato</th>
+                          <th className="py-2.5 px-3">Contato & Triagem</th>
+                          <th className="py-2.5 px-3 text-center">Ficha Clínica</th>
+                          <th className="py-2.5 px-3 text-center">Documentos</th>
+                          <th className="py-2.5 px-4 text-right">Elegibilidade</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 bg-white">
+                        {pendingList.map((part) => {
+                          const isAnamnesisDone = Boolean(part.anamnesisDone);
 
-                    return (
-                      <div key={part.id} className="p-6">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <div className="flex items-center space-x-2">
-                              <span className="px-2 py-0.5 bg-slate-800 text-white text-xs font-bold rounded">
-                                {part.researchCode}
-                              </span>
-                              <h4 className="font-bold text-slate-900 text-base flex items-center gap-1.5">
-                                <span>{part.patient.fullName}</span>
+                          return (
+                            <tr key={part.id} className="hover:bg-slate-50/70 transition">
+                              {/* Coluna 1: Código & Nome */}
+                              <td className="py-2.5 px-4 whitespace-nowrap">
+                                <div className="flex items-center space-x-2">
+                                  <span className="px-2 py-0.5 bg-slate-900 text-white font-mono font-bold text-[11px] rounded shadow-2xs">
+                                    {part.researchCode}
+                                  </span>
+                                  <span className="font-bold text-slate-900 text-xs sm:text-sm">
+                                    {part.patient.fullName}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenEditPatient(part)}
+                                    className="p-1 text-slate-400 hover:text-blue-600 rounded hover:bg-blue-50 transition"
+                                    title="Editar dados cadastrais"
+                                  >
+                                    <Edit className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              </td>
+
+                              {/* Coluna 2: Contato, Sexo & Queixa */}
+                              <td className="py-2.5 px-3">
+                                <div className="text-[11px] leading-tight">
+                                  <span className="font-semibold text-slate-700">{part.patient.phoneWhatsApp}</span>
+                                  <span className="text-slate-400"> • {part.patient.biologicalSex}</span>
+                                  {(part.patient.chiefComplaint || part.patient.allergies) && (
+                                    <p
+                                      className="text-[10px] text-slate-500 truncate max-w-[240px] mt-0.5"
+                                      title={`Queixa: ${part.patient.chiefComplaint || 'N/I'} | Alergias: ${part.patient.allergies || 'Nenhuma'}`}
+                                    >
+                                      Qx: {part.patient.chiefComplaint || 'N/I'} • Alerg: {part.patient.allergies || 'Nenhuma'}
+                                    </p>
+                                  )}
+                                </div>
+                              </td>
+
+                              {/* Coluna 3: Ficha Clínica */}
+                              <td className="py-2.5 px-3 text-center whitespace-nowrap">
                                 <button
                                   type="button"
-                                  onClick={() => handleOpenEditPatient(part)}
-                                  className="p-1 text-slate-400 hover:text-blue-600 rounded-lg hover:bg-blue-50 transition"
-                                  title="Editar dados cadastrais do paciente (com justificativa de auditoria)"
+                                  onClick={() => openAnamnesisModal(part)}
+                                  className={`inline-flex items-center space-x-1 px-2.5 py-1 rounded-lg text-[11px] font-bold border transition ${
+                                    isAnamnesisDone
+                                      ? 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100'
+                                      : 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100'
+                                  }`}
+                                  title={isAnamnesisDone ? 'Ver/Alterar Ficha Clínica' : 'Preencher Ficha Clínica Obrigatória'}
                                 >
-                                  <Edit className="w-3.5 h-3.5" />
+                                  {isAnamnesisDone ? (
+                                    <>
+                                      <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" />
+                                      <span>Ficha Ok</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <ClipboardList className="w-3 h-3 text-blue-600 shrink-0" />
+                                      <span>Preencher</span>
+                                    </>
+                                  )}
                                 </button>
-                              </h4>
-                              
-                              {isAnamnesisDone ? (
-                                <span className="px-2.5 py-0.5 bg-emerald-100 text-emerald-800 text-[11px] font-bold rounded-full flex items-center space-x-1">
-                                  <CheckCircle2 className="w-3 h-3 mr-1 inline" />
-                                  <span>Ficha Clínica Preenchida</span>
-                                </span>
-                              ) : (
-                                <span className="px-2.5 py-0.5 bg-amber-100 text-amber-800 text-[11px] font-bold rounded-full flex items-center space-x-1">
-                                  <AlertTriangle className="w-3 h-3 mr-1 inline text-amber-700" />
-                                  <span>Ficha Pendente</span>
-                                </span>
-                              )}
-                            </div>
+                              </td>
 
-                            <p className="text-xs text-slate-500 mt-2">
-                              <strong>WhatsApp:</strong> {part.patient.phoneWhatsApp} • <strong>Sexo:</strong> {part.patient.biologicalSex}
-                            </p>
+                              {/* Coluna 4: TCLE e PDF */}
+                              <td className="py-2.5 px-3 text-center whitespace-nowrap">
+                                <div className="inline-flex items-center space-x-1">
+                                  <Link
+                                    href={`/tcle/${part.id}`}
+                                    target="_blank"
+                                    className="px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-md text-[11px] font-bold transition inline-flex items-center space-x-1"
+                                    title="Abrir TCLE Digital"
+                                  >
+                                    <FileText className="w-3 h-3 text-indigo-600" />
+                                    <span>TCLE</span>
+                                  </Link>
 
-                            <p className="text-xs text-slate-600 mt-1.5 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
-                              <strong>Queixa Principal:</strong> {part.patient.chiefComplaint || 'Não informada'} <br/>
-                              <strong>Alergias relatadas:</strong> {part.patient.allergies || 'Nenhuma'}
-                            </p>
-                          </div>
-                        </div>
+                                  <Link
+                                    href={`/tcle/${part.id}/pdf`}
+                                    target="_blank"
+                                    className="px-2 py-1 bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-md text-[11px] font-bold transition inline-flex items-center space-x-1"
+                                    title="Baixar via PDF"
+                                  >
+                                    <FileText className="w-3 h-3 text-slate-500" />
+                                    <span>PDF</span>
+                                  </Link>
 
-                        {/* Botão de Preenchimento da Ficha Clínica e TCLE */}
-                        <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-2">
-                          <button
-                            onClick={() => openAnamnesisModal(part)}
-                            className={`py-2 px-3 rounded-lg text-xs font-bold flex items-center justify-center space-x-1.5 border transition ${
-                              isAnamnesisDone
-                                ? 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-300'
-                                : 'bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200'
-                            }`}
-                          >
-                            {isAnamnesisDone ? <Search className="w-3.5 h-3.5 mr-1" /> : <ClipboardList className="w-3.5 h-3.5 mr-1" />}
-                            <span className="truncate">
-                              {isAnamnesisDone ? 'Ficha Preenchida' : 'Preencher Ficha'}
-                            </span>
-                          </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenEditPatient(part)}
+                                    className="px-2 py-1 bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-md text-[11px] font-bold transition inline-flex items-center space-x-1"
+                                    title="Editar dados cadastrais"
+                                  >
+                                    <Edit className="w-3 h-3 text-slate-500" />
+                                    <span>Editar</span>
+                                  </button>
+                                </div>
+                              </td>
 
-                          <Link
-                            href={`/tcle/${part.id}`}
-                            target="_blank"
-                            className="py-2 px-3 rounded-lg text-xs font-bold flex items-center justify-center space-x-1.5 border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 transition"
-                          >
-                            <FileText className="w-3.5 h-3.5 mr-1 text-indigo-600" />
-                            <span>TCLE Digital</span>
-                          </Link>
+                              {/* Coluna 5: Decisão de Elegibilidade */}
+                              <td className="py-2.5 px-4 text-right whitespace-nowrap">
+                                <div className="inline-flex items-center space-x-1.5 justify-end">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleApprove(part.id)}
+                                    disabled={!isAnamnesisDone}
+                                    className={`px-3 py-1 rounded-lg text-xs font-bold transition inline-flex items-center space-x-1 ${
+                                      isAnamnesisDone
+                                        ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-2xs cursor-pointer'
+                                        : 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed opacity-60'
+                                    }`}
+                                    title={
+                                      isAnamnesisDone
+                                        ? `Confirmar inclusão do participante ${part.researchCode}`
+                                        : 'Preencha a ficha clínica antes de incluir'
+                                    }
+                                  >
+                                    <CheckCircle2 className="w-3.5 h-3.5" />
+                                    <span>Incluir</span>
+                                  </button>
 
-                          <Link
-                            href={`/tcle/${part.id}/pdf`}
-                            target="_blank"
-                            className="py-2 px-3 rounded-lg text-xs font-bold flex items-center justify-center space-x-1.5 border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 transition"
-                            title="Baixar ou visualizar via impressa/PDF do TCLE assinado"
-                          >
-                            <FileText className="w-3.5 h-3.5 mr-1 text-slate-500" />
-                            <span>TCLE (PDF)</span>
-                          </Link>
-
-                          <button
-                            type="button"
-                            onClick={() => handleOpenEditPatient(part)}
-                            className="py-2 px-3 rounded-lg text-xs font-bold flex items-center justify-center space-x-1.5 border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 transition"
-                            title="Editar dados cadastrais do paciente (com justificativa de auditoria)"
-                          >
-                            <Edit className="w-3.5 h-3.5 mr-1 text-slate-500" />
-                            <span>Editar Cadastro</span>
-                          </button>
-                        </div>
-
-                        {/* Decisão de Inclusão / Exclusão */}
-                        <div className="mt-3">
-                          <div className="flex space-x-3 items-center">
-                            <div className="flex-1">
-                              <button
-                                onClick={() => handleApprove(part.id)}
-                                disabled={!isAnamnesisDone}
-                                className={`w-full py-2.5 rounded-lg font-bold text-xs shadow-xs transition flex items-center justify-center space-x-1.5 ${
-                                  isAnamnesisDone
-                                    ? 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer'
-                                    : 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                                }`}
-                              >
-                                <CheckCircle2 className="w-3.5 h-3.5" />
-                                <span>Incluir na Pesquisa ({part.researchCode})</span>
-                              </button>
-                            </div>
-
-                            <button 
-                              onClick={() => handleOpenReject(part)}
-                              className="px-4 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 py-2.5 rounded-lg font-bold text-xs transition flex items-center space-x-1"
-                            >
-                              <X className="w-3.5 h-3.5" />
-                              <span>Excluir</span>
-                            </button>
-                          </div>
-
-                          {/* Mensagem Explicativa Clara */}
-                          {!isAnamnesisDone ? (
-                            <p className="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-md p-2 mt-2 text-center font-medium flex items-center justify-center space-x-1.5">
-                              <Lock className="w-3.5 h-3.5 inline mr-1 text-amber-800 shrink-0" />
-                              <span><strong>Etapa Obrigatória do Protocolo:</strong> Preencha a <em>Ficha & Anamnese</em> acima para validar os critérios de elegibilidade antes de incluir o participante.</span>
-                            </p>
-                          ) : (
-                            <p className="text-[11px] text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-md p-1.5 mt-2 text-center font-medium flex items-center justify-center space-x-1.5">
-                              <CheckCircle2 className="w-3.5 h-3.5 inline mr-1 text-emerald-800 shrink-0" />
-                              <span>Critérios clínicos validados na ficha. Clique acima para confirmar a inclusão e gerar o termo.</span>
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenReject(part)}
+                                    className="px-2 py-1 rounded-lg text-xs font-bold text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 transition inline-flex items-center space-x-1"
+                                    title="Excluir candidato da pesquisa"
+                                  >
+                                    <X className="w-3.5 h-3.5 text-red-600" />
+                                    <span>Excluir</span>
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
                 )}
               </div>
             </div>
           </div>
         )}
 
-        {/* ABA: TRILHA DE AUDITORIA REGULATÓRIA GCP (ICH-GCP E6 & 21 CFR PART 11) */}
+                {/* ABA: TRILHA DE AUDITORIA REGULATÓRIA GCP (ICH-GCP E6 & 21 CFR PART 11) */}
         {activeTab === 'audit' && currentUser?.role === 'ADMIN' && (() => {
           const allLogs = project.auditLogs || [];
 
