@@ -577,6 +577,10 @@ function DashboardContent() {
   const projectIdParam = searchParams.get('projectId');
 
   const [project, setProject] = useState<ProjectData | null>(null);
+  const studyProtocol = React.useMemo(
+    () => parseStudyProtocol(project?.anamnesisTemplate),
+    [project?.anamnesisTemplate]
+  );
   const [allProjects, setAllProjects] = useState<Array<{ id: string; name: string }>>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -2139,11 +2143,6 @@ function DashboardContent() {
       </div>
     );
   }
-
-  const studyProtocol = React.useMemo(
-    () => parseStudyProtocol(project?.anamnesisTemplate),
-    [project?.anamnesisTemplate]
-  );
 
   const pendingList = project.participants.filter((p) => p.status === 'PENDING');
   const approvedList = project.participants.filter((p) => p.status === 'APPROVED');
