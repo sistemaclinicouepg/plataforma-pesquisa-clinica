@@ -79,8 +79,40 @@ export default function PrototypeNav() {
         body: JSON.stringify({ email, password: pass }),
       });
       if (res.ok) {
+        const data = await res.json();
+        if (typeof window !== 'undefined') {
+          // Limpa todos os caches de projetos e chaves do usuário anterior
+          localStorage.removeItem('uepg_cached_projects');
+          localStorage.removeItem('uepg_cached_last_project');
+          localStorage.removeItem('app_active_project_id');
+          localStorage.removeItem('app_active_patient_code');
+          localStorage.removeItem('prototipo_active_project_id');
+          localStorage.removeItem('prototipo_active_patient_code');
+
+          Object.keys(localStorage).forEach((key) => {
+            if (key.startsWith('uepg_cached_') || key.startsWith('app_active_')) {
+              localStorage.removeItem(key);
+            }
+          });
+          Object.keys(sessionStorage).forEach((key) => {
+            if (key.startsWith('uepg_tab_')) {
+              sessionStorage.removeItem(key);
+            }
+          });
+
+          if (data.user) {
+            localStorage.setItem('uepg_cached_user', JSON.stringify(data.user));
+          }
+          if (data.token) {
+            localStorage.setItem('uepg_auth_token', data.token);
+            const isHttps = window.location.protocol === 'https:';
+            const secureFlag = isHttps ? '; Secure; SameSite=None' : '; SameSite=Lax';
+            document.cookie = `auth_session=${data.token}; path=/; max-age=604800${secureFlag}`;
+            document.cookie = `auth_token_client=${data.token}; path=/; max-age=604800${secureFlag}`;
+          }
+        }
         await checkUser();
-        router.refresh();
+        window.location.reload();
       }
     } catch (err) {
       console.error(err);

@@ -219,11 +219,22 @@ function AnamnesisBuilderContent() {
   const [loadingForms, setLoadingForms] = useState(false);
   const [creatingFormPreset, setCreatingFormPreset] = useState<string | null>(null);
 
+  const getAuthHeaders = (contentType: boolean = true) => {
+    const authToken = typeof window !== 'undefined' ? localStorage.getItem('uepg_auth_token') : null;
+    const headers: Record<string, string> = {};
+    if (contentType) headers['Content-Type'] = 'application/json';
+    if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
+    return headers;
+  };
+
   const loadProjectForms = async () => {
     if (!projectId) return;
     try {
       setLoadingForms(true);
-      const res = await fetch(`/api/forms?projectId=${projectId}`);
+      const res = await fetch(`/api/forms?projectId=${projectId}`, {
+        headers: getAuthHeaders(false),
+        credentials: 'include',
+      });
       if (res.ok) {
         const data = await res.json();
         setProjectForms(data.forms || []);
@@ -243,7 +254,10 @@ function AnamnesisBuilderContent() {
   useEffect(() => {
     async function loadProjects() {
       try {
-        const res = await fetch('/api/projects');
+        const res = await fetch('/api/projects', {
+          headers: getAuthHeaders(false),
+          credentials: 'include',
+        });
         if (res.ok) {
           const data = await res.json();
           setProjectsList(data.projects || []);
@@ -264,7 +278,10 @@ function AnamnesisBuilderContent() {
     async function loadTemplate() {
       try {
         setLoading(true);
-        const res = await fetch(`/api/projects/${projectId}/anamnesis`);
+        const res = await fetch(`/api/projects/${projectId}/anamnesis`, {
+          headers: getAuthHeaders(false),
+          credentials: 'include',
+        });
         if (res.ok) {
           const data = await res.json();
           setProjectName(data.projectName || 'Projeto');
@@ -322,7 +339,8 @@ function AnamnesisBuilderContent() {
 
       const res = await fetch(`/api/projects/${projectId}/anamnesis`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(true),
+        credentials: 'include',
         body: JSON.stringify({ anamnesisTemplate: payload }),
       });
 
@@ -440,7 +458,8 @@ function AnamnesisBuilderContent() {
 
       const res = await fetch('/api/forms', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(true),
+        credentials: 'include',
         body: JSON.stringify({
           projectId,
           title,

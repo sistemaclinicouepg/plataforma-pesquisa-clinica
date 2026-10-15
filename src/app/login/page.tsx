@@ -58,16 +58,42 @@ export default function LoginPage() {
         throw new Error(data.error || 'Credenciais inválidas. Verifique seu e-mail e senha.');
       }
 
-      // Salva os dados do usuário e token nos storages locais para resiliência máxima
+      // Salva os dados do usuário e token nos storages locais e limpa dados do usuário anterior
       if (typeof window !== 'undefined') {
         try {
+          const previousUserStr = localStorage.getItem('uepg_cached_user');
+          const previousUser = previousUserStr ? JSON.parse(previousUserStr) : null;
+
+          // Se for troca de usuário ou primeiro login, limpa resquícios de projetos de outros pesquisadores
+          if (!previousUser || previousUser.id !== data.user?.id) {
+            localStorage.removeItem('uepg_cached_projects');
+            localStorage.removeItem('uepg_cached_last_project');
+            localStorage.removeItem('app_active_project_id');
+            localStorage.removeItem('app_active_patient_code');
+            localStorage.removeItem('prototipo_active_project_id');
+            localStorage.removeItem('prototipo_active_patient_code');
+
+            Object.keys(localStorage).forEach((key) => {
+              if (key.startsWith('uepg_cached_project_') || key.startsWith('app_active_')) {
+                localStorage.removeItem(key);
+              }
+            });
+            Object.keys(sessionStorage).forEach((key) => {
+              if (key.startsWith('uepg_tab_')) {
+                sessionStorage.removeItem(key);
+              }
+            });
+          }
+
           if (data.user) {
             localStorage.setItem('uepg_cached_user', JSON.stringify(data.user));
           }
           if (data.token) {
             localStorage.setItem('uepg_auth_token', data.token);
-            document.cookie = `auth_session=${data.token}; path=/; max-age=604800; SameSite=Lax`;
-            document.cookie = `auth_token_client=${data.token}; path=/; max-age=604800; SameSite=Lax`;
+            const isHttps = window.location.protocol === 'https:';
+            const secureFlag = isHttps ? '; Secure; SameSite=None' : '; SameSite=Lax';
+            document.cookie = `auth_session=${data.token}; path=/; max-age=604800${secureFlag}`;
+            document.cookie = `auth_token_client=${data.token}; path=/; max-age=604800${secureFlag}`;
           }
         } catch (e) {}
       }
@@ -81,18 +107,9 @@ export default function LoginPage() {
       const separator = targetPath.includes('?') ? '&' : '?';
       const safeTargetPath = data.token ? `${targetPath}${separator}auth_token=${encodeURIComponent(data.token)}` : targetPath;
 
-      // Executa transição instantânea de rota via Next.js router
-      try {
-        router.push(safeTargetPath);
-        router.refresh();
-      } catch {}
-
-      // Fallback garantido caso a transição do cliente não ocorra em 250ms
-      setTimeout(() => {
-        if (typeof window !== 'undefined' && window.location.pathname === '/login') {
-          window.location.href = safeTargetPath;
-        }
-      }, 250);
+      // Executa transição garantida limpando qualquer estado anterior em memória
+      window.location.href = safeTargetPath;
+      return;
     } catch (err: unknown) {
       clearTimeout(timeoutId);
       if (err instanceof Error && err.name === 'AbortError') {

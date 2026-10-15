@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import AppNav from "@/components/AppNav";
 import OfflineIndicator from "@/components/OfflineIndicator";
+import KeepAlive from "@/components/KeepAlive";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -46,6 +47,7 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-slate-50 text-slate-900 w-full overflow-x-hidden">
+        <KeepAlive />
         <AppNav />
         <main className="flex-1 flex flex-col w-full">{children}</main>
         <OfflineIndicator />

@@ -124,29 +124,63 @@ export default function HomePage() {
     e.preventDefault();
     if (!editingProject || !editProjectName.trim()) return;
 
+    const targetProject = editingProject;
+    const previousProjects = [...projects];
+
+    let existingTemplate: any = {};
+    if (targetProject.anamnesisTemplate) {
+      try {
+        existingTemplate =
+          typeof targetProject.anamnesisTemplate === 'string'
+            ? JSON.parse(targetProject.anamnesisTemplate)
+            : targetProject.anamnesisTemplate;
+      } catch (e) {}
+    }
+
+    const updatedTemplate = {
+      ...existingTemplate,
+      enableOdontogram: editEnableOdontogram,
+      odontogramScope: editOdontogramScope,
+      enablePeriodontogram: editEnablePeriodontogram,
+      enableAnamnesis: editEnableAnamnesis,
+    };
+
+    const updatedProjectLocally: Project = {
+      ...targetProject,
+      name: editProjectName.trim(),
+      description: editProjectDesc.trim() || null,
+      status: editProjectStatus,
+      anamnesisTemplate: updatedTemplate,
+    };
+
+    // 1. Resposta imediata em 0 ms: fecha modal e atualiza interface
+    setProjects((prev) =>
+      prev.map((p) => (p.id === targetProject.id ? { ...p, ...updatedProjectLocally } : p))
+    );
+    setEditingProject(null);
+    setSavingEdit(false);
+
+    // 2. Persiste no cache local de forma atômica
     try {
-      setSavingEdit(true);
-      let existingTemplate: any = {};
-      if (editingProject.anamnesisTemplate) {
-        try {
-          existingTemplate =
-            typeof editingProject.anamnesisTemplate === 'string'
-              ? JSON.parse(editingProject.anamnesisTemplate)
-              : editingProject.anamnesisTemplate;
-        } catch (e) {}
+      const newProjects = projects.map((p) =>
+        p.id === targetProject.id ? { ...p, ...updatedProjectLocally } : p
+      );
+      localStorage.setItem('uepg_cached_projects', JSON.stringify(newProjects));
+      if (currentUser?.id) {
+        localStorage.setItem(`uepg_cached_projects_${currentUser.id}`, JSON.stringify(newProjects));
       }
+    } catch (e) {}
 
-      const updatedTemplate = {
-        ...existingTemplate,
-        enableOdontogram: editEnableOdontogram,
-        odontogramScope: editOdontogramScope,
-        enablePeriodontogram: editEnablePeriodontogram,
-        enableAnamnesis: editEnableAnamnesis,
-      };
+    // 3. Sincronização em segundo plano com o servidor
+    try {
+      const authToken = typeof window !== 'undefined' ? localStorage.getItem('uepg_auth_token') : null;
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
 
-      const res = await fetch(`/api/projects/${editingProject.id}`, {
+      const res = await fetch(`/api/projects/${targetProject.id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
+        credentials: 'include',
         body: JSON.stringify({
           name: editProjectName.trim(),
           description: editProjectDesc.trim() || null,
@@ -155,24 +189,16 @@ export default function HomePage() {
         }),
       });
 
-      if (res.ok) {
-        const data = await res.json();
-        const updatedProject = data.project;
-        // Atualiza no estado local
-        setProjects((prev) =>
-          prev.map((p) => (p.id === editingProject.id ? { ...p, ...updatedProject } : p))
-        );
-        setEditingProject(null);
-        await loadData(true);
-      } else {
+      if (!res.ok) {
+        // Reverte se houve erro do servidor
+        setProjects(previousProjects);
         const err = await res.json().catch(() => ({}));
         alert(err.error || 'Erro ao salvar alterações do projeto.');
       }
     } catch (err) {
-      console.error('Erro ao atualizar projeto:', err);
-      alert('Erro de conexão ao salvar alterações.');
-    } finally {
-      setSavingEdit(false);
+      console.error('Erro ao atualizar projeto em segundo plano:', err);
+      setProjects(previousProjects);
+      alert('Erro de conexão ao salvar alterações do projeto.');
     }
   };
 
@@ -201,6 +227,9 @@ export default function HomePage() {
         setProjects(remaining);
         try {
           localStorage.setItem('uepg_cached_projects', JSON.stringify(remaining));
+          if (currentUser?.id) {
+            localStorage.setItem(`uepg_cached_projects_${currentUser.id}`, JSON.stringify(remaining));
+          }
         } catch (e) {}
 
         setProjectToDelete(null);
@@ -218,10 +247,12 @@ export default function HomePage() {
     }
   };
 
-  const fetchWithRetry = async (url: string, timeoutMs: number = 35000, maxRetries: number = 2): Promise<Response> => {
+  const fetchWithRetry = async (url: string, timeoutMs: number = 15000, maxRetries: number = 1): Promise<Response> => {
     let lastError: any = null;
     const authToken = typeof window !== 'undefined' ? localStorage.getItem('uepg_auth_token') : null;
-    const reqHeaders: Record<string, string> = {};
+    const reqHeaders: Record<string, string> = {
+      'Cache-Control': 'no-cache',
+    };
     if (authToken) {
       reqHeaders['Authorization'] = `Bearer ${authToken}`;
     }
@@ -266,6 +297,7 @@ export default function HomePage() {
         if (typeof window !== 'undefined') {
           localStorage.removeItem('uepg_auth_token');
           localStorage.removeItem('uepg_cached_user');
+          localStorage.removeItem('uepg_cached_projects');
           window.location.href = '/login?from=/';
         }
         return;
@@ -277,12 +309,13 @@ export default function HomePage() {
         setProjects(projectList);
         setCurrentUser(data.currentUser || null);
 
-        // Salva no cache local para renderização instantânea
+        // Salva no cache local particionado pelo ID do usuário autenticado
         try {
-          localStorage.setItem('uepg_cached_projects', JSON.stringify(projectList));
-          if (data.currentUser) {
+          if (data.currentUser?.id) {
+            localStorage.setItem(`uepg_cached_projects_${data.currentUser.id}`, JSON.stringify(projectList));
             localStorage.setItem('uepg_cached_user', JSON.stringify(data.currentUser));
           }
+          localStorage.setItem('uepg_cached_projects', JSON.stringify(projectList));
         } catch (e) {}
 
         setLoading(false);
@@ -328,8 +361,10 @@ export default function HomePage() {
         const urlToken = urlParams.get('auth_token');
         if (urlToken) {
           localStorage.setItem('uepg_auth_token', urlToken);
-          document.cookie = `auth_session=${urlToken}; path=/; max-age=604800; SameSite=Lax`;
-          document.cookie = `auth_token_client=${urlToken}; path=/; max-age=604800; SameSite=Lax`;
+          const isHttps = window.location.protocol === 'https:';
+          const secureFlag = isHttps ? '; Secure; SameSite=None' : '; SameSite=Lax';
+          document.cookie = `auth_session=${urlToken}; path=/; max-age=604800${secureFlag}`;
+          document.cookie = `auth_token_client=${urlToken}; path=/; max-age=604800${secureFlag}`;
           urlParams.delete('auth_token');
           const cleanQuery = urlParams.toString();
           const cleanPath = window.location.pathname + (cleanQuery ? `?${cleanQuery}` : '');
@@ -338,20 +373,31 @@ export default function HomePage() {
       } catch (e) {}
     }
 
-    // 2. Carregamento instantâneo via Cache Local (SWR)
+    // 2. Carregamento seguro particionado por usuário via Cache Local
     if (typeof window !== 'undefined') {
       try {
-        const cached = localStorage.getItem('uepg_cached_projects');
-        const cachedUser = localStorage.getItem('uepg_cached_user');
-        if (cached) {
-          const parsed = JSON.parse(cached);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setProjects(parsed);
-            setLoading(false);
-          }
-        }
+        const cachedUserStr = localStorage.getItem('uepg_cached_user');
+        const cachedUser = cachedUserStr ? JSON.parse(cachedUserStr) : null;
         if (cachedUser) {
-          setCurrentUser(JSON.parse(cachedUser));
+          setCurrentUser(cachedUser);
+          const userKey = `uepg_cached_projects_${cachedUser.id}`;
+          const cached = localStorage.getItem(userKey) || localStorage.getItem('uepg_cached_projects');
+          if (cached) {
+            const parsed = JSON.parse(cached);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              // Verificação defensiva de segurança: garante que pesquisadores não vejam projetos alheios em hipótese alguma
+              const isUserAdmin = cachedUser.role === 'ADMIN' || cachedUser.email === 'admin@uepg.br';
+              const validProjects = isUserAdmin
+                ? parsed
+                : parsed.filter((p: Project) =>
+                    p.members?.some((m) => m.user?.id === cachedUser.id || (m as any).userId === cachedUser.id)
+                  );
+              if (validProjects.length > 0) {
+                setProjects(validProjects);
+                setLoading(false);
+              }
+            }
+          }
         }
       } catch (e) {
         console.warn('Erro ao ler cache local de projetos:', e);
@@ -381,9 +427,14 @@ export default function HomePage() {
         questions: [],
       };
 
+      const authToken = typeof window !== 'undefined' ? localStorage.getItem('uepg_auth_token') : null;
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
+
       const res = await fetch('/api/projects', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
+        credentials: 'include',
         body: JSON.stringify({
           name: newProjectName,
           description: newProjectDesc,
@@ -413,9 +464,14 @@ export default function HomePage() {
 
   const handleApproveUser = async (userId: string) => {
     try {
+      const authToken = typeof window !== 'undefined' ? localStorage.getItem('uepg_auth_token') : null;
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
+
       const res = await fetch('/api/admin/users', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
+        credentials: 'include',
         body: JSON.stringify({ userId, isApproved: true }),
       });
       if (res.ok) {

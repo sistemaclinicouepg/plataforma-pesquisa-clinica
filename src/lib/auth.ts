@@ -77,32 +77,52 @@ export async function verifySessionToken(
 }
 
 /**
- * Obtém o usuário atualmente autenticado com base no token da sessão nos cookies ou cabeçalho Authorization.
+ * Obtém o usuário atualmente autenticado com base no cabeçalho Authorization ou cookies de sessão.
+ * Prioriza o cabeçalho Authorization enviado explicitamente pelo cliente para identificação imediata na troca de usuário.
  */
 export async function getCurrentUser() {
   let sessionToken: string | undefined;
 
+  // 1. Prioridade máxima para o cabeçalho Authorization (Bearer token) enviado pelo cliente
   try {
-    const cookieStore = await cookies();
-    sessionToken =
-      cookieStore.get(SESSION_COOKIE_NAME)?.value ||
-      cookieStore.get('auth_token_client')?.value;
+    const headerList = await headers();
+    const authHeader = headerList.get('authorization');
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const candidate = authHeader.substring(7).trim();
+      if (candidate) {
+        sessionToken = candidate;
+      }
+    }
   } catch {}
 
+  // 2. Se não houver cabeçalho Authorization explícito, consulta os cookies da sessão
   if (!sessionToken) {
     try {
-      const headerList = await headers();
-      const authHeader = headerList.get('authorization');
-      if (authHeader && authHeader.startsWith('Bearer ')) {
-        sessionToken = authHeader.substring(7).trim();
-      }
+      const cookieStore = await cookies();
+      sessionToken =
+        cookieStore.get(SESSION_COOKIE_NAME)?.value ||
+        cookieStore.get('auth_token_client')?.value;
     } catch {}
   }
 
   if (!sessionToken) return null;
 
   try {
-    const verified = await verifySessionToken(sessionToken);
+    let verified = await verifySessionToken(sessionToken);
+
+    // Se o token do cabeçalho falhou por estar corrompido ou expirado, tenta o cookie como contingência
+    if (!verified?.id) {
+      try {
+        const cookieStore = await cookies();
+        const cookieToken =
+          cookieStore.get(SESSION_COOKIE_NAME)?.value ||
+          cookieStore.get('auth_token_client')?.value;
+        if (cookieToken && cookieToken !== sessionToken) {
+          verified = await verifySessionToken(cookieToken);
+        }
+      } catch {}
+    }
+
     if (!verified?.id) return null;
 
     const role =
@@ -123,6 +143,7 @@ export async function getCurrentUser() {
     return null;
   }
 }
+
 
 export type ProjectAuthResult =
   | { authorized: true; user: NonNullable<Awaited<ReturnType<typeof getCurrentUser>>>; member?: unknown }

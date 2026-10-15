@@ -35,23 +35,23 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/api/tcle') ||
     (pathname.startsWith('/api/responses') && request.method === 'POST');
 
-  // 3. Obter token de múltiplas fontes para máxima resiliência (Cookies, Header Bearer, Query param)
-  let token =
-    request.cookies.get(SESSION_COOKIE_NAME)?.value ||
-    request.cookies.get('auth_token_client')?.value;
+  // 3. Obter token com prioridade para fontes explícitas (Header Bearer ou query param auth_token)
+  let token: string | undefined;
 
-  if (!token) {
-    const authHeader = request.headers.get('authorization');
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      token = authHeader.substring(7).trim();
-    }
+  const authHeader = request.headers.get('authorization');
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    token = authHeader.substring(7).trim();
+  }
+
+  const queryToken = request.nextUrl.searchParams.get('auth_token');
+  if (queryToken && !token) {
+    token = queryToken.trim();
   }
 
   if (!token) {
-    const queryToken = request.nextUrl.searchParams.get('auth_token');
-    if (queryToken) {
-      token = queryToken.trim();
-    }
+    token =
+      request.cookies.get(SESSION_COOKIE_NAME)?.value ||
+      request.cookies.get('auth_token_client')?.value;
   }
 
   // 4. Validar token assinado JWT da sessão contra os segredos conhecidos
@@ -71,17 +71,12 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // 5. Se já estiver autenticado e tentar acessar /login, direcionar para Meus Estudos (Home)
-  if (isAuthenticated && pathname === '/login') {
-    return NextResponse.redirect(new URL('/', request.url));
-  }
-
-  // 6. Se for rota pública, liberar navegação
+  // 5. Se for rota pública (inclusive /login para permitir troca de usuário sem bloqueio), liberar navegação
   if (isPublicRoute) {
     return NextResponse.next();
   }
 
-  // 7. Rota protegida sem autenticação válida:
+  // 6. Rota protegida sem autenticação válida:
   if (!isAuthenticated) {
     // Se for uma requisição de API interna: responde 401 Unauthorized
     if (pathname.startsWith('/api/')) {
@@ -97,13 +92,21 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  // 8. Se autenticado e a requisição não tinha o cookie primário HttpOnly, sincroniza-o
+  // 7. Sincroniza cookies de sessão quando há token explícito novo ou ausência de cookie primário
   const response = NextResponse.next();
-  if (token && !request.cookies.get(SESSION_COOKIE_NAME)) {
+  const currentCookie = request.cookies.get(SESSION_COOKIE_NAME)?.value;
+  if (token && (queryToken || !currentCookie || currentCookie !== token)) {
     const isHttps = request.nextUrl.protocol === 'https:' || process.env.NODE_ENV === 'production';
     response.cookies.set(SESSION_COOKIE_NAME, token, {
       path: '/',
       httpOnly: true,
+      secure: isHttps,
+      sameSite: isHttps ? 'none' : 'lax',
+      maxAge: 60 * 60 * 24 * 7,
+    });
+    response.cookies.set('auth_token_client', token, {
+      path: '/',
+      httpOnly: false,
       secure: isHttps,
       sameSite: isHttps ? 'none' : 'lax',
       maxAge: 60 * 60 * 24 * 7,

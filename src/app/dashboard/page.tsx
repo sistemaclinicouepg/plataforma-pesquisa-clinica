@@ -639,6 +639,9 @@ function DashboardContent() {
     // Salva no cache local para renderização instantânea em 0 ms nas próximas visitas (SWR)
     try {
       localStorage.setItem(`uepg_cached_project_${data.project.id}`, JSON.stringify(data.project));
+      if (data.currentUser?.id) {
+        localStorage.setItem(`uepg_cached_last_project_${data.currentUser.id}`, JSON.stringify(data.project));
+      }
       localStorage.setItem('uepg_cached_last_project', JSON.stringify(data.project));
     } catch (e) {}
 
@@ -674,10 +677,12 @@ function DashboardContent() {
     }
   };
 
-  const fetchWithRetry = async (url: string, timeoutMs: number = 35000, maxRetries: number = 2): Promise<Response> => {
+  const fetchWithRetry = async (url: string, timeoutMs: number = 15000, maxRetries: number = 1): Promise<Response> => {
     let lastError: any = null;
     const authToken = typeof window !== 'undefined' ? localStorage.getItem('uepg_auth_token') : null;
-    const reqHeaders: Record<string, string> = {};
+    const reqHeaders: Record<string, string> = {
+      'Cache-Control': 'no-cache',
+    };
     if (authToken) {
       reqHeaders['Authorization'] = `Bearer ${authToken}`;
     }
@@ -723,28 +728,30 @@ function DashboardContent() {
       const pId = projectIdParam;
 
       if (pId) {
-        // Dispara a lista de projetos em segundo plano sem bloquear a exibição do projeto atual
-        fetchWithRetry('/api/projects', 35000, 1)
-          .then(async (listRes) => {
-            if (listRes.status === 401 && typeof window !== 'undefined') {
-              localStorage.removeItem('uepg_auth_token');
-              localStorage.removeItem('uepg_cached_user');
-              window.location.href = `/login?from=${encodeURIComponent(window.location.pathname + window.location.search)}`;
-              return;
-            }
-            if (listRes.ok) {
-              const listData = await listRes.json();
-              if (listData.projects) {
-                setAllProjects(listData.projects.map((p: any) => ({ id: p.id, name: p.name })));
+        // Dispara a lista de projetos em segundo plano apenas se ainda não foi carregada
+        if (allProjects.length === 0) {
+          fetchWithRetry('/api/projects', 15000, 1)
+            .then(async (listRes) => {
+              if (listRes.status === 401 && typeof window !== 'undefined') {
+                localStorage.removeItem('uepg_auth_token');
+                localStorage.removeItem('uepg_cached_user');
+                window.location.href = `/login?from=${encodeURIComponent(window.location.pathname + window.location.search)}`;
+                return;
               }
-              if (listData.currentUser) {
-                setCurrentUser(listData.currentUser);
+              if (listRes.ok) {
+                const listData = await listRes.json();
+                if (listData.projects) {
+                  setAllProjects(listData.projects.map((p: any) => ({ id: p.id, name: p.name })));
+                }
+                if (listData.currentUser) {
+                  setCurrentUser(listData.currentUser);
+                }
               }
-            }
-          })
-          .catch((e) => console.warn('Aviso: busca em segundo plano de projetos falhou:', e));
+            })
+            .catch((e) => console.warn('Aviso: busca em segundo plano de projetos falhou:', e));
+        }
 
-        const resProject = await fetchWithRetry(`/api/projects/${pId}`, 35000, 2);
+        const resProject = await fetchWithRetry(`/api/projects/${pId}`, 15000, 1);
 
         if (resProject.status === 401) {
           if (typeof window !== 'undefined') {
@@ -813,8 +820,10 @@ function DashboardContent() {
         const urlToken = urlParams.get('auth_token');
         if (urlToken) {
           localStorage.setItem('uepg_auth_token', urlToken);
-          document.cookie = `auth_session=${urlToken}; path=/; max-age=604800; SameSite=Lax`;
-          document.cookie = `auth_token_client=${urlToken}; path=/; max-age=604800; SameSite=Lax`;
+          const isHttps = window.location.protocol === 'https:';
+          const secureFlag = isHttps ? '; Secure; SameSite=None' : '; SameSite=Lax';
+          document.cookie = `auth_session=${urlToken}; path=/; max-age=604800${secureFlag}`;
+          document.cookie = `auth_token_client=${urlToken}; path=/; max-age=604800${secureFlag}`;
           urlParams.delete('auth_token');
           const cleanQuery = urlParams.toString();
           const cleanPath = window.location.pathname + (cleanQuery ? `?${cleanQuery}` : '');
@@ -823,31 +832,50 @@ function DashboardContent() {
       } catch (e) {}
     }
 
-    // 1. Carregamento instantâneo via Cache Local (SWR - 0 ms!)
+    // 1. Carregamento seguro via Cache Local particionado por usuário
     if (typeof window !== 'undefined') {
       try {
         const cachedUserStr = localStorage.getItem('uepg_cached_user');
+        let currentCachedUser: any = null;
         if (cachedUserStr) {
-          const cachedUser = JSON.parse(cachedUserStr);
-          if (cachedUser) {
-            setCurrentUser(cachedUser);
+          currentCachedUser = JSON.parse(cachedUserStr);
+          if (currentCachedUser) {
+            setCurrentUser(currentCachedUser);
           }
         }
 
-        const cachedKey = projectIdParam ? `uepg_cached_project_${projectIdParam}` : 'uepg_cached_last_project';
-        const cachedStr = localStorage.getItem(cachedKey);
-        if (cachedStr) {
+        const cachedKey = projectIdParam
+          ? `uepg_cached_project_${projectIdParam}`
+          : currentCachedUser?.id
+          ? `uepg_cached_last_project_${currentCachedUser.id}`
+          : 'uepg_cached_last_project';
+
+        const cachedStr = cachedKey ? localStorage.getItem(cachedKey) : null;
+        if (cachedStr && currentCachedUser) {
           const cached = JSON.parse(cachedStr);
           if (cached && cached.id) {
-            setProject(cached);
-            setLoading(false); // Exibe o projeto imediatamente sem travar a interface!
-            const approvedCount = (cached.participants || []).filter((p: any) => p.status === 'APPROVED').length;
-            const pendingCount = (cached.participants || []).filter((p: any) => p.status === 'PENDING').length;
-            const savedTab = sessionStorage.getItem(`uepg_tab_${cached.id}`);
-            if (savedTab && ['active', 'triage', 'audit', 'consort', 'team', 'export'].includes(savedTab)) {
-              setActiveTab(savedTab as any);
-            } else if (approvedCount === 0 && pendingCount > 0) {
-              setActiveTab('triage');
+            // Verificação de permissão: só exibe o projeto em cache se o usuário logado for ADMIN ou membro do projeto
+            const isUserAdmin = currentCachedUser.role === 'ADMIN' || currentCachedUser.email === 'admin@uepg.br';
+            const isMember =
+              isUserAdmin ||
+              cached.members?.some(
+                (m: any) =>
+                  m.userId === currentCachedUser.id ||
+                  m.user?.id === currentCachedUser.id ||
+                  m.user?.email === currentCachedUser.email
+              );
+
+            if (isMember) {
+              setProject(cached);
+              setLoading(false); // Exibe o projeto imediatamente sem travar a interface!
+              const approvedCount = (cached.participants || []).filter((p: any) => p.status === 'APPROVED').length;
+              const pendingCount = (cached.participants || []).filter((p: any) => p.status === 'PENDING').length;
+              const savedTab = sessionStorage.getItem(`uepg_tab_${cached.id}`);
+              if (savedTab && ['active', 'triage', 'audit', 'consort', 'team', 'export'].includes(savedTab)) {
+                setActiveTab(savedTab as any);
+              } else if (approvedCount === 0 && pendingCount > 0) {
+                setActiveTab('triage');
+              }
             }
           }
         }
@@ -973,22 +1001,41 @@ function DashboardContent() {
 
   // Ações de Triagem
   const handleApprove = async (participantId: string) => {
+    // 1. Atualização otimista imediata na interface (0 ms de espera!)
+    setProject((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        participants: (prev.participants || []).map((p) =>
+          p.id === participantId ? { ...p, status: 'APPROVED' } : p
+        ),
+      };
+    });
+    handleSelectTab('active');
+
     try {
+      const authToken = typeof window !== 'undefined' ? localStorage.getItem('uepg_auth_token') : null;
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
+
       const res = await fetch(`/api/participants/${participantId}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
+        credentials: 'include',
         body: JSON.stringify({ status: 'APPROVED' }),
       });
+
       if (res.ok) {
-        await loadProject(true);
-        handleSelectTab('active');
+        loadProject(true);
       } else {
         const errorData = await res.json().catch(() => ({}));
         alert(errorData.error || 'Erro ao incluir participante.');
+        loadProject(true);
       }
     } catch (e) {
       console.error('Erro ao aprovar:', e);
       alert('Erro de comunicação ao incluir participante.');
+      loadProject(true);
     }
   };
 
@@ -1001,23 +1048,49 @@ function DashboardContent() {
   const handleConfirmReject = async () => {
     if (!selectedParticipant || !exclusionReason.trim()) return;
 
+    const partId = selectedParticipant.id;
+    const reason = exclusionReason.trim();
+
+    // Fecha o modal imediatamente
+    setShowRejectModal(false);
+    setSelectedParticipant(null);
+
+    // Atualização otimista imediata
+    setProject((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        participants: (prev.participants || []).map((p) =>
+          p.id === partId ? { ...p, status: 'EXCLUDED', exclusionReason: reason } : p
+        ),
+      };
+    });
+
     try {
-      const res = await fetch(`/api/participants/${selectedParticipant.id}`, {
+      const authToken = typeof window !== 'undefined' ? localStorage.getItem('uepg_auth_token') : null;
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
+
+      const res = await fetch(`/api/participants/${partId}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
+        credentials: 'include',
         body: JSON.stringify({
           status: 'EXCLUDED',
-          exclusionReason: exclusionReason.trim(),
+          exclusionReason: reason,
         }),
       });
 
       if (res.ok) {
-        setShowRejectModal(false);
-        setSelectedParticipant(null);
-        loadProject();
+        loadProject(true);
+      } else {
+        const errorData = await res.json().catch(() => ({}));
+        alert(errorData.error || 'Erro ao recusar participante.');
+        loadProject(true);
       }
     } catch (e) {
       console.error('Erro ao excluir:', e);
+      loadProject(true);
     }
   };
 
@@ -1032,25 +1105,47 @@ function DashboardContent() {
     e.preventDefault();
     if (!allocatingParticipant) return;
 
+    const partId = allocatingParticipant.id;
+    const newGroup = allocatedGroupInput.trim();
+
+    // Fecha o modal e atualiza a interface instantaneamente
+    setShowAllocationModal(false);
+    setAllocatingParticipant(null);
+
+    setProject((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        participants: (prev.participants || []).map((p) =>
+          p.id === partId ? { ...p, group: newGroup } : p
+        ),
+      };
+    });
+
     try {
       setSavingAllocation(true);
-      const res = await fetch(`/api/participants/${allocatingParticipant.id}`, {
+      const authToken = typeof window !== 'undefined' ? localStorage.getItem('uepg_auth_token') : null;
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
+
+      const res = await fetch(`/api/participants/${partId}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ group: allocatedGroupInput.trim() }),
+        headers,
+        credentials: 'include',
+        body: JSON.stringify({ group: newGroup }),
       });
 
       if (res.ok) {
-        setShowAllocationModal(false);
-        setAllocatingParticipant(null);
-        await loadProject(true);
+        loadProject(true);
       } else {
         const errorData = await res.json().catch(() => ({}));
         alert(errorData.error || 'Erro ao salvar alocação de grupo.');
+        loadProject(true);
       }
     } catch (err) {
       console.error('Erro ao salvar alocação:', err);
       alert('Erro de comunicação ao salvar alocação.');
+      loadProject(true);
     } finally {
       setSavingAllocation(false);
     }
@@ -1063,9 +1158,14 @@ function DashboardContent() {
 
     try {
       setSavingPatient(true);
+      const authToken = typeof window !== 'undefined' ? localStorage.getItem('uepg_auth_token') : null;
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
+
       const res = await fetch('/api/patients', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
+        credentials: 'include',
         body: JSON.stringify({
           ...newPatientData,
           projectId: project.id,
@@ -1104,8 +1204,8 @@ function DashboardContent() {
         // Alterna imediatamente para a aba de Triagem para exibir o voluntário recém-adicionado
         setActiveTab('triage');
 
-        // Recarrega os dados do projeto
-        await loadProject(true);
+        // Sincroniza em segundo plano sem travar o usuário
+        loadProject(true);
 
         if (openAnamnesisAfterCreate && result.participant) {
           openAnamnesisModal(result.participant);
@@ -1156,16 +1256,40 @@ function DashboardContent() {
       return;
     }
 
+    const patientId = editingParticipant.patient.id;
+    const updatedPatientData = { ...editPatientData };
+
+    // Fecha o modal e atualiza a interface imediatamente
+    setShowEditPatientModal(false);
+    setEditingParticipant(null);
+
+    setProject((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        participants: (prev.participants || []).map((p) =>
+          p.patient.id === patientId
+            ? { ...p, patient: { ...p.patient, ...updatedPatientData } }
+            : p
+        ),
+      };
+    });
+
     try {
       setSavingPatientEdit(true);
+      const authToken = typeof window !== 'undefined' ? localStorage.getItem('uepg_auth_token') : null;
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
+
       const res = await fetch('/api/patients', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
+        credentials: 'include',
         body: JSON.stringify({
-          patientId: editingParticipant.patient.id,
+          patientId,
           projectId: project.id,
           reason: editPatientReason.trim(),
-          ...editPatientData,
+          ...updatedPatientData,
         }),
       });
 
@@ -1174,13 +1298,11 @@ function DashboardContent() {
         throw new Error(data.error || 'Erro ao atualizar dados cadastrais.');
       }
 
-      alert(data.message || 'Dados cadastrais atualizados com sucesso e registrados na trilha de auditoria.');
-      setShowEditPatientModal(false);
-      setEditingParticipant(null);
-      await loadProject(true);
+      loadProject(true);
     } catch (err: any) {
       console.error('Erro ao atualizar dados cadastrais do paciente:', err);
       alert(err?.message || 'Erro de comunicação ao salvar alterações.');
+      loadProject(true);
     } finally {
       setSavingPatientEdit(false);
     }
@@ -1221,28 +1343,52 @@ function DashboardContent() {
     e.preventDefault();
     if (!currentAnamnesisPart) return;
 
+    const partId = currentAnamnesisPart.id;
+    const serializedData = JSON.stringify(anamnesisData);
+
+    // Fecha o modal e atualiza o estado local em 0 ms!
+    setShowAnamnesisModal(false);
+    setCurrentAnamnesisPart(null);
+
+    setProject((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        participants: (prev.participants || []).map((p) =>
+          p.id === partId
+            ? { ...p, anamnesisDone: true, anamnesisData: serializedData }
+            : p
+        ),
+      };
+    });
+
     try {
       setSavingAnamnesis(true);
-      const res = await fetch(`/api/participants/${currentAnamnesisPart.id}`, {
+      const authToken = typeof window !== 'undefined' ? localStorage.getItem('uepg_auth_token') : null;
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
+
+      const res = await fetch(`/api/participants/${partId}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
+        credentials: 'include',
         body: JSON.stringify({
           anamnesisDone: true,
-          anamnesisData: JSON.stringify(anamnesisData),
+          anamnesisData: serializedData,
         }),
       });
 
       if (res.ok) {
-        setShowAnamnesisModal(false);
-        setCurrentAnamnesisPart(null);
-        await loadProject(true);
+        loadProject(true);
       } else {
         const errorData = await res.json().catch(() => ({}));
         alert(errorData.error || 'Erro ao salvar ficha clínica / anamnese.');
+        loadProject(true);
       }
     } catch (err) {
       console.error('Erro ao salvar anamnese:', err);
       alert('Falha de rede ao salvar anamnese.');
+      loadProject(true);
     } finally {
       setSavingAnamnesis(false);
     }
@@ -1286,31 +1432,80 @@ function DashboardContent() {
     e.preventDefault();
     if (!currentSessionForm.participantId) return;
 
+    const formData = { ...currentSessionForm };
+
+    // Fecha o modal e atualiza a interface instantaneamente (0 ms de latência percebida)
+    setShowSessionModal(false);
+
+    setProject((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        participants: (prev.participants || []).map((p) => {
+          if (p.id !== formData.participantId) return p;
+          const existingSessions = p.sessions || [];
+          const sessionIndex = existingSessions.findIndex((s) => s.sessionNumber === formData.sessionNumber);
+          const updatedSession = {
+            id: sessionIndex >= 0 ? existingSessions[sessionIndex].id : `temp_${Date.now()}`,
+            participantId: formData.participantId,
+            sessionNumber: formData.sessionNumber,
+            sessionType: formData.sessionType,
+            sessionDate: new Date(formData.sessionDate),
+            shadeRight: formData.shadeRight,
+            shadeLeft: formData.shadeLeft,
+            painScore0h: formData.painScore0h,
+            painScore1h: formData.painScore1h,
+            painScore24h: formData.painScore24h,
+            painScore48h: formData.painScore48h,
+            gingivalIrritation: formData.gingivalIrritation,
+            adverseEvents: formData.adverseEvents,
+            operatorName: formData.operatorName,
+            evaluatorName: formData.evaluatorName,
+            notes: formData.notes,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            alerts: [],
+          };
+          const newSessions = [...existingSessions];
+          if (sessionIndex >= 0) {
+            newSessions[sessionIndex] = updatedSession as any;
+          } else {
+            newSessions.push(updatedSession as any);
+          }
+          return { ...p, sessions: newSessions };
+        }),
+      };
+    });
+
     try {
       setSavingSession(true);
-      const res = await fetch(`/api/participants/${currentSessionForm.participantId}/sessions`, {
+      const authToken = typeof window !== 'undefined' ? localStorage.getItem('uepg_auth_token') : null;
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
+
+      const res = await fetch(`/api/participants/${formData.participantId}/sessions`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(currentSessionForm),
+        headers,
+        credentials: 'include',
+        body: JSON.stringify(formData),
       });
 
       if (res.ok) {
-        setShowSessionModal(false);
-        removeOfflineItemByEndpoint(`/api/participants/${currentSessionForm.participantId}/sessions`);
-        await loadProject(true);
+        removeOfflineItemByEndpoint(`/api/participants/${formData.participantId}/sessions`);
+        loadProject(true);
       } else {
         const errorData = await res.json().catch(() => ({}));
         alert(errorData.error || 'Erro ao registrar sessão clínica.');
+        loadProject(true);
       }
     } catch (err) {
       console.warn('Falha de conexão ao salvar sessão clínica (adicionando à fila offline):', err);
       enqueueOfflineItem(
         'SESSION_UPDATE',
-        `/api/participants/${currentSessionForm.participantId}/sessions`,
-        currentSessionForm
+        `/api/participants/${formData.participantId}/sessions`,
+        formData
       );
       alert('Sem conexão direta com a internet: Sessão clínica armazenada com segurança na memória local deste navegador e será transmitida automaticamente assim que a conexão restabelecer.');
-      setShowSessionModal(false);
     } finally {
       setSavingSession(false);
     }

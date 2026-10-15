@@ -52,7 +52,14 @@ export async function GET() {
       orderBy: { createdAt: 'desc' },
     });
 
-    return NextResponse.json({ projects, currentUser });
+    return NextResponse.json(
+      { projects, currentUser },
+      {
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        },
+      }
+    );
   } catch (error) {
     console.error('Erro ao buscar projetos:', error);
     return NextResponse.json({ error: 'Erro ao carregar projetos.' }, { status: 500 });

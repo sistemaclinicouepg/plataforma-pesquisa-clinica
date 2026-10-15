@@ -70,11 +70,15 @@ export default function AppNav() {
           } catch (e) {}
         }
       } else {
-        if (!localStorage.getItem('uepg_cached_user')) {
-          setCurrentUser(null);
+        // Se a resposta não foi ok (ex: 401 não autenticado), limpa o cache de usuário anterior
+        setCurrentUser(null);
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('uepg_cached_user');
+          localStorage.removeItem('uepg_auth_token');
         }
       }
     } catch {
+      // Falha de rede: se não havia cache válido, garante nulo
       if (!localStorage.getItem('uepg_cached_user')) {
         setCurrentUser(null);
       }
@@ -113,8 +117,31 @@ export default function AppNav() {
   const handleLogout = async () => {
     try {
       if (typeof window !== 'undefined') {
+        // Limpeza agressiva e completa de qualquer dado ou cache em memória
         localStorage.removeItem('uepg_auth_token');
         localStorage.removeItem('uepg_cached_user');
+        localStorage.removeItem('uepg_cached_projects');
+        localStorage.removeItem('uepg_cached_last_project');
+        localStorage.removeItem('app_active_project_id');
+        localStorage.removeItem('app_active_patient_code');
+        localStorage.removeItem('prototipo_active_project_id');
+        localStorage.removeItem('prototipo_active_patient_code');
+
+        Object.keys(localStorage).forEach((key) => {
+          if (key.startsWith('uepg_cached_') || key.startsWith('app_active_')) {
+            localStorage.removeItem(key);
+          }
+        });
+        Object.keys(sessionStorage).forEach((key) => {
+          if (key.startsWith('uepg_tab_')) {
+            sessionStorage.removeItem(key);
+          }
+        });
+
+        const isHttps = window.location.protocol === 'https:';
+        const secureFlag = isHttps ? '; Secure; SameSite=None' : '; SameSite=Lax';
+        document.cookie = `auth_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT${secureFlag}`;
+        document.cookie = `auth_token_client=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT${secureFlag}`;
         document.cookie = 'auth_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
         document.cookie = 'auth_token_client=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
       }
