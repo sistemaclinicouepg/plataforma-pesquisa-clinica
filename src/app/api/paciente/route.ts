@@ -81,11 +81,22 @@ export async function GET(req: Request) {
 
     if (!resolvedParticipantId && code) {
       const cleanedCode = code.trim().toUpperCase();
+      const codeWithoutHyphen = cleanedCode.replace(/-/g, '');
+      const codeVariants = [cleanedCode, codeWithoutHyphen];
 
-      // Buscar todos os participantes que compartilham este código de pesquisa
-      const candidates = await prisma.participant.findMany({
+      const pMatch = cleanedCode.match(/^P(\d+)-?(\d+)$/);
+      if (pMatch) {
+        const pNum = String(parseInt(pMatch[1], 10)).padStart(2, '0');
+        const sNum = String(parseInt(pMatch[2], 10)).padStart(3, '0');
+        codeVariants.push(`P${pNum}-${sNum}`);
+        codeVariants.push(`P${pMatch[1]}-${sNum}`);
+        codeVariants.push(`P${pNum}${sNum}`);
+      }
+
+      // Buscar todos os participantes que compartilham ou correspondem a este código
+      let candidates = await prisma.participant.findMany({
         where: {
-          researchCode: cleanedCode,
+          researchCode: { in: codeVariants },
           ...(projectId && { projectId }),
         },
         include: {
@@ -104,6 +115,38 @@ export async function GET(req: Request) {
           },
         },
       });
+
+      // Se não encontrou e o projectId foi fornecido, tenta busca pelo sufixo numérico no projeto
+      if (candidates.length === 0 && projectId) {
+        const digitsMatch = cleanedCode.match(/\d+$/);
+        if (digitsMatch) {
+          const numPadded = digitsMatch[0].padStart(3, '0');
+          candidates = await prisma.participant.findMany({
+            where: {
+              projectId,
+              OR: [
+                { researchCode: { endsWith: `-${numPadded}` } },
+                { researchCode: `P${numPadded}` },
+              ],
+            },
+            include: {
+              patient: {
+                select: {
+                  fullName: true,
+                  cpf: true,
+                  dateOfBirth: true,
+                },
+              },
+              project: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+            },
+          });
+        }
+      }
 
       if (candidates.length === 0) {
         return NextResponse.json(

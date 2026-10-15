@@ -37,6 +37,7 @@ export type FormTargetProtocol = {
 };
 
 export type StudyProtocolConfig = {
+  projectPrefix?: string; // Prefixo personalizado do código dos participantes (ex: 'P01', 'EXP', 'CLAR')
   totalSessions: number;
   sessions: StudySessionProtocol[];
   forms: FormTargetProtocol[];
@@ -248,6 +249,7 @@ export function parseStudyProtocol(templateStringOrObj: any): StudyProtocolConfi
     : DEFAULT_FORM_TARGETS;
 
   return {
+    projectPrefix: studyProtocol.projectPrefix ? String(studyProtocol.projectPrefix).trim().toUpperCase() : undefined,
     totalSessions: Number(studyProtocol.totalSessions) || sessions.length,
     sessions,
     forms,

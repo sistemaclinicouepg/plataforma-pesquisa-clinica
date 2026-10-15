@@ -225,12 +225,12 @@ function PacienteContent() {
   useEffect(() => {
     if (codeParam || partIdParam) {
       const timer = setTimeout(() => {
-        loadParticipant(codeParam, partIdParam);
+        loadParticipant(codeParam, partIdParam, projectIdParam);
       }, 0);
       return () => clearTimeout(timer);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [codeParam, partIdParam]);
+  }, [codeParam, partIdParam, projectIdParam]);
 
   // Recarregar dados automaticamente após sincronização em segundo plano da fila offline
   useEffect(() => {

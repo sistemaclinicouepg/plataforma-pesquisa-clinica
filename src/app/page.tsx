@@ -87,6 +87,7 @@ export default function HomePage() {
   const [createTab, setCreateTab] = useState<'GENERAL' | 'SESSIONS' | 'FORMS'>('GENERAL');
   const [newProjectName, setNewProjectName] = useState('');
   const [newProjectDesc, setNewProjectDesc] = useState('');
+  const [newProjectPrefix, setNewProjectPrefix] = useState('');
   const [newProjectStatus, setNewProjectStatus] = useState<'ACTIVE' | 'COMPLETED' | 'CANCELLED'>('ACTIVE');
   const [enableOdontogram, setEnableOdontogram] = useState(true);
   const [odontogramScope, setOdontogramScope] = useState<'anterior' | 'full'>('anterior');
@@ -101,6 +102,7 @@ export default function HomePage() {
   const [editTab, setEditTab] = useState<'GENERAL' | 'SESSIONS' | 'FORMS'>('GENERAL');
   const [editProjectName, setEditProjectName] = useState('');
   const [editProjectDesc, setEditProjectDesc] = useState('');
+  const [editProjectPrefix, setEditProjectPrefix] = useState('');
   const [editProjectStatus, setEditProjectStatus] = useState<'ACTIVE' | 'COMPLETED' | 'CANCELLED'>('ACTIVE');
   const [editEnableOdontogram, setEditEnableOdontogram] = useState(true);
   const [editOdontogramScope, setEditOdontogramScope] = useState<'anterior' | 'full'>('anterior');
@@ -212,6 +214,7 @@ export default function HomePage() {
     const protocol = parseStudyProtocol(p.anamnesisTemplate);
     setEditStudySessions(protocol.sessions);
     setEditFormTargets(protocol.forms);
+    setEditProjectPrefix(protocol.projectPrefix || '');
   };
 
   const handleSaveProjectEdit = async (e: React.FormEvent) => {
@@ -238,6 +241,7 @@ export default function HomePage() {
       enablePeriodontogram: editEnablePeriodontogram,
       enableAnamnesis: editEnableAnamnesis,
       studyProtocol: {
+        projectPrefix: editProjectPrefix.trim().toUpperCase() || undefined,
         totalSessions: editStudySessions.length,
         sessions: editStudySessions,
         forms: editFormTargets,
@@ -525,6 +529,7 @@ export default function HomePage() {
         },
         questions: [],
         studyProtocol: {
+          projectPrefix: newProjectPrefix.trim().toUpperCase() || undefined,
           totalSessions: studySessions.length,
           sessions: studySessions,
           forms: formTargets,
@@ -552,6 +557,7 @@ export default function HomePage() {
         setIsCreateModalOpen(false);
         setNewProjectName('');
         setNewProjectDesc('');
+        setNewProjectPrefix('');
         setNewProjectStatus('ACTIVE');
         if (data.project?.id) {
           router.push(`/anamnese?projectId=${data.project.id}&new=true`);
@@ -1138,6 +1144,23 @@ export default function HomePage() {
                     </select>
                   </div>
 
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                      Prefixo do Código dos Voluntários (Opcional)
+                    </label>
+                    <input
+                      type="text"
+                      value={newProjectPrefix}
+                      onChange={(e) => setNewProjectPrefix(e.target.value.toUpperCase())}
+                      placeholder="Ex: P01, EXP, CLAR (Padrão automático: P01, P02...)"
+                      maxLength={8}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm font-mono uppercase focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    />
+                    <p className="text-[10px] text-slate-400 mt-1">
+                      Garante códigos únicos para cada paciente (Ex: P01-001, P07-001), eliminando qualquer conflito com outros projetos.
+                    </p>
+                  </div>
+
                   <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 text-xs space-y-1.5 text-slate-600">
                     <div className="font-bold text-slate-800 flex items-center gap-1.5">
                       <Sparkles className="w-4 h-4 text-blue-600" />
@@ -1675,6 +1698,23 @@ export default function HomePage() {
                       <option value="COMPLETED">🔵 Finalizado / Concluído</option>
                       <option value="CANCELLED">⚪ Cancelado / Interrompido</option>
                     </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                      Prefixo do Código dos Voluntários (Opcional)
+                    </label>
+                    <input
+                      type="text"
+                      value={editProjectPrefix}
+                      onChange={(e) => setEditProjectPrefix(e.target.value.toUpperCase())}
+                      placeholder="Ex: P01, EXP, CLAR (Padrão automático: P01, P02...)"
+                      maxLength={8}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm font-mono uppercase focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    />
+                    <p className="text-[10px] text-slate-400 mt-1">
+                      Garante códigos únicos para cada paciente (Ex: P01-001, P07-001), eliminando qualquer conflito com outros projetos.
+                    </p>
                   </div>
 
                   {/* Ações Específicas dos Instrumentos */}

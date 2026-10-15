@@ -82,21 +82,54 @@ export async function POST(req: Request) {
       );
     }
 
-    // 3. Gerar código de pesquisa sequencial seguro e à prova de colisões (P001, P002, etc.)
-    const existingParticipants = await prisma.participant.findMany({
+    // 3. Determinar o prefixo exclusivo do projeto e gerar código sequencial seguro (ex: P01-001, P07-001)
+    const currentProject = await prisma.project.findUnique({
+      where: { id: projectId },
+      select: { id: true, name: true, createdAt: true, anamnesisTemplate: true },
+    });
+
+    let projectPrefix = '';
+    if (currentProject?.anamnesisTemplate) {
+      try {
+        const proto = JSON.parse(currentProject.anamnesisTemplate);
+        const customPrefix = proto?.studyProtocol?.projectPrefix || proto?.projectPrefix;
+        if (customPrefix && typeof customPrefix === 'string') {
+          projectPrefix = customPrefix.trim().toUpperCase();
+        }
+      } catch (e) {}
+    }
+
+    if (!projectPrefix) {
+      // Calcular índice do projeto pela ordem de criação histórica
+      const allProjects = await prisma.project.findMany({
+        select: { id: true },
+        orderBy: { createdAt: 'asc' },
+      });
+      const pIdx = allProjects.findIndex((p) => p.id === projectId) + 1;
+      projectPrefix = `P${String(pIdx > 0 ? pIdx : 1).padStart(2, '0')}`;
+    }
+
+    // Buscar participantes existentes deste projeto para obter o próximo sequencial
+    const existingInProject = await prisma.participant.findMany({
       where: { projectId },
       select: { researchCode: true },
     });
 
-    const usedNumbers = existingParticipants
+    const usedNumbers = existingInProject
       .map((p) => {
-        const m = p.researchCode.match(/\d+/);
-        return m ? parseInt(m[0], 10) : 0;
+        const m = p.researchCode.match(/(?:-|\b)(\d+)$/);
+        return m ? parseInt(m[1], 10) : 0;
       })
       .filter((n) => n > 0);
 
-    const nextNumber = (usedNumbers.length > 0 ? Math.max(...usedNumbers) : 0) + 1;
-    const researchCode = `P${String(nextNumber).padStart(3, '0')}`;
+    let nextNumber = (usedNumbers.length > 0 ? Math.max(...usedNumbers) : 0) + 1;
+    let researchCode = `${projectPrefix}-${String(nextNumber).padStart(3, '0')}`;
+
+    // Garantia absoluta de unicidade em toda a plataforma (evita qualquer conflito entre projetos)
+    while (await prisma.participant.findFirst({ where: { researchCode } })) {
+      nextNumber++;
+      researchCode = `${projectPrefix}-${String(nextNumber).padStart(3, '0')}`;
+    }
 
     // 4. Criar a participação desidentificada vinculada ao projeto
     const participant = await prisma.participant.create({
