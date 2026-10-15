@@ -55,6 +55,10 @@ export default function RootLayout({
                     for (var i = 0; i < names.length; i++) { caches.delete(names[i]); }
                   });
                 }
+                try {
+                  localStorage.removeItem('uepg_clinical_offline_queue');
+                  localStorage.removeItem('uepg_offline_synced');
+                } catch(e) {}
               }
             `,
           }}

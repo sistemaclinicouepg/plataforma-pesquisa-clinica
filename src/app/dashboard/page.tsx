@@ -2582,12 +2582,12 @@ function DashboardContent() {
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse text-xs">
                     <thead>
-                      <tr className="border-b border-slate-200 bg-slate-50/90 text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                        <th className="py-3 px-4">Participante</th>
-                        <th className="py-3 px-3">Grupo</th>
-                        <th className="py-3 px-3">Sessões</th>
-                        <th className="py-3 px-3">Status da Janela</th>
-                        <th className="py-3 px-4 text-right">Ações</th>
+                      <tr className="border-b border-slate-200 bg-slate-50/90 text-[11px] font-bold uppercase tracking-wider text-slate-500 h-10">
+                        <th className="py-2.5 px-4 min-w-[240px]">Participante</th>
+                        <th className="py-2.5 px-3 min-w-[180px]">Grupo</th>
+                        <th className="py-2.5 px-3 min-w-[150px]">Sessões</th>
+                        <th className="py-2.5 px-3 min-w-[180px]">Status da Janela</th>
+                        <th className="py-2.5 px-4 text-right min-w-[490px]">Ações</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
