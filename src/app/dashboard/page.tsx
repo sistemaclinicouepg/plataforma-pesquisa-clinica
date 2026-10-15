@@ -2264,20 +2264,20 @@ function DashboardContent() {
           </div>
         )}
         
-        {/* Abas de Navegação do Projeto */}
-        <div className="flex items-center gap-1.5 border-b border-slate-200 mb-6 pb-2 overflow-x-auto no-scrollbar">
+        {/* Abas de Navegação do Projeto (Segmented Control Padronizado) */}
+        <div className="bg-slate-100/90 p-1.5 rounded-2xl flex items-center gap-1.5 mb-6 border border-slate-200/80 overflow-x-auto no-scrollbar shadow-2xs">
           <button
             onClick={() => handleSelectTab('active')}
-            className={`px-3.5 py-2 text-xs font-bold rounded-lg transition-all flex items-center space-x-2 shrink-0 ${
+            className={`px-3.5 py-2 text-xs font-bold rounded-xl transition-all flex items-center space-x-2 shrink-0 ${
               activeTab === 'active'
                 ? 'bg-blue-600 text-white shadow-xs'
-                : 'bg-white text-slate-700 hover:text-slate-900 hover:bg-slate-100 border border-slate-200'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-white/70'
             }`}
           >
             <Stethoscope className="w-3.5 h-3.5" />
             <span>Prontuários & Atendimento</span>
-            <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
-              activeTab === 'active' ? 'bg-blue-800 text-white' : 'bg-slate-100 text-slate-700'
+            <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold ${
+              activeTab === 'active' ? 'bg-blue-700 text-white' : 'bg-slate-200 text-slate-700'
             }`}>
               {approvedList.length}
             </span>
@@ -2288,16 +2288,16 @@ function DashboardContent() {
 
           <button
             onClick={() => handleSelectTab('triage')}
-            className={`px-3.5 py-2 text-xs font-bold rounded-lg transition-all flex items-center space-x-2 shrink-0 ${
+            className={`px-3.5 py-2 text-xs font-bold rounded-xl transition-all flex items-center space-x-2 shrink-0 ${
               activeTab === 'triage'
                 ? 'bg-blue-600 text-white shadow-xs'
-                : 'bg-white text-slate-700 hover:text-slate-900 hover:bg-slate-100 border border-slate-200'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-white/70'
             }`}
           >
             <ClipboardList className="w-3.5 h-3.5" />
             <span>Triagem & Critérios</span>
-            <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
-              activeTab === 'triage' ? 'bg-blue-800 text-white' : 'bg-slate-100 text-slate-700'
+            <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold ${
+              activeTab === 'triage' ? 'bg-blue-700 text-white' : 'bg-slate-200 text-slate-700'
             }`}>
               {pendingList.length}
             </span>
@@ -2306,16 +2306,16 @@ function DashboardContent() {
           {isAdmin && (
             <button
               onClick={() => handleSelectTab('audit')}
-              className={`px-3.5 py-2 text-xs font-bold rounded-lg transition-all flex items-center space-x-2 shrink-0 ${
+              className={`px-3.5 py-2 text-xs font-bold rounded-xl transition-all flex items-center space-x-2 shrink-0 ${
                 activeTab === 'audit'
                   ? 'bg-indigo-600 text-white shadow-xs'
-                  : 'bg-white text-slate-700 hover:text-slate-900 hover:bg-slate-100 border border-slate-200'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/70'
               }`}
             >
               <ShieldCheck className="w-3.5 h-3.5" />
               <span>Trilha de Auditoria GCP</span>
-              <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
-                activeTab === 'audit' ? 'bg-indigo-800 text-white' : 'bg-slate-100 text-slate-700'
+              <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold ${
+                activeTab === 'audit' ? 'bg-indigo-700 text-white' : 'bg-slate-200 text-slate-700'
               }`}>
                 {project.auditLogs?.length || 0}
               </span>
@@ -2327,13 +2327,13 @@ function DashboardContent() {
             className={`px-3.5 py-2 text-xs font-bold rounded-xl transition-all flex items-center space-x-2 shrink-0 ${
               activeTab === 'consort'
                 ? 'bg-blue-600 text-white shadow-xs'
-                : 'bg-white text-slate-700 hover:text-slate-900 hover:bg-slate-100 border border-slate-200'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-white/70'
             }`}
           >
             <BarChart3 className="w-3.5 h-3.5" />
             <span>Fluxo CONSORT</span>
-            <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
-              activeTab === 'consort' ? 'bg-blue-800 text-white' : 'bg-slate-100 text-slate-700'
+            <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold ${
+              activeTab === 'consort' ? 'bg-blue-700 text-white' : 'bg-slate-200 text-slate-700'
             }`}>
               {excludedList.length}
             </span>
@@ -2344,13 +2344,13 @@ function DashboardContent() {
             className={`px-3.5 py-2 text-xs font-bold rounded-xl transition-all flex items-center space-x-2 shrink-0 ${
               activeTab === 'team'
                 ? 'bg-blue-600 text-white shadow-xs'
-                : 'bg-white text-slate-700 hover:text-slate-900 hover:bg-slate-100 border border-slate-200'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-white/70'
             }`}
           >
             <Users className="w-3.5 h-3.5" />
             <span>Equipe</span>
-            <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
-              activeTab === 'team' ? 'bg-blue-800 text-white' : 'bg-slate-100 text-slate-700'
+            <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold ${
+              activeTab === 'team' ? 'bg-blue-700 text-white' : 'bg-slate-200 text-slate-700'
             }`}>
               {project.members?.length || 0}
             </span>
@@ -2361,7 +2361,7 @@ function DashboardContent() {
             className={`px-3.5 py-2 text-xs font-bold rounded-xl transition-all flex items-center space-x-2 shrink-0 ${
               activeTab === 'export'
                 ? 'bg-blue-600 text-white shadow-xs'
-                : 'bg-white text-slate-700 hover:text-slate-900 hover:bg-slate-100 border border-slate-200'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-white/70'
             }`}
           >
             <Download className="w-3.5 h-3.5" />
@@ -2382,73 +2382,86 @@ function DashboardContent() {
               </div>
             )}
 
-            {/* Métricas Compactas de Atendimento */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div className="bg-white rounded-xl shadow-2xs border border-slate-200 p-3 flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Ativos no Estudo</p>
-                  <p className="text-xl font-black text-slate-900">{approvedList.length}</p>
+            {/* Métricas Compactas de Atendimento (Cards com Altura e Hierarquia Padronizadas) */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
+              {/* Card 1: Ativos no Estudo */}
+              <div className="bg-white rounded-xl shadow-2xs border border-slate-200 p-3.5 flex flex-col justify-between min-h-[88px]">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Ativos no Estudo</span>
+                  <div className="p-1.5 rounded-lg bg-blue-50 text-blue-600">
+                    <Users className="w-3.5 h-3.5" />
+                  </div>
                 </div>
-                <div className="p-2 rounded-lg bg-blue-50 text-blue-700">
-                  <CheckCircle2 className="w-4 h-4" />
+                <div className="mt-2">
+                  <div className="text-xl font-black text-slate-900 leading-none">{approvedList.length}</div>
+                  <p className="text-[10px] text-slate-500 mt-1 truncate">Participantes no protocolo</p>
                 </div>
               </div>
 
-              <div className={`rounded-xl shadow-2xs border p-3 flex items-center justify-between transition ${
+              {/* Card 2: Retornos Clínicos */}
+              <div className={`rounded-xl shadow-2xs border p-3.5 flex flex-col justify-between min-h-[88px] transition ${
                 overdueVisits.length > 0
-                  ? 'bg-red-50/50 border-red-200'
+                  ? 'bg-red-50/40 border-red-200'
                   : dueNowVisits.length > 0
-                  ? 'bg-amber-50/50 border-amber-200'
+                  ? 'bg-amber-50/40 border-amber-200'
                   : 'bg-white border-slate-200'
               }`}>
-                <div>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Retornos Clínicos</p>
-                  <p className="text-xl font-black text-slate-900">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Retornos Clínicos</span>
+                  <div className={`p-1.5 rounded-lg ${
+                    overdueVisits.length > 0
+                      ? 'bg-red-100 text-red-700 animate-pulse'
+                      : dueNowVisits.length > 0
+                      ? 'bg-amber-100 text-amber-700'
+                      : 'bg-emerald-50 text-emerald-700'
+                  }`}>
+                    {overdueVisits.length > 0 ? (
+                      <AlertCircle className="w-3.5 h-3.5" />
+                    ) : dueNowVisits.length > 0 ? (
+                      <Clock className="w-3.5 h-3.5" />
+                    ) : (
+                      <Calendar className="w-3.5 h-3.5" />
+                    )}
+                  </div>
+                </div>
+                <div className="mt-2">
+                  <div className="text-xl font-black text-slate-900 leading-none">
                     {overdueVisits.length + dueNowVisits.length}
-                  </p>
-                  <p className="text-[10px] text-slate-500">
+                  </div>
+                  <p className="text-[10px] text-slate-500 mt-1 truncate">
                     {overdueVisits.length > 0 ? `${overdueVisits.length} atrasado(s)` : ''}
                     {overdueVisits.length > 0 && dueNowVisits.length > 0 ? ' • ' : ''}
                     {dueNowVisits.length > 0 ? `${dueNowVisits.length} na janela` : ''}
-                    {overdueVisits.length === 0 && dueNowVisits.length === 0 ? 'Em dia' : ''}
+                    {overdueVisits.length === 0 && dueNowVisits.length === 0 ? 'Todos os retornos em dia' : ''}
                   </p>
                 </div>
-                <div className={`p-2 rounded-lg ${
-                  overdueVisits.length > 0
-                    ? 'bg-red-100 text-red-700 animate-pulse'
-                    : dueNowVisits.length > 0
-                    ? 'bg-amber-100 text-amber-700'
-                    : 'bg-emerald-100 text-emerald-700'
-                }`}>
-                  {overdueVisits.length > 0 ? (
-                    <AlertCircle className="w-4 h-4" />
-                  ) : dueNowVisits.length > 0 ? (
-                    <Clock className="w-4 h-4" />
-                  ) : (
-                    <Calendar className="w-4 h-4" />
-                  )}
+              </div>
+
+              {/* Card 3: Protocolos Concluídos */}
+              <div className="bg-white rounded-xl shadow-2xs border border-slate-200 p-3.5 flex flex-col justify-between min-h-[88px]">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Protocolos Concluídos</span>
+                  <div className="p-1.5 rounded-lg bg-emerald-50 text-emerald-700">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                  </div>
+                </div>
+                <div className="mt-2">
+                  <div className="text-xl font-black text-emerald-600 leading-none">{allCompletedVisits.length}</div>
+                  <p className="text-[10px] text-slate-500 mt-1 truncate">4 de 4 sessões finalizadas</p>
                 </div>
               </div>
 
-              <div className="bg-white rounded-xl shadow-2xs border border-slate-200 p-3 flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Protocolos Concluídos</p>
-                  <p className="text-xl font-black text-emerald-600">{allCompletedVisits.length}</p>
-                  <p className="text-[10px] text-slate-500">4 de 4 sessões finalizadas</p>
+              {/* Card 4: Próximos Retornos */}
+              <div className="bg-white rounded-xl shadow-2xs border border-slate-200 p-3.5 flex flex-col justify-between min-h-[88px]">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Próximos Retornos</span>
+                  <div className="p-1.5 rounded-lg bg-slate-100 text-slate-600">
+                    <Clock className="w-3.5 h-3.5" />
+                  </div>
                 </div>
-                <div className="p-2 rounded-lg bg-emerald-50 text-emerald-700">
-                  <CheckCircle2 className="w-4 h-4" />
-                </div>
-              </div>
-
-              <div className="bg-white rounded-xl shadow-2xs border border-slate-200 p-3 flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Próximos Retornos</p>
-                  <p className="text-xl font-black text-slate-900">{upcomingVisits.length}</p>
-                  <p className="text-[10px] text-slate-500">Dentro da janela futura</p>
-                </div>
-                <div className="p-2 rounded-lg bg-slate-100 text-slate-600">
-                  <Clock className="w-4 h-4" />
+                <div className="mt-2">
+                  <div className="text-xl font-black text-slate-900 leading-none">{upcomingVisits.length}</div>
+                  <p className="text-[10px] text-slate-500 mt-1 truncate">Dentro da janela futura</p>
                 </div>
               </div>
             </div>
@@ -2466,10 +2479,10 @@ function DashboardContent() {
                 <button
                   type="button"
                   onClick={() => setActiveFilter(activeFilter === 'PENDING' ? 'ALL' : 'PENDING')}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition shrink-0 ${
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition shrink-0 ${
                     activeFilter === 'PENDING'
                       ? 'bg-amber-600 text-white'
-                      : 'bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300'
+                      : 'bg-white hover:bg-amber-100 text-amber-900 border border-amber-300 shadow-2xs'
                   }`}
                 >
                   {activeFilter === 'PENDING' ? 'Mostrar Todos os Participantes' : 'Filtrar Apenas Retornos Pendentes'}
@@ -2477,58 +2490,69 @@ function DashboardContent() {
               </div>
             )}
 
-            {/* Lista Principal de Prontuários no Formato Tabela Compacta */}
+            {/* Lista Principal de Prontuários no Formato Tabela Padronizada */}
             <div className="bg-white rounded-xl shadow-xs border border-slate-200 overflow-hidden flex flex-col">
-              {/* Barra Superior de Filtros e Busca Rápida */}
-              <div className="p-3.5 border-b border-slate-100 bg-slate-50/70 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              {/* Barra Superior de Filtros e Busca Rápida (Segmented Control + Busca) */}
+              <div className="p-3.5 border-b border-slate-200 bg-slate-50/70 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="flex flex-wrap items-center gap-1.5">
-                  <h3 className="text-sm font-bold text-slate-800 mr-2">Prontuários ({filteredApprovedList.length})</h3>
-                  <button
-                    onClick={() => setActiveFilter('ALL')}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition ${
-                      activeFilter === 'ALL'
-                        ? 'bg-slate-800 text-white'
-                        : 'bg-slate-200/70 text-slate-600 hover:bg-slate-200'
-                    }`}
-                  >
-                    Todos ({approvedList.length})
-                  </button>
-                  <button
-                    onClick={() => setActiveFilter('PENDING')}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition ${
-                      activeFilter === 'PENDING'
-                        ? 'bg-amber-600 text-white'
-                        : 'bg-slate-200/70 text-slate-600 hover:bg-slate-200'
-                    }`}
-                  >
-                    Retornos Pendentes ({overdueVisits.length + dueNowVisits.length})
-                  </button>
-                  <button
-                    onClick={() => setActiveFilter('COMPLETED')}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition ${
-                      activeFilter === 'COMPLETED'
-                        ? 'bg-emerald-600 text-white'
-                        : 'bg-slate-200/70 text-slate-600 hover:bg-slate-200'
-                    }`}
-                  >
-                    Concluídos ({allCompletedVisits.length})
-                  </button>
+                  <div className="bg-slate-200/70 p-1 rounded-xl flex items-center gap-1">
+                    <button
+                      onClick={() => setActiveFilter('ALL')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                        activeFilter === 'ALL'
+                          ? 'bg-white text-slate-900 shadow-2xs'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      Todos ({approvedList.length})
+                    </button>
+                    <button
+                      onClick={() => setActiveFilter('PENDING')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
+                        activeFilter === 'PENDING'
+                          ? 'bg-amber-500 text-white shadow-2xs'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      <span>Retornos Pendentes</span>
+                      <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
+                        activeFilter === 'PENDING' ? 'bg-amber-700 text-white' : 'bg-slate-300 text-slate-700'
+                      }`}>
+                        {overdueVisits.length + dueNowVisits.length}
+                      </span>
+                    </button>
+                    <button
+                      onClick={() => setActiveFilter('COMPLETED')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
+                        activeFilter === 'COMPLETED'
+                          ? 'bg-emerald-600 text-white shadow-2xs'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      <span>Concluídos</span>
+                      <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
+                        activeFilter === 'COMPLETED' ? 'bg-emerald-800 text-white' : 'bg-slate-300 text-slate-700'
+                      }`}>
+                        {allCompletedVisits.length}
+                      </span>
+                    </button>
+                  </div>
                 </div>
 
                 {/* Caixa de Busca */}
-                <div className="relative min-w-[200px] sm:max-w-xs w-full">
+                <div className="relative min-w-[220px] sm:max-w-xs w-full">
                   <input
                     type="text"
                     placeholder="Buscar código, nome ou WhatsApp..."
                     value={activeSearch}
                     onChange={(e) => setActiveSearch(e.target.value)}
-                    className="w-full pl-8 pr-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    className="w-full pl-8 pr-7 py-1.5 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition shadow-2xs"
                   />
-                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2" />
+                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
                   {activeSearch && (
                     <button
                       onClick={() => setActiveSearch('')}
-                      className="absolute right-2.5 top-1.5 text-slate-400 hover:text-slate-600 text-xs"
+                      className="absolute right-2 top-1.5 w-5 h-5 flex items-center justify-center text-slate-400 hover:text-slate-600 text-xs rounded-full hover:bg-slate-100"
                     >
                       ×
                     </button>
@@ -2558,12 +2582,12 @@ function DashboardContent() {
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse text-xs">
                     <thead>
-                      <tr className="border-b border-slate-100 bg-slate-50/50 text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                        <th className="py-2.5 px-3.5">Participante</th>
-                        <th className="py-2.5 px-3">Grupo</th>
-                        <th className="py-2.5 px-3">Sessões</th>
-                        <th className="py-2.5 px-3">Status da Janela</th>
-                        <th className="py-2.5 px-3.5 text-right">Ações</th>
+                      <tr className="border-b border-slate-200 bg-slate-50/90 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                        <th className="py-3 px-4">Participante</th>
+                        <th className="py-3 px-3">Grupo</th>
+                        <th className="py-3 px-3">Sessões</th>
+                        <th className="py-3 px-3">Status da Janela</th>
+                        <th className="py-3 px-4 text-right">Ações</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
@@ -2582,24 +2606,24 @@ function DashboardContent() {
                           return (
                             <tr key={part.id} className="hover:bg-slate-50/80 transition-colors">
                               {/* 1. Identificação do Participante */}
-                              <td className="py-2.5 px-3.5 align-middle">
+                              <td className="py-3 px-4 align-middle">
                                 <div className="flex items-center space-x-2">
-                                  <span className="px-2 py-0.5 bg-slate-900 text-white text-[11px] font-mono font-bold rounded">
+                                  <span className="px-2 py-0.5 bg-slate-900 text-white text-[11px] font-mono font-bold rounded-md whitespace-nowrap shrink-0 shadow-2xs">
                                     {part.researchCode}
                                   </span>
-                                  <span className="font-bold text-slate-900 text-xs">
+                                  <span className="font-bold text-slate-900 text-xs truncate max-w-[180px]">
                                     {part.patient.fullName}
                                   </span>
                                   <button
                                     type="button"
                                     onClick={() => handleOpenEditPatient(part)}
-                                    className="p-1 text-slate-400 hover:text-blue-600 rounded hover:bg-blue-50 transition"
-                                    title="Editar dados cadastrais do paciente (com justificativa de auditoria)"
+                                    className="p-1 text-slate-400 hover:text-blue-600 rounded hover:bg-blue-50 transition shrink-0"
+                                    title="Editar dados cadastrais do paciente"
                                   >
                                     <Edit className="w-3 h-3" />
                                   </button>
                                 </div>
-                                <div className="text-[10px] text-slate-400 mt-0.5 flex items-center space-x-1.5">
+                                <div className="text-[10px] text-slate-500 mt-0.5 flex items-center space-x-1.5">
                                   <span>{part.patient.biologicalSex}</span>
                                   <span>•</span>
                                   <span>{part.patient.phoneWhatsApp}</span>
@@ -2607,9 +2631,12 @@ function DashboardContent() {
                               </td>
 
                               {/* 2. Grupo de Alocação */}
-                              <td className="py-2.5 px-3 align-middle">
-                                <div className="inline-flex items-center space-x-1.5">
-                                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200">
+                              <td className="py-3 px-3 align-middle">
+                                <div className="flex flex-col items-start gap-1">
+                                  <span
+                                    className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200 max-w-[150px] truncate block"
+                                    title={part.group || 'Pendente'}
+                                  >
                                     {isBlindedUser ? (
                                       <span className="flex items-center gap-1">
                                         <Lock className="w-2.5 h-2.5 text-slate-400" />
@@ -2622,36 +2649,42 @@ function DashboardContent() {
                                   {!isBlindedUser && (
                                     <button
                                       onClick={() => handleOpenAllocation(part)}
-                                      className="text-[10px] text-blue-600 hover:text-blue-800 font-semibold underline"
+                                      className="text-[10px] text-blue-600 hover:text-blue-800 font-semibold hover:underline"
                                     >
-                                      {part.group ? 'Alterar' : 'Alocar'}
+                                      {part.group ? 'Alterar grupo' : 'Alocar grupo'}
                                     </button>
                                   )}
                                 </div>
                               </td>
 
                               {/* 3. Indicadores de Sessões Clínicas */}
-                              <td className="py-2.5 px-3 align-middle">
-                                <div className="inline-flex items-center gap-1 flex-wrap max-w-[200px]">
+                              <td className="py-3 px-3 align-middle">
+                                <div className="inline-flex items-center gap-1">
                                   {studyProtocol.sessions.map((sess) => {
                                     const num = sess.sessionNumber;
                                     const done = part.sessions?.some((s) => s.sessionNumber === num);
+                                    const isCurrent = next && next.sessionNumber === num;
                                     return (
                                       <button
                                         key={num}
                                         type="button"
                                         onClick={() => openSessionEditor(part, num)}
-                                        className={`px-1.5 py-0.5 rounded text-[10px] font-bold font-mono transition inline-flex items-center gap-0.5 ${
+                                        className={`w-7 h-6 rounded text-[10px] font-bold font-mono transition-all inline-flex items-center justify-center ${
                                           done
-                                            ? 'bg-emerald-600 text-white hover:bg-emerald-700'
-                                            : 'bg-slate-100 text-slate-400 border border-slate-200 hover:border-blue-400 hover:text-blue-600'
+                                            ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-2xs'
+                                            : isCurrent
+                                            ? 'bg-blue-50 text-blue-700 border-2 border-blue-500 hover:bg-blue-100'
+                                            : 'bg-slate-100 text-slate-400 border border-slate-200 hover:border-slate-300 hover:text-slate-600'
                                         }`}
                                         title={`${sess.name} (${sess.durationMinutes} min) - ${
                                           done ? 'Realizada (clique para ver/editar)' : 'Pendente (clique para registrar)'
                                         }`}
                                       >
-                                        {done && <Check className="w-2.5 h-2.5 stroke-[3]" />}
-                                        <span>S{num}</span>
+                                        {done ? (
+                                          <Check className="w-3 h-3 stroke-[3]" />
+                                        ) : (
+                                          <span>S{num}</span>
+                                        )}
                                       </button>
                                     );
                                   })}
@@ -2659,51 +2692,51 @@ function DashboardContent() {
                               </td>
 
                               {/* 4. Status da Janela de Retorno */}
-                              <td className="py-2.5 px-3 align-middle">
+                              <td className="py-3 px-3 align-middle">
                                 {windows.overallAlert === 'OVERDUE' && next && (
-                                  <span className="px-2 py-0.5 bg-red-100 text-red-800 border border-red-300 rounded text-[11px] font-bold inline-flex items-center gap-1 animate-pulse">
-                                    <AlertCircle className="w-3 h-3 text-red-600" />
+                                  <span className="px-2.5 py-1 bg-red-50 text-red-700 border border-red-200 rounded-md text-[11px] font-bold inline-flex items-center gap-1.5 whitespace-nowrap">
+                                    <AlertCircle className="w-3.5 h-3.5 text-red-600 shrink-0" />
                                     <span>{next.config.shortName} atrasada (+{next.daysDiff}d)</span>
                                   </span>
                                 )}
                                 {windows.overallAlert === 'DUE_NOW' && next && (
-                                  <span className="px-2 py-0.5 bg-amber-100 text-amber-900 border border-amber-300 rounded text-[11px] font-bold inline-flex items-center gap-1">
-                                    <Clock className="w-3 h-3 text-amber-600" />
+                                  <span className="px-2.5 py-1 bg-amber-50 text-amber-800 border border-amber-200 rounded-md text-[11px] font-bold inline-flex items-center gap-1.5 whitespace-nowrap">
+                                    <Clock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
                                     <span>{next.config.shortName} na janela ({next.daysDiff}d)</span>
                                   </span>
                                 )}
                                 {windows.overallAlert === 'UPCOMING' && next && (
-                                  <span className="px-2 py-0.5 bg-blue-50 text-blue-800 border border-blue-200 rounded text-[11px] font-medium inline-flex items-center gap-1">
-                                    <Calendar className="w-3 h-3 text-blue-500" />
+                                  <span className="px-2.5 py-1 bg-blue-50 text-blue-700 border border-blue-200 rounded-md text-[11px] font-medium inline-flex items-center gap-1.5 whitespace-nowrap">
+                                    <Calendar className="w-3.5 h-3.5 text-blue-500 shrink-0" />
                                     <span>{next.config.shortName} em {next.daysDiff}d</span>
                                   </span>
                                 )}
                                 {windows.overallAlert === 'COMPLETED' && (
-                                  <span className="px-2 py-0.5 bg-emerald-50 text-emerald-800 border border-emerald-300 rounded text-[11px] font-bold inline-flex items-center gap-1">
-                                    <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                  <span className="px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-md text-[11px] font-bold inline-flex items-center gap-1.5 whitespace-nowrap">
+                                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                                     <span>{studyProtocol.sessions.length}/{studyProtocol.sessions.length} Concluído</span>
                                   </span>
                                 )}
                                 {windows.overallAlert === 'WAITING_S1' && (
-                                  <span className="px-2 py-0.5 bg-slate-100 text-slate-600 border border-slate-200 rounded text-[11px] font-medium inline-flex items-center gap-1">
-                                    <Clock className="w-3 h-3 text-slate-400" />
+                                  <span className="px-2.5 py-1 bg-slate-100 text-slate-600 border border-slate-200 rounded-md text-[11px] font-medium inline-flex items-center gap-1.5 whitespace-nowrap">
+                                    <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                                     <span>Aguardando S1</span>
                                   </span>
                                 )}
                               </td>
 
-                              {/* 5. Ações Clínicas Rápidas (Botões Compactos) */}
-                              <td className="py-2.5 px-3.5 align-middle text-right">
-                                <div className="inline-flex items-center gap-1">
-                                  {/* Botão Primário: Registrar Sessão */}
+                              {/* 5. Ações Clínicas Rápidas (Padronizadas com Altura Uniforme) */}
+                              <td className="py-3 px-4 align-middle text-right">
+                                <div className="inline-flex items-center justify-end gap-1.5">
+                                  {/* Botão Primário: Ação Principal de Atendimento */}
                                   {next ? (
                                     <button
                                       type="button"
                                       onClick={() => openSessionEditor(part, next.sessionNumber)}
-                                      className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-bold transition inline-flex items-center gap-1 shadow-2xs"
+                                      className="h-8 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition inline-flex items-center gap-1.5 shadow-2xs whitespace-nowrap"
                                       title={`Registrar atendimento clínico de ${next.config.name}`}
                                     >
-                                      <Stethoscope className="w-3 h-3" />
+                                      <Stethoscope className="w-3.5 h-3.5" />
                                       <span>Registrar {next.config.shortName}</span>
                                     </button>
                                   ) : (
@@ -2713,98 +2746,105 @@ function DashboardContent() {
                                         setTimelineParticipant(part);
                                         setShowTimelineModal(true);
                                       }}
-                                      className="px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded text-xs font-semibold transition inline-flex items-center gap-1"
-                                      title="Ver histórico completo das 4 sessões"
+                                      className="h-8 px-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-lg text-xs font-bold transition inline-flex items-center gap-1.5 whitespace-nowrap shadow-2xs"
+                                      title="Ver histórico completo das sessões"
                                     >
-                                      <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                                      <span>Ver 4/4</span>
+                                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                                      <span>Concluído (4/4)</span>
                                     </button>
                                   )}
 
-                                  {/* Histórico mini */}
-                                  {next && (
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setTimelineParticipant(part);
-                                        setShowTimelineModal(true);
-                                      }}
-                                      className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[11px] font-medium transition inline-flex items-center gap-1"
-                                      title="Ver linha do tempo e histórico das sessões"
-                                    >
-                                      <Clock className="w-3 h-3 text-slate-500" />
-                                      <span>{sessionCount}/4</span>
-                                    </button>
-                                  )}
+                                  {/* Agrupamento Padronizado de Ações Secundárias */}
+                                  <div className="inline-flex items-center gap-1 border-l border-slate-200 pl-1.5">
+                                    {/* eCRF se houver questionários respondidos */}
+                                    {(part.responses?.length || 0) > 0 && (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setResponsesParticipant(part);
+                                          setShowResponsesModal(true);
+                                        }}
+                                        className="h-8 px-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-lg text-xs font-semibold transition inline-flex items-center gap-1 shadow-2xs"
+                                        title="Ver questionários respondidos (eCRF)"
+                                      >
+                                        <span>eCRF</span>
+                                        <span className="px-1 py-0.2 bg-blue-100 text-blue-700 rounded-full text-[10px] font-bold">
+                                          {part.responses?.length}
+                                        </span>
+                                      </button>
+                                    )}
 
-                                  {/* eCRF mini se houver respostas */}
-                                  {(part.responses?.length || 0) > 0 && (
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setResponsesParticipant(part);
-                                        setShowResponsesModal(true);
-                                      }}
-                                      className="px-2 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded text-[11px] font-semibold transition"
-                                      title="Ver questionários respondidos"
+                                    {/* Portal do Paciente */}
+                                    <a
+                                      href={`/paciente?code=${part.researchCode}&projectId=${project.id}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="h-8 px-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-lg text-xs font-medium transition inline-flex items-center gap-1 shadow-2xs"
+                                      title="Abrir portal público do paciente"
                                     >
-                                      eCRF ({part.responses?.length})
-                                    </button>
-                                  )}
+                                      <ExternalLink className="w-3 h-3 text-slate-500" />
+                                      <span>Portal</span>
+                                    </a>
 
-                                  {/* Portal do Paciente */}
-                                  <a
-                                    href={`/paciente?code=${part.researchCode}&projectId=${project.id}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded text-[11px] font-semibold transition inline-flex items-center gap-1"
-                                    title="Abrir portal do paciente"
-                                  >
-                                    <ExternalLink className="w-3 h-3" />
-                                    <span>Portal</span>
-                                  </a>
-
-                                  {/* TCLE Assinado */}
-                                  <Link
-                                    href={`/tcle/${part.id}/pdf`}
-                                    target="_blank"
-                                    className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 rounded text-[11px] font-medium transition inline-flex items-center gap-1"
-                                    title="Baixar/Visualizar TCLE oficial em PDF"
-                                  >
-                                    <FileText className="w-3 h-3 text-slate-500" />
-                                    <span>TCLE</span>
-                                  </Link>
-
-                                  {/* WhatsApp */}
-                                  {next && (windows.overallAlert === 'OVERDUE' || windows.overallAlert === 'DUE_NOW') ? (
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        openWhatsAppAppointment(
-                                          part.patient.phoneWhatsApp,
-                                          part.researchCode,
-                                          part.patient.fullName,
-                                          next.config.name,
-                                          next.windowStart,
-                                          next.windowEnd
-                                        )
-                                      }
-                                      className="px-2 py-1 bg-amber-500 hover:bg-amber-600 text-white rounded text-[11px] font-bold transition inline-flex items-center gap-1 shadow-2xs"
-                                      title={`Agendar retorno ${next.config.name} no WhatsApp`}
+                                    {/* TCLE Oficial em PDF */}
+                                    <Link
+                                      href={`/tcle/${part.id}/pdf`}
+                                      target="_blank"
+                                      className="h-8 px-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-lg text-xs font-medium transition inline-flex items-center gap-1 shadow-2xs"
+                                      title="Baixar/Visualizar TCLE oficial em PDF"
                                     >
-                                      <MessageSquare className="w-3 h-3" />
-                                      <span>Agendar</span>
-                                    </button>
-                                  ) : (
-                                    <button
-                                      type="button"
-                                      onClick={() => openWhatsApp(part.patient.phoneWhatsApp, part.researchCode)}
-                                      className="p-1.5 bg-[#25D366] hover:bg-[#128C7E] text-white rounded transition shadow-2xs"
-                                      title="Conversar no WhatsApp com o participante"
-                                    >
-                                      <svg className="w-3 h-3 fill-current" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-                                    </button>
-                                  )}
+                                      <FileText className="w-3 h-3 text-slate-500" />
+                                      <span>TCLE</span>
+                                    </Link>
+
+                                    {/* Histórico / Linha do tempo */}
+                                    {next && (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setTimelineParticipant(part);
+                                          setShowTimelineModal(true);
+                                        }}
+                                        className="h-8 px-2 bg-white hover:bg-slate-50 text-slate-600 border border-slate-200 rounded-lg text-xs font-medium transition inline-flex items-center gap-1 shadow-2xs"
+                                        title="Ver linha do tempo e sessões"
+                                      >
+                                        <Clock className="w-3 h-3 text-slate-400" />
+                                        <span>{sessionCount}/4</span>
+                                      </button>
+                                    )}
+
+                                    {/* WhatsApp / Agendamento padronizado */}
+                                    {next && (windows.overallAlert === 'OVERDUE' || windows.overallAlert === 'DUE_NOW') ? (
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          openWhatsAppAppointment(
+                                            part.patient.phoneWhatsApp,
+                                            part.researchCode,
+                                            part.patient.fullName,
+                                            next.config.name,
+                                            next.windowStart,
+                                            next.windowEnd
+                                          )
+                                        }
+                                        className="h-8 px-2.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg text-xs font-bold transition inline-flex items-center gap-1 shadow-2xs"
+                                        title={`Agendar retorno ${next.config.name} no WhatsApp`}
+                                      >
+                                        <MessageSquare className="w-3 h-3 text-amber-700" />
+                                        <span>Agendar</span>
+                                      </button>
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        onClick={() => openWhatsApp(part.patient.phoneWhatsApp, part.researchCode)}
+                                        className="h-8 px-2 bg-white hover:bg-emerald-50 text-emerald-800 border border-slate-200 hover:border-emerald-300 rounded-lg text-xs font-medium transition inline-flex items-center gap-1 shadow-2xs"
+                                        title="Conversar no WhatsApp com o participante"
+                                      >
+                                        <MessageSquare className="w-3 h-3 text-emerald-600" />
+                                        <span>Whats</span>
+                                      </button>
+                                    )}
+                                  </div>
                                 </div>
                               </td>
                             </tr>

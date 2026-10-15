@@ -226,11 +226,11 @@ export default function AppNav() {
                   href={link.href}
                   className={`px-2.5 py-1.5 rounded-lg transition-all font-semibold text-xs flex items-center space-x-1.5 ${
                     isActive
-                      ? 'bg-blue-600 text-white font-bold shadow-xs'
+                      ? 'bg-slate-100 text-slate-900 font-bold border border-slate-200/90 shadow-2xs'
                       : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                   }`}
                 >
-                  <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-white' : 'text-slate-500'}`} />
+                  <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-blue-600' : 'text-slate-500'}`} />
                   <span>{link.label}</span>
                   {link.roleBadge && !isActive && (
                     <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-100 text-slate-500 font-mono">
