@@ -31,10 +31,11 @@ type ParticipantSession = {
 };
 
 type FormQuestionItem = {
-  id: string;
-  type: 'vas' | 'likert' | 'choice' | 'boolean' | 'text' | 'number' | 'instruction';
+  id: string | number;
+  type: 'vas' | 'likert' | 'choice' | 'boolean' | 'text' | 'number' | 'instruction' | 'matrix' | string;
   title: string;
   required: boolean;
+  description?: string;
   options?: { label: string; value: string }[];
   minLabel?: string;
   maxLabel?: string;
@@ -295,23 +296,36 @@ function PacienteContent() {
 
   const handleSelectForm = (form: FormItem) => {
     setSelectedForm(form);
-    setFormAnswers(form.myAnswers || {});
+    const initialAnswers: Record<string, FormAnswerValue> = { ...(form.myAnswers || {}) };
+
+    // Inicializa perguntas VAS para 0.0 caso não haja resposta prévia, evitando bloqueio do voluntário por input range
+    (form.questions || []).forEach((q) => {
+      const qKey = String(q.id);
+      if (q.type === 'vas' && initialAnswers[qKey] === undefined && initialAnswers[q.id] === undefined) {
+        initialAnswers[qKey] = 0;
+        initialAnswers[q.id] = 0;
+      }
+    });
+
+    setFormAnswers(initialAnswers);
     setFormError(null);
     setFormSuccessMessage(null);
   };
 
-  const handleFormAnswerChange = (questionId: string, value: FormAnswerValue) => {
-    setFormAnswers((prev) => ({ ...prev, [questionId]: value }));
+  const handleFormAnswerChange = (questionId: string | number, value: FormAnswerValue) => {
+    const key = String(questionId);
+    setFormAnswers((prev) => ({ ...prev, [key]: value, [questionId]: value }));
   };
 
   const handleSubmitCustomForm = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedForm || !participant) return;
 
-    // Validação de campos obrigatórios
+    // Validação de campos obrigatórios (instruções informativas nunca bloqueiam envio)
     const missing = selectedForm.questions.filter((q) => {
+      if (q.type === 'instruction') return false;
       if (!q.required) return false;
-      const val = formAnswers[q.id];
+      const val = formAnswers[String(q.id)] ?? formAnswers[q.id];
       return val === undefined || val === null || val === '';
     });
 
@@ -1250,7 +1264,7 @@ function PacienteContent() {
                     </button>
                     <div className="flex items-center space-x-2">
                       <span className="text-[10px] text-slate-400 font-mono font-bold">
-                        {selectedForm.questions.length} perguntas
+                        {selectedForm.questions.filter((q) => q.type !== 'instruction').length} perguntas
                       </span>
                     </div>
                   </div>
@@ -1263,140 +1277,318 @@ function PacienteContent() {
                   </div>
 
                   <div className="space-y-5">
-                    {selectedForm.questions.map((q, idx) => (
-                      <div key={q.id} className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-3">
-                        <div>
-                          <h4 className="font-bold text-slate-900 text-xs leading-snug">
-                            {idx + 1}. {q.title} {q.required && <span className="text-red-500 font-bold">*</span>}
-                          </h4>
-                          {q.observation && (
-                            <p className="text-[11px] text-slate-600 mt-1.5 bg-white p-2.5 rounded-lg border border-slate-200 leading-relaxed flex items-start space-x-1.5">
-                              <Info className="w-3.5 h-3.5 text-blue-600 shrink-0 mt-0.5" />
-                              <span><strong>Orientação:</strong> {q.observation}</span>
-                            </p>
-                          )}
-                        </div>
+                    {(() => {
+                      let questionCounter = 0;
+                      return selectedForm.questions.map((q) => {
+                        const isInstruction = q.type === 'instruction';
+                        const qNumber = !isInstruction ? ++questionCounter : null;
+                        const answerKey = String(q.id);
+                        const currentAnswer = formAnswers[answerKey] ?? formAnswers[q.id];
 
-                        {/* Likert */}
-                        {q.type === 'likert' && q.options && (
-                          <div className="grid grid-cols-1 gap-1.5 pt-1">
-                            {q.options.map((opt) => {
-                              const isSelected = formAnswers[q.id] === opt.value;
+                        // CASO ESPECIAL: INSTRUÇÃO / ORIENTAÇÃO (Não é pergunta com resposta)
+                        if (isInstruction) {
+                          return (
+                            <div
+                              key={q.id}
+                              className="p-4 bg-blue-50/70 border border-blue-200 rounded-2xl space-y-2 shadow-2xs"
+                            >
+                              <div className="flex items-center space-x-2 text-blue-900 font-bold text-xs">
+                                <Info className="w-4 h-4 text-blue-600 shrink-0" />
+                                <span>{q.title || 'Orientações Iniciais'}</span>
+                              </div>
+                              <p className="text-[11px] text-blue-800 leading-relaxed">
+                                {q.description ||
+                                  q.observation ||
+                                  'Leia com atenção as perguntas a seguir e selecione as opções que melhor descrevem suas sensações.'}
+                              </p>
+                            </div>
+                          );
+                        }
+
+                        // PERGUNTA COMUM
+                        return (
+                          <div
+                            key={q.id}
+                            className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-3"
+                          >
+                            <div>
+                              <h4 className="font-bold text-slate-900 text-xs leading-snug">
+                                {qNumber}. {q.title} {q.required && <span className="text-red-500 font-bold">*</span>}
+                              </h4>
+                              {q.observation && (
+                                <p className="text-[11px] text-slate-600 mt-1.5 bg-white p-2.5 rounded-lg border border-slate-200 leading-relaxed flex items-start space-x-1.5">
+                                  <Info className="w-3.5 h-3.5 text-blue-600 shrink-0 mt-0.5" />
+                                  <span>
+                                    <strong>Orientação:</strong> {q.observation}
+                                  </span>
+                                </p>
+                              )}
+                            </div>
+
+                            {/* 1. Tabela de Avaliação (Matrix 1 a 10 + NA) */}
+                            {(q.type === 'matrix' || q.type === ('matrix' as any)) && (() => {
+                              const options =
+                                q.options && q.options.length > 0
+                                  ? q.options
+                                  : [
+                                      { label: '1', value: '1' },
+                                      { label: '2', value: '2' },
+                                      { label: '3', value: '3' },
+                                      { label: '4', value: '4' },
+                                      { label: '5', value: '5' },
+                                      { label: '6', value: '6' },
+                                      { label: '7', value: '7' },
+                                      { label: '8', value: '8' },
+                                      { label: '9', value: '9' },
+                                      { label: '10', value: '10' },
+                                      { label: 'NA', value: 'NA' },
+                                    ];
+
                               return (
-                                <button
-                                  key={opt.value}
-                                  type="button"
-                                  onClick={() => handleFormAnswerChange(q.id, opt.value)}
-                                  className={`p-2.5 rounded-xl border text-left text-xs transition flex justify-between items-center ${
-                                    isSelected
-                                      ? 'bg-blue-600 text-white border-blue-600 font-bold shadow-xs'
-                                      : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
-                                  }`}
-                                >
-                                  <span>{opt.label}</span>
-                                  {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-white" />}
-                                </button>
+                                <div className="pt-2 space-y-2.5">
+                                  <div className="flex justify-between items-center text-[10px] text-slate-500 font-semibold px-0.5">
+                                    <span>1 = Pior / Mínimo</span>
+                                    <span>10 = Excelente / Máximo</span>
+                                  </div>
+                                  <div className="grid grid-cols-6 sm:grid-cols-11 gap-1.5">
+                                    {options.map((opt) => {
+                                      const isSelected = String(currentAnswer) === String(opt.value);
+                                      const isNA = opt.value === 'NA';
+                                      return (
+                                        <button
+                                          key={opt.value}
+                                          type="button"
+                                          onClick={() => handleFormAnswerChange(q.id, opt.value)}
+                                          className={`h-11 rounded-xl text-xs font-bold transition flex items-center justify-center ${
+                                            isSelected
+                                              ? 'bg-blue-600 text-white border-2 border-blue-600 shadow-md ring-2 ring-blue-300 scale-[1.03]'
+                                              : isNA
+                                              ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300'
+                                              : 'bg-white hover:bg-slate-100 text-slate-800 border border-slate-200'
+                                          } ${isNA ? 'col-span-2 sm:col-span-1 text-[11px]' : ''}`}
+                                        >
+                                          {opt.label}
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                  {currentAnswer !== undefined && currentAnswer !== null && currentAnswer !== '' && (
+                                    <div className="flex justify-end items-center text-[11px] font-bold text-blue-700 pt-0.5">
+                                      <span>
+                                        Opção escolhida: {currentAnswer === 'NA' ? 'NA (Não se aplica)' : `Nota ${currentAnswer}`}
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
                               );
-                            })}
-                          </div>
-                        )}
+                            })()}
 
-                        {/* Choice */}
-                        {q.type === 'choice' && q.options && (
-                          <div className="space-y-1.5 pt-1">
-                            {q.options.map((opt) => {
-                              const isSelected = formAnswers[q.id] === opt.value;
+                            {/* 2. Escala Likert */}
+                            {(q.type === 'likert' || q.type === ('likert' as any)) && (() => {
+                              const options =
+                                q.options && q.options.length > 0
+                                  ? q.options
+                                  : [
+                                      { label: 'Nunca (0)', value: '0' },
+                                      { label: 'Raramente (1)', value: '1' },
+                                      { label: 'Às vezes (2)', value: '2' },
+                                      { label: 'Frequentemente (3)', value: '3' },
+                                      { label: 'Sempre (4)', value: '4' },
+                                    ];
+
                               return (
-                                <button
-                                  key={opt.value}
-                                  type="button"
-                                  onClick={() => handleFormAnswerChange(q.id, opt.value)}
-                                  className={`w-full p-2.5 rounded-xl border text-left text-xs transition flex justify-between items-center ${
-                                    isSelected
-                                      ? 'bg-blue-600 text-white border-blue-600 font-bold shadow-xs'
-                                      : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
-                                  }`}
-                                >
-                                  <span>{opt.label}</span>
-                                  {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-white" />}
-                                </button>
+                                <div className="grid grid-cols-1 gap-1.5 pt-1">
+                                  {options.map((opt) => {
+                                    const isSelected = String(currentAnswer) === String(opt.value);
+                                    return (
+                                      <button
+                                        key={opt.value}
+                                        type="button"
+                                        onClick={() => handleFormAnswerChange(q.id, opt.value)}
+                                        className={`p-2.5 rounded-xl border text-left text-xs transition flex justify-between items-center ${
+                                          isSelected
+                                            ? 'bg-blue-600 text-white border-blue-600 font-bold shadow-xs'
+                                            : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
+                                        }`}
+                                      >
+                                        <span>{opt.label}</span>
+                                        {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-white" />}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
                               );
-                            })}
-                          </div>
-                        )}
+                            })()}
 
-                        {/* Boolean */}
-                        {q.type === 'boolean' && (
-                          <div className="grid grid-cols-2 gap-2 pt-1">
-                            {['Sim', 'Não'].map((val) => {
-                              const isSelected = formAnswers[q.id] === val;
+                            {/* 3. Múltipla Escolha */}
+                            {(q.type === 'choice' || q.type === ('choice' as any)) && (() => {
+                              const options =
+                                q.options && q.options.length > 0
+                                  ? q.options
+                                  : [
+                                      { label: 'Opção 1', value: '1' },
+                                      { label: 'Opção 2', value: '2' },
+                                    ];
+
                               return (
-                                <button
-                                  key={val}
-                                  type="button"
-                                  onClick={() => handleFormAnswerChange(q.id, val)}
-                                  className={`py-2.5 rounded-xl border text-center text-xs font-bold transition ${
-                                    isSelected
-                                      ? val === 'Sim' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-slate-700 text-white border-slate-700'
-                                      : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
-                                  }`}
-                                >
-                                  {val}
-                                </button>
+                                <div className="space-y-1.5 pt-1">
+                                  {options.map((opt) => {
+                                    const isSelected = String(currentAnswer) === String(opt.value);
+                                    return (
+                                      <button
+                                        key={opt.value}
+                                        type="button"
+                                        onClick={() => handleFormAnswerChange(q.id, opt.value)}
+                                        className={`w-full p-2.5 rounded-xl border text-left text-xs transition flex justify-between items-center ${
+                                          isSelected
+                                            ? 'bg-blue-600 text-white border-blue-600 font-bold shadow-xs'
+                                            : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
+                                        }`}
+                                      >
+                                        <span>{opt.label}</span>
+                                        {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-white" />}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
                               );
-                            })}
-                          </div>
-                        )}
+                            })()}
 
-                        {/* VAS Contínua e Neutra para o Paciente */}
-                        {q.type === 'vas' && (
-                          <div className="py-3 px-1 space-y-2">
-                            <p className="text-[11px] text-slate-500 text-center font-medium italic">
-                              Deslize o marcador para o ponto que melhor representa sua sensação
-                            </p>
-                            <div className="relative flex items-center">
-                              <div className="w-1 h-6 bg-slate-400 rounded-full shrink-0 -mr-1 z-10" />
-                              <input
-                                type="range"
-                                min="0"
-                                max="10"
-                                step="0.1"
-                                value={(formAnswers[q.id] as number | undefined) ?? 5}
-                                onChange={(e) => handleFormAnswerChange(q.id, parseFloat(parseFloat(e.target.value).toFixed(1)))}
-                                className="w-full h-3 bg-slate-200 border border-slate-300 rounded-lg appearance-none cursor-pointer accent-slate-800 focus:outline-none shadow-inner"
+                            {/* 4. Binário (Sim / Não) */}
+                            {q.type === 'boolean' && (
+                              <div className="grid grid-cols-2 gap-2 pt-1">
+                                {['Sim', 'Não'].map((val) => {
+                                  const isSelected = currentAnswer === val;
+                                  return (
+                                    <button
+                                      key={val}
+                                      type="button"
+                                      onClick={() => handleFormAnswerChange(q.id, val)}
+                                      className={`py-2.5 rounded-xl border text-center text-xs font-bold transition ${
+                                        isSelected
+                                          ? val === 'Sim'
+                                            ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
+                                            : 'bg-slate-700 text-white border-slate-700 shadow-xs'
+                                          : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
+                                      }`}
+                                    >
+                                      {val}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            )}
+
+                            {/* 5. Escala Visual Analógica (EVA - Dor / Sensibilidade) */}
+                            {q.type === 'vas' && (() => {
+                              const vasVal =
+                                typeof currentAnswer === 'number'
+                                  ? currentAnswer
+                                  : typeof currentAnswer === 'string' && !isNaN(Number(currentAnswer))
+                                  ? Number(currentAnswer)
+                                  : 0;
+                              return (
+                                <div className="py-2 px-1 space-y-2.5">
+                                  <div className="flex justify-between items-center text-xs px-1">
+                                    <span className="text-[11px] text-slate-500 italic">
+                                      Deslize o marcador ou toque nos atalhos:
+                                    </span>
+                                    <span className="px-2.5 py-0.5 rounded-full font-mono font-bold text-xs bg-blue-100 text-blue-800 border border-blue-200">
+                                      {vasVal.toFixed(1)} / 10.0
+                                    </span>
+                                  </div>
+                                  <div className="relative flex items-center">
+                                    <div className="w-1 h-6 bg-slate-400 rounded-full shrink-0 -mr-1 z-10" />
+                                    <input
+                                      type="range"
+                                      min="0"
+                                      max="10"
+                                      step="0.1"
+                                      value={vasVal}
+                                      onTouchStart={() => handleFormAnswerChange(q.id, vasVal)}
+                                      onMouseDown={() => handleFormAnswerChange(q.id, vasVal)}
+                                      onChange={(e) =>
+                                        handleFormAnswerChange(
+                                          q.id,
+                                          parseFloat(parseFloat(e.target.value).toFixed(1))
+                                        )
+                                      }
+                                      className="w-full h-3 bg-slate-200 border border-slate-300 rounded-lg appearance-none cursor-pointer accent-blue-600 focus:outline-none shadow-inner"
+                                    />
+                                    <div className="w-1 h-6 bg-slate-400 rounded-full shrink-0 -ml-1 z-10" />
+                                  </div>
+                                  <div className="flex justify-between items-start text-xs pt-0.5 px-1">
+                                    <span className="font-bold text-slate-800">
+                                      {q.minLabel || '0 = Ausente / Mínimo'}
+                                    </span>
+                                    <span className="font-bold text-slate-800">
+                                      {q.maxLabel || '10 = Severo / Máximo'}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center justify-between gap-1 pt-1">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleFormAnswerChange(q.id, 0)}
+                                      className={`px-2.5 py-1 rounded-lg text-[10px] font-bold border transition ${
+                                        vasVal === 0
+                                          ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
+                                          : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
+                                      }`}
+                                    >
+                                      0 (Sem Incômodo)
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleFormAnswerChange(q.id, 5)}
+                                      className={`px-2.5 py-1 rounded-lg text-[10px] font-bold border transition ${
+                                        vasVal === 5
+                                          ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
+                                          : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
+                                      }`}
+                                    >
+                                      5.0 (Moderado)
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleFormAnswerChange(q.id, 10)}
+                                      className={`px-2.5 py-1 rounded-lg text-[10px] font-bold border transition ${
+                                        vasVal === 10
+                                          ? 'bg-rose-600 text-white border-rose-600 shadow-xs'
+                                          : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
+                                      }`}
+                                    >
+                                      10 (Máximo)
+                                    </button>
+                                  </div>
+                                </div>
+                              );
+                            })()}
+
+                            {/* 6. Texto Aberto */}
+                            {q.type === 'text' && (
+                              <textarea
+                                rows={3}
+                                value={(currentAnswer as string | undefined) ?? ''}
+                                onChange={(e) => handleFormAnswerChange(q.id, e.target.value)}
+                                placeholder="Digite sua resposta aqui..."
+                                className="w-full p-2.5 border border-slate-300 rounded-xl text-xs bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
                               />
-                              <div className="w-1 h-6 bg-slate-400 rounded-full shrink-0 -ml-1 z-10" />
-                            </div>
-                            <div className="flex justify-between items-start text-xs pt-1 px-1">
-                              <span className="font-bold text-slate-800">{q.minLabel || 'Mínimo'}</span>
-                              <span className="font-bold text-slate-800">{q.maxLabel || 'Máximo'}</span>
-                            </div>
+                            )}
+
+                            {/* 7. Número */}
+                            {q.type === 'number' && (
+                              <input
+                                type="number"
+                                value={(currentAnswer as string | number | undefined) ?? ''}
+                                onChange={(e) => handleFormAnswerChange(q.id, e.target.value)}
+                                placeholder="Informe um número..."
+                                className="w-full p-2.5 border border-slate-300 rounded-xl text-xs bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                              />
+                            )}
                           </div>
-                        )}
-
-                        {/* Text */}
-                        {q.type === 'text' && (
-                          <textarea
-                            rows={3}
-                            value={(formAnswers[q.id] as string | undefined) ?? ''}
-                            onChange={(e) => handleFormAnswerChange(q.id, e.target.value)}
-                            placeholder="Digite sua resposta aqui..."
-                            className="w-full p-2.5 border border-slate-300 rounded-xl text-xs bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                          />
-                        )}
-
-                        {/* Number */}
-                        {q.type === 'number' && (
-                          <input
-                            type="number"
-                            value={(formAnswers[q.id] as string | number | undefined) ?? ''}
-                            onChange={(e) => handleFormAnswerChange(q.id, e.target.value)}
-                            placeholder="Informe um número..."
-                            className="w-full p-2.5 border border-slate-300 rounded-xl text-xs bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                          />
-                        )}
-                      </div>
-                    ))}
+                        );
+                      });
+                    })()}
                   </div>
 
                   <div className="pt-2">

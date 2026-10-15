@@ -6088,7 +6088,11 @@ function DashboardContent() {
                                         </div>
 
                                         <div className="shrink-0 text-right">
-                                          {q.type === 'vas' ? (
+                                          {q.type === 'instruction' ? (
+                                            <span className="px-2.5 py-1 bg-slate-100 text-slate-500 rounded text-xs font-medium">
+                                              Texto Informativo
+                                            </span>
+                                          ) : q.type === 'vas' ? (
                                             <div className="inline-flex flex-col items-end">
                                               <span className="px-2.5 py-1 bg-indigo-50 border border-indigo-200 text-indigo-800 rounded-lg text-sm font-bold font-mono">
                                                 {hasAnswer ? `${Number(val).toFixed(1)} / 10.0` : '—'}
@@ -6097,6 +6101,10 @@ function DashboardContent() {
                                                 Escala Visual Analógica (EVA)
                                               </span>
                                             </div>
+                                          ) : q.type === 'matrix' ? (
+                                            <span className="px-3 py-1 bg-purple-100 text-purple-800 rounded-lg text-xs font-bold border border-purple-200">
+                                              {hasAnswer ? (val === 'NA' ? 'NA (Não se aplica)' : `Nota ${val}`) : 'Não respondido'}
+                                            </span>
                                           ) : q.type === 'boolean' ? (
                                             <span
                                               className={`px-3 py-1 rounded-full text-xs font-bold ${

@@ -28,7 +28,9 @@ import {
   Copy,
   ChevronUp,
   Sliders,
-  Check
+  Check,
+  Table,
+  Info
 } from 'lucide-react';
 
 type QuestionType =
@@ -38,7 +40,8 @@ type QuestionType =
   | 'boolean'
   | 'text'
   | 'number'
-  | 'instruction';
+  | 'instruction'
+  | 'matrix';
 
 type QuestionOption = {
   label: string;
@@ -50,6 +53,7 @@ type FormQuestion = {
   type: QuestionType;
   title: string;
   required: boolean;
+  description?: string;
   options?: QuestionOption[];
   minLabel?: string;
   maxLabel?: string;
@@ -222,6 +226,35 @@ function FormBuilderContent() {
           { label: 'Opção 2', value: 'opcao_2' },
           { label: 'Opção 3', value: 'opcao_3' },
         ],
+      };
+    } else if (type === 'matrix') {
+      newQ = {
+        id,
+        type,
+        title: 'Tabela de Avaliação (1 a 10 + NA)',
+        required: true,
+        observation: 'Avalie com notas de 1 a 10 ou declare NA se não aplicável.',
+        options: [
+          { label: '1', value: '1' },
+          { label: '2', value: '2' },
+          { label: '3', value: '3' },
+          { label: '4', value: '4' },
+          { label: '5', value: '5' },
+          { label: '6', value: '6' },
+          { label: '7', value: '7' },
+          { label: '8', value: '8' },
+          { label: '9', value: '9' },
+          { label: '10', value: '10' },
+          { label: 'NA', value: 'NA' },
+        ],
+      };
+    } else if (type === 'instruction') {
+      newQ = {
+        id,
+        type,
+        title: 'Orientações Iniciais',
+        required: false,
+        observation: 'Leia atentamente as perguntas a seguir e responda de acordo com sua percepção.',
       };
     } else if (type === 'text') {
       newQ = { id, type, title: 'Pergunta Descritiva / Observações do Paciente', required: false };
@@ -700,9 +733,11 @@ function FormBuilderContent() {
                           className="px-2.5 py-1 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-700 focus:ring-1 focus:ring-blue-500 focus:outline-none cursor-pointer"
                         >
                           <option value="vas">Escala EVA (Dor / Sensibilidade)</option>
+                          <option value="matrix">Tabela de Avaliação (1 a 10 + NA)</option>
                           <option value="likert">Escala Likert (Frequência / Acordo)</option>
                           <option value="boolean">Sim ou Não (Binário)</option>
                           <option value="choice">Múltipla Escolha</option>
+                          <option value="instruction">Instruções / Texto Informativo</option>
                           <option value="text">Texto Aberto</option>
                           <option value="number">Valor Numérico</option>
                         </select>
@@ -964,6 +999,52 @@ function FormBuilderContent() {
                       </div>
                     )}
 
+                    {/* TIPO: TABELA DE AVALIAÇÃO / MATRIX (1 a 10 + NA) */}
+                    {q.type === 'matrix' && (
+                      <div className="bg-white rounded-xl p-4 border border-slate-200 space-y-3">
+                        <div className="flex justify-between items-center text-xs text-slate-600 font-semibold">
+                          <span>Escala Numérica Padronizada:</span>
+                          <span className="text-[10px] font-mono text-purple-700 bg-purple-50 px-2 py-0.5 rounded border border-purple-200 font-bold">
+                            1 a 10 + NA (Não se Aplica)
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-6 sm:grid-cols-11 gap-1.5 pt-1">
+                          {['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'NA'].map((num) => (
+                            <div
+                              key={num}
+                              className={`h-9 rounded-lg border text-center font-bold text-xs flex items-center justify-center ${
+                                num === 'NA'
+                                  ? 'bg-slate-100 text-slate-700 col-span-2 sm:col-span-1'
+                                  : 'bg-slate-50 text-slate-800'
+                              }`}
+                            >
+                              {num}
+                            </div>
+                          ))}
+                        </div>
+                        <p className="text-[11px] text-slate-500 italic">
+                          O voluntário poderá selecionar uma das notas de 1 a 10 ou declarar &quot;NA&quot; caso o quesito não se aplique.
+                        </p>
+                      </div>
+                    )}
+
+                    {/* TIPO: INSTRUÇÃO / TEXTO INFORMATIVO */}
+                    {q.type === 'instruction' && (
+                      <div className="bg-blue-50/70 rounded-xl p-4 border border-blue-200 space-y-2">
+                        <span className="text-xs font-bold text-blue-900 flex items-center gap-1.5">
+                          <Info className="w-3.5 h-3.5 text-blue-600" />
+                          Texto Informativo de Orientação ao Voluntário (Sem campo de resposta):
+                        </span>
+                        <textarea
+                          rows={2}
+                          value={q.observation || q.description || ''}
+                          onChange={(e) => updateQuestionObservation(q.id, e.target.value)}
+                          placeholder="Digite as orientações para guiar o participante antes das questões..."
+                          className="w-full p-2.5 bg-white border border-blue-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                      </div>
+                    )}
+
                     {/* Orientação Clínica Adicional & Obrigatório */}
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-slate-200/60 text-xs">
                       <div className="flex-1">
@@ -998,7 +1079,7 @@ function FormBuilderContent() {
                 + Adicionar Item à Prancheta Clínica:
               </h4>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
                 <button
                   type="button"
                   onClick={() => addCustomQuestion('vas')}
@@ -1007,6 +1088,16 @@ function FormBuilderContent() {
                   <Zap className="w-5 h-5 text-amber-500 group-hover:scale-110 transition" />
                   <span className="text-xs font-bold text-slate-800">Escala EVA</span>
                   <span className="text-[10px] text-slate-400 font-medium">Dor / Sensib.</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => addCustomQuestion('matrix')}
+                  className="p-3 bg-white hover:bg-blue-50 border border-slate-200 hover:border-blue-400 rounded-2xl text-center transition flex flex-col items-center justify-center space-y-1 shadow-2xs group"
+                >
+                  <Table className="w-5 h-5 text-purple-600 group-hover:scale-110 transition" />
+                  <span className="text-xs font-bold text-slate-800">Tabela 1-10</span>
+                  <span className="text-[10px] text-slate-400 font-medium">1 a 10 + NA</span>
                 </button>
 
                 <button
@@ -1037,6 +1128,16 @@ function FormBuilderContent() {
                   <CircleDot className="w-5 h-5 text-blue-500 group-hover:scale-110 transition" />
                   <span className="text-xs font-bold text-slate-800">Múltipla</span>
                   <span className="text-[10px] text-slate-400 font-medium">Opções rádio</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => addCustomQuestion('instruction')}
+                  className="p-3 bg-white hover:bg-blue-50 border border-slate-200 hover:border-blue-400 rounded-2xl text-center transition flex flex-col items-center justify-center space-y-1 shadow-2xs group"
+                >
+                  <Info className="w-5 h-5 text-blue-600 group-hover:scale-110 transition" />
+                  <span className="text-xs font-bold text-slate-800">Instrução</span>
+                  <span className="text-[10px] text-slate-400 font-medium">Texto guia</span>
                 </button>
 
                 <button
@@ -1271,6 +1372,42 @@ function FormBuilderContent() {
                           setPreviewAnswers({ ...previewAnswers, [q.id]: e.target.value })
                         }
                       />
+                    </div>
+                  )}
+
+                  {q.type === 'matrix' && (
+                    <div className="pt-2 space-y-2">
+                      <div className="flex justify-between items-center text-[10px] text-slate-500 font-semibold px-0.5">
+                        <span>1 = Mínimo</span>
+                        <span>10 = Máximo</span>
+                      </div>
+                      <div className="grid grid-cols-6 sm:grid-cols-11 gap-1.5">
+                        {['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'NA'].map((num) => {
+                          const isSelected = previewAnswers[q.id] === num;
+                          return (
+                            <button
+                              key={num}
+                              type="button"
+                              onClick={() => setPreviewAnswers({ ...previewAnswers, [q.id]: num })}
+                              className={`h-10 rounded-xl text-xs font-bold transition flex items-center justify-center ${
+                                isSelected
+                                  ? 'bg-blue-600 text-white shadow-xs'
+                                  : num === 'NA'
+                                  ? 'bg-slate-100 text-slate-700 col-span-2 sm:col-span-1 border border-slate-300'
+                                  : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
+                              }`}
+                            >
+                              {num}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {q.type === 'instruction' && (
+                    <div className="p-3 bg-blue-50/70 border border-blue-200 rounded-xl text-xs text-blue-800">
+                      {q.observation || q.description || 'Texto informativo / orientações do formulário clínico.'}
                     </div>
                   )}
 
