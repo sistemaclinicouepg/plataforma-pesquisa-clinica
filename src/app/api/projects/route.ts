@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/auth';
+import { parseStudyProtocol, PRESET_FORM_QUESTIONS, getFrequencyLabel } from '@/lib/studyProtocol';
 
 export const dynamic = 'force-dynamic';
 
@@ -109,6 +110,34 @@ export async function POST(req: Request) {
         },
       });
       members = [coordinator];
+    }
+
+    // Se o protocolo do estudo tiver formulários selecionados (ex: EVA, OHIP-14, Satisfação), cria os formulários no banco
+    if (anamnesisTemplate) {
+      try {
+        const protocol = parseStudyProtocol(anamnesisTemplate);
+        for (const f of protocol.forms) {
+          if (f.enabled && (f.id === 'eva' || f.id === 'ohip' || f.id === 'satisfaction')) {
+            const questions = PRESET_FORM_QUESTIONS[f.id as keyof typeof PRESET_FORM_QUESTIONS];
+            if (questions) {
+              const respLabel = f.respondent === 'PATIENT' ? 'Paciente' : 'Pesquisador';
+              const freqLabel = getFrequencyLabel(f.frequency);
+              await prisma.form.create({
+                data: {
+                  projectId: newProject.id,
+                  title: f.title,
+                  description: `Preenchido por: ${respLabel} | Frequência: ${freqLabel}`,
+                  questionsJson: JSON.stringify(questions),
+                  expirationHours: f.frequency === 'DAILY' ? 24 : 168,
+                  allowLate: false,
+                },
+              });
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Erro ao instanciar formulários iniciais do projeto:', err);
+      }
     }
 
     return NextResponse.json({ success: true, project: { ...newProject, members } });

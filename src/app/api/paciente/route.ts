@@ -256,8 +256,12 @@ export async function GET(req: Request) {
     // Identificar a sessão ativa mais recente para registro do diário de dor
     const latestSession = participant.sessions[participant.sessions.length - 1] || null;
 
-    // Processar formulários do projeto e identificar status para o participante
-    const formsWithStatus = participant.project.forms.map((f: { id: string; title: string; description: string | null; questionsJson: string; expirationHours: number; allowLate: boolean; createdAt: Date }) => {
+    // Processar formulários do projeto destinados ao paciente (PROMs)
+    const patientForms = participant.project.forms.filter(
+      (f: { description: string | null }) => !f.description?.includes('Preenchido por: Pesquisador')
+    );
+
+    const formsWithStatus = patientForms.map((f: { id: string; title: string; description: string | null; questionsJson: string; expirationHours: number; allowLate: boolean; createdAt: Date }) => {
       const resp = participant.responses.find((r: { formId: string; submittedAt: Date; answersJson: string | null }) => r.formId === f.id);
       let parsedQuestions = [];
       try {

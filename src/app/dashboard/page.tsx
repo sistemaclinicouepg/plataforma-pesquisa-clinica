@@ -16,6 +16,12 @@ import {
 import { ConnectivityBadge } from '@/components/OfflineIndicator';
 import { enqueueOfflineItem, removeOfflineItemByEndpoint, syncOfflineQueue } from '@/lib/offlineSync';
 import {
+  parseStudyProtocol,
+  StudyProtocolConfig,
+  getRespondentLabel,
+  getFrequencyLabel,
+} from '@/lib/studyProtocol';
+import {
   Stethoscope,
   ClipboardList,
   BarChart3,
@@ -330,7 +336,10 @@ export type ParticipantWindowsSummary = {
   overallAlert: 'OVERDUE' | 'DUE_NOW' | 'UPCOMING' | 'WAITING_S1' | 'COMPLETED';
 };
 
-export function calculateSessionWindows(part: Participant): ParticipantWindowsSummary {
+export function calculateSessionWindows(
+  part: Participant,
+  customProtocol?: StudyProtocolConfig
+): ParticipantWindowsSummary {
   const s1 = part.sessions?.find((s) => s.sessionNumber === 1);
   if (!s1) {
     return {
@@ -350,89 +359,186 @@ export function calculateSessionWindows(part: Participant): ParticipantWindowsSu
 
   let nextPendingSessionNumber: number | undefined = undefined;
 
-  for (const sNum of [2, 3, 4] as const) {
-    const config = CLINICAL_WINDOWS[sNum];
-    const anchor =
-      config.anchorSessionNumber === 1 || !s2
-        ? s1Date
-        : new Date(s2.sessionDate);
+  // Se houver sessões customizadas no protocolo do estudo
+  const protocolSessions =
+    customProtocol?.sessions && customProtocol.sessions.length > 0
+      ? customProtocol.sessions.filter((s) => s.sessionNumber > 1)
+      : null;
 
-    const additionalDays = config.anchorSessionNumber === 2 && !s2 ? 7 : 0;
-    const totalDays = config.targetDaysFromAnchor + additionalDays;
-    const targetDate = new Date(anchor.getTime() + totalDays * 86400000);
-    const windowStart = new Date(
-      anchor.getTime() + (totalDays - config.toleranceMinusDays) * 86400000
-    );
-    const windowEnd = new Date(
-      anchor.getTime() + (totalDays + config.tolerancePlusDays) * 86400000
-    );
-
-    const existingSession = part.sessions?.find((s) => s.sessionNumber === sNum);
-
-    if (existingSession) {
-      const actualDate = new Date(existingSession.sessionDate);
-      const actualTime = new Date(actualDate).setHours(0, 0, 0, 0);
-      const startTime = new Date(windowStart).setHours(0, 0, 0, 0);
-      const endTime = new Date(windowEnd).setHours(23, 59, 59, 999);
-
-      let completedStatus: 'ON_TIME' | 'DEVIATION_EARLY' | 'DEVIATION_LATE' = 'ON_TIME';
-      let deviationDays = 0;
-
-      if (actualTime < startTime) {
-        completedStatus = 'DEVIATION_EARLY';
-        deviationDays = Math.round((startTime - actualTime) / 86400000);
-      } else if (actualTime > endTime) {
-        completedStatus = 'DEVIATION_LATE';
-        deviationDays = Math.round((actualTime - endTime) / 86400000);
-      }
-
-      sessions[sNum] = {
+  if (protocolSessions) {
+    let cumulativeDays = 0;
+    for (const proto of protocolSessions) {
+      cumulativeDays += proto.daysFromPrevious;
+      const sNum = proto.sessionNumber;
+      const tol = proto.toleranceDays || 2;
+      const config: ClinicalWindowConfig = {
         sessionNumber: sNum,
-        config,
-        targetDate,
-        windowStart,
-        windowEnd,
-        isCompleted: true,
-        actualDate,
-        completedStatus,
-        deviationDays,
+        name: proto.name,
+        shortName: `S${sNum}`,
+        targetDaysFromAnchor: cumulativeDays,
+        toleranceMinusDays: tol,
+        tolerancePlusDays: tol,
+        anchorSessionNumber: 1,
       };
-    } else {
-      if (nextPendingSessionNumber === undefined) {
-        nextPendingSessionNumber = sNum;
-      }
 
-      const startTime = new Date(windowStart).setHours(0, 0, 0, 0);
-      const endTime = new Date(windowEnd).setHours(23, 59, 59, 999);
+      const targetDate = new Date(s1Date.getTime() + cumulativeDays * 86400000);
+      const windowStart = new Date(s1Date.getTime() + (cumulativeDays - tol) * 86400000);
+      const windowEnd = new Date(s1Date.getTime() + (cumulativeDays + tol) * 86400000);
 
-      let pendingStatus: 'OVERDUE' | 'DUE_NOW' | 'UPCOMING' = 'UPCOMING';
-      let daysDiff = 0;
+      const existingSession = part.sessions?.find((s) => s.sessionNumber === sNum);
 
-      if (today.getTime() > endTime) {
-        pendingStatus = 'OVERDUE';
-        daysDiff = Math.ceil((today.getTime() - endTime) / 86400000);
-      } else if (today.getTime() >= startTime) {
-        pendingStatus = 'DUE_NOW';
-        daysDiff = Math.ceil((endTime - today.getTime()) / 86400000);
+      if (existingSession) {
+        const actualDate = new Date(existingSession.sessionDate);
+        const actualTime = new Date(actualDate).setHours(0, 0, 0, 0);
+        const startTime = new Date(windowStart).setHours(0, 0, 0, 0);
+        const endTime = new Date(windowEnd).setHours(23, 59, 59, 999);
+
+        let completedStatus: 'ON_TIME' | 'DEVIATION_EARLY' | 'DEVIATION_LATE' = 'ON_TIME';
+        let deviationDays = 0;
+
+        if (actualTime < startTime) {
+          completedStatus = 'DEVIATION_EARLY';
+          deviationDays = Math.round((startTime - actualTime) / 86400000);
+        } else if (actualTime > endTime) {
+          completedStatus = 'DEVIATION_LATE';
+          deviationDays = Math.round((actualTime - endTime) / 86400000);
+        }
+
+        sessions[sNum] = {
+          sessionNumber: sNum,
+          config,
+          targetDate,
+          windowStart,
+          windowEnd,
+          isCompleted: true,
+          actualDate,
+          completedStatus,
+          deviationDays,
+        };
       } else {
-        pendingStatus = 'UPCOMING';
-        daysDiff = Math.ceil((targetDate.getTime() - today.getTime()) / 86400000);
-      }
+        if (nextPendingSessionNumber === undefined) {
+          nextPendingSessionNumber = sNum;
+        }
 
-      sessions[sNum] = {
-        sessionNumber: sNum,
-        config,
-        targetDate,
-        windowStart,
-        windowEnd,
-        isCompleted: false,
-        pendingStatus,
-        daysDiff,
-      };
+        const startTime = new Date(windowStart).setHours(0, 0, 0, 0);
+        const endTime = new Date(windowEnd).setHours(23, 59, 59, 999);
+
+        let pendingStatus: 'OVERDUE' | 'DUE_NOW' | 'UPCOMING' = 'UPCOMING';
+        let daysDiff = 0;
+
+        if (today.getTime() > endTime) {
+          pendingStatus = 'OVERDUE';
+          daysDiff = Math.ceil((today.getTime() - endTime) / 86400000);
+        } else if (today.getTime() >= startTime) {
+          pendingStatus = 'DUE_NOW';
+          daysDiff = Math.ceil((endTime - today.getTime()) / 86400000);
+        } else {
+          pendingStatus = 'UPCOMING';
+          daysDiff = Math.ceil((targetDate.getTime() - today.getTime()) / 86400000);
+        }
+
+        sessions[sNum] = {
+          sessionNumber: sNum,
+          config,
+          targetDate,
+          windowStart,
+          windowEnd,
+          isCompleted: false,
+          pendingStatus,
+          daysDiff,
+        };
+      }
+    }
+  } else {
+    // Protocolo padrão de 4 sessões (para compatibilidade com estudos existentes)
+    for (const sNum of [2, 3, 4] as const) {
+      const config = CLINICAL_WINDOWS[sNum];
+      const anchor =
+        config.anchorSessionNumber === 1 || !s2
+          ? s1Date
+          : new Date(s2.sessionDate);
+
+      const additionalDays = config.anchorSessionNumber === 2 && !s2 ? 7 : 0;
+      const totalDays = config.targetDaysFromAnchor + additionalDays;
+      const targetDate = new Date(anchor.getTime() + totalDays * 86400000);
+      const windowStart = new Date(
+        anchor.getTime() + (totalDays - config.toleranceMinusDays) * 86400000
+      );
+      const windowEnd = new Date(
+        anchor.getTime() + (totalDays + config.tolerancePlusDays) * 86400000
+      );
+
+      const existingSession = part.sessions?.find((s) => s.sessionNumber === sNum);
+
+      if (existingSession) {
+        const actualDate = new Date(existingSession.sessionDate);
+        const actualTime = new Date(actualDate).setHours(0, 0, 0, 0);
+        const startTime = new Date(windowStart).setHours(0, 0, 0, 0);
+        const endTime = new Date(windowEnd).setHours(23, 59, 59, 999);
+
+        let completedStatus: 'ON_TIME' | 'DEVIATION_EARLY' | 'DEVIATION_LATE' = 'ON_TIME';
+        let deviationDays = 0;
+
+        if (actualTime < startTime) {
+          completedStatus = 'DEVIATION_EARLY';
+          deviationDays = Math.round((startTime - actualTime) / 86400000);
+        } else if (actualTime > endTime) {
+          completedStatus = 'DEVIATION_LATE';
+          deviationDays = Math.round((actualTime - endTime) / 86400000);
+        }
+
+        sessions[sNum] = {
+          sessionNumber: sNum,
+          config,
+          targetDate,
+          windowStart,
+          windowEnd,
+          isCompleted: true,
+          actualDate,
+          completedStatus,
+          deviationDays,
+        };
+      } else {
+        if (nextPendingSessionNumber === undefined) {
+          nextPendingSessionNumber = sNum;
+        }
+
+        const startTime = new Date(windowStart).setHours(0, 0, 0, 0);
+        const endTime = new Date(windowEnd).setHours(23, 59, 59, 999);
+
+        let pendingStatus: 'OVERDUE' | 'DUE_NOW' | 'UPCOMING' = 'UPCOMING';
+        let daysDiff = 0;
+
+        if (today.getTime() > endTime) {
+          pendingStatus = 'OVERDUE';
+          daysDiff = Math.ceil((today.getTime() - endTime) / 86400000);
+        } else if (today.getTime() >= startTime) {
+          pendingStatus = 'DUE_NOW';
+          daysDiff = Math.ceil((endTime - today.getTime()) / 86400000);
+        } else {
+          pendingStatus = 'UPCOMING';
+          daysDiff = Math.ceil((targetDate.getTime() - today.getTime()) / 86400000);
+        }
+
+        sessions[sNum] = {
+          sessionNumber: sNum,
+          config,
+          targetDate,
+          windowStart,
+          windowEnd,
+          isCompleted: false,
+          pendingStatus,
+          daysDiff,
+        };
+      }
     }
   }
 
-  const allCompleted = [1, 2, 3, 4].every((num) =>
+  const allNumbers = protocolSessions
+    ? [1, ...protocolSessions.map((s) => s.sessionNumber)]
+    : [1, 2, 3, 4];
+
+  const allCompleted = allNumbers.every((num) =>
     part.sessions?.some((s) => s.sessionNumber === num)
   );
 
@@ -2034,13 +2140,18 @@ function DashboardContent() {
     );
   }
 
+  const studyProtocol = React.useMemo(
+    () => parseStudyProtocol(project?.anamnesisTemplate),
+    [project?.anamnesisTemplate]
+  );
+
   const pendingList = project.participants.filter((p) => p.status === 'PENDING');
   const approvedList = project.participants.filter((p) => p.status === 'APPROVED');
   const excludedList = project.participants.filter((p) => p.status === 'EXCLUDED');
 
   const participantWindows = approvedList.map((part) => ({
     part,
-    windows: calculateSessionWindows(part),
+    windows: calculateSessionWindows(part, studyProtocol),
   }));
 
   const overdueVisits = participantWindows.filter(
@@ -2065,11 +2176,11 @@ function DashboardContent() {
       if (!matchCode && !matchName && !matchPhone) return false;
     }
     if (activeFilter === 'PENDING') {
-      const w = calculateSessionWindows(part);
+      const w = calculateSessionWindows(part, studyProtocol);
       return w.overallAlert === 'OVERDUE' || w.overallAlert === 'DUE_NOW';
     }
     if (activeFilter === 'COMPLETED') {
-      const w = calculateSessionWindows(part);
+      const w = calculateSessionWindows(part, studyProtocol);
       return w.overallAlert === 'COMPLETED';
     }
     return true;
@@ -2487,7 +2598,7 @@ function DashboardContent() {
                       ) : (
                         filteredApprovedList.map((part) => {
                           const sessionCount = part.sessions?.length || 0;
-                          const windows = calculateSessionWindows(part);
+                          const windows = calculateSessionWindows(part, studyProtocol);
                           const next = windows.nextStatus;
 
                           return (
@@ -2541,25 +2652,29 @@ function DashboardContent() {
                                 </div>
                               </td>
 
-                              {/* 3. Indicadores de Sessões S1-S4 */}
+                              {/* 3. Indicadores de Sessões Clínicas */}
                               <td className="py-2.5 px-3 align-middle">
-                                <div className="inline-flex items-center gap-1">
-                                  {[1, 2, 3, 4].map((num) => {
+                                <div className="inline-flex items-center gap-1 flex-wrap max-w-[200px]">
+                                  {studyProtocol.sessions.map((sess) => {
+                                    const num = sess.sessionNumber;
                                     const done = part.sessions?.some((s) => s.sessionNumber === num);
-                                    const labels: Record<number, string> = { 1: 'S1', 2: 'S2', 3: '14d', 4: '30d' };
                                     return (
-                                      <span
+                                      <button
                                         key={num}
+                                        type="button"
+                                        onClick={() => openSessionEditor(part, num)}
                                         className={`px-1.5 py-0.5 rounded text-[10px] font-bold font-mono transition inline-flex items-center gap-0.5 ${
                                           done
-                                            ? 'bg-emerald-600 text-white'
-                                            : 'bg-slate-100 text-slate-400 border border-slate-200'
+                                            ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                                            : 'bg-slate-100 text-slate-400 border border-slate-200 hover:border-blue-400 hover:text-blue-600'
                                         }`}
-                                        title={done ? `Sessão ${labels[num]} Realizada` : `Sessão ${labels[num]} Pendente`}
+                                        title={`${sess.name} (${sess.durationMinutes} min) - ${
+                                          done ? 'Realizada (clique para ver/editar)' : 'Pendente (clique para registrar)'
+                                        }`}
                                       >
                                         {done && <Check className="w-2.5 h-2.5 stroke-[3]" />}
-                                        <span>{labels[num]}</span>
-                                      </span>
+                                        <span>S{num}</span>
+                                      </button>
                                     );
                                   })}
                                 </div>
@@ -2588,7 +2703,7 @@ function DashboardContent() {
                                 {windows.overallAlert === 'COMPLETED' && (
                                   <span className="px-2 py-0.5 bg-emerald-50 text-emerald-800 border border-emerald-300 rounded text-[11px] font-bold inline-flex items-center gap-1">
                                     <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                                    <span>4/4 Concluído</span>
+                                    <span>{studyProtocol.sessions.length}/{studyProtocol.sessions.length} Concluído</span>
                                   </span>
                                 )}
                                 {windows.overallAlert === 'WAITING_S1' && (
@@ -3907,17 +4022,36 @@ function DashboardContent() {
                       ).length;
                       const complianceRate = totalApproved > 0 ? Math.round((respondedCount / totalApproved) * 100) : 0;
 
+                      const isPatient = form.description?.includes('Preenchido por: Paciente') ||
+                        studyProtocol.forms?.some((f) => f.title.toLowerCase() === form.title.toLowerCase() && f.respondent === 'PATIENT');
+                      const freqMatch = form.description?.match(/Frequência:\s*([^|]+)/);
+                      const freqLabel = freqMatch ? freqMatch[1].trim() : null;
+
                       return (
                         <div
                           key={form.id}
                           className="p-5 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 hover:bg-slate-50/60 transition"
                         >
                           <div className="space-y-1 max-w-xl">
-                            <div className="flex items-center space-x-2.5">
+                            <div className="flex flex-wrap items-center gap-2">
                               <span className="font-bold text-slate-800 text-sm">{form.title}</span>
                               <span className="px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 rounded text-[10px] font-bold">
                                 {questionCount} {questionCount === 1 ? 'questão' : 'questões'}
                               </span>
+                              {isPatient ? (
+                                <span className="px-2 py-0.5 bg-purple-50 text-purple-700 border border-purple-200 rounded text-[10px] font-bold inline-flex items-center gap-1">
+                                  👤 Paciente (PROM)
+                                </span>
+                              ) : (
+                                <span className="px-2 py-0.5 bg-sky-50 text-sky-700 border border-sky-200 rounded text-[10px] font-bold inline-flex items-center gap-1">
+                                  🩺 Pesquisador (eCRF)
+                                </span>
+                              )}
+                              {freqLabel && (
+                                <span className="px-2 py-0.5 bg-amber-50 text-amber-800 border border-amber-200 rounded text-[10px] font-bold inline-flex items-center gap-1">
+                                  📅 {freqLabel}
+                                </span>
+                              )}
                             </div>
                             {form.description && (
                               <p className="text-xs text-slate-500 line-clamp-1">{form.description}</p>
@@ -5151,12 +5285,13 @@ function DashboardContent() {
               </button>
             </div>
 
-            {/* Timeline Steps (4 sessões) */}
+            {/* Timeline Steps */}
             <div className="space-y-4">
               {(() => {
-                const participantWindows = calculateSessionWindows(timelineParticipant);
+                const participantWindows = calculateSessionWindows(timelineParticipant, studyProtocol);
 
-                return [1, 2, 3, 4].map((sNum) => {
+                return studyProtocol.sessions.map((sess) => {
+                  const sNum = sess.sessionNumber;
                   const sessionInfo = SESSION_DEFINITIONS[sNum];
                   const session = timelineParticipant.sessions?.find((s) => s.sessionNumber === sNum);
                   const isCompleted = Boolean(session);
@@ -5169,6 +5304,9 @@ function DashboardContent() {
                         session?.painScore48h || 0
                       )
                     : 0;
+
+                  const titleText = sess.name || sessionInfo?.title || `Sessão ${sNum}`;
+                  const subtitleText = sessionInfo?.subtitle || (sess.daysFromPrevious > 0 ? `Intervalo de ${sess.daysFromPrevious} dias da etapa anterior` : 'Atendimento Inicial');
 
                   return (
                     <div
@@ -5200,7 +5338,7 @@ function DashboardContent() {
                           </div>
                           <div>
                             <div className="flex flex-wrap items-center gap-1.5">
-                              <h4 className="font-bold text-slate-900 text-sm">{sessionInfo?.title}</h4>
+                              <h4 className="font-bold text-slate-900 text-sm">{titleText}</h4>
                               <span
                                 className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                                   isCompleted
@@ -5209,6 +5347,13 @@ function DashboardContent() {
                                 }`}
                               >
                                 {isCompleted ? 'Concluída' : 'Pendente'}
+                              </span>
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200 inline-flex items-center gap-1">
+                                <Clock className="w-2.5 h-2.5" />
+                                {sess.durationMinutes} min
+                              </span>
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                                {sess.type === 'CLINICAL' ? 'Intervenção' : sess.type === 'EVALUATION' ? 'Avaliação' : 'Acompanhamento'}
                               </span>
 
                               {/* Badges de Auditoria de Janela Clínica */}
@@ -5250,7 +5395,7 @@ function DashboardContent() {
                                 </span>
                               )}
                             </div>
-                            <p className="text-[11px] text-slate-500 mt-0.5">{sessionInfo?.subtitle}</p>
+                            <p className="text-[11px] text-slate-500 mt-0.5">{subtitleText}</p>
                           </div>
                         </div>
 
@@ -5395,7 +5540,12 @@ function DashboardContent() {
 
       {/* Modal de Registro e Edição de Sessão Clínica */}
       {showSessionModal && currentSessionForm && (() => {
+        const protoSession = studyProtocol.sessions.find(
+          (s) => s.sessionNumber === currentSessionForm.sessionNumber
+        );
         const sessionInfo = SESSION_DEFINITIONS[currentSessionForm.sessionNumber];
+        const displayTitle = protoSession?.name || sessionInfo?.title || `Registro Clínico: Sessão ${currentSessionForm.sessionNumber}`;
+        const displaySubtitle = sessionInfo?.subtitle || 'Preencha os desfechos aferidos durante a consulta.';
 
         return (
           <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto">
@@ -5404,12 +5554,30 @@ function DashboardContent() {
                 <div>
                   <div className="flex items-center space-x-2">
                     <h3 className="text-lg font-bold text-slate-900">
-                      {sessionInfo?.title || `Registro Clínico: Sessão ${currentSessionForm.sessionNumber}`}
+                      {displayTitle}
                     </h3>
                     <ConnectivityBadge />
                   </div>
+                  <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                    {protoSession && (
+                      <>
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-200">
+                          {protoSession.type === 'CLINICAL' ? '🩺 Intervenção / Procedimento' : protoSession.type === 'EVALUATION' ? '📋 Avaliação' : '🔍 Acompanhamento'}
+                        </span>
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200 inline-flex items-center gap-1">
+                          <Clock className="w-2.5 h-2.5" />
+                          Duração prevista: {protoSession.durationMinutes} min
+                        </span>
+                        {protoSession.daysFromPrevious > 0 && (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                            Intervalo: {protoSession.daysFromPrevious} dias
+                          </span>
+                        )}
+                      </>
+                    )}
+                  </div>
                   <p className="text-xs text-slate-500 mt-1">
-                    {sessionInfo?.subtitle || 'Preencha os desfechos aferidos durante a consulta.'}
+                    {displaySubtitle}
                   </p>
                 </div>
                 <button

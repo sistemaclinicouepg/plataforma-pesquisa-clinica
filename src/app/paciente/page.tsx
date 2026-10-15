@@ -1236,9 +1236,21 @@ function PacienteContent() {
                         >
                           <div className="flex justify-between items-start gap-2">
                             <div>
-                              <h4 className="font-bold text-slate-900 text-xs">{f.title}</h4>
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                <h4 className="font-bold text-slate-900 text-xs">{f.title}</h4>
+                                {(() => {
+                                  const freqMatch = f.description?.match(/Frequência:\s*([^|]+)/);
+                                  const freq = freqMatch ? freqMatch[1].trim() : null;
+                                  if (!freq) return null;
+                                  return (
+                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 inline-flex items-center gap-1">
+                                      📅 {freq}
+                                    </span>
+                                  );
+                                })()}
+                              </div>
                               {f.description && (
-                                <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">{f.description}</p>
+                                <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">{f.description}</p>
                               )}
                               <span className="inline-block mt-1 text-[10px] text-slate-400 font-mono">
                                 {f.questions.length} perguntas
