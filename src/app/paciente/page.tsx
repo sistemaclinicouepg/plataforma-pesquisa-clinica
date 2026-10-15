@@ -17,8 +17,6 @@ import {
   Phone,
   Smartphone,
 } from 'lucide-react';
-import { enqueueOfflineItem, syncOfflineQueue } from '@/lib/offlineSync';
-import { ConnectivityBadge } from '@/components/OfflineIndicator';
 
 type ParticipantSession = {
   id: string;
@@ -135,7 +133,6 @@ function PacienteContent() {
     timestamp: string;
     isRedAlert?: boolean;
     gingivalSensation?: string;
-    isOffline?: boolean;
   } | null>(null);
 
   const getWhatsAppTarget = () => {
@@ -232,24 +229,6 @@ function PacienteContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [codeParam, partIdParam, projectIdParam]);
 
-  // Recarregar dados automaticamente após sincronização em segundo plano da fila offline
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    syncOfflineQueue().then((res) => {
-      if (res.synced > 0 && participant?.researchCode) {
-        loadParticipant(participant.researchCode, participant.id);
-      }
-    });
-
-    const handleSynced = () => {
-      if (participant?.researchCode) {
-        loadParticipant(participant.researchCode, participant.id);
-      }
-    };
-    window.addEventListener('uepg_offline_synced', handleSynced);
-    return () => window.removeEventListener('uepg_offline_synced', handleSynced);
-  }, [participant]);
 
   const handleSearchParticipant = (e: React.FormEvent) => {
     e.preventDefault();
@@ -305,26 +284,10 @@ function PacienteContent() {
         timestamp: new Date().toLocaleString('pt-BR'),
         isRedAlert: Boolean(data.isRedAlert || triggeredRedAlert),
         gingivalSensation,
-        isOffline: false,
       });
       setIsSubmitted(true);
     } catch (err: unknown) {
-      // Se falhar por erro de rede/conexão, enfileirar offline
-      if (typeof window !== 'undefined' && (!navigator.onLine || (err instanceof TypeError))) {
-        enqueueOfflineItem('DIARY_REPORT', '/api/paciente/report', payload);
-        setSubmittedData({
-          timePoint,
-          painScore,
-          sessionNumber: selectedSessionNumber,
-          timestamp: new Date().toLocaleString('pt-BR'),
-          isRedAlert: triggeredRedAlert,
-          gingivalSensation,
-          isOffline: true,
-        });
-        setIsSubmitted(true);
-      } else {
-        setErrorMsg(err instanceof Error ? err.message : 'Erro ao enviar respostas.');
-      }
+      setErrorMsg(err instanceof Error ? err.message : 'Erro ao enviar respostas. Verifique sua conexão à internet e tente novamente.');
     } finally {
       setSubmitting(false);
     }
@@ -427,19 +390,7 @@ function PacienteContent() {
       }
       await loadParticipant(participant.researchCode, participant.id);
     } catch (err: unknown) {
-      if (typeof window !== 'undefined' && (!navigator.onLine || err instanceof TypeError)) {
-        enqueueOfflineItem('FORM_RESPONSE', '/api/responses', payload);
-        setFormSuccessMessage('Questionário armazenado na fila offline deste dispositivo. Assim que a conexão for restabelecida, os dados serão transmitidos automaticamente.');
-        if (hasSevereSymptom) {
-          setFormRedAlert({
-            isRedAlert: true,
-            maxVasScore: localMaxVas,
-            severeDesc: localDesc,
-          });
-        }
-      } else {
-        setFormError(err instanceof Error ? err.message : 'Erro ao registrar respostas.');
-      }
+      setFormError(err instanceof Error ? err.message : 'Erro ao registrar respostas. Verifique sua conexão à internet e tente novamente.');
     } finally {
       setSubmittingForm(false);
     }
@@ -518,18 +469,6 @@ function PacienteContent() {
                 <span className="font-medium text-slate-700">{submittedData.timestamp}</span>
               </div>
             </div>
-
-            {submittedData.isOffline && (
-              <div className="p-3.5 bg-amber-50 border border-amber-300 rounded-2xl text-left text-xs text-amber-900 space-y-1">
-                <div className="font-bold flex items-center space-x-1.5 text-amber-800">
-                  <Smartphone className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                  <span>Modo Offline - Gravado em Fila Local</span>
-                </div>
-                <p className="text-[11px] text-amber-700 leading-relaxed">
-                  Seu relato foi salvo com segurança na memória deste dispositivo. Assim que seu celular ou computador reconectar à internet, o diário será transmitido automaticamente ao servidor da UEPG.
-                </p>
-              </div>
-            )}
 
             {isRedAlertTriggered ? (
               <div className="p-4 bg-red-50 border-2 border-red-300 rounded-2xl text-left text-xs space-y-2.5">
@@ -825,7 +764,6 @@ function PacienteContent() {
               <p className="text-blue-200 text-[11px] truncate mt-0.5">{participant.projectName}</p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
-              <ConnectivityBadge />
               {participant.id && (
                 <a
                   href={`/tcle/${participant.id}/pdf`}
@@ -1214,7 +1152,6 @@ function PacienteContent() {
                         Questionários de acompanhamento do ensaio clínico para este participante.
                       </p>
                     </div>
-                    <ConnectivityBadge />
                   </div>
 
                   {(!participant.forms || participant.forms.length === 0) ? (
@@ -1312,7 +1249,6 @@ function PacienteContent() {
                       <span>Voltar aos Questionários</span>
                     </button>
                     <div className="flex items-center space-x-2">
-                      <ConnectivityBadge />
                       <span className="text-[10px] text-slate-400 font-mono font-bold">
                         {selectedForm.questions.length} perguntas
                       </span>

@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import AppNav from "@/components/AppNav";
-import OfflineIndicator from "@/components/OfflineIndicator";
 import KeepAlive from "@/components/KeepAlive";
 
 const geistSans = Geist({
@@ -18,12 +17,6 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Plataforma de Pesquisa Clínica Odontológica | UEPG",
   description: "Sistema Integrado de Ensaios Clínicos Odontológicos e Prontuário Digital",
-  manifest: "/manifest.json",
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "default",
-    title: "UEPG Pesquisa",
-  },
   icons: {
     icon: "/icons/icon-192x192.png",
     apple: "/icons/icon-192x192.png",
@@ -46,11 +39,31 @@ export default function RootLayout({
       lang="pt-BR"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
+      <head>
+        {/* Desativa e desregistra imediatamente qualquer Service Worker/cache legado no navegador */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if (typeof window !== 'undefined') {
+                if ('serviceWorker' in navigator) {
+                  navigator.serviceWorker.getRegistrations().then(function(regs) {
+                    for (var i = 0; i < regs.length; i++) { regs[i].unregister(); }
+                  });
+                }
+                if ('caches' in window) {
+                  caches.keys().then(function(names) {
+                    for (var i = 0; i < names.length; i++) { caches.delete(names[i]); }
+                  });
+                }
+              }
+            `,
+          }}
+        />
+      </head>
       <body className="min-h-full flex flex-col bg-slate-50 text-slate-900 w-full overflow-x-hidden">
         <KeepAlive />
         <AppNav />
         <main className="flex-1 flex flex-col w-full">{children}</main>
-        <OfflineIndicator />
       </body>
     </html>
   );

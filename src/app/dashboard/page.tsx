@@ -13,8 +13,6 @@ import {
   generateSPSSSyntaxScript,
   generateGraphPadPrismFormat,
 } from '@/lib/exportGenerators';
-import { ConnectivityBadge } from '@/components/OfflineIndicator';
-import { enqueueOfflineItem, removeOfflineItemByEndpoint, syncOfflineQueue } from '@/lib/offlineSync';
 import {
   parseStudyProtocol,
   StudyProtocolConfig,
@@ -1012,19 +1010,6 @@ function DashboardContent() {
       .catch(() => {});
 
     loadProject();
-    syncOfflineQueue();
-
-    const handleSync = () => {
-      loadProject(true);
-    };
-
-    window.addEventListener('uepg_offline_synced', handleSync);
-    window.addEventListener('online', handleSync);
-
-    return () => {
-      window.removeEventListener('uepg_offline_synced', handleSync);
-      window.removeEventListener('online', handleSync);
-    };
   }, [projectIdParam]);
 
   // Ações de Membros da Equipe & Cegamento
@@ -1601,7 +1586,6 @@ function DashboardContent() {
       });
 
       if (res.ok) {
-        removeOfflineItemByEndpoint(`/api/participants/${formData.participantId}/sessions`);
         loadProject(true);
       } else {
         const errorData = await res.json().catch(() => ({}));
@@ -1609,13 +1593,8 @@ function DashboardContent() {
         loadProject(true);
       }
     } catch (err) {
-      console.warn('Falha de conexão ao salvar sessão clínica (adicionando à fila offline):', err);
-      enqueueOfflineItem(
-        'SESSION_UPDATE',
-        `/api/participants/${formData.participantId}/sessions`,
-        formData
-      );
-      alert('Sem conexão direta com a internet: Sessão clínica armazenada com segurança na memória local deste navegador e será transmitida automaticamente assim que a conexão restabelecer.');
+      console.error('Erro ao salvar sessão clínica:', err);
+      alert('Erro de conexão ao salvar a sessão clínica. Verifique sua conexão com a internet e tente novamente.');
     } finally {
       setSavingSession(false);
     }
@@ -5555,7 +5534,6 @@ function DashboardContent() {
                     <h3 className="text-lg font-bold text-slate-900">
                       {displayTitle}
                     </h3>
-                    <ConnectivityBadge />
                   </div>
                   <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
                     {protoSession && (

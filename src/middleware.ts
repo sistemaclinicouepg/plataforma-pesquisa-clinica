@@ -12,12 +12,11 @@ const SESSION_COOKIE_NAME = 'auth_session';
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // 1. Ignorar arquivos estáticos e internos do Next.js e manifest PWA
+  // 1. Ignorar arquivos estáticos e internos do Next.js
   if (
     pathname.startsWith('/_next') ||
     pathname.startsWith('/favicon.ico') ||
-    pathname === '/manifest.webmanifest' ||
-    pathname.match(/\.(svg|png|jpg|jpeg|gif|webp|ico|css|js|webmanifest|json)$/)
+    pathname.match(/\.(svg|png|jpg|jpeg|gif|webp|ico|css|js|json)$/)
   ) {
     return NextResponse.next();
   }
