@@ -2382,24 +2382,24 @@ function DashboardContent() {
               </div>
             )}
 
-            {/* Métricas Compactas de Atendimento (Cards com Altura e Hierarquia Padronizadas) */}
+            {/* Métricas Compactas de Atendimento (Cards com Altura e Hierarquia Rigorosamente Padronizadas) */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
               {/* Card 1: Ativos no Estudo */}
-              <div className="bg-white rounded-xl shadow-2xs border border-slate-200 p-3.5 flex flex-col justify-between min-h-[88px]">
+              <div className="bg-white rounded-xl shadow-2xs border border-slate-200 p-4 flex flex-col justify-between h-[92px]">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Ativos no Estudo</span>
                   <div className="p-1.5 rounded-lg bg-blue-50 text-blue-600">
                     <Users className="w-3.5 h-3.5" />
                   </div>
                 </div>
-                <div className="mt-2">
-                  <div className="text-xl font-black text-slate-900 leading-none">{approvedList.length}</div>
+                <div>
+                  <div className="text-2xl font-black text-slate-900 leading-none">{approvedList.length}</div>
                   <p className="text-[10px] text-slate-500 mt-1 truncate">Participantes no protocolo</p>
                 </div>
               </div>
 
               {/* Card 2: Retornos Clínicos */}
-              <div className={`rounded-xl shadow-2xs border p-3.5 flex flex-col justify-between min-h-[88px] transition ${
+              <div className={`rounded-xl shadow-2xs border p-4 flex flex-col justify-between h-[92px] transition ${
                 overdueVisits.length > 0
                   ? 'bg-red-50/40 border-red-200'
                   : dueNowVisits.length > 0
@@ -2424,8 +2424,8 @@ function DashboardContent() {
                     )}
                   </div>
                 </div>
-                <div className="mt-2">
-                  <div className="text-xl font-black text-slate-900 leading-none">
+                <div>
+                  <div className="text-2xl font-black text-slate-900 leading-none">
                     {overdueVisits.length + dueNowVisits.length}
                   </div>
                   <p className="text-[10px] text-slate-500 mt-1 truncate">
@@ -2438,29 +2438,29 @@ function DashboardContent() {
               </div>
 
               {/* Card 3: Protocolos Concluídos */}
-              <div className="bg-white rounded-xl shadow-2xs border border-slate-200 p-3.5 flex flex-col justify-between min-h-[88px]">
+              <div className="bg-white rounded-xl shadow-2xs border border-slate-200 p-4 flex flex-col justify-between h-[92px]">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Protocolos Concluídos</span>
                   <div className="p-1.5 rounded-lg bg-emerald-50 text-emerald-700">
                     <CheckCircle2 className="w-3.5 h-3.5" />
                   </div>
                 </div>
-                <div className="mt-2">
-                  <div className="text-xl font-black text-emerald-600 leading-none">{allCompletedVisits.length}</div>
+                <div>
+                  <div className="text-2xl font-black text-emerald-600 leading-none">{allCompletedVisits.length}</div>
                   <p className="text-[10px] text-slate-500 mt-1 truncate">4 de 4 sessões finalizadas</p>
                 </div>
               </div>
 
               {/* Card 4: Próximos Retornos */}
-              <div className="bg-white rounded-xl shadow-2xs border border-slate-200 p-3.5 flex flex-col justify-between min-h-[88px]">
+              <div className="bg-white rounded-xl shadow-2xs border border-slate-200 p-4 flex flex-col justify-between h-[92px]">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Próximos Retornos</span>
                   <div className="p-1.5 rounded-lg bg-slate-100 text-slate-600">
                     <Clock className="w-3.5 h-3.5" />
                   </div>
                 </div>
-                <div className="mt-2">
-                  <div className="text-xl font-black text-slate-900 leading-none">{upcomingVisits.length}</div>
+                <div>
+                  <div className="text-2xl font-black text-slate-900 leading-none">{upcomingVisits.length}</div>
                   <p className="text-[10px] text-slate-500 mt-1 truncate">Dentro da janela futura</p>
                 </div>
               </div>
@@ -2604,14 +2604,14 @@ function DashboardContent() {
                           const next = windows.nextStatus;
 
                           return (
-                            <tr key={part.id} className="hover:bg-slate-50/80 transition-colors">
+                            <tr key={part.id} className="hover:bg-slate-50/80 transition-colors h-[64px]">
                               {/* 1. Identificação do Participante */}
-                              <td className="py-3 px-4 align-middle">
+                              <td className="py-2.5 px-4 align-middle whitespace-nowrap">
                                 <div className="flex items-center space-x-2">
-                                  <span className="px-2 py-0.5 bg-slate-900 text-white text-[11px] font-mono font-bold rounded-md whitespace-nowrap shrink-0 shadow-2xs">
+                                  <span className="w-[72px] h-[22px] flex items-center justify-center px-1.5 bg-slate-900 text-white text-[11px] font-mono font-bold rounded whitespace-nowrap shrink-0 shadow-2xs">
                                     {part.researchCode}
                                   </span>
-                                  <span className="font-bold text-slate-900 text-xs truncate max-w-[180px]">
+                                  <span className="font-bold text-slate-900 text-xs truncate max-w-[150px] inline-block" title={part.patient.fullName}>
                                     {part.patient.fullName}
                                   </span>
                                   <button
@@ -2623,18 +2623,18 @@ function DashboardContent() {
                                     <Edit className="w-3 h-3" />
                                   </button>
                                 </div>
-                                <div className="text-[10px] text-slate-500 mt-0.5 flex items-center space-x-1.5">
+                                <div className="text-[10px] text-slate-500 mt-0.5 flex items-center space-x-1.5 truncate max-w-[230px]">
                                   <span>{part.patient.biologicalSex}</span>
                                   <span>•</span>
                                   <span>{part.patient.phoneWhatsApp}</span>
                                 </div>
                               </td>
 
-                              {/* 2. Grupo de Alocação */}
-                              <td className="py-3 px-3 align-middle">
-                                <div className="flex flex-col items-start gap-1">
+                              {/* 2. Grupo de Alocação (Tratamento para não quebrar linha) */}
+                              <td className="py-2.5 px-3 align-middle whitespace-nowrap">
+                                <div className="flex items-center space-x-1.5">
                                   <span
-                                    className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200 max-w-[150px] truncate block"
+                                    className="text-[10px] font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200 truncate max-w-[125px] inline-block whitespace-nowrap"
                                     title={part.group || 'Pendente'}
                                   >
                                     {isBlindedUser ? (
@@ -2649,16 +2649,16 @@ function DashboardContent() {
                                   {!isBlindedUser && (
                                     <button
                                       onClick={() => handleOpenAllocation(part)}
-                                      className="text-[10px] text-blue-600 hover:text-blue-800 font-semibold hover:underline"
+                                      className="text-[10px] text-blue-600 hover:text-blue-800 font-semibold underline shrink-0 whitespace-nowrap"
                                     >
-                                      {part.group ? 'Alterar grupo' : 'Alocar grupo'}
+                                      {part.group ? 'Alterar' : 'Alocar'}
                                     </button>
                                   )}
                                 </div>
                               </td>
 
-                              {/* 3. Indicadores de Sessões Clínicas */}
-                              <td className="py-3 px-3 align-middle">
+                              {/* 3. Indicadores de Sessões Clínicas (Todos 28x28px Perfeitos) */}
+                              <td className="py-2.5 px-3 align-middle whitespace-nowrap">
                                 <div className="inline-flex items-center gap-1">
                                   {studyProtocol.sessions.map((sess) => {
                                     const num = sess.sessionNumber;
@@ -2669,7 +2669,7 @@ function DashboardContent() {
                                         key={num}
                                         type="button"
                                         onClick={() => openSessionEditor(part, num)}
-                                        className={`w-7 h-6 rounded text-[10px] font-bold font-mono transition-all inline-flex items-center justify-center ${
+                                        className={`w-7 h-7 rounded text-[10px] font-bold font-mono transition-all inline-flex items-center justify-center shrink-0 ${
                                           done
                                             ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-2xs'
                                             : isCurrent
@@ -2681,7 +2681,7 @@ function DashboardContent() {
                                         }`}
                                       >
                                         {done ? (
-                                          <Check className="w-3 h-3 stroke-[3]" />
+                                          <Check className="w-3.5 h-3.5 stroke-[2.5]" />
                                         ) : (
                                           <span>S{num}</span>
                                         )}
@@ -2691,49 +2691,49 @@ function DashboardContent() {
                                 </div>
                               </td>
 
-                              {/* 4. Status da Janela de Retorno */}
-                              <td className="py-3 px-3 align-middle">
+                              {/* 4. Status da Janela de Retorno (Badge de Altura Fixa h-7.5) */}
+                              <td className="py-2.5 px-3 align-middle whitespace-nowrap">
                                 {windows.overallAlert === 'OVERDUE' && next && (
-                                  <span className="px-2.5 py-1 bg-red-50 text-red-700 border border-red-200 rounded-md text-[11px] font-bold inline-flex items-center gap-1.5 whitespace-nowrap">
+                                  <span className="h-7.5 px-2.5 bg-red-50 text-red-700 border border-red-200 rounded-md text-[11px] font-bold inline-flex items-center gap-1.5 whitespace-nowrap">
                                     <AlertCircle className="w-3.5 h-3.5 text-red-600 shrink-0" />
                                     <span>{next.config.shortName} atrasada (+{next.daysDiff}d)</span>
                                   </span>
                                 )}
                                 {windows.overallAlert === 'DUE_NOW' && next && (
-                                  <span className="px-2.5 py-1 bg-amber-50 text-amber-800 border border-amber-200 rounded-md text-[11px] font-bold inline-flex items-center gap-1.5 whitespace-nowrap">
+                                  <span className="h-7.5 px-2.5 bg-amber-50 text-amber-800 border border-amber-200 rounded-md text-[11px] font-bold inline-flex items-center gap-1.5 whitespace-nowrap">
                                     <Clock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
                                     <span>{next.config.shortName} na janela ({next.daysDiff}d)</span>
                                   </span>
                                 )}
                                 {windows.overallAlert === 'UPCOMING' && next && (
-                                  <span className="px-2.5 py-1 bg-blue-50 text-blue-700 border border-blue-200 rounded-md text-[11px] font-medium inline-flex items-center gap-1.5 whitespace-nowrap">
+                                  <span className="h-7.5 px-2.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-md text-[11px] font-medium inline-flex items-center gap-1.5 whitespace-nowrap">
                                     <Calendar className="w-3.5 h-3.5 text-blue-500 shrink-0" />
                                     <span>{next.config.shortName} em {next.daysDiff}d</span>
                                   </span>
                                 )}
                                 {windows.overallAlert === 'COMPLETED' && (
-                                  <span className="px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-md text-[11px] font-bold inline-flex items-center gap-1.5 whitespace-nowrap">
+                                  <span className="h-7.5 px-2.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-md text-[11px] font-bold inline-flex items-center gap-1.5 whitespace-nowrap">
                                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                                     <span>{studyProtocol.sessions.length}/{studyProtocol.sessions.length} Concluído</span>
                                   </span>
                                 )}
                                 {windows.overallAlert === 'WAITING_S1' && (
-                                  <span className="px-2.5 py-1 bg-slate-100 text-slate-600 border border-slate-200 rounded-md text-[11px] font-medium inline-flex items-center gap-1.5 whitespace-nowrap">
+                                  <span className="h-7.5 px-2.5 bg-slate-100 text-slate-600 border border-slate-200 rounded-md text-[11px] font-medium inline-flex items-center gap-1.5 whitespace-nowrap">
                                     <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                                     <span>Aguardando S1</span>
                                   </span>
                                 )}
                               </td>
 
-                              {/* 5. Ações Clínicas Rápidas (Padronizadas com Altura Uniforme) */}
-                              <td className="py-3 px-4 align-middle text-right">
+                              {/* 5. Ações Clínicas Padronizadas (Mesmo Tamanho e Ordem em Todas as Linhas) */}
+                              <td className="py-2.5 px-4 align-middle text-right whitespace-nowrap">
                                 <div className="inline-flex items-center justify-end gap-1.5">
-                                  {/* Botão Primário: Ação Principal de Atendimento */}
+                                  {/* Botão Primário: w-36 h-8 fixo em todas as linhas */}
                                   {next ? (
                                     <button
                                       type="button"
                                       onClick={() => openSessionEditor(part, next.sessionNumber)}
-                                      className="h-8 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition inline-flex items-center gap-1.5 shadow-2xs whitespace-nowrap"
+                                      className="w-36 h-8 px-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition inline-flex items-center justify-center gap-1.5 shadow-2xs whitespace-nowrap shrink-0"
                                       title={`Registrar atendimento clínico de ${next.config.name}`}
                                     >
                                       <Stethoscope className="w-3.5 h-3.5" />
@@ -2746,7 +2746,7 @@ function DashboardContent() {
                                         setTimelineParticipant(part);
                                         setShowTimelineModal(true);
                                       }}
-                                      className="h-8 px-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-lg text-xs font-bold transition inline-flex items-center gap-1.5 whitespace-nowrap shadow-2xs"
+                                      className="w-36 h-8 px-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-lg text-xs font-bold transition inline-flex items-center justify-center gap-1.5 whitespace-nowrap shadow-2xs shrink-0"
                                       title="Ver histórico completo das sessões"
                                     >
                                       <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
@@ -2754,66 +2754,64 @@ function DashboardContent() {
                                     </button>
                                   )}
 
-                                  {/* Agrupamento Padronizado de Ações Secundárias */}
+                                  {/* Agrupamento Padronizado de Ações Secundárias (Todas com h-8) */}
                                   <div className="inline-flex items-center gap-1 border-l border-slate-200 pl-1.5">
-                                    {/* eCRF se houver questionários respondidos */}
-                                    {(part.responses?.length || 0) > 0 && (
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          setResponsesParticipant(part);
-                                          setShowResponsesModal(true);
-                                        }}
-                                        className="h-8 px-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-lg text-xs font-semibold transition inline-flex items-center gap-1 shadow-2xs"
-                                        title="Ver questionários respondidos (eCRF)"
-                                      >
-                                        <span>eCRF</span>
-                                        <span className="px-1 py-0.2 bg-blue-100 text-blue-700 rounded-full text-[10px] font-bold">
-                                          {part.responses?.length}
-                                        </span>
-                                      </button>
-                                    )}
+                                    {/* 1. Histórico / Linha do tempo */}
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setTimelineParticipant(part);
+                                        setShowTimelineModal(true);
+                                      }}
+                                      className="h-8 px-2.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-lg text-xs font-medium transition inline-flex items-center justify-center gap-1 shadow-2xs shrink-0"
+                                      title="Ver linha do tempo e sessões"
+                                    >
+                                      <Clock className="w-3.5 h-3.5 text-slate-400" />
+                                      <span>{sessionCount}/4</span>
+                                    </button>
 
-                                    {/* Portal do Paciente */}
+                                    {/* 2. eCRF (Presente em todas as linhas para alinhamento) */}
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setResponsesParticipant(part);
+                                        setShowResponsesModal(true);
+                                      }}
+                                      className="h-8 px-2.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-lg text-xs font-medium transition inline-flex items-center justify-center gap-1 shadow-2xs shrink-0"
+                                      title="Ver questionários respondidos (eCRF)"
+                                    >
+                                      <span>eCRF</span>
+                                      <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                                        (part.responses?.length || 0) > 0 ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-500'
+                                      }`}>
+                                        {part.responses?.length || 0}
+                                      </span>
+                                    </button>
+
+                                    {/* 3. Portal do Paciente */}
                                     <a
                                       href={`/paciente?code=${part.researchCode}&projectId=${project.id}`}
                                       target="_blank"
                                       rel="noopener noreferrer"
-                                      className="h-8 px-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-lg text-xs font-medium transition inline-flex items-center gap-1 shadow-2xs"
+                                      className="h-8 px-2.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-lg text-xs font-medium transition inline-flex items-center justify-center gap-1 shadow-2xs shrink-0"
                                       title="Abrir portal público do paciente"
                                     >
-                                      <ExternalLink className="w-3 h-3 text-slate-500" />
+                                      <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
                                       <span>Portal</span>
                                     </a>
 
-                                    {/* TCLE Oficial em PDF */}
+                                    {/* 4. TCLE Oficial em PDF */}
                                     <Link
                                       href={`/tcle/${part.id}/pdf`}
                                       target="_blank"
-                                      className="h-8 px-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-lg text-xs font-medium transition inline-flex items-center gap-1 shadow-2xs"
+                                      className="h-8 px-2.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-lg text-xs font-medium transition inline-flex items-center justify-center gap-1 shadow-2xs shrink-0"
                                       title="Baixar/Visualizar TCLE oficial em PDF"
                                     >
-                                      <FileText className="w-3 h-3 text-slate-500" />
+                                      <FileText className="w-3.5 h-3.5 text-slate-500" />
                                       <span>TCLE</span>
                                     </Link>
 
-                                    {/* Histórico / Linha do tempo */}
-                                    {next && (
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          setTimelineParticipant(part);
-                                          setShowTimelineModal(true);
-                                        }}
-                                        className="h-8 px-2 bg-white hover:bg-slate-50 text-slate-600 border border-slate-200 rounded-lg text-xs font-medium transition inline-flex items-center gap-1 shadow-2xs"
-                                        title="Ver linha do tempo e sessões"
-                                      >
-                                        <Clock className="w-3 h-3 text-slate-400" />
-                                        <span>{sessionCount}/4</span>
-                                      </button>
-                                    )}
-
-                                    {/* WhatsApp / Agendamento padronizado */}
+                                    {/* 5. WhatsApp / Agendamento padronizado (w-24 h-8 fixo em todas as linhas) */}
                                     {next && (windows.overallAlert === 'OVERDUE' || windows.overallAlert === 'DUE_NOW') ? (
                                       <button
                                         type="button"
@@ -2827,20 +2825,20 @@ function DashboardContent() {
                                             next.windowEnd
                                           )
                                         }
-                                        className="h-8 px-2.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg text-xs font-bold transition inline-flex items-center gap-1 shadow-2xs"
+                                        className="w-24 h-8 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-bold transition inline-flex items-center justify-center gap-1 shadow-2xs shrink-0"
                                         title={`Agendar retorno ${next.config.name} no WhatsApp`}
                                       >
-                                        <MessageSquare className="w-3 h-3 text-amber-700" />
+                                        <MessageSquare className="w-3.5 h-3.5" />
                                         <span>Agendar</span>
                                       </button>
                                     ) : (
                                       <button
                                         type="button"
                                         onClick={() => openWhatsApp(part.patient.phoneWhatsApp, part.researchCode)}
-                                        className="h-8 px-2 bg-white hover:bg-emerald-50 text-emerald-800 border border-slate-200 hover:border-emerald-300 rounded-lg text-xs font-medium transition inline-flex items-center gap-1 shadow-2xs"
+                                        className="w-24 h-8 bg-white hover:bg-emerald-50 text-emerald-800 border border-slate-200 hover:border-emerald-300 rounded-lg text-xs font-medium transition inline-flex items-center justify-center gap-1 shadow-2xs shrink-0"
                                         title="Conversar no WhatsApp com o participante"
                                       >
-                                        <MessageSquare className="w-3 h-3 text-emerald-600" />
+                                        <MessageSquare className="w-3.5 h-3.5 text-emerald-600" />
                                         <span>Whats</span>
                                       </button>
                                     )}
