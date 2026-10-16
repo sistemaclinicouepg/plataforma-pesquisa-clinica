@@ -110,9 +110,10 @@ export async function POST(req: Request) {
     }
 
     // Geração de Código NÃO-SEQUENCIAL e Criptograficamente Seguro (Anti-Enumeração / LGPD / GCP)
-    // Utiliza 4 caracteres alfanuméricos inequívocos (sem 0, O, 1, I, L) para evitar erros de leitura e digitação
+    // Sem hífen conforme especificação, utiliza 4 caracteres alfanuméricos inequívocos (sem 0, O, 1, I, L)
     // Garante que nenhum paciente consiga acessar a ficha de outro mudando o último dígito
     const generateSecureCode = (prefix: string, length = 4): string => {
+      const cleanPrefix = prefix.replace(/[^A-Z0-9]/gi, '').toUpperCase();
       const chars = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
       let token = '';
       const array = new Uint8Array(length);
@@ -126,7 +127,7 @@ export async function POST(req: Request) {
       for (let i = 0; i < length; i++) {
         token += chars[array[i] % chars.length];
       }
-      return `${prefix}-${token}`;
+      return `${cleanPrefix}${token}`;
     };
 
     let researchCode = generateSecureCode(projectPrefix, 4);

@@ -1539,8 +1539,8 @@ function DashboardContent() {
   };
 
   // Abertura e Gravação de Sessões Clínicas
-  const openSessionEditor = (participant: Participant, sessionNumber: number) => {
-    const existing = participant.sessions?.find((s) => s.sessionNumber === sessionNumber);
+  const openSessionEditor = async (participant: Participant, sessionNumber: number) => {
+    let existing = participant.sessions?.find((s) => s.sessionNumber === sessionNumber);
     const sessionTypes: Record<number, string> = {
       1: 'BASELINE_INTERVENTION_1',
       2: 'INTERVENTION_2',
@@ -1570,6 +1570,37 @@ function DashboardContent() {
       justification: '',
     });
     setShowSessionModal(true);
+
+    // Consulta em tempo real para sincronizar quaisquer relatos submetidos pelo paciente no portal
+    try {
+      const res = await fetch(`/api/participants/${participant.id}/sessions`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.sessions) {
+          const fresh = (data.sessions as ClinicalSession[]).find((s) => s.sessionNumber === sessionNumber);
+          if (fresh) {
+            setCurrentSessionForm((prev) => ({
+              ...prev,
+              painScore0h: fresh.painScore0h ?? prev.painScore0h,
+              painScore1h: fresh.painScore1h ?? prev.painScore1h,
+              painScore24h: fresh.painScore24h ?? prev.painScore24h,
+              painScore48h: fresh.painScore48h ?? prev.painScore48h,
+              notes: fresh.notes || prev.notes,
+              adverseEvents: fresh.adverseEvents || prev.adverseEvents,
+            }));
+          }
+          setProject((prev) => {
+            if (!prev) return prev;
+            return {
+              ...prev,
+              participants: (prev.participants || []).map((p) =>
+                p.id === participant.id ? { ...p, sessions: data.sessions } : p
+              ),
+            };
+          });
+        }
+      }
+    } catch {}
   };
 
   const handleSaveSession = async (e: React.FormEvent) => {
@@ -1589,8 +1620,9 @@ function DashboardContent() {
           if (p.id !== formData.participantId) return p;
           const existingSessions = p.sessions || [];
           const sessionIndex = existingSessions.findIndex((s) => s.sessionNumber === formData.sessionNumber);
+          const prevSess = sessionIndex >= 0 ? existingSessions[sessionIndex] : null;
           const updatedSession = {
-            id: sessionIndex >= 0 ? existingSessions[sessionIndex].id : `temp_${Date.now()}`,
+            id: prevSess ? prevSess.id : `temp_${Date.now()}`,
             participantId: formData.participantId,
             sessionNumber: formData.sessionNumber,
             sessionType: formData.sessionType,
@@ -1598,9 +1630,9 @@ function DashboardContent() {
             shadeRight: formData.shadeRight,
             shadeLeft: formData.shadeLeft,
             painScore0h: formData.painScore0h,
-            painScore1h: formData.painScore1h,
-            painScore24h: formData.painScore24h,
-            painScore48h: formData.painScore48h,
+            painScore1h: formData.painScore1h !== null ? formData.painScore1h : prevSess?.painScore1h ?? null,
+            painScore24h: formData.painScore24h !== null ? formData.painScore24h : prevSess?.painScore24h ?? null,
+            painScore48h: formData.painScore48h !== null ? formData.painScore48h : prevSess?.painScore48h ?? null,
             gingivalIrritation: formData.gingivalIrritation,
             adverseEvents: formData.adverseEvents,
             operatorName: formData.operatorName,

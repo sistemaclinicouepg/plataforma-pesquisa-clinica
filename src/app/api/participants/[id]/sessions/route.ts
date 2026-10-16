@@ -95,6 +95,13 @@ export async function POST(
 
     const parsedDate = sessionDate ? new Date(sessionDate) : new Date();
 
+    const resolveScore = (incoming: unknown, existingVal: number | null) => {
+      if (incoming === undefined) return existingVal;
+      if (incoming === null || incoming === '') return existingVal !== null ? existingVal : null;
+      const n = Number(incoming);
+      return isNaN(n) ? existingVal : n;
+    };
+
     let session;
     if (existing) {
       session = await prisma.clinicalSession.update({
@@ -104,10 +111,10 @@ export async function POST(
           sessionDate: parsedDate,
           shadeRight: shadeRight !== undefined ? shadeRight : existing.shadeRight,
           shadeLeft: shadeLeft !== undefined ? shadeLeft : existing.shadeLeft,
-          painScore0h: painScore0h !== undefined ? (painScore0h === null ? null : Number(painScore0h)) : existing.painScore0h,
-          painScore1h: painScore1h !== undefined ? (painScore1h === null ? null : Number(painScore1h)) : existing.painScore1h,
-          painScore24h: painScore24h !== undefined ? (painScore24h === null ? null : Number(painScore24h)) : existing.painScore24h,
-          painScore48h: painScore48h !== undefined ? (painScore48h === null ? null : Number(painScore48h)) : existing.painScore48h,
+          painScore0h: resolveScore(painScore0h, existing.painScore0h),
+          painScore1h: resolveScore(painScore1h, existing.painScore1h),
+          painScore24h: resolveScore(painScore24h, existing.painScore24h),
+          painScore48h: resolveScore(painScore48h, existing.painScore48h),
           gingivalIrritation: gingivalIrritation !== undefined ? gingivalIrritation : existing.gingivalIrritation,
           adverseEvents: adverseEvents !== undefined ? adverseEvents : existing.adverseEvents,
           operatorName: operatorName !== undefined ? operatorName : existing.operatorName,

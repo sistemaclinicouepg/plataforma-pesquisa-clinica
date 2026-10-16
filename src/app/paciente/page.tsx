@@ -199,6 +199,11 @@ function PacienteContent() {
       }
       if (data.participant.latestSession) {
         setSelectedSessionNumber(data.participant.latestSession.sessionNumber);
+        const activeSess = data.participant.latestSession;
+        const currentScore = timePoint === '0h' ? activeSess.painScore0h : timePoint === '1h' ? activeSess.painScore1h : timePoint === '24h' ? activeSess.painScore24h : activeSess.painScore48h;
+        if (typeof currentScore === 'number') {
+          setPainScore(currentScore);
+        }
       }
       if (formIdParam && data.participant.forms) {
         const found = data.participant.forms.find((f: FormItem) => f.id === formIdParam);
@@ -214,9 +219,14 @@ function PacienteContent() {
           });
           setFormAnswers(initialAnswers);
           setFormError(null);
-          setFormSuccessMessage(null);
           setActiveTab('forms');
         }
+      } else if (data.participant.forms) {
+        setSelectedForm((prev) => {
+          if (!prev) return null;
+          const refreshed = data.participant.forms.find((f: FormItem) => f.id === prev.id);
+          return refreshed || prev;
+        });
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erro ao carregar dados do participante.';
@@ -241,8 +251,9 @@ function PacienteContent() {
 
   const handleSearchParticipant = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputCode.trim()) return;
-    loadParticipant(inputCode.trim());
+    const clean = inputCode.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (!clean) return;
+    loadParticipant(clean);
   };
 
   const handleSubmitReport = async (e: React.FormEvent) => {
@@ -419,6 +430,9 @@ function PacienteContent() {
         setFormRedAlert(null);
       }
       await loadParticipant(participant.researchCode, participant.id);
+      if (typeof window !== 'undefined') {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
     } catch (err: unknown) {
       setFormError(err instanceof Error ? err.message : 'Erro ao registrar respostas. Verifique sua conexão à internet e tente novamente.');
     } finally {
@@ -738,7 +752,7 @@ function PacienteContent() {
               <input
                 type="text"
                 required
-                placeholder="Ex: P01-7K9M ou P001"
+                placeholder="Ex: P01FV5K ou P07NN23"
                 value={inputCode}
                 onChange={(e) => setInputCode(e.target.value)}
                 className="w-full px-4 py-3 border border-slate-300 rounded-xl text-center text-lg font-mono font-bold tracking-widest uppercase focus:ring-2 focus:ring-blue-500 focus:outline-none"
@@ -890,39 +904,118 @@ function PacienteContent() {
           )}
 
           {/* ABA 1: DIÁRIO DE SENSIBILIDADE (EVA) */}
-          {activeTab === 'diary' && (
-            <form onSubmit={handleSubmitReport} className="space-y-6">
-              
-              {/* Seleção do Momento da Avaliação */}
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
-                  1. Momento do relato após a sessão:
-                </label>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {[
-                    { key: '0h' as const, label: '0h (Imed.)', sub: 'Na consulta' },
-                    { key: '1h' as const, label: '1 Hora', sub: 'Pós-clareamento' },
-                    { key: '24h' as const, label: '24 Horas', sub: 'Dia seguinte' },
-                    { key: '48h' as const, label: '48 Horas', sub: '2 dias após' },
-                  ].map((item) => (
-                    <button
-                      key={item.key}
-                      type="button"
-                      onClick={() => setTimePoint(item.key)}
-                      className={`p-2.5 rounded-xl border text-center transition ${
-                        timePoint === item.key
-                          ? 'bg-blue-600 text-white border-blue-600 shadow-xs font-bold'
-                          : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
-                      }`}
-                    >
-                      <span className="block text-xs">{item.label}</span>
-                      <span className={`block text-[10px] ${timePoint === item.key ? 'text-blue-100' : 'text-slate-400'}`}>
-                        {item.sub}
-                      </span>
-                    </button>
-                  ))}
+          {activeTab === 'diary' && (() => {
+            const activeSession = participant?.sessions?.find((s) => s.sessionNumber === selectedSessionNumber) || participant?.latestSession;
+
+            const getMomentScore = (k: '0h' | '1h' | '24h' | '48h'): number | null => {
+              if (!activeSession) return null;
+              if (k === '0h') return activeSession.painScore0h ?? null;
+              if (k === '1h') return activeSession.painScore1h ?? null;
+              if (k === '24h') return activeSession.painScore24h ?? null;
+              if (k === '48h') return activeSession.painScore48h ?? null;
+              return null;
+            };
+
+            const recordedCount = [getMomentScore('0h'), getMomentScore('1h'), getMomentScore('24h'), getMomentScore('48h')].filter((v) => v !== null).length;
+
+            return (
+              <form onSubmit={handleSubmitReport} className="space-y-6">
+                
+                {/* Painel de Registros Confirmados do Participante */}
+                <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 space-y-2.5 shadow-2xs">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-bold text-slate-800 flex items-center gap-1.5">
+                      <Activity className="w-3.5 h-3.5 text-blue-600" />
+                      <span>Registros Salvos no Estudo (Sessão {selectedSessionNumber}):</span>
+                    </span>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                      recordedCount > 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'
+                    }`}>
+                      {recordedCount} de 4 registrados
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 text-[11px]">
+                    {[
+                      { key: '0h' as const, label: '0h (Imed.)', val: getMomentScore('0h') },
+                      { key: '1h' as const, label: '1 Hora', val: getMomentScore('1h') },
+                      { key: '24h' as const, label: '24 Horas', val: getMomentScore('24h') },
+                      { key: '48h' as const, label: '48 Horas', val: getMomentScore('48h') },
+                    ].map((m) => (
+                      <div
+                        key={m.key}
+                        onClick={() => {
+                          setTimePoint(m.key);
+                          if (m.val !== null && typeof m.val === 'number') {
+                            setPainScore(m.val);
+                          }
+                        }}
+                        className={`p-2 rounded-xl border flex flex-col justify-between cursor-pointer transition ${
+                          m.val !== null
+                            ? 'bg-emerald-50/80 border-emerald-300 text-emerald-900 hover:bg-emerald-100'
+                            : 'bg-white border-slate-200 text-slate-400 hover:border-slate-300'
+                        } ${timePoint === m.key ? 'ring-2 ring-blue-500' : ''}`}
+                      >
+                        <span className="font-semibold">{m.label}</span>
+                        <span className="font-mono font-bold mt-0.5">
+                          {m.val !== null ? `✓ EVA ${Number(m.val).toFixed(1)}` : 'Aguardando'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
+
+                {/* Seleção do Momento da Avaliação */}
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
+                    1. Momento do relato após a sessão:
+                  </label>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {[
+                      { key: '0h' as const, label: '0h (Imed.)', sub: 'Na consulta' },
+                      { key: '1h' as const, label: '1 Hora', sub: 'Pós-clareamento' },
+                      { key: '24h' as const, label: '24 Horas', sub: 'Dia seguinte' },
+                      { key: '48h' as const, label: '48 Horas', sub: '2 dias após' },
+                    ].map((item) => {
+                      const isSelected = timePoint === item.key;
+                      const score = getMomentScore(item.key);
+                      const isRecorded = score !== null && score !== undefined;
+
+                      return (
+                        <button
+                          key={item.key}
+                          type="button"
+                          onClick={() => {
+                            setTimePoint(item.key);
+                            if (isRecorded && typeof score === 'number') {
+                              setPainScore(score);
+                            }
+                          }}
+                          className={`p-2.5 rounded-xl border text-center transition flex flex-col justify-between items-center ${
+                            isSelected
+                              ? 'bg-blue-600 text-white border-blue-600 shadow-xs font-bold'
+                              : isRecorded
+                              ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100 font-medium'
+                              : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                          }`}
+                        >
+                          <div className="w-full">
+                            <span className="block text-xs">{item.label}</span>
+                            <span className={`block text-[10px] ${isSelected ? 'text-blue-100' : isRecorded ? 'text-emerald-600 font-semibold' : 'text-slate-400'}`}>
+                              {item.sub}
+                            </span>
+                          </div>
+                          {isRecorded && (
+                            <span className={`mt-1 px-1.5 py-0.5 rounded text-[9px] font-bold ${
+                              isSelected ? 'bg-blue-700 text-white' : 'bg-emerald-200/80 text-emerald-900'
+                            }`}>
+                              ✓ Salvo ({Number(score).toFixed(1)})
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
 
               {/* Escala Visual Analógica (EVA) Contínua e Neutra */}
               <div className="p-5 bg-slate-50 border border-slate-200 rounded-2xl space-y-4">
@@ -1101,7 +1194,8 @@ function PacienteContent() {
               </div>
 
             </form>
-          )}
+          );
+        })()}
 
           {/* ABA 2: QUESTIONÁRIOS DA PESQUISA (eCRF: OHIP-14, Hábitos, Estética) */}
           {activeTab === 'forms' && (

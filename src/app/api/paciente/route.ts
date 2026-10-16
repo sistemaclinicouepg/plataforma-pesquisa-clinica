@@ -80,25 +80,44 @@ export async function GET(req: Request) {
     let resolvedParticipantId: string | null = participantId;
 
     if (!resolvedParticipantId && code) {
-      const cleanedCode = code.trim().toUpperCase();
-      const codeWithoutHyphen = cleanedCode.replace(/-/g, '');
-      const codeVariants = [cleanedCode, codeWithoutHyphen];
+      const rawCode = code.trim().toUpperCase();
+      const cleanedCode = rawCode;
+      const codeWithoutHyphen = rawCode.replace(/[^A-Z0-9]/g, '');
 
-      // Se o usuário digitou sem hífen (ex: P017K9M ou P01001), gera a variante com hífen
-      if (!cleanedCode.includes('-')) {
-        if (cleanedCode.length >= 5) {
-          codeVariants.push(`${cleanedCode.slice(0, cleanedCode.length - 4)}-${cleanedCode.slice(-4)}`);
-        }
-        if (cleanedCode.length >= 6) {
-          codeVariants.push(`${cleanedCode.slice(0, cleanedCode.length - 3)}-${cleanedCode.slice(-3)}`);
-        }
+      // Mapeamento retroativo de códigos antigos/sequenciais para os novos códigos seguros sem hífen
+      const LEGACY_CODE_MAP: Record<string, string> = {
+        'P01001': 'P013WD6', 'P01-001': 'P013WD6', 'P001': 'P013WD6',
+        'P01002': 'P01FV5K', 'P01-002': 'P01FV5K',
+        'P01003': 'P017D8Y', 'P01-003': 'P017D8Y',
+        'P01004': 'P01WGMJ', 'P01-004': 'P01WGMJ',
+        'P02001': 'P02MS4V', 'P02-001': 'P02MS4V',
+        'P01005': 'P01HD8J', 'P01-005': 'P01HD8J',
+        'P02002': 'P02MM9P', 'P02-002': 'P02MM9P',
+        'P03001': 'P03XHTS', 'P03-001': 'P03XHTS',
+        'P01006': 'P0143Q9', 'P01-006': 'P0143Q9',
+        'P04001': 'P0423QR', 'P04-001': 'P0423QR',
+        'P05001': 'P05CQWE', 'P05-001': 'P05CQWE',
+        'P04002': 'P04SUV3', 'P04-002': 'P04SUV3',
+        'P07001': 'P07NN23', 'P07-001': 'P07NN23',
+      };
+
+      const mappedLegacyCode = LEGACY_CODE_MAP[codeWithoutHyphen] || LEGACY_CODE_MAP[rawCode];
+
+      const codeVariants = [rawCode, codeWithoutHyphen];
+      if (mappedLegacyCode) {
+        codeVariants.push(mappedLegacyCode);
+      }
+
+      // Se o usuário digitou com ou sem hífen (ex: P01-3WD6 ou P013WD6)
+      if (codeWithoutHyphen.length >= 5) {
+        codeVariants.push(`${codeWithoutHyphen.slice(0, codeWithoutHyphen.length - 4)}-${codeWithoutHyphen.slice(-4)}`);
       }
 
       // Suporte legado para códigos sequenciais antigos (ex: P01-001)
-      const pMatch = cleanedCode.match(/^P(\d+)-?(\d+)$/);
+      const pMatch = codeWithoutHyphen.match(/^P(\d+)(\d{3})$/);
       if (pMatch) {
         const pNum = String(parseInt(pMatch[1], 10)).padStart(2, '0');
-        const sNum = String(parseInt(pMatch[2], 10)).padStart(3, '0');
+        const sNum = pMatch[2];
         codeVariants.push(`P${pNum}-${sNum}`);
         codeVariants.push(`P${pMatch[1]}-${sNum}`);
         codeVariants.push(`P${pNum}${sNum}`);
@@ -109,8 +128,8 @@ export async function GET(req: Request) {
         where: {
           OR: [
             { researchCode: { in: codeVariants } },
-            { researchCode: { endsWith: `-${cleanedCode}` } },
-            { researchCode: cleanedCode },
+            { researchCode: codeWithoutHyphen },
+            { researchCode: rawCode },
           ],
           ...(projectId && { projectId }),
         },
@@ -293,6 +312,7 @@ export async function GET(req: Request) {
           orderBy: { sessionNumber: 'asc' },
         },
         responses: {
+          orderBy: { submittedAt: 'desc' },
           select: {
             id: true,
             formId: true,
