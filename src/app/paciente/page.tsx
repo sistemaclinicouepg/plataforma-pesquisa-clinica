@@ -204,7 +204,15 @@ function PacienteContent() {
         const found = data.participant.forms.find((f: FormItem) => f.id === formIdParam);
         if (found) {
           setSelectedForm(found);
-          setFormAnswers(found.myAnswers || {});
+          const initialAnswers: Record<string, FormAnswerValue> = { ...(found.myAnswers || {}) };
+          (found.questions || []).forEach((q: FormQuestionItem) => {
+            const qKey = String(q.id);
+            if (q.type === 'vas' && initialAnswers[qKey] === undefined && initialAnswers[q.id] === undefined) {
+              initialAnswers[qKey] = 0;
+              initialAnswers[q.id] = 0;
+            }
+          });
+          setFormAnswers(initialAnswers);
           setFormError(null);
           setFormSuccessMessage(null);
           setActiveTab('forms');
@@ -287,6 +295,7 @@ function PacienteContent() {
         gingivalSensation,
       });
       setIsSubmitted(true);
+      await loadParticipant(participant.researchCode, participant.id);
     } catch (err: unknown) {
       setErrorMsg(err instanceof Error ? err.message : 'Erro ao enviar respostas. Verifique sua conexão à internet e tente novamente.');
     } finally {
@@ -331,6 +340,13 @@ function PacienteContent() {
 
     if (missing.length > 0) {
       setFormError(`Por favor, responda a todas as perguntas obrigatórias marcadas com * (${missing.length} pendente(s)).`);
+      const firstMissingId = String(missing[0].id);
+      setTimeout(() => {
+        const el = document.getElementById(`question-card-${firstMissingId}`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 50);
       return;
     }
 
@@ -722,7 +738,7 @@ function PacienteContent() {
               <input
                 type="text"
                 required
-                placeholder="Ex: P001"
+                placeholder="Ex: P01-7K9M ou P001"
                 value={inputCode}
                 onChange={(e) => setInputCode(e.target.value)}
                 className="w-full px-4 py-3 border border-slate-300 rounded-xl text-center text-lg font-mono font-bold tracking-widest uppercase focus:ring-2 focus:ring-blue-500 focus:outline-none"
@@ -1305,11 +1321,22 @@ function PacienteContent() {
                           );
                         }
 
+                        const isMissing = Boolean(
+                          formError &&
+                          q.required &&
+                          (currentAnswer === undefined || currentAnswer === null || currentAnswer === '')
+                        );
+
                         // PERGUNTA COMUM
                         return (
                           <div
                             key={q.id}
-                            className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-3"
+                            id={`question-card-${q.id}`}
+                            className={`p-4 rounded-2xl space-y-3 transition ${
+                              isMissing
+                                ? 'bg-red-50/60 border-2 border-red-400 ring-2 ring-red-100'
+                                : 'bg-slate-50 border border-slate-200'
+                            }`}
                           >
                             <div>
                               <h4 className="font-bold text-slate-900 text-xs leading-snug">
@@ -1592,6 +1619,12 @@ function PacienteContent() {
                   </div>
 
                   <div className="pt-2">
+                    {formError && (
+                      <div className="mb-3.5 p-3.5 bg-red-50 border-2 border-red-300 rounded-xl text-xs text-red-800 flex items-center space-x-2 shadow-xs">
+                        <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
+                        <span className="font-semibold">{formError}</span>
+                      </div>
+                    )}
                     <button
                       type="submit"
                       disabled={submittingForm}

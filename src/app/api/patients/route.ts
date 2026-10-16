@@ -109,26 +109,32 @@ export async function POST(req: Request) {
       projectPrefix = `P${String(pIdx > 0 ? pIdx : 1).padStart(2, '0')}`;
     }
 
-    // Buscar participantes existentes deste projeto para obter o próximo sequencial
-    const existingInProject = await prisma.participant.findMany({
-      where: { projectId },
-      select: { researchCode: true },
-    });
+    // Geração de Código NÃO-SEQUENCIAL e Criptograficamente Seguro (Anti-Enumeração / LGPD / GCP)
+    // Utiliza 4 caracteres alfanuméricos inequívocos (sem 0, O, 1, I, L) para evitar erros de leitura e digitação
+    // Garante que nenhum paciente consiga acessar a ficha de outro mudando o último dígito
+    const generateSecureCode = (prefix: string, length = 4): string => {
+      const chars = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
+      let token = '';
+      const array = new Uint8Array(length);
+      if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+        crypto.getRandomValues(array);
+      } else {
+        for (let i = 0; i < length; i++) {
+          array[i] = Math.floor(Math.random() * 256);
+        }
+      }
+      for (let i = 0; i < length; i++) {
+        token += chars[array[i] % chars.length];
+      }
+      return `${prefix}-${token}`;
+    };
 
-    const usedNumbers = existingInProject
-      .map((p) => {
-        const m = p.researchCode.match(/(?:-|\b)(\d+)$/);
-        return m ? parseInt(m[1], 10) : 0;
-      })
-      .filter((n) => n > 0);
-
-    let nextNumber = (usedNumbers.length > 0 ? Math.max(...usedNumbers) : 0) + 1;
-    let researchCode = `${projectPrefix}-${String(nextNumber).padStart(3, '0')}`;
-
-    // Garantia absoluta de unicidade em toda a plataforma (evita qualquer conflito entre projetos)
+    let researchCode = generateSecureCode(projectPrefix, 4);
+    let attempts = 0;
+    // Garantia absoluta de unicidade em toda a plataforma
     while (await prisma.participant.findFirst({ where: { researchCode } })) {
-      nextNumber++;
-      researchCode = `${projectPrefix}-${String(nextNumber).padStart(3, '0')}`;
+      attempts++;
+      researchCode = generateSecureCode(projectPrefix, attempts > 5 ? 5 : 4);
     }
 
     // 4. Criar a participação desidentificada vinculada ao projeto

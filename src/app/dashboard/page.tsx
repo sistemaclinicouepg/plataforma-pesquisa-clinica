@@ -1046,6 +1046,19 @@ function DashboardContent() {
 
     // Se restaurou do cache, carrega silenciosamente em segundo plano
     loadProject(hasRestoredFromCache);
+
+    const handleFocus = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        loadProject(true);
+      }
+    };
+    window.addEventListener('visibilitychange', handleFocus);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      window.removeEventListener('visibilitychange', handleFocus);
+      window.removeEventListener('focus', handleFocus);
+    };
   }, [projectIdParam]);
 
   // Ações de Membros da Equipe & Cegamento
@@ -2809,9 +2822,27 @@ function DashboardContent() {
                                     {/* 2. eCRF (Presente em todas as linhas para alinhamento) */}
                                     <button
                                       type="button"
-                                      onClick={() => {
+                                      onClick={async () => {
                                         setResponsesParticipant(part);
                                         setShowResponsesModal(true);
+                                        try {
+                                          const res = await fetch(`/api/responses?participantId=${part.id}`);
+                                          if (res.ok) {
+                                            const data = await res.json();
+                                            if (data.responses) {
+                                              setResponsesParticipant((prev) => (prev && prev.id === part.id ? { ...prev, responses: data.responses } : prev));
+                                              setProject((prev) => {
+                                                if (!prev) return prev;
+                                                return {
+                                                  ...prev,
+                                                  participants: (prev.participants || []).map((p) =>
+                                                    p.id === part.id ? { ...p, responses: data.responses } : p
+                                                  ),
+                                                };
+                                              });
+                                            }
+                                          }
+                                        } catch {}
                                       }}
                                       className="h-8 px-2.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-lg text-xs font-medium transition inline-flex items-center justify-center gap-1 shadow-2xs shrink-0"
                                       title="Ver questionários respondidos (eCRF)"

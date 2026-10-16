@@ -84,6 +84,17 @@ export async function GET(req: Request) {
       const codeWithoutHyphen = cleanedCode.replace(/-/g, '');
       const codeVariants = [cleanedCode, codeWithoutHyphen];
 
+      // Se o usuário digitou sem hífen (ex: P017K9M ou P01001), gera a variante com hífen
+      if (!cleanedCode.includes('-')) {
+        if (cleanedCode.length >= 5) {
+          codeVariants.push(`${cleanedCode.slice(0, cleanedCode.length - 4)}-${cleanedCode.slice(-4)}`);
+        }
+        if (cleanedCode.length >= 6) {
+          codeVariants.push(`${cleanedCode.slice(0, cleanedCode.length - 3)}-${cleanedCode.slice(-3)}`);
+        }
+      }
+
+      // Suporte legado para códigos sequenciais antigos (ex: P01-001)
       const pMatch = cleanedCode.match(/^P(\d+)-?(\d+)$/);
       if (pMatch) {
         const pNum = String(parseInt(pMatch[1], 10)).padStart(2, '0');
@@ -96,7 +107,11 @@ export async function GET(req: Request) {
       // Buscar todos os participantes que compartilham ou correspondem a este código
       let candidates = await prisma.participant.findMany({
         where: {
-          researchCode: { in: codeVariants },
+          OR: [
+            { researchCode: { in: codeVariants } },
+            { researchCode: { endsWith: `-${cleanedCode}` } },
+            { researchCode: cleanedCode },
+          ],
           ...(projectId && { projectId }),
         },
         include: {
