@@ -43,7 +43,7 @@ export async function GET(
           ? {
               auditLogs: {
                 orderBy: { createdAt: 'desc' as const },
-                take: 100,
+                take: 40,
               },
             }
           : {}),
@@ -76,11 +76,6 @@ export async function GET(
           orderBy: { researchCode: 'asc' },
         },
         forms: {
-          include: {
-            responses: {
-              select: { id: true, participantId: true, submittedAt: true, answersJson: true },
-            },
-          },
           orderBy: { createdAt: 'desc' },
         },
       },
@@ -107,16 +102,23 @@ export async function GET(
       return p;
     });
 
-    return NextResponse.json({
-      project: {
-        ...project,
-        auditLogs: (project as any).auditLogs || [],
-        participants: sanitizedParticipants,
+    return NextResponse.json(
+      {
+        project: {
+          ...project,
+          auditLogs: (project as any).auditLogs || [],
+          participants: sanitizedParticipants,
+        },
+        currentUser,
+        currentMember,
+        isBlinded,
       },
-      currentUser,
-      currentMember,
-      isBlinded,
-    });
+      {
+        headers: {
+          'Cache-Control': 'private, no-cache, must-revalidate',
+        },
+      }
+    );
   } catch (error) {
     console.error('Erro ao buscar detalhes do projeto:', error);
     return NextResponse.json(

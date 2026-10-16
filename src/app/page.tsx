@@ -441,14 +441,18 @@ export default function HomePage() {
         }
       } else {
         const errData = await res.json().catch(() => ({}));
-        setLoadError(errData.error || 'Não foi possível carregar os dados mais recentes do servidor.');
+        if (projects.length === 0) {
+          setLoadError(errData.error || 'Não foi possível carregar os dados mais recentes do servidor.');
+        }
       }
     } catch (e: any) {
       console.error('Erro ao carregar projetos:', e);
-      if (e.name === 'AbortError') {
-        setLoadError('A conexão com o banco de dados demorou para responder. Clique para tentar novamente.');
-      } else {
-        setLoadError('Não foi possível conectar ao banco de dados no momento.');
+      if (projects.length === 0) {
+        if (e.name === 'AbortError') {
+          setLoadError('A conexão com o banco de dados demorou para responder. Clique para tentar novamente.');
+        } else {
+          setLoadError('Não foi possível conectar ao banco de dados no momento.');
+        }
       }
     } finally {
       setLoading(false);
@@ -499,6 +503,16 @@ export default function HomePage() {
                 setProjects(validProjects);
                 setLoading(false);
               }
+            }
+          }
+        } else {
+          // Fallback: se cachedUser ainda não foi sincronizado, renderiza os projetos em cache imediatamente (0 ms)
+          const cached = localStorage.getItem('uepg_cached_projects');
+          if (cached) {
+            const parsed = JSON.parse(cached);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setProjects(parsed);
+              setLoading(false);
             }
           }
         }

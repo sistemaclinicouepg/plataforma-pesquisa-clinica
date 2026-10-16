@@ -575,6 +575,10 @@ function DashboardContent() {
   const projectIdParam = searchParams.get('projectId');
 
   const [project, setProject] = useState<ProjectData | null>(null);
+  const projectRef = React.useRef<ProjectData | null>(null);
+  React.useEffect(() => {
+    projectRef.current = project;
+  }, [project]);
   const studyProtocol = React.useMemo(
     () => parseStudyProtocol(project?.anamnesisTemplate),
     [project?.anamnesisTemplate]
@@ -828,15 +832,30 @@ function DashboardContent() {
   const loadProject = async (silent: boolean = false) => {
     setLoadError(null);
     try {
-      if (!silent && !project) {
+      const hasExistingData = Boolean(projectRef.current || project);
+      if (!silent && !hasExistingData) {
         setLoading(true);
-      } else if (silent) {
+      } else {
         setIsRefreshing(true);
       }
-      const pId = projectIdParam;
+
+      let pId = projectIdParam;
+
+      // Se não há projectIdParam na URL, tenta o último projeto conhecido em cache para paralelizar
+      if (!pId && typeof window !== 'undefined') {
+        try {
+          const cachedLastStr = localStorage.getItem('uepg_cached_last_project');
+          if (cachedLastStr) {
+            const parsedLast = JSON.parse(cachedLastStr);
+            if (parsedLast?.id) {
+              pId = parsedLast.id;
+            }
+          }
+        } catch {}
+      }
 
       if (pId) {
-        // Dispara a lista de projetos em segundo plano apenas se ainda não foi carregada
+        // Dispara a lista de projetos em segundo plano se ainda não foi carregada
         if (allProjects.length === 0) {
           fetchWithRetry('/api/projects', 15000, 1)
             .then(async (listRes) => {
@@ -872,10 +891,13 @@ function DashboardContent() {
 
         if (resProject.ok) {
           const data = await resProject.json();
+          projectRef.current = data.project;
           applyProjectData(data);
         } else {
           const errData = await resProject.json().catch(() => ({}));
-          setLoadError(errData.error || 'Erro ao carregar dados do projeto.');
+          if (!projectRef.current) {
+            setLoadError(errData.error || 'Erro ao carregar dados do projeto.');
+          }
         }
       } else {
         const listRes = await fetchWithRetry('/api/projects', 35000, 2);
@@ -899,20 +921,25 @@ function DashboardContent() {
             const firstRes = await fetchWithRetry(`/api/projects/${listData.projects[0].id}`, 35000, 2);
             if (firstRes.ok) {
               const firstData = await firstRes.json();
+              projectRef.current = firstData.project;
               applyProjectData(firstData);
             }
           }
         } else {
           const errData = await listRes.json().catch(() => ({}));
-          setLoadError(errData.error || 'Erro ao carregar lista de projetos.');
+          if (!projectRef.current) {
+            setLoadError(errData.error || 'Erro ao carregar lista de projetos.');
+          }
         }
       }
     } catch (err: any) {
       console.error('Erro ao carregar projeto:', err);
-      if (err.name === 'AbortError') {
-        setLoadError('A conexão com o banco de dados demorou para responder. Clique para tentar novamente.');
-      } else {
-        setLoadError('Não foi possível conectar ao banco de dados no momento.');
+      if (!projectRef.current) {
+        if (err.name === 'AbortError') {
+          setLoadError('A conexão com o banco de dados demorou para responder. Clique para tentar novamente.');
+        } else {
+          setLoadError('Não foi possível conectar ao banco de dados no momento.');
+        }
       }
     } finally {
       setLoading(false);
@@ -940,7 +967,9 @@ function DashboardContent() {
       } catch (e) {}
     }
 
-    // 1. Carregamento seguro via Cache Local particionado por usuário
+    let hasRestoredFromCache = false;
+
+    // 1. Carregamento seguro via Cache Local particionado por usuário (0 ms)
     if (typeof window !== 'undefined') {
       try {
         const cachedUserStr = localStorage.getItem('uepg_cached_user');
@@ -958,13 +987,17 @@ function DashboardContent() {
           ? `uepg_cached_last_project_${currentCachedUser.id}`
           : 'uepg_cached_last_project';
 
-        const cachedStr = cachedKey ? localStorage.getItem(cachedKey) : null;
-        if (cachedStr && currentCachedUser) {
+        let cachedStr = cachedKey ? localStorage.getItem(cachedKey) : null;
+        if (!cachedStr && !projectIdParam) {
+          cachedStr = localStorage.getItem('uepg_cached_last_project');
+        }
+
+        if (cachedStr) {
           const cached = JSON.parse(cachedStr);
           if (cached && cached.id) {
-            // Verificação de permissão: só exibe o projeto em cache se o usuário logado for ADMIN ou membro do projeto
-            const isUserAdmin = currentCachedUser.role === 'ADMIN' || currentCachedUser.email === 'admin@uepg.br';
+            const isUserAdmin = currentCachedUser?.role === 'ADMIN' || currentCachedUser?.email === 'admin@uepg.br';
             const isMember =
+              !currentCachedUser ||
               isUserAdmin ||
               cached.members?.some(
                 (m: any) =>
@@ -975,7 +1008,9 @@ function DashboardContent() {
 
             if (isMember) {
               setProject(cached);
+              projectRef.current = cached;
               setLoading(false); // Exibe o projeto imediatamente sem travar a interface!
+              hasRestoredFromCache = true;
               const approvedCount = (cached.participants || []).filter((p: any) => p.status === 'APPROVED').length;
               const pendingCount = (cached.participants || []).filter((p: any) => p.status === 'PENDING').length;
               const savedTab = sessionStorage.getItem(`uepg_tab_${cached.id}`);
@@ -1009,7 +1044,8 @@ function DashboardContent() {
       })
       .catch(() => {});
 
-    loadProject();
+    // Se restaurou do cache, carrega silenciosamente em segundo plano
+    loadProject(hasRestoredFromCache);
   }, [projectIdParam]);
 
   // Ações de Membros da Equipe & Cegamento
