@@ -64,6 +64,7 @@ import {
   History,
   RefreshCw,
   Sliders,
+  MoreHorizontal,
 } from 'lucide-react';
 
 type Patient = {
@@ -684,6 +685,45 @@ function DashboardContent() {
     if (!dossierParticipant || !project?.participants) return dossierParticipant;
     return (project.participants as Participant[]).find((p) => p.id === dossierParticipant.id) || dossierParticipant;
   }, [dossierParticipant, project?.participants]);
+
+  // Menu dropdown de mais ações da linha do participante
+  const [activeRowMenu, setActiveRowMenu] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('.row-actions-dropdown')) {
+        setActiveRowMenu(null);
+      }
+    };
+    if (activeRowMenu) {
+      document.addEventListener('mousedown', handleOutsideClick);
+      return () => document.removeEventListener('mousedown', handleOutsideClick);
+    }
+  }, [activeRowMenu]);
+
+  const handleOpenResponses = async (part: Participant) => {
+    setResponsesParticipant(part);
+    setShowResponsesModal(true);
+    try {
+      const res = await fetch(`/api/responses?participantId=${part.id}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.responses) {
+          setResponsesParticipant((prev) => (prev && prev.id === part.id ? { ...prev, responses: data.responses } : prev));
+          setProject((prev) => {
+            if (!prev) return prev;
+            return {
+              ...prev,
+              participants: (prev.participants || []).map((p) =>
+                p.id === part.id ? { ...p, responses: data.responses } : p
+              ),
+            };
+          });
+        }
+      }
+    } catch {}
+  };
 
   // Modal de Registro/Edição de Sessão Clínica
   const [showSessionModal, setShowSessionModal] = useState(false);
@@ -2807,15 +2847,15 @@ function DashboardContent() {
                   )}
                 </div>
               ) : (
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto min-h-[320px]">
                   <table className="w-full text-left border-collapse text-xs">
                     <thead>
                       <tr className="border-b border-slate-200 bg-slate-50/90 text-[11px] font-bold uppercase tracking-wider text-slate-500 h-10">
-                        <th className="py-2.5 px-4 min-w-[240px]">Participante</th>
-                        <th className="py-2.5 px-3 min-w-[180px]">Grupo</th>
-                        <th className="py-2.5 px-3 min-w-[150px]">Sessões</th>
-                        <th className="py-2.5 px-3 min-w-[180px]">Status da Janela</th>
-                        <th className="py-2.5 px-4 text-right min-w-[490px]">Ações</th>
+                        <th className="py-2.5 px-4 min-w-[200px]">Participante</th>
+                        <th className="py-2.5 px-3 min-w-[110px]">Grupo</th>
+                        <th className="py-2.5 px-3 min-w-[120px]">Sessões</th>
+                        <th className="py-2.5 px-3 min-w-[150px]">Status da Janela</th>
+                        <th className="py-2.5 px-4 text-right min-w-[240px]">Ações</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
@@ -2963,15 +3003,15 @@ function DashboardContent() {
                                 )}
                               </td>
 
-                              {/* 5. Ações Clínicas Padronizadas (Mesmo Tamanho e Ordem em Todas as Linhas) */}
+                              {/* 5. Ações Clínicas Padronizadas & Compactas */}
                               <td className="py-2.5 px-4 align-middle text-right whitespace-nowrap">
                                 <div className="inline-flex items-center justify-end gap-1.5">
-                                  {/* Botão Primário: w-36 h-8 fixo em todas as linhas */}
+                                  {/* Botão Primário: Registrar Atendimento ou Concluído */}
                                   {next ? (
                                     <button
                                       type="button"
                                       onClick={() => openSessionEditor(part, next.sessionNumber)}
-                                      className="w-36 h-8 px-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition inline-flex items-center justify-center gap-1.5 shadow-2xs whitespace-nowrap shrink-0"
+                                      className="h-8 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition inline-flex items-center justify-center gap-1.5 shadow-2xs whitespace-nowrap shrink-0"
                                       title={`Registrar atendimento clínico de ${next.config.name}`}
                                     >
                                       <Stethoscope className="w-3.5 h-3.5" />
@@ -2984,7 +3024,7 @@ function DashboardContent() {
                                         setTimelineParticipant(part);
                                         setShowTimelineModal(true);
                                       }}
-                                      className="w-36 h-8 px-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-lg text-xs font-bold transition inline-flex items-center justify-center gap-1.5 whitespace-nowrap shadow-2xs shrink-0"
+                                      className="h-8 px-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-lg text-xs font-bold transition inline-flex items-center justify-center gap-1.5 whitespace-nowrap shadow-2xs shrink-0"
                                       title="Ver histórico completo das sessões"
                                     >
                                       <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
@@ -2992,122 +3032,150 @@ function DashboardContent() {
                                     </button>
                                   )}
 
-                                  {/* Agrupamento Padronizado de Ações Secundárias (Todas com h-8) */}
-                                  <div className="inline-flex items-center gap-1 border-l border-slate-200 pl-1.5">
-                                    {/* 0. Prontuário / Ficha Completa */}
+                                  {/* Prontuário / Ficha Completa */}
+                                  <button
+                                    type="button"
+                                    onClick={() => openPatientDossier(part)}
+                                    className="h-8 px-2.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg text-xs font-bold transition inline-flex items-center justify-center gap-1 shadow-2xs shrink-0 cursor-pointer"
+                                    title="Abrir Prontuário e Ficha Clínica Completa (Anamnese, Odontograma e Histórico)"
+                                  >
+                                    <FileSpreadsheet className="w-3.5 h-3.5 text-blue-600" />
+                                    <span>Ficha</span>
+                                  </button>
+
+                                  {/* WhatsApp / Agendamento */}
+                                  {next && (windows.overallAlert === 'OVERDUE' || windows.overallAlert === 'DUE_NOW') ? (
                                     <button
                                       type="button"
-                                      onClick={() => openPatientDossier(part)}
-                                      className="h-8 px-2.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg text-xs font-bold transition inline-flex items-center justify-center gap-1 shadow-2xs shrink-0 cursor-pointer"
-                                      title="Abrir Prontuário e Ficha Clínica Completa (Anamnese, Odontograma e Histórico)"
+                                      onClick={() =>
+                                        openWhatsAppAppointment(
+                                          part.patient.phoneWhatsApp,
+                                          part.researchCode,
+                                          part.patient.fullName,
+                                          next.config.name,
+                                          next.windowStart,
+                                          next.windowEnd
+                                        )
+                                      }
+                                      className="h-8 px-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-bold transition inline-flex items-center justify-center gap-1 shadow-2xs shrink-0"
+                                      title={`Agendar retorno ${next.config.name} no WhatsApp`}
                                     >
-                                      <FileSpreadsheet className="w-3.5 h-3.5 text-blue-600" />
-                                      <span>Ficha</span>
+                                      <MessageSquare className="w-3.5 h-3.5" />
+                                      <span>Agendar</span>
                                     </button>
-
-                                    {/* 1. Histórico / Linha do tempo */}
+                                  ) : (
                                     <button
                                       type="button"
-                                      onClick={() => {
-                                        setTimelineParticipant(part);
-                                        setShowTimelineModal(true);
-                                      }}
-                                      className="h-8 px-2.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-lg text-xs font-medium transition inline-flex items-center justify-center gap-1 shadow-2xs shrink-0"
-                                      title="Ver linha do tempo e sessões"
+                                      onClick={() => openWhatsApp(part.patient.phoneWhatsApp, part.researchCode)}
+                                      className="h-8 w-8 bg-white hover:bg-emerald-50 text-emerald-700 border border-slate-200 hover:border-emerald-300 rounded-lg transition inline-flex items-center justify-center shadow-2xs shrink-0 cursor-pointer"
+                                      title="Conversar no WhatsApp com o participante"
                                     >
-                                      <Clock className="w-3.5 h-3.5 text-slate-400" />
-                                      <span>{sessionCount}/4</span>
+                                      <MessageSquare className="w-3.5 h-3.5 text-emerald-600" />
                                     </button>
+                                  )}
 
-                                    {/* 2. eCRF (Presente em todas as linhas para alinhamento) */}
+                                  {/* Menu Dropdown de Mais Opções (eCRF, Portal, TCLE, Histórico, Edição) */}
+                                  <div className="relative row-actions-dropdown">
                                     <button
                                       type="button"
-                                      onClick={async () => {
-                                        setResponsesParticipant(part);
-                                        setShowResponsesModal(true);
-                                        try {
-                                          const res = await fetch(`/api/responses?participantId=${part.id}`);
-                                          if (res.ok) {
-                                            const data = await res.json();
-                                            if (data.responses) {
-                                              setResponsesParticipant((prev) => (prev && prev.id === part.id ? { ...prev, responses: data.responses } : prev));
-                                              setProject((prev) => {
-                                                if (!prev) return prev;
-                                                return {
-                                                  ...prev,
-                                                  participants: (prev.participants || []).map((p) =>
-                                                    p.id === part.id ? { ...p, responses: data.responses } : p
-                                                  ),
-                                                };
-                                              });
-                                            }
-                                          }
-                                        } catch {}
-                                      }}
-                                      className="h-8 px-2.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-lg text-xs font-medium transition inline-flex items-center justify-center gap-1 shadow-2xs shrink-0"
-                                      title="Ver questionários respondidos (eCRF)"
+                                      onClick={() => setActiveRowMenu(activeRowMenu === part.id ? null : part.id)}
+                                      className={`h-8 w-8 rounded-lg border transition inline-flex items-center justify-center shadow-2xs shrink-0 cursor-pointer ${
+                                        activeRowMenu === part.id
+                                          ? 'bg-slate-200 text-slate-800 border-slate-300'
+                                          : 'bg-white hover:bg-slate-100 text-slate-600 border border-slate-200'
+                                      }`}
+                                      title="Mais opções do participante"
                                     >
-                                      <span>eCRF</span>
-                                      <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
-                                        (part.responses?.length || 0) > 0 ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-500'
-                                      }`}>
-                                        {part.responses?.length || 0}
-                                      </span>
+                                      <MoreHorizontal className="w-4 h-4" />
                                     </button>
 
-                                    {/* 3. Portal do Paciente */}
-                                    <a
-                                      href={`/paciente?code=${part.researchCode}&projectId=${project.id}`}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="h-8 px-2.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-lg text-xs font-medium transition inline-flex items-center justify-center gap-1 shadow-2xs shrink-0"
-                                      title="Abrir portal público do paciente"
-                                    >
-                                      <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
-                                      <span>Portal</span>
-                                    </a>
+                                    {activeRowMenu === part.id && (
+                                      <div className="absolute right-0 top-full mt-1.5 w-52 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 z-40 text-xs text-left animate-in fade-in zoom-in-95 duration-100">
+                                        <div className="px-3 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100">
+                                          Mais Opções
+                                        </div>
 
-                                    {/* 4. TCLE Oficial em PDF */}
-                                    <Link
-                                      href={`/tcle/${part.id}/pdf`}
-                                      target="_blank"
-                                      className="h-8 px-2.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-lg text-xs font-medium transition inline-flex items-center justify-center gap-1 shadow-2xs shrink-0"
-                                      title="Baixar/Visualizar TCLE oficial em PDF"
-                                    >
-                                      <FileText className="w-3.5 h-3.5 text-slate-500" />
-                                      <span>TCLE</span>
-                                    </Link>
+                                        {/* eCRF */}
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            setActiveRowMenu(null);
+                                            handleOpenResponses(part);
+                                          }}
+                                          className="w-full px-3 py-2 text-left hover:bg-slate-50 flex items-center justify-between text-slate-700 transition cursor-pointer"
+                                        >
+                                          <span className="flex items-center gap-2">
+                                            <FileText className="w-3.5 h-3.5 text-blue-600" />
+                                            <span>Questionários (eCRF)</span>
+                                          </span>
+                                          <span
+                                            className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                                              (part.responses?.length || 0) > 0
+                                                ? 'bg-blue-100 text-blue-700'
+                                                : 'bg-slate-100 text-slate-500'
+                                            }`}
+                                          >
+                                            {part.responses?.length || 0}
+                                          </span>
+                                        </button>
 
-                                    {/* 5. WhatsApp / Agendamento padronizado (w-24 h-8 fixo em todas as linhas) */}
-                                    {next && (windows.overallAlert === 'OVERDUE' || windows.overallAlert === 'DUE_NOW') ? (
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          openWhatsAppAppointment(
-                                            part.patient.phoneWhatsApp,
-                                            part.researchCode,
-                                            part.patient.fullName,
-                                            next.config.name,
-                                            next.windowStart,
-                                            next.windowEnd
-                                          )
-                                        }
-                                        className="w-24 h-8 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-bold transition inline-flex items-center justify-center gap-1 shadow-2xs shrink-0"
-                                        title={`Agendar retorno ${next.config.name} no WhatsApp`}
-                                      >
-                                        <MessageSquare className="w-3.5 h-3.5" />
-                                        <span>Agendar</span>
-                                      </button>
-                                    ) : (
-                                      <button
-                                        type="button"
-                                        onClick={() => openWhatsApp(part.patient.phoneWhatsApp, part.researchCode)}
-                                        className="w-24 h-8 bg-white hover:bg-emerald-50 text-emerald-800 border border-slate-200 hover:border-emerald-300 rounded-lg text-xs font-medium transition inline-flex items-center justify-center gap-1 shadow-2xs shrink-0"
-                                        title="Conversar no WhatsApp com o participante"
-                                      >
-                                        <MessageSquare className="w-3.5 h-3.5 text-emerald-600" />
-                                        <span>Whats</span>
-                                      </button>
+                                        {/* Portal do Paciente */}
+                                        <a
+                                          href={`/paciente?code=${part.researchCode}&projectId=${project.id}`}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          onClick={() => setActiveRowMenu(null)}
+                                          className="w-full px-3 py-2 text-left hover:bg-slate-50 flex items-center gap-2 text-slate-700 transition"
+                                        >
+                                          <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
+                                          <span>Portal do Paciente</span>
+                                        </a>
+
+                                        {/* TCLE Oficial PDF */}
+                                        <Link
+                                          href={`/tcle/${part.id}/pdf`}
+                                          target="_blank"
+                                          onClick={() => setActiveRowMenu(null)}
+                                          className="w-full px-3 py-2 text-left hover:bg-slate-50 flex items-center gap-2 text-slate-700 transition"
+                                        >
+                                          <FileSpreadsheet className="w-3.5 h-3.5 text-slate-500" />
+                                          <span>Baixar TCLE (PDF)</span>
+                                        </Link>
+
+                                        {/* Linha do Tempo */}
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            setActiveRowMenu(null);
+                                            setTimelineParticipant(part);
+                                            setShowTimelineModal(true);
+                                          }}
+                                          className="w-full px-3 py-2 text-left hover:bg-slate-50 flex items-center justify-between text-slate-700 transition cursor-pointer"
+                                        >
+                                          <span className="flex items-center gap-2">
+                                            <Clock className="w-3.5 h-3.5 text-slate-500" />
+                                            <span>Linha do Tempo</span>
+                                          </span>
+                                          <span className="text-[10px] text-slate-400 font-mono">
+                                            {sessionCount}/4
+                                          </span>
+                                        </button>
+
+                                        {/* Editar Dados */}
+                                        <div className="border-t border-slate-100 mt-1 pt-1">
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              setActiveRowMenu(null);
+                                              handleOpenEditPatient(part);
+                                            }}
+                                            className="w-full px-3 py-2 text-left hover:bg-slate-50 flex items-center gap-2 text-slate-700 transition cursor-pointer"
+                                          >
+                                            <Edit className="w-3.5 h-3.5 text-slate-500" />
+                                            <span>Editar Cadastro</span>
+                                          </button>
+                                        </div>
+                                      </div>
                                     )}
                                   </div>
                                 </div>
