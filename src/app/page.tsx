@@ -26,6 +26,12 @@ import {
   Calendar,
   User,
   ShieldAlert,
+  LayoutGrid,
+  List,
+  Users,
+  FolderKanban,
+  FileText,
+  ChevronRight,
 } from 'lucide-react';
 
 import {
@@ -78,9 +84,28 @@ export default function HomePage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Filtros de status e busca textual
+  // Filtros de status, busca textual e modo de exibição (Grade / Lista)
   const [statusFilter, setStatusFilter] = useState<StatusFilterType>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedMode = localStorage.getItem('uepg_projects_view_mode');
+      if (savedMode === 'grid' || savedMode === 'list') {
+        setViewMode(savedMode);
+      }
+    }
+  }, []);
+
+  const handleChangeViewMode = (mode: 'grid' | 'list') => {
+    setViewMode(mode);
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('uepg_projects_view_mode', mode);
+      } catch (e) {}
+    }
+  };
 
   // Modal de criação de projeto
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -616,21 +641,28 @@ export default function HomePage() {
     }
   };
 
-  // Estatísticas de contagem por status
+  // Estatísticas de contagem por status e participantes
   const counts = useMemo(() => {
     const total = projects.length;
     let active = 0;
     let completed = 0;
     let cancelled = 0;
+    let totalApproved = 0;
+    let totalPending = 0;
 
     for (const p of projects) {
       const st = p.status || 'ACTIVE';
       if (st === 'ACTIVE') active++;
       else if (st === 'COMPLETED') completed++;
       else if (st === 'CANCELLED') cancelled++;
+
+      for (const part of p.participants || []) {
+        if (part.status === 'APPROVED') totalApproved++;
+        else if (part.status === 'PENDING') totalPending++;
+      }
     }
 
-    return { total, active, completed, cancelled };
+    return { total, active, completed, cancelled, totalApproved, totalPending };
   }, [projects]);
 
   // Filtragem combinada por Status e Busca
@@ -733,7 +765,50 @@ export default function HomePage() {
           </button>
         </div>
 
-        {/* Barra de Filtros e Busca de Projetos */}
+        {/* Barra de Estatísticas Resumidas (KPIs) */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-3.5 sm:p-4 shadow-2xs flex items-center space-x-3 transition hover:border-slate-300">
+            <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+              <FolderKanban className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Total de Estudos</p>
+              <p className="text-xl font-extrabold text-slate-800 leading-tight">{counts.total}</p>
+            </div>
+          </div>
+
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-3.5 sm:p-4 shadow-2xs flex items-center space-x-3 transition hover:border-slate-300">
+            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+              <Activity className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Estudos Ativos</p>
+              <p className="text-xl font-extrabold text-emerald-600 leading-tight">{counts.active}</p>
+            </div>
+          </div>
+
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-3.5 sm:p-4 shadow-2xs flex items-center space-x-3 transition hover:border-slate-300">
+            <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+              <Users className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Voluntários Ativos</p>
+              <p className="text-xl font-extrabold text-indigo-600 leading-tight">{counts.totalApproved}</p>
+            </div>
+          </div>
+
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-3.5 sm:p-4 shadow-2xs flex items-center space-x-3 transition hover:border-slate-300">
+            <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+              <Clock className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Em Triagem</p>
+              <p className="text-xl font-extrabold text-amber-600 leading-tight">{counts.totalPending}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Barra de Filtros, Busca e Alternador de Visão */}
         <div className="mb-6 bg-white border border-slate-200 rounded-2xl p-3 sm:p-4 shadow-xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
           {/* Abas de Filtros por Status */}
           <div className="flex flex-wrap items-center gap-1.5">
@@ -813,24 +888,54 @@ export default function HomePage() {
             </button>
           </div>
 
-          {/* Campo de Busca Rápida */}
-          <div className="relative min-w-[240px] sm:min-w-[280px]">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Buscar por nome ou descrição..."
-              className="w-full pl-9 pr-8 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-            />
-            {searchQuery && (
+          {/* Campo de Busca Rápida + Alternador de Visualização */}
+          <div className="flex items-center gap-2">
+            <div className="relative min-w-[200px] sm:min-w-[240px] flex-1">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Buscar por nome ou descrição..."
+                className="w-full pl-9 pr-8 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+
+            {/* Alternador Grade / Lista */}
+            <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200/80 shrink-0">
               <button
-                onClick={() => setSearchQuery('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
+                type="button"
+                onClick={() => handleChangeViewMode('grid')}
+                className={`p-1.5 rounded-lg transition cursor-pointer ${
+                  viewMode === 'grid'
+                    ? 'bg-white text-blue-600 shadow-2xs font-bold'
+                    : 'text-slate-500 hover:text-slate-700'
+                }`}
+                title="Visualização em Grade Compacta"
               >
-                <X className="w-3.5 h-3.5" />
+                <LayoutGrid className="w-4 h-4" />
               </button>
-            )}
+              <button
+                type="button"
+                onClick={() => handleChangeViewMode('list')}
+                className={`p-1.5 rounded-lg transition cursor-pointer ${
+                  viewMode === 'list'
+                    ? 'bg-white text-blue-600 shadow-2xs font-bold'
+                    : 'text-slate-500 hover:text-slate-700'
+                }`}
+                title="Visualização em Lista / Tabela"
+              >
+                <List className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </div>
 
@@ -910,8 +1015,9 @@ export default function HomePage() {
                   Limpar Filtros
                 </button>
               </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            ) : viewMode === 'grid' ? (
+              /* Visualização em Grade Compacta */
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
                 {filteredProjects.map((project) => {
                   const myMember = (project.members || []).find(
                     (m) => m.user?.id === currentUser?.id
@@ -926,139 +1032,292 @@ export default function HomePage() {
                   const isBlinded = myMember?.isBlinded ?? false;
                   const approvedCount = (project.participants || []).filter((p) => p.status === 'APPROVED').length;
                   const pendingCount = (project.participants || []).filter((p) => p.status === 'PENDING').length;
-
+                  const formsCount = (project.forms || []).length;
                   const pStatus = project.status || 'ACTIVE';
+                  const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.email === 'admin@uepg.br';
 
                   return (
                     <div key={project.id} className="block group">
-                      <div className="bg-white rounded-2xl shadow-xs border border-slate-200 p-6 h-full hover:shadow-md hover:border-blue-400 transition-all flex flex-col justify-between">
+                      <div className="bg-white rounded-2xl shadow-2xs border border-slate-200/90 p-4 sm:p-5 h-full hover:shadow-md hover:border-blue-400 transition-all flex flex-col justify-between">
                         <div>
-                          <div className="flex justify-between items-start mb-4 gap-2">
-                            {/* Badge de Status do Projeto */}
+                          {/* Linha de Badges de Status e Papel */}
+                          <div className="flex justify-between items-center mb-2.5 gap-2">
                             <div className="flex items-center gap-1.5 flex-wrap">
                               {pStatus === 'ACTIVE' && (
-                                <span className="px-2.5 py-1 bg-emerald-100 text-emerald-800 text-xs font-bold rounded-full flex items-center gap-1">
+                                <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200/60 text-[11px] font-bold rounded-full flex items-center gap-1">
                                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                                   <span>Ativo</span>
                                 </span>
                               )}
                               {pStatus === 'COMPLETED' && (
-                                <span className="px-2.5 py-1 bg-blue-100 text-blue-800 text-xs font-bold rounded-full flex items-center gap-1">
+                                <span className="px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-200/60 text-[11px] font-bold rounded-full flex items-center gap-1">
                                   <CheckCircle2 className="w-3 h-3 text-blue-600" />
                                   <span>Finalizado</span>
                                 </span>
                               )}
                               {pStatus === 'CANCELLED' && (
-                                <span className="px-2.5 py-1 bg-slate-200 text-slate-700 text-xs font-bold rounded-full flex items-center gap-1">
+                                <span className="px-2 py-0.5 bg-slate-100 text-slate-600 border border-slate-200 text-[11px] font-bold rounded-full flex items-center gap-1">
                                   <X className="w-3 h-3 text-slate-500" />
                                   <span>Cancelado</span>
                                 </span>
                               )}
                             </div>
 
-                            {/* Badge do Papel do Usuário */}
                             <div>
                               {isBlinded ? (
-                                <span className="px-2.5 py-1 bg-purple-100 text-purple-700 text-xs font-bold rounded-full flex items-center space-x-1">
+                                <span className="px-2 py-0.5 bg-purple-50 text-purple-700 border border-purple-200/60 text-[11px] font-bold rounded-full flex items-center space-x-1">
                                   <EyeOff className="w-3 h-3" />
                                   <span>Avaliador Cego</span>
                                 </span>
                               ) : (
-                                <span className="px-2.5 py-1 bg-slate-100 text-slate-600 text-xs font-bold rounded-full">
+                                <span className="px-2 py-0.5 bg-slate-100 text-slate-600 text-[11px] font-medium rounded-full">
                                   {roleName}
                                 </span>
                               )}
                             </div>
                           </div>
 
+                          {/* Título e Descrição */}
                           <Link href={`/dashboard?projectId=${project.id}`} className="block">
-                            <h3 className="text-xl font-bold text-slate-800 hover:text-blue-600 transition-colors leading-snug">
+                            <h3 className="text-base font-bold text-slate-900 group-hover:text-blue-600 transition-colors line-clamp-1 leading-snug" title={project.name}>
                               {project.name}
                             </h3>
                           </Link>
 
-                          <p className="text-sm text-slate-500 mt-2 line-clamp-2">
+                          <p className="text-xs text-slate-500 mt-1 line-clamp-2 min-h-[32px] leading-relaxed">
                             {project.description || 'Sem descrição cadastrada.'}
                           </p>
+
+                          {/* Chips Compactos de Métricas */}
+                          <div className="mt-3 pt-2.5 border-t border-slate-100 flex flex-wrap items-center gap-1.5">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-50 border border-slate-200/60 text-slate-600 text-[11px] font-medium">
+                              <Users className="w-3 h-3 text-slate-400" />
+                              <strong className="text-slate-800">{approvedCount}</strong> ativos
+                            </span>
+                            {pendingCount > 0 && (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-50 border border-amber-200/60 text-amber-700 text-[11px] font-medium">
+                                <Clock className="w-3 h-3 text-amber-500" />
+                                <strong className="text-amber-800">{pendingCount}</strong> triagem
+                              </span>
+                            )}
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-50/60 border border-blue-100 text-blue-700 text-[11px] font-medium">
+                              <FileText className="w-3 h-3 text-blue-500" />
+                              <span>{formsCount} {formsCount === 1 ? 'eCRF' : 'eCRFs'}</span>
+                            </span>
+                          </div>
                         </div>
 
-                        <div className="mt-5 pt-4 border-t border-slate-100 flex flex-col gap-3">
-                          <div className="flex justify-between items-center text-xs">
-                            <div className="space-x-2 text-xs">
-                              <span className="text-slate-600">
-                                <strong>{approvedCount}</strong> Ativos
-                              </span>
-                              {pendingCount > 0 && (
-                                <span className="text-amber-600 font-semibold">• {pendingCount} na Triagem</span>
-                              )}
-                            </div>
-                            <Link
-                              href={`/dashboard?projectId=${project.id}`}
-                              className="text-blue-600 font-bold text-xs hover:underline flex items-center space-x-1"
-                            >
-                              <span>Acessar</span>
-                              <ArrowRight className="w-3.5 h-3.5" />
-                            </Link>
-                          </div>
+                        {/* Barra de Ações em Linha Única */}
+                        <div className="mt-3.5 pt-2.5 border-t border-slate-100 flex items-center gap-1.5">
+                          <Link
+                            href={`/dashboard?projectId=${project.id}`}
+                            className="flex-1 py-1.5 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold text-center transition flex items-center justify-center gap-1.5 shadow-2xs"
+                          >
+                            <Activity className="w-3.5 h-3.5" />
+                            <span>Prontuário</span>
+                          </Link>
 
-                          {/* Botões de Acesso Rápido Direto + Botão de Excluir para ADMIN */}
-                          <div className="flex items-center gap-2 pt-1 text-xs font-bold">
-                            <Link
-                              href={`/dashboard?projectId=${project.id}`}
-                              onClick={(e) => e.stopPropagation()}
-                              className="flex-1 py-2 px-3 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl text-center border border-blue-200 transition flex items-center justify-center space-x-1.5"
-                            >
-                              <Activity className="w-3.5 h-3.5 text-blue-600" />
-                              <span>Prontuário & Atendimento</span>
-                            </Link>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openEditModal(project);
+                            }}
+                            className="p-1.5 bg-slate-50 hover:bg-slate-100 text-slate-600 hover:text-slate-900 rounded-xl border border-slate-200 transition cursor-pointer shrink-0"
+                            title="Configurar particularidades do estudo, Odontograma e eCRF"
+                          >
+                            <Sliders className="w-4 h-4" />
+                          </button>
+
+                          {isAdmin && (
                             <button
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                openEditModal(project);
+                                setDeleteError(null);
+                                setProjectToDelete(project);
                               }}
-                              className="py-2 px-3 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-xl text-center border border-slate-200 transition flex items-center justify-center space-x-1.5 cursor-pointer shrink-0"
-                              title="Configurar particularidades do estudo, Odontograma e eCRF"
+                              title="Excluir Projeto de Pesquisa (Apenas Administrador)"
+                              className="p-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl border border-red-200 transition cursor-pointer shrink-0"
                             >
-                              <Sliders className="w-3.5 h-3.5 text-slate-600" />
-                              <span>Configurar</span>
+                              <Trash2 className="w-4 h-4" />
                             </button>
-
-                            {/* Botão de Excluir Exclusivo para Administrador */}
-                            {(currentUser?.role === 'ADMIN' || currentUser?.email === 'admin@uepg.br') && (
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setDeleteError(null);
-                                  setProjectToDelete(project);
-                                }}
-                                title="Excluir Projeto de Pesquisa (Apenas Administrador)"
-                                className="p-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg border border-red-200 transition cursor-pointer shrink-0"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            )}
-                          </div>
+                          )}
                         </div>
                       </div>
                     </div>
                   );
                 })}
 
-                {/* Card para Criar Novo Projeto */}
+                {/* Card Compacto para Criar Novo Projeto */}
                 <button
                   onClick={() => setIsCreateModalOpen(true)}
-                  className="bg-slate-50/80 rounded-2xl border-2 border-dashed border-slate-300 p-6 h-full min-h-[200px] hover:border-blue-500 hover:bg-blue-50/50 transition-all flex flex-col items-center justify-center text-slate-500 hover:text-blue-600 group cursor-pointer"
+                  className="bg-slate-50/70 hover:bg-blue-50/40 border-2 border-dashed border-slate-300 hover:border-blue-500 rounded-2xl p-5 min-h-[190px] flex flex-col items-center justify-center text-center transition-all group cursor-pointer"
                 >
-                  <div className="p-4 rounded-full bg-white shadow-2xs group-hover:bg-blue-100 mb-3 transition-colors border border-slate-200">
-                    <Plus className="w-8 h-8" />
+                  <div className="w-10 h-10 rounded-full bg-white shadow-2xs border border-slate-200 group-hover:bg-blue-600 group-hover:border-blue-600 group-hover:text-white text-slate-500 flex items-center justify-center mb-2.5 transition-all">
+                    <Plus className="w-5 h-5 transition-transform group-hover:scale-110" />
                   </div>
-                  <h3 className="text-base font-bold text-slate-700 group-hover:text-blue-600">Criar Novo Projeto</h3>
-                  <p className="text-xs text-center text-slate-400 mt-1 max-w-[200px]">
-                    Defina os objetivos, cegamento da equipe e formulários do estudo.
-                  </p>
+                  <span className="text-sm font-bold text-slate-700 group-hover:text-blue-600 transition-colors">
+                    Criar Novo Estudo
+                  </span>
+                  <span className="text-[11px] text-slate-400 mt-1 max-w-[210px] leading-snug">
+                    Configurar protocolo clínico, cronograma e formulários
+                  </span>
                 </button>
+              </div>
+            ) : (
+              /* Visualização em Lista / Tabela de Alta Densidade */
+              <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-50/80 border-b border-slate-200 text-slate-500 uppercase tracking-wider text-[10px] font-semibold">
+                      <tr>
+                        <th scope="col" className="px-4 sm:px-6 py-3">Estudo / Descrição</th>
+                        <th scope="col" className="px-4 py-3 hidden md:table-cell">Papel</th>
+                        <th scope="col" className="px-4 py-3">Status</th>
+                        <th scope="col" className="px-4 py-3 hidden sm:table-cell">Participantes</th>
+                        <th scope="col" className="px-4 py-3 hidden lg:table-cell">eCRFs</th>
+                        <th scope="col" className="px-4 sm:px-6 py-3 text-right">Ações</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {filteredProjects.map((project) => {
+                        const myMember = (project.members || []).find(
+                          (m) => m.user?.id === currentUser?.id
+                        );
+                        const roleLabels: Record<string, string> = {
+                          COORDINATOR: 'Coordenador',
+                          CO_ADVISOR: 'Co-orientador',
+                          OPERATOR: 'Operador',
+                          EVALUATOR: 'Avaliador',
+                        };
+                        const roleName = roleLabels[myMember?.role || ''] || 'Pesquisador';
+                        const isBlinded = myMember?.isBlinded ?? false;
+                        const approvedCount = (project.participants || []).filter((p) => p.status === 'APPROVED').length;
+                        const pendingCount = (project.participants || []).filter((p) => p.status === 'PENDING').length;
+                        const formsCount = (project.forms || []).length;
+                        const pStatus = project.status || 'ACTIVE';
+                        const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.email === 'admin@uepg.br';
+
+                        return (
+                          <tr key={project.id} className="hover:bg-slate-50/70 transition-colors group">
+                            <td className="px-4 sm:px-6 py-3.5">
+                              <Link href={`/dashboard?projectId=${project.id}`} className="block">
+                                <span className="font-bold text-slate-900 group-hover:text-blue-600 transition-colors text-sm">
+                                  {project.name}
+                                </span>
+                                {project.description && (
+                                  <p className="text-slate-400 text-xs truncate max-w-xs sm:max-w-md mt-0.5">
+                                    {project.description}
+                                  </p>
+                                )}
+                              </Link>
+                            </td>
+                            <td className="px-4 py-3.5 hidden md:table-cell whitespace-nowrap">
+                              {isBlinded ? (
+                                <span className="px-2 py-0.5 bg-purple-50 text-purple-700 border border-purple-200/60 text-[11px] font-bold rounded-full inline-flex items-center gap-1">
+                                  <EyeOff className="w-3 h-3" />
+                                  <span>Avaliador Cego</span>
+                                </span>
+                              ) : (
+                                <span className="px-2 py-0.5 bg-slate-100 text-slate-600 text-[11px] font-medium rounded-full">
+                                  {roleName}
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3.5 whitespace-nowrap">
+                              {pStatus === 'ACTIVE' && (
+                                <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200/60 text-[11px] font-bold rounded-full inline-flex items-center gap-1">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                  <span>Ativo</span>
+                                </span>
+                              )}
+                              {pStatus === 'COMPLETED' && (
+                                <span className="px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-200/60 text-[11px] font-bold rounded-full inline-flex items-center gap-1">
+                                  <CheckCircle2 className="w-3 h-3 text-blue-600" />
+                                  <span>Finalizado</span>
+                                </span>
+                              )}
+                              {pStatus === 'CANCELLED' && (
+                                <span className="px-2 py-0.5 bg-slate-100 text-slate-600 border border-slate-200 text-[11px] font-bold rounded-full inline-flex items-center gap-1">
+                                  <X className="w-3 h-3 text-slate-500" />
+                                  <span>Cancelado</span>
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3.5 hidden sm:table-cell whitespace-nowrap">
+                              <div className="flex items-center gap-1.5">
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[11px] font-medium">
+                                  <Users className="w-3 h-3 text-slate-400" />
+                                  <strong>{approvedCount}</strong> ativos
+                                </span>
+                                {pendingCount > 0 && (
+                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-200/60 text-[10px] font-medium">
+                                    {pendingCount} triagem
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3.5 hidden lg:table-cell whitespace-nowrap text-slate-600">
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-50/60 border border-blue-100 text-blue-700 text-[11px] font-medium">
+                                <FileText className="w-3 h-3 text-blue-500" />
+                                {formsCount} {formsCount === 1 ? 'eCRF' : 'eCRFs'}
+                              </span>
+                            </td>
+                            <td className="px-4 sm:px-6 py-3.5 text-right whitespace-nowrap">
+                              <div className="flex items-center justify-end gap-1.5">
+                                <Link
+                                  href={`/dashboard?projectId=${project.id}`}
+                                  className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold inline-flex items-center gap-1 transition shadow-2xs"
+                                >
+                                  <Activity className="w-3.5 h-3.5" />
+                                  <span className="hidden sm:inline">Prontuário</span>
+                                </Link>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    openEditModal(project);
+                                  }}
+                                  className="p-1.5 bg-slate-50 hover:bg-slate-100 text-slate-600 hover:text-slate-900 rounded-lg border border-slate-200 transition cursor-pointer"
+                                  title="Configurar particularidades do estudo, Odontograma e eCRF"
+                                >
+                                  <Sliders className="w-3.5 h-3.5" />
+                                </button>
+                                {isAdmin && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setDeleteError(null);
+                                      setProjectToDelete(project);
+                                    }}
+                                    title="Excluir Projeto de Pesquisa (Apenas Administrador)"
+                                    className="p-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg border border-red-200 transition cursor-pointer"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Rodapé da tabela com botão rápido para novo projeto */}
+                <div className="p-3 bg-slate-50/70 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
+                  <span>Exibindo <strong>{filteredProjects.length}</strong> de <strong>{counts.total}</strong> estudos</span>
+                  <button
+                    onClick={() => setIsCreateModalOpen(true)}
+                    className="text-blue-600 hover:text-blue-800 font-bold inline-flex items-center gap-1 cursor-pointer transition"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Cadastrar Novo Estudo</span>
+                  </button>
+                </div>
               </div>
             )}
           </>
