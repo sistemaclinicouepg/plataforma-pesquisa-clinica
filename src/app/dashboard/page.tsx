@@ -62,6 +62,7 @@ import {
   FileCode,
   History,
   RefreshCw,
+  Sliders,
 } from 'lucide-react';
 
 type Patient = {
@@ -184,6 +185,7 @@ type ProjectData = {
   id: string;
   name: string;
   description: string | null;
+  status?: string | null;
   participants: Participant[];
   members: ProjectMember[];
   forms: Array<{
@@ -631,6 +633,13 @@ function DashboardContent() {
   const [showNewPatientModal, setShowNewPatientModal] = useState(false);
   const [openAnamnesisAfterCreate, setOpenAnamnesisAfterCreate] = useState(true);
 
+  // Modal de Edição de Dados do Estudo Clínico
+  const [showEditProjectModal, setShowEditProjectModal] = useState(false);
+  const [editProjectName, setEditProjectName] = useState('');
+  const [editProjectDesc, setEditProjectDesc] = useState('');
+  const [editProjectStatus, setEditProjectStatus] = useState<'ACTIVE' | 'COMPLETED' | 'CANCELLED'>('ACTIVE');
+  const [savingProjectEdit, setSavingProjectEdit] = useState(false);
+
   // Modal de Ficha Clínica & Anamnese do Projeto
   const [showAnamnesisModal, setShowAnamnesisModal] = useState(false);
   const [currentAnamnesisPart, setCurrentAnamnesisPart] = useState<Participant | null>(null);
@@ -1060,6 +1069,85 @@ function DashboardContent() {
       window.removeEventListener('focus', handleFocus);
     };
   }, [projectIdParam]);
+
+  // Ações de Edição do Projeto no Dashboard
+  const openEditProjectModal = () => {
+    if (!project) return;
+    setEditProjectName(project.name);
+    setEditProjectDesc(project.description || '');
+    setEditProjectStatus(
+      project.status === 'COMPLETED' ? 'COMPLETED' : project.status === 'CANCELLED' ? 'CANCELLED' : 'ACTIVE'
+    );
+    setShowEditProjectModal(true);
+  };
+
+  const handleSaveProjectEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!project || !editProjectName.trim()) return;
+
+    try {
+      setSavingProjectEdit(true);
+      const authToken = typeof window !== 'undefined' ? localStorage.getItem('uepg_auth_token') : null;
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
+
+      const res = await fetch(`/api/projects/${project.id}`, {
+        method: 'PATCH',
+        headers,
+        credentials: 'include',
+        body: JSON.stringify({
+          name: editProjectName.trim(),
+          description: editProjectDesc.trim() || null,
+          status: editProjectStatus,
+        }),
+      });
+
+      if (res.ok) {
+        const updated = {
+          ...project,
+          name: editProjectName.trim(),
+          description: editProjectDesc.trim() || null,
+          status: editProjectStatus,
+        };
+        setProject(updated);
+        projectRef.current = updated;
+        setShowEditProjectModal(false);
+
+        setAllProjects((prev) =>
+          prev.map((p) => (p.id === project.id ? { ...p, name: editProjectName.trim() } : p))
+        );
+
+        if (typeof window !== 'undefined') {
+          try {
+            localStorage.setItem(`uepg_cached_project_${project.id}`, JSON.stringify(updated));
+            const cachedList = localStorage.getItem('uepg_cached_projects');
+            if (cachedList) {
+              const parsed = JSON.parse(cachedList);
+              const nextList = parsed.map((p: any) =>
+                p.id === project.id
+                  ? {
+                      ...p,
+                      name: editProjectName.trim(),
+                      description: editProjectDesc.trim() || null,
+                      status: editProjectStatus,
+                    }
+                  : p
+              );
+              localStorage.setItem('uepg_cached_projects', JSON.stringify(nextList));
+            }
+          } catch (e) {}
+        }
+      } else {
+        const err = await res.json().catch(() => ({}));
+        alert(err.error || 'Erro ao salvar alterações do projeto.');
+      }
+    } catch (err) {
+      console.error('Erro ao atualizar projeto:', err);
+      alert('Erro de conexão ao salvar alterações do projeto.');
+    } finally {
+      setSavingProjectEdit(false);
+    }
+  };
 
   // Ações de Membros da Equipe & Cegamento
   const handleToggleBlinded = async (memberId: string, currentVal: boolean) => {
@@ -2269,9 +2357,12 @@ function DashboardContent() {
                     value={project.id}
                     onChange={(e) => {
                       const newId = e.target.value;
+                      if (typeof window !== 'undefined') {
+                        localStorage.setItem('app_active_project_id', newId);
+                      }
                       router.push(`/dashboard?projectId=${newId}`);
                     }}
-                    className="text-sm font-bold text-slate-900 bg-slate-50 hover:bg-slate-100 border border-slate-300 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer max-w-[260px] sm:max-w-md truncate"
+                    className="text-sm font-bold text-slate-900 bg-slate-50 hover:bg-slate-100 border border-slate-300 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer max-w-[240px] sm:max-w-xs truncate"
                     title="Alternar entre projetos de pesquisa"
                   >
                     {allProjects.map((p) => (
@@ -2286,17 +2377,37 @@ function DashboardContent() {
                   {project.name}
                 </span>
               )}
+
+              {/* Badge de Status do Estudo */}
+              {project.status === 'COMPLETED' ? (
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-200 inline-flex items-center gap-1 shrink-0">
+                  <CheckCircle2 className="w-3 h-3 text-blue-600" />
+                  <span>Finalizado</span>
+                </span>
+              ) : project.status === 'CANCELLED' ? (
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-700 border border-slate-300 inline-flex items-center gap-1 shrink-0">
+                  <X className="w-3 h-3 text-slate-500" />
+                  <span>Cancelado</span>
+                </span>
+              ) : (
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 inline-flex items-center gap-1 shrink-0">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <span>Ativo</span>
+                </span>
+              )}
+
               <button
                 onClick={() => loadProject(true)}
                 disabled={isRefreshing}
                 title="Recarregar dados do projeto"
-                className="p-1.5 text-slate-400 hover:text-blue-600 rounded-lg hover:bg-slate-100 transition disabled:opacity-50"
+                className="p-1.5 text-slate-400 hover:text-blue-600 rounded-lg hover:bg-slate-100 transition disabled:opacity-50 cursor-pointer"
               >
                 <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-blue-600' : ''}`} />
               </button>
             </div>
 
-            <div className="flex items-center gap-2 shrink-0">
+            {/* Ações e Ferramentas Conectadas do Estudo Clínico */}
+            <div className="flex flex-wrap items-center gap-2 shrink-0">
               <button
                 onClick={() => setShowNewPatientModal(true)}
                 className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center space-x-1.5 cursor-pointer shrink-0"
@@ -2305,13 +2416,34 @@ function DashboardContent() {
                 <span>Cadastrar Paciente</span>
               </button>
 
+              <button
+                type="button"
+                onClick={openEditProjectModal}
+                className="px-3 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-xl transition flex items-center space-x-1.5 shadow-2xs shrink-0 cursor-pointer"
+                title="Editar nome, descrição e status deste estudo"
+              >
+                <Sliders className="w-3.5 h-3.5 text-slate-600" />
+                <span>Editar Estudo</span>
+              </button>
+
               <Link
                 href={`/anamnese?projectId=${project.id}`}
                 className="px-3 py-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-semibold rounded-xl transition flex items-center space-x-1.5 shadow-2xs shrink-0"
                 title="Configurar Odontograma, Critérios e Instrumentos do Estudo"
               >
-                <Settings className="w-3.5 h-3.5 text-slate-600" />
-                <span>Configurar Estudo</span>
+                <Stethoscope className="w-3.5 h-3.5 text-blue-600" />
+                <span className="hidden sm:inline">Ficha & Critérios</span>
+                <span className="sm:hidden">Ficha</span>
+              </Link>
+
+              <Link
+                href={`/construtor?projectId=${project.id}`}
+                className="px-3 py-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-semibold rounded-xl transition flex items-center space-x-1.5 shadow-2xs shrink-0"
+                title="Construtor de questionários eCRFs para pesquisador ou paciente"
+              >
+                <FileCode className="w-3.5 h-3.5 text-indigo-600" />
+                <span className="hidden sm:inline">Construtor eCRF</span>
+                <span className="sm:hidden">eCRF</span>
               </Link>
 
               <Link
@@ -2319,8 +2451,8 @@ function DashboardContent() {
                 className="px-3 py-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-semibold rounded-xl transition flex items-center space-x-1.5 shadow-2xs shrink-0"
                 title="Personalizar Termo de Consentimento Livre e Esclarecido"
               >
-                <FileText className="w-3.5 h-3.5 text-slate-600" />
-                <span>Personalizar TCLE</span>
+                <FileText className="w-3.5 h-3.5 text-emerald-600" />
+                <span>TCLE</span>
               </Link>
             </div>
           </div>
@@ -6322,6 +6454,125 @@ function DashboardContent() {
           </div>
         );
       })()}
+
+      {/* Modal de Edição de Dados do Estudo Clínico */}
+      {showEditProjectModal && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-xl w-full p-6 border border-slate-200">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+              <div className="flex items-center space-x-2.5">
+                <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+                  <Sliders className="w-4 h-4" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-slate-900">Editar Dados do Estudo Clínico</h2>
+                  <p className="text-xs text-slate-500">
+                    Ajuste o título, a descrição e o status de andamento deste projeto.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowEditProjectModal(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveProjectEdit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                  Nome do Projeto / Ensaio Clínico *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editProjectName}
+                  onChange={(e) => setEditProjectName(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                  Descrição / Hipótese do Estudo (Opcional)
+                </label>
+                <textarea
+                  rows={3}
+                  value={editProjectDesc}
+                  onChange={(e) => setEditProjectDesc(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                  Status do Estudo
+                </label>
+                <select
+                  value={editProjectStatus}
+                  onChange={(e) => setEditProjectStatus(e.target.value as any)}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white font-medium"
+                >
+                  <option value="ACTIVE">🟢 Em Andamento / Ativo</option>
+                  <option value="COMPLETED">🔵 Finalizado / Concluído</option>
+                  <option value="CANCELLED">⚪ Cancelado / Interrompido</option>
+                </select>
+              </div>
+
+              <div className="pt-2 border-t border-slate-100">
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">
+                  Editores Especializados deste Estudo:
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                  <Link
+                    href={`/anamnese?projectId=${project.id}`}
+                    className="p-2.5 bg-blue-50/70 hover:bg-blue-100/80 border border-blue-200 rounded-xl text-blue-900 font-semibold transition flex items-center justify-between"
+                  >
+                    <span>Ficha Clínica & Critérios</span>
+                    <ChevronRight className="w-4 h-4 text-blue-600" />
+                  </Link>
+                  <Link
+                    href={`/construtor?projectId=${project.id}`}
+                    className="p-2.5 bg-indigo-50/70 hover:bg-indigo-100/80 border border-indigo-200 rounded-xl text-indigo-900 font-semibold transition flex items-center justify-between"
+                  >
+                    <span>Construtor de eCRF</span>
+                    <ChevronRight className="w-4 h-4 text-indigo-600" />
+                  </Link>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end space-x-3 pt-4 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setShowEditProjectModal(false)}
+                  className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingProjectEdit || !editProjectName.trim()}
+                  className="px-5 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-xs transition disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
+                >
+                  {savingProjectEdit ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Salvando...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-3.5 h-3.5" />
+                      <span>Salvar Alterações</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
     </div>
   );

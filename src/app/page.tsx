@@ -524,8 +524,11 @@ export default function HomePage() {
     loadData();
   }, []);
 
-  const handleCreateProject = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleCreateProject = async (
+    e: React.FormEvent,
+    targetDestination: 'anamnese' | 'dashboard' = 'anamnese'
+  ) => {
+    if (e && e.preventDefault) e.preventDefault();
     if (!newProjectName.trim()) return;
 
     try {
@@ -574,7 +577,14 @@ export default function HomePage() {
         setNewProjectPrefix('');
         setNewProjectStatus('ACTIVE');
         if (data.project?.id) {
-          router.push(`/anamnese?projectId=${data.project.id}&new=true`);
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('app_active_project_id', data.project.id);
+          }
+          if (targetDestination === 'dashboard') {
+            router.push(`/dashboard?projectId=${data.project.id}`);
+          } else {
+            router.push(`/anamnese?projectId=${data.project.id}&new=true`);
+          }
         } else {
           loadData();
         }
@@ -1599,11 +1609,25 @@ export default function HomePage() {
                   )}
 
                   <button
-                    type="submit"
+                    type="button"
                     disabled={creating}
-                    className="px-5 py-2 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
+                    onClick={(e) => handleCreateProject(e, 'dashboard')}
+                    className="px-3.5 py-2 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
+                    title="Criar o projeto e abrir diretamente o Prontuário & Atendimento"
                   >
-                    <span>{creating ? 'Criando Projeto...' : 'Criar Estudo & Salvar Protocolo'}</span>
+                    <Activity className="w-3.5 h-3.5 text-blue-600" />
+                    <span>Criar e Ir ao Prontuário</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={creating}
+                    onClick={(e) => handleCreateProject(e, 'anamnese')}
+                    className="px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
+                    title="Criar o projeto e avançar para a personalização de critérios e odontograma"
+                  >
+                    <span>{creating ? 'Criando Projeto...' : 'Criar e Configurar Ficha'}</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
                   </button>
                 </div>
               </div>
