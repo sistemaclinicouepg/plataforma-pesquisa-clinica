@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { OFFICIAL_UEPG_TCLE } from '@/lib/tcleDefault';
 
 export async function GET(
   req: Request,
@@ -20,26 +21,14 @@ export async function GET(
         success: true,
         consentForm: {
           id: 'demo-tcle',
-          title: 'Ensaio Clínico de Demonstração - Clareamento Dental UEPG',
-          responsibleResearcher: 'Dra. Roberta Micheten Dias',
-          advisor: 'Profa. Dra. Alessandra Reis',
-          institution: 'Universidade Estadual de Ponta Grossa – UEPG',
-          ethicsNumber: 'Parecer CEP nº 5.892.104 / CAAE',
-          ethicsContacts:
-            'Comitê de Ética em Pesquisa da UEPG: Av. Carlos Cavalcanti, nº 4748, Bloco Reitoria, Sala 22 - Uvaranas, Ponta Grossa/PR. Tel: (42) 3220-3282 - E-mail: coep105@uepg.br',
-          contentMarkdown: `Você está sendo convidado(a) a participar de uma pesquisa científica desenvolvida na Universidade Estadual de Ponta Grossa (UEPG). Antes de decidir participar, é fundamental que leia atentamente este documento.
-
-### 1. Justificativa e Objetivos
-Esta pesquisa tem como objetivo comparar a eficácia clínica de dois géis clareadores amplamente utilizados no mercado odontológico: peróxido de hidrogênio a 6% e peróxido de carbamida a 37%.
-
-### 2. Procedimentos da Pesquisa
-Serão avaliados ao longo do tratamento: alteração e estabilidade da cor dos dentes, ocorrência e intensidade de eventual sensibilidade dentária e saúde gengival.
-
-### 3. Riscos e Benefícios
-Os riscos são mínimos e equivalentes a procedimentos odontológicos de rotina. Caso haja sensibilidade, atendimento imediato e agentes dessensibilizantes serão oferecidos gratuitamente.
-
-### 4. Confidencialidade e LGPD (Lei nº 13.709/2018)
-Seus dados pessoais serão rigorosamente protegidos nos termos da Lei Geral de Proteção de Dados. Qualquer divulgação de resultados em periódicos científicos ocorrerá de forma anônima através de código de pesquisa alfanumérico.`,
+          title: OFFICIAL_UEPG_TCLE.title,
+          responsibleResearcher: OFFICIAL_UEPG_TCLE.responsibleResearcher,
+          advisor: OFFICIAL_UEPG_TCLE.advisor,
+          institution: OFFICIAL_UEPG_TCLE.institution,
+          ethicsNumber: OFFICIAL_UEPG_TCLE.ethicsNumber,
+          ethicsContacts: OFFICIAL_UEPG_TCLE.ethicsContacts,
+          contentMarkdown: OFFICIAL_UEPG_TCLE.contentMarkdown,
+          assentContentMarkdown: OFFICIAL_UEPG_TCLE.assentContentMarkdown,
         },
         participant: {
           id: 'demo',
@@ -100,26 +89,14 @@ Seus dados pessoais serão rigorosamente protegidos nos termos da Lei Geral de P
       consentForm = {
         id: `default-${participant.project.id}`,
         projectId: participant.project.id,
-        title: participant.project.name,
-        responsibleResearcher: 'Dra. Roberta Micheten Dias',
-        advisor: 'Profa. Dra. Alessandra Reis',
-        institution: 'Universidade Estadual de Ponta Grossa – UEPG',
-        ethicsNumber: 'Parecer CEP nº 5.892.104 / CAAE',
-        ethicsContacts:
-          'Comitê de Ética em Pesquisa da UEPG: Av. Carlos Cavalcanti, nº 4748, Bloco Reitoria, Sala 22 - Uvaranas, Ponta Grossa/PR. Tel: (42) 3220-3282 - E-mail: coep105@uepg.br',
-        contentMarkdown: `Você está sendo convidado(a) a participar de uma pesquisa científica desenvolvida na Universidade Estadual de Ponta Grossa (UEPG). Antes de decidir participar, é fundamental que leia atentamente este documento.
-
-### 1. Justificativa e Objetivos
-Esta pesquisa tem como objetivo avaliar protocolos clínicos odontológicos desenvolvidos no âmbito dos ensaios clínicos da UEPG.
-
-### 2. Procedimentos da Pesquisa
-Serão avaliados ao longo do tratamento a eficácia do protocolo, eventual sensibilidade relatada e parâmetros de segurança clínica.
-
-### 3. Confidencialidade e LGPD (Lei nº 13.709/2018)
-Seus dados pessoais serão protegidos com sigilo e confidencialidade nos termos da LGPD, sendo identificados na pesquisa estritamente através do seu código de pesquisa.`,
-        assentContentMarkdown: `Termo de Assentimento Livre e Esclarecido (TALE) - UEPG
-Você está sendo convidado a participar de uma pesquisa sobre clareamento dental e saúde bucal.
-Explicamos tudo para você e seus pais ou responsáveis. Se você tiver qualquer dúvida ou não quiser continuar em qualquer momento, você pode nos dizer e nada vai acontecer de ruim. Seus pais assinam junto com você para confirmar sua participação segura.`,
+        title: participant.project.name || OFFICIAL_UEPG_TCLE.title,
+        responsibleResearcher: OFFICIAL_UEPG_TCLE.responsibleResearcher,
+        advisor: OFFICIAL_UEPG_TCLE.advisor,
+        institution: OFFICIAL_UEPG_TCLE.institution,
+        ethicsNumber: OFFICIAL_UEPG_TCLE.ethicsNumber,
+        ethicsContacts: OFFICIAL_UEPG_TCLE.ethicsContacts,
+        contentMarkdown: OFFICIAL_UEPG_TCLE.contentMarkdown,
+        assentContentMarkdown: OFFICIAL_UEPG_TCLE.assentContentMarkdown,
         createdAt: new Date(),
         updatedAt: new Date(),
       };

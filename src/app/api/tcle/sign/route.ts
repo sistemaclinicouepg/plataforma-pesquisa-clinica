@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { headers } from 'next/headers';
+import { OFFICIAL_UEPG_TCLE } from '@/lib/tcleDefault';
 
 export async function GET(req: Request) {
   try {
@@ -19,14 +20,14 @@ export async function GET(req: Request) {
         success: true,
         consentForm: {
           id: 'demo-tcle',
-          title: 'Ensaio Clínico de Demonstração - Clareamento Dental UEPG',
-          responsibleResearcher: 'Dra. Roberta Micheten Dias',
-          advisor: 'Profa. Dra. Alessandra Reis',
-          institution: 'Universidade Estadual de Ponta Grossa – UEPG',
-          ethicsNumber: 'Parecer CEP nº 5.892.104 / CAAE',
-          ethicsContacts:
-            'Comitê de Ética em Pesquisa da UEPG: Av. Carlos Cavalcanti, nº 4748, Bloco Reitoria, Sala 22 - Uvaranas, Ponta Grossa/PR. Tel: (42) 3220-3282 - E-mail: coep105@uepg.br',
-          contentMarkdown: 'Termo de Consentimento Livre e Esclarecido padrão assinado pelo participante.',
+          title: OFFICIAL_UEPG_TCLE.title,
+          responsibleResearcher: OFFICIAL_UEPG_TCLE.responsibleResearcher,
+          advisor: OFFICIAL_UEPG_TCLE.advisor,
+          institution: OFFICIAL_UEPG_TCLE.institution,
+          ethicsNumber: OFFICIAL_UEPG_TCLE.ethicsNumber,
+          ethicsContacts: OFFICIAL_UEPG_TCLE.ethicsContacts,
+          contentMarkdown: OFFICIAL_UEPG_TCLE.contentMarkdown,
+          assentContentMarkdown: OFFICIAL_UEPG_TCLE.assentContentMarkdown,
         },
         participant: {
           id: 'demo',
@@ -51,14 +52,14 @@ export async function GET(req: Request) {
     const consentForm = participant.project.consentForm || {
       id: `default-${participant.project.id}`,
       projectId: participant.project.id,
-      title: participant.project.name,
-      responsibleResearcher: 'Dra. Roberta Micheten Dias',
-      advisor: 'Profa. Dra. Alessandra Reis',
-      institution: 'Universidade Estadual de Ponta Grossa – UEPG',
-      ethicsNumber: 'Parecer CEP nº 5.892.104 / CAAE',
-      ethicsContacts:
-        'Comitê de Ética em Pesquisa da UEPG: Av. Carlos Cavalcanti, nº 4748, Bloco Reitoria, Sala 22 - Uvaranas, Ponta Grossa/PR. Tel: (42) 3220-3282 - E-mail: coep105@uepg.br',
-      contentMarkdown: 'Termo de Consentimento Livre e Esclarecido padrão assinado pelo participante.',
+      title: participant.project.name || OFFICIAL_UEPG_TCLE.title,
+      responsibleResearcher: OFFICIAL_UEPG_TCLE.responsibleResearcher,
+      advisor: OFFICIAL_UEPG_TCLE.advisor,
+      institution: OFFICIAL_UEPG_TCLE.institution,
+      ethicsNumber: OFFICIAL_UEPG_TCLE.ethicsNumber,
+      ethicsContacts: OFFICIAL_UEPG_TCLE.ethicsContacts,
+      contentMarkdown: OFFICIAL_UEPG_TCLE.contentMarkdown,
+      assentContentMarkdown: OFFICIAL_UEPG_TCLE.assentContentMarkdown,
     };
 
     return NextResponse.json({
@@ -147,10 +148,14 @@ export async function POST(req: Request) {
       const newConsent = await prisma.consentForm.create({
         data: {
           projectId: participant.projectId,
-          title: participant.project.name,
-          responsibleResearcher: 'Dra. Roberta Micheten Dias',
-          advisor: 'Profa. Dra. Alessandra Reis',
-          contentMarkdown: 'Termo de Consentimento Livre e Esclarecido padrão assinado pelo participante.',
+          title: participant.project.name || OFFICIAL_UEPG_TCLE.title,
+          responsibleResearcher: OFFICIAL_UEPG_TCLE.responsibleResearcher,
+          advisor: OFFICIAL_UEPG_TCLE.advisor,
+          institution: OFFICIAL_UEPG_TCLE.institution,
+          ethicsNumber: OFFICIAL_UEPG_TCLE.ethicsNumber,
+          ethicsContacts: OFFICIAL_UEPG_TCLE.ethicsContacts,
+          contentMarkdown: OFFICIAL_UEPG_TCLE.contentMarkdown,
+          assentContentMarkdown: OFFICIAL_UEPG_TCLE.assentContentMarkdown,
         },
       });
       targetFormId = newConsent.id;

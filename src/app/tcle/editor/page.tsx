@@ -3,7 +3,8 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, CheckCircle2, Eye, Save, Clock } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Eye, Save, Clock, Sparkles, FileText, Phone, Mail } from 'lucide-react';
+import { OFFICIAL_UEPG_TCLE } from '@/lib/tcleDefault';
 
 function TcleEditorContent() {
   const searchParams = useSearchParams();
@@ -13,6 +14,7 @@ function TcleEditorContent() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
+  const [activeTab, setActiveTab] = useState<'tcle' | 'tale'>('tcle');
 
   const [formData, setFormData] = useState({
     title: '',
@@ -22,6 +24,7 @@ function TcleEditorContent() {
     ethicsNumber: '',
     ethicsContacts: '',
     contentMarkdown: '',
+    assentContentMarkdown: '',
   });
 
   useEffect(() => {
@@ -52,6 +55,7 @@ function TcleEditorContent() {
                 ethicsNumber: data.consentForm.ethicsNumber || '',
                 ethicsContacts: data.consentForm.ethicsContacts || '',
                 contentMarkdown: data.consentForm.contentMarkdown || '',
+                assentContentMarkdown: data.consentForm.assentContentMarkdown || OFFICIAL_UEPG_TCLE.assentContentMarkdown,
               });
             }
           }
@@ -65,6 +69,25 @@ function TcleEditorContent() {
 
     fetchTcle();
   }, [projectIdParam]);
+
+  const handleLoadOfficialTemplate = () => {
+    if (
+      window.confirm(
+        'Deseja carregar o modelo oficial da UEPG ("TCLE PC vs PH")? Quaisquer alterações não salvas nos campos de texto serão substituídas pelo documento original aprovado.'
+      )
+    ) {
+      setFormData({
+        title: OFFICIAL_UEPG_TCLE.title,
+        responsibleResearcher: OFFICIAL_UEPG_TCLE.responsibleResearcher,
+        advisor: OFFICIAL_UEPG_TCLE.advisor,
+        institution: OFFICIAL_UEPG_TCLE.institution,
+        ethicsNumber: OFFICIAL_UEPG_TCLE.ethicsNumber,
+        ethicsContacts: OFFICIAL_UEPG_TCLE.ethicsContacts,
+        contentMarkdown: OFFICIAL_UEPG_TCLE.contentMarkdown,
+        assentContentMarkdown: OFFICIAL_UEPG_TCLE.assentContentMarkdown,
+      });
+    }
+  };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -120,7 +143,16 @@ function TcleEditorContent() {
           )}
         </div>
 
-        <div className="flex items-center space-x-3">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <button
+            type="button"
+            onClick={handleLoadOfficialTemplate}
+            className="px-3.5 py-2 border border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-xs font-bold transition inline-flex items-center gap-1.5 cursor-pointer shadow-2xs"
+            title="Carregar texto integral oficial do protocolo PC vs PH da UEPG"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+            <span>Restaurar Modelo Oficial UEPG</span>
+          </button>
           <Link
             href={`/tcle/demo?projectId=${projectId}`}
             target="_blank"
@@ -145,9 +177,12 @@ function TcleEditorContent() {
           
           {/* Card: Metadados Institucionais e Pesquisadores */}
           <div className="bg-white rounded-2xl shadow-xs border border-slate-200 p-6 space-y-4">
-            <h3 className="text-base font-bold text-slate-900 border-b border-slate-100 pb-2">
-              1. Identificação do Estudo e Pesquisadores Responsáveis
-            </h3>
+            <div className="flex justify-between items-center border-b border-slate-100 pb-2">
+              <h3 className="text-base font-bold text-slate-900">
+                1. Identificação do Estudo e Pesquisadores Responsáveis
+              </h3>
+              <span className="text-[11px] text-slate-400">Dados oficiais exigidos pelo CEP/CONEP</span>
+            </div>
 
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
@@ -172,7 +207,7 @@ function TcleEditorContent() {
                   required
                   value={formData.responsibleResearcher}
                   onChange={(e) => setFormData({ ...formData, responsibleResearcher: e.target.value })}
-                  placeholder="Ex: Dra. Roberta Micheten Dias"
+                  placeholder="Ex: Roberta Micheten Dias"
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
                 />
               </div>
@@ -230,27 +265,80 @@ function TcleEditorContent() {
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
               />
             </div>
+
+            {/* Aviso de contatos da pesquisadora no termo */}
+            <div className="p-3 bg-blue-50/70 border border-blue-200/80 rounded-xl text-xs text-blue-900 flex items-center justify-between flex-wrap gap-2">
+              <span className="font-semibold">Contato da Pesquisadora no Protocolo:</span>
+              <span className="text-blue-800 font-mono text-[11px]">
+                Tel: (42) 99946-5140 • robertinhamicheten@hotmail.com
+              </span>
+            </div>
           </div>
 
-          {/* Card: Conteúdo Textual do TCLE (Riscos, Benefícios, Split-Mouth) */}
+          {/* Card: Conteúdo Textual do TCLE e TALE com Abas */}
           <div className="bg-white rounded-2xl shadow-xs border border-slate-200 p-6 space-y-4">
-            <div className="flex justify-between items-center border-b border-slate-100 pb-2">
-              <h3 className="text-base font-bold text-slate-900">
-                2. Corpo do Termo (Objetivos, Riscos, Metodologia e Direitos)
-              </h3>
-              <span className="text-xs text-slate-400">Suporta formatação com títulos (#) e tópicos (-)</span>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-100 pb-3 gap-2">
+              <div>
+                <h3 className="text-base font-bold text-slate-900">
+                  2. Redação dos Termos de Esclarecimento
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Selecione a aba para editar o termo destinado a adultos (TCLE) ou a menores/vulneráveis (TALE).
+                </p>
+              </div>
+              
+              {/* Seletor de Abas */}
+              <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-bold">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('tcle')}
+                  className={`px-3 py-1.5 rounded-lg transition cursor-pointer ${
+                    activeTab === 'tcle' ? 'bg-white text-blue-600 shadow-2xs font-extrabold' : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  TCLE (Adultos)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('tale')}
+                  className={`px-3 py-1.5 rounded-lg transition cursor-pointer ${
+                    activeTab === 'tale' ? 'bg-white text-blue-600 shadow-2xs font-extrabold' : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  TALE (Menores)
+                </button>
+              </div>
             </div>
 
-            <p className="text-xs text-slate-500">
-              Adapte o texto abaixo para refletir fielmente o protocolo da sua pesquisa. Este texto será exibido integralmente para o voluntário ler antes da assinatura na tela.
-            </p>
-
-            <textarea
-              rows={16}
-              value={formData.contentMarkdown}
-              onChange={(e) => setFormData({ ...formData, contentMarkdown: e.target.value })}
-              className="w-full font-mono text-xs p-4 border border-slate-300 rounded-xl leading-relaxed focus:ring-2 focus:ring-blue-500 focus:outline-none"
-            />
+            {activeTab === 'tcle' ? (
+              <div className="space-y-2">
+                <div className="flex justify-between items-center text-xs text-slate-500">
+                  <span className="font-semibold text-slate-700">Texto Integral do TCLE (Suporta Markdown #, ##, -):</span>
+                  <span>Exibido antes da assinatura do voluntário</span>
+                </div>
+                <textarea
+                  rows={18}
+                  value={formData.contentMarkdown}
+                  onChange={(e) => setFormData({ ...formData, contentMarkdown: e.target.value })}
+                  className="w-full font-mono text-xs p-4 border border-slate-300 rounded-xl leading-relaxed focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  placeholder="Texto do Termo de Consentimento Livre e Esclarecido..."
+                />
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <div className="flex justify-between items-center text-xs text-slate-500">
+                  <span className="font-semibold text-purple-700">Texto do Termo de Assentimento (TALE):</span>
+                  <span>Linguagem acessível para menores com leitura conjunta dos pais</span>
+                </div>
+                <textarea
+                  rows={12}
+                  value={formData.assentContentMarkdown}
+                  onChange={(e) => setFormData({ ...formData, assentContentMarkdown: e.target.value })}
+                  className="w-full font-mono text-xs p-4 border border-slate-300 rounded-xl leading-relaxed focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                  placeholder="Texto do Termo de Assentimento Livre e Esclarecido (para menores de idade)..."
+                />
+              </div>
+            )}
           </div>
 
         </form>

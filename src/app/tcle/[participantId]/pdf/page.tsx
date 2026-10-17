@@ -251,10 +251,13 @@ function TclePdfContent() {
           </div>
         </div>
 
-        {/* Declaração de Aquiescência */}
+        {/* Declaração de Aquiescência Oficial */}
         <div className="p-4 bg-slate-50 border-l-4 border-slate-900 rounded-r-xl text-xs mb-8 font-sans">
+          <p className="font-bold text-slate-900 mb-1 text-[11px] uppercase tracking-wider">
+            Declaração do Participante:
+          </p>
           <p className="italic text-slate-700 leading-normal">
-            &ldquo;Declaro ter recebido cópia deste termo, ter sido amplamente esclarecido(a) sobre a natureza, objetivos, métodos, riscos e benefícios da pesquisa, e concordo voluntariamente em participar deste protocolo clínico.&rdquo;
+            &ldquo;Declaro que li este Termo de Consentimento Livre e Esclarecido; tive oportunidade de fazer perguntas; todas as minhas dúvidas foram esclarecidas; fui informado(a) sobre os objetivos, procedimentos, riscos, benefícios e meus direitos; recebi informações suficientes para decidir livremente e concordo voluntariamente em participar desta pesquisa. Também declaro estar ciente de que poderei retirar meu consentimento a qualquer momento, sem sofrer qualquer prejuízo.&rdquo;
           </p>
         </div>
 
@@ -279,7 +282,7 @@ function TclePdfContent() {
               <p className="text-xs font-bold text-slate-900">{participant.fullName}</p>
               <p className="text-[10px] text-slate-500 font-mono">CPF: {participant.cpf}</p>
               <p className="text-[10px] text-slate-500">
-                {isMinor ? 'Assinatura do Participante (Assentimento)' : 'Assinatura do Participante Voluntário'}
+                {isMinor ? 'Assinatura do Participante (Assentimento)' : 'Assinatura do Participante da Pesquisa'}
               </p>
             </div>
 
@@ -316,7 +319,10 @@ function TclePdfContent() {
               ) : (
                 <>
                   <p className="text-xs font-bold text-slate-900">{consentForm.responsibleResearcher}</p>
-                  <p className="text-[10px] text-slate-500">Pelo Protocolo Clínico • UEPG</p>
+                  <p className="text-[10px] text-slate-500">Pesquisadora Responsável • UEPG</p>
+                  <p className="text-[9px] text-slate-400 font-sans">
+                    Tel: (42) 99946-5140 • robertinhamicheten@hotmail.com
+                  </p>
                 </>
               )}
             </div>
@@ -375,6 +381,11 @@ function TclePdfContent() {
             </div>
           )}
 
+          {/* Vias do Termo */}
+          <div className="flex flex-col sm:flex-row justify-between items-center text-[10px] text-slate-500 border-t border-slate-300 pt-3 gap-1">
+            <span><strong>1ª via:</strong> Pesquisador (Arquivo institucional UEPG)</span>
+            <span><strong>2ª via:</strong> Participante da pesquisa (Via de guarda do participante)</span>
+          </div>
         </div>
 
       </div>

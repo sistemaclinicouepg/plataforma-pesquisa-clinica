@@ -384,11 +384,16 @@ function PatientTcleContent() {
         </header>
 
         {/* Informações dos Pesquisadores e Ética */}
-        <div className="bg-slate-50 border-b border-slate-200 p-4 text-xs space-y-1 text-slate-600">
-          <p><strong>Pesquisadora Responsável:</strong> {tcle?.responsibleResearcher}</p>
+        <div className="bg-slate-50 border-b border-slate-200 p-4 text-xs space-y-1.5 text-slate-600">
+          <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-1">
+            <p><strong>Pesquisadora Responsável:</strong> {tcle?.responsibleResearcher}</p>
+            <p className="text-[11px] text-blue-700 font-mono">
+              Tel: (42) 99946-5140 • robertinhamicheten@hotmail.com
+            </p>
+          </div>
           {tcle?.advisor && <p><strong>Orientadora:</strong> {tcle.advisor}</p>}
           {tcle?.ethicsNumber && (
-            <p><strong>Comitê de Ética:</strong> Aprovado sob {tcle.ethicsNumber}</p>
+            <p><strong>Comitê de Ética:</strong> {tcle.ethicsNumber}</p>
           )}
           {isAssentMode && (
             <div className="mt-2 p-2.5 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-[11px] flex items-center space-x-2">
@@ -427,7 +432,7 @@ function PatientTcleContent() {
               className="mt-0.5 w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
             />
             <span className="text-xs text-slate-800 font-medium leading-tight">
-              Declaro que li este documento, todas as dúvidas foram esclarecidas e <strong>concordo voluntariamente em participar</strong> desta pesquisa clínica.
+              Declaro que li este Termo de Consentimento Livre e Esclarecido, tive oportunidade de fazer perguntas, todas as minhas dúvidas foram esclarecidas e <strong>concordo voluntariamente em participar</strong> desta pesquisa clínica.
             </span>
           </label>
 
