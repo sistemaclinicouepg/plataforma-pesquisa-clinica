@@ -2423,30 +2423,11 @@ function DashboardContent() {
             mobileMenuOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full lg:translate-x-0'
           } h-[calc(100vh-57px)] shrink-0`}
         >
-          {/* Topo do Sidebar: Navegação Superior e Estudo Ativo */}
+          {/* Topo do Sidebar: Identificação e Ação do Estudo */}
           <div className="p-4 border-b border-slate-100 flex flex-col gap-3 shrink-0">
             <div className="flex items-center justify-between">
-              <Link
-                href="/"
-                className="text-xs font-semibold text-slate-500 hover:text-blue-600 transition flex items-center space-x-1.5 py-1"
-                title="Voltar para Meus Estudos"
-              >
-                <ChevronLeft className="w-4 h-4" />
-                <span>Meus Estudos</span>
-              </Link>
-              <button
-                type="button"
-                onClick={() => setMobileMenuOpen(false)}
-                className="lg:hidden p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Identificação e Seletor do Estudo */}
-            <div className="space-y-1">
-              <div className="flex items-center justify-between gap-1.5">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Estudo Selecionado</span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Estudo Atual</span>
                 {project.status === 'COMPLETED' ? (
                   <span className="px-2 py-0.2 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 inline-flex items-center gap-1">
                     <CheckCircle2 className="w-2.5 h-2.5 text-blue-600" />
@@ -2464,6 +2445,19 @@ function DashboardContent() {
                 )}
               </div>
 
+              {/* Botão fechar apenas no mobile */}
+              <button
+                type="button"
+                onClick={() => setMobileMenuOpen(false)}
+                className="lg:hidden p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100"
+                title="Fechar menu"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Nome do Estudo ou Seletor */}
+            <div>
               {allProjects.length > 1 ? (
                 <select
                   value={project.id}
@@ -2484,7 +2478,7 @@ function DashboardContent() {
                   ))}
                 </select>
               ) : (
-                <h2 className="text-xs font-bold text-slate-900 line-clamp-2 leading-tight" title={project.name}>
+                <h2 className="text-xs font-bold text-slate-900 line-clamp-2 leading-snug" title={project.name}>
                   {project.name}
                 </h2>
               )}

@@ -17,6 +17,7 @@ import {
   ArrowRight,
   User as UserIcon,
   ChevronDown,
+  ChevronRight,
   Sparkles,
 } from 'lucide-react';
 
@@ -197,21 +198,16 @@ export default function AppNav() {
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   };
 
-  const navLinks = [
-    { href: '/', label: 'Meus Estudos', icon: FolderKanban },
-    { href: `/dashboard?projectId=${activeProjectId}`, label: 'Atendimento Clínico', icon: Activity },
-    { href: '/paciente', label: 'Portal do Participante', icon: ExternalLink, external: true },
-  ];
-
   return (
     <header className="bg-white/95 backdrop-blur-md text-slate-800 border-b border-slate-200/80 sticky top-0 z-40 shadow-card">
       <div className="w-full px-4 sm:px-6 lg:px-8 py-2.5 flex flex-col md:flex-row md:items-center justify-between gap-3">
         
-        {/* Identificação Oficial do Sistema */}
+        {/* Identificação Oficial e Breadcrumbs Globais */}
         <div className="flex flex-wrap items-center gap-2 sm:gap-4">
           <Link
             href="/"
-            className="flex items-center space-x-2.5 group transition"
+            className="flex items-center space-x-2.5 group transition shrink-0"
+            title="Página Inicial - UEPG Pesquisa Clínica"
           >
             {/* Logomarca UEPG Pesquisa Clínica */}
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 flex items-center justify-center text-white shadow-xs group-hover:scale-105 transition-transform duration-200">
@@ -232,34 +228,111 @@ export default function AppNav() {
 
           <div className="hidden lg:block h-5 w-px bg-slate-200 mx-1" />
 
-          {/* Links Principais da Aplicação */}
-          <nav className="flex flex-wrap items-center gap-1">
-            {navLinks.map((link) => {
-              const Icon = link.icon;
-              const linkBase = link.href.split('?')[0];
-              const isActive = pathname === linkBase || (link.href === '/' && pathname === '/projetos');
-              return (
+          {/* Breadcrumb Contextual (Indica localização global sem competir com o menu lateral) */}
+          <nav className="flex items-center space-x-1.5 text-xs">
+            {pathname === '/' || pathname === '/projetos' ? (
+              <span className="font-semibold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200/60 flex items-center space-x-1.5">
+                <FolderKanban className="w-3.5 h-3.5 text-blue-600" />
+                <span>Projetos de Pesquisa</span>
+              </span>
+            ) : (
+              <div className="flex items-center space-x-1.5 text-slate-500 font-medium">
                 <Link
-                  key={link.href}
-                  href={link.href}
-                  target={link.external ? '_blank' : undefined}
-                  rel={link.external ? 'noopener noreferrer' : undefined}
-                  className={`px-3 py-1.5 rounded-xl transition-all font-semibold text-xs flex items-center space-x-2 ${
-                    isActive && !link.external
-                      ? 'bg-blue-50 text-blue-700 font-bold border border-blue-200/80 shadow-2xs'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
-                  }`}
+                  href="/"
+                  className="hover:text-blue-600 transition flex items-center space-x-1 text-slate-600"
+                  title="Voltar para todos os estudos"
                 >
-                  <Icon className={`w-3.5 h-3.5 ${isActive && !link.external ? 'text-blue-600' : 'text-slate-400'}`} />
-                  <span>{link.label}</span>
+                  <FolderKanban className="w-3.5 h-3.5 text-slate-400" />
+                  <span className="hidden sm:inline">Meus Estudos</span>
+                  <span className="sm:hidden">Estudos</span>
                 </Link>
-              );
-            })}
+                <ChevronRight className="w-3.5 h-3.5 text-slate-300 shrink-0" />
+
+                {pathname.startsWith('/dashboard') && (
+                  <span className="font-bold text-slate-900 bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200/60 flex items-center space-x-1.5">
+                    <Activity className="w-3.5 h-3.5 text-blue-600" />
+                    <span>Ambiente do Estudo</span>
+                  </span>
+                )}
+
+                {pathname.startsWith('/anamnese') && (
+                  <>
+                    <Link
+                      href={`/dashboard?projectId=${activeProjectId}`}
+                      className="hover:text-blue-600 transition"
+                    >
+                      Estudo
+                    </Link>
+                    <ChevronRight className="w-3.5 h-3.5 text-slate-300 shrink-0" />
+                    <span className="font-bold text-blue-800 bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-200/60 flex items-center space-x-1.5">
+                      <Stethoscope className="w-3.5 h-3.5 text-blue-600" />
+                      <span>Ficha & Critérios</span>
+                    </span>
+                  </>
+                )}
+
+                {pathname.startsWith('/construtor') && (
+                  <>
+                    <Link
+                      href={`/dashboard?projectId=${activeProjectId}`}
+                      className="hover:text-blue-600 transition"
+                    >
+                      Estudo
+                    </Link>
+                    <ChevronRight className="w-3.5 h-3.5 text-slate-300 shrink-0" />
+                    <span className="font-bold text-indigo-800 bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-200/60 flex items-center space-x-1.5">
+                      <FileCode className="w-3.5 h-3.5 text-indigo-600" />
+                      <span>Construtor de eCRF</span>
+                    </span>
+                  </>
+                )}
+
+                {pathname.startsWith('/tcle') && (
+                  <>
+                    <Link
+                      href={`/dashboard?projectId=${activeProjectId}`}
+                      className="hover:text-blue-600 transition"
+                    >
+                      Estudo
+                    </Link>
+                    <ChevronRight className="w-3.5 h-3.5 text-slate-300 shrink-0" />
+                    <span className="font-bold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200/60 flex items-center space-x-1.5">
+                      <FileText className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Termo TCLE</span>
+                    </span>
+                  </>
+                )}
+
+                {pathname.startsWith('/perfil') && (
+                  <span className="font-bold text-slate-900 bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200/60">
+                    Meu Perfil
+                  </span>
+                )}
+
+                {pathname.startsWith('/relatorio-cep') && (
+                  <span className="font-bold text-purple-900 bg-purple-50 px-2.5 py-1 rounded-lg border border-purple-200/60 flex items-center space-x-1.5">
+                    <ShieldCheck className="w-3.5 h-3.5 text-purple-600" />
+                    <span>Relatório CEP / CONEP</span>
+                  </span>
+                )}
+              </div>
+            )}
           </nav>
         </div>
 
-        {/* Lado Direito: Perfil Autêntico Logado e Controle de Sessão */}
+        {/* Lado Direito: Acesso Externo ao Participante e Perfil Autêntico */}
         <div className="flex items-center space-x-2.5 shrink-0 self-end md:self-center">
+          <Link
+            href="/paciente"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:text-blue-600 hover:bg-slate-100 transition flex items-center space-x-1.5 border border-slate-200/70 shadow-2xs"
+            title="Abrir o Portal do Participante em nova aba (para testar o diário de dor e formulários do paciente)"
+          >
+            <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
+            <span className="hidden sm:inline">Portal do Participante</span>
+            <span className="sm:hidden">Paciente</span>
+          </Link>
           {currentUser ? (
             <div className="flex items-center space-x-2">
               
