@@ -503,32 +503,32 @@ export async function DELETE(req: Request) {
 
     const participantIds = patient.participations.map((p) => p.id);
 
-    // Cascata transacional segura
-    await prisma.$transaction(async (tx) => {
-      if (participantIds.length > 0) {
-        await tx.consentSignature.deleteMany({
-          where: { participantId: { in: participantIds } }
-        });
-        await tx.formResponse.deleteMany({
-          where: { participantId: { in: participantIds } }
-        });
-        await tx.clinicalAlert.deleteMany({
-          where: { participantId: { in: participantIds } }
-        });
-        await tx.clinicalSession.deleteMany({
-          where: { participantId: { in: participantIds } }
-        });
-        await tx.participant.deleteMany({
-          where: { id: { in: participantIds } }
-        });
-      }
-
-      await tx.patient.delete({
-        where: { id: patientId }
+    // Cascata sequencial segura compatível com modo HTTP (Cloudflare Workers / Neon HTTP)
+    if (participantIds.length > 0) {
+      await prisma.consentSignature.deleteMany({
+        where: { participantId: { in: participantIds } }
       });
+      await prisma.formResponse.deleteMany({
+        where: { participantId: { in: participantIds } }
+      });
+      await prisma.clinicalAlert.deleteMany({
+        where: { participantId: { in: participantIds } }
+      });
+      await prisma.clinicalSession.deleteMany({
+        where: { participantId: { in: participantIds } }
+      });
+      await prisma.participant.deleteMany({
+        where: { id: { in: participantIds } }
+      });
+    }
 
-      // Registro de Auditoria GCP / ICH
-      await tx.auditLog.create({
+    await prisma.patient.delete({
+      where: { id: patientId }
+    });
+
+    // Registro de Auditoria GCP / ICH
+    try {
+      await prisma.auditLog.create({
         data: {
           entityType: 'Patient',
           entityId: patientId,
@@ -538,7 +538,9 @@ export async function DELETE(req: Request) {
           reason: reason?.trim() || `Exclusão definitiva do paciente ${patient.fullName} (CPF: ${patient.cpf}) por administrador.`,
         }
       });
-    });
+    } catch (auditErr) {
+      console.warn('Erro ao registrar log de auditoria:', auditErr);
+    }
 
     return NextResponse.json({
       success: true,

@@ -100,35 +100,36 @@ export async function POST(req: Request) {
 
     const hashedPassword = await hashPassword(password);
 
-    const newUser = await prisma.$transaction(async (tx) => {
-      const user = await tx.user.create({
-        data: {
-          name: name.trim(),
-          email: cleanEmail,
-          password: hashedPassword,
-          role: role || 'RESEARCHER',
-          isApproved: isApproved !== undefined ? Boolean(isApproved) : true,
-        },
-      });
+    // Execução sequencial para compatibilidade com o modo HTTP (PrismaNeonHTTP / Cloudflare Workers)
+    const user = await prisma.user.create({
+      data: {
+        name: name.trim(),
+        email: cleanEmail,
+        password: hashedPassword,
+        role: role || 'RESEARCHER',
+        isApproved: isApproved !== undefined ? Boolean(isApproved) : true,
+      },
+    });
 
-      // Atribuição de projetos se fornecido
-      if (Array.isArray(projects) && projects.length > 0) {
-        for (const proj of projects) {
-          if (proj.projectId) {
-            await tx.projectMember.create({
-              data: {
-                userId: user.id,
-                projectId: proj.projectId,
-                role: proj.role || 'OPERATOR',
-                isBlinded: Boolean(proj.isBlinded),
-              },
-            });
-          }
+    // Atribuição de projetos se fornecido
+    if (Array.isArray(projects) && projects.length > 0) {
+      for (const proj of projects) {
+        if (proj.projectId) {
+          await prisma.projectMember.create({
+            data: {
+              userId: user.id,
+              projectId: proj.projectId,
+              role: proj.role || 'OPERATOR',
+              isBlinded: Boolean(proj.isBlinded),
+            },
+          });
         }
       }
+    }
 
-      // Trilha de Auditoria GCP / ICH E6
-      await tx.auditLog.create({
+    // Trilha de Auditoria GCP / ICH E6
+    try {
+      await prisma.auditLog.create({
         data: {
           entityType: 'User',
           entityId: user.id,
@@ -138,20 +139,20 @@ export async function POST(req: Request) {
           reason: `Cadastro de novo membro da equipe: ${user.name} (${user.email}, Função: ${user.role}).`,
         },
       });
-
-      return user;
-    });
+    } catch (auditErr) {
+      console.warn('Erro ao registrar log de auditoria:', auditErr);
+    }
 
     return NextResponse.json({
       success: true,
       message: 'Membro da equipe cadastrado com sucesso.',
       user: {
-        id: newUser.id,
-        name: newUser.name,
-        email: newUser.email,
-        role: newUser.role,
-        isApproved: newUser.isApproved,
-        createdAt: newUser.createdAt,
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        isApproved: user.isApproved,
+        createdAt: user.createdAt,
       },
     });
   } catch (error: any) {
@@ -219,34 +220,35 @@ export async function PATCH(req: Request) {
       updateData.password = await hashPassword(password.trim());
     }
 
-    const updatedUser = await prisma.$transaction(async (tx) => {
-      const user = await tx.user.update({
-        where: { id: userId },
-        data: updateData,
+    // Execução sequencial para compatibilidade com o modo HTTP (PrismaNeonHTTP / Cloudflare Workers)
+    const user = await prisma.user.update({
+      where: { id: userId },
+      data: updateData,
+    });
+
+    // Se a lista de projetos foi enviada, sincroniza ProjectMember
+    if (Array.isArray(projects)) {
+      await prisma.projectMember.deleteMany({
+        where: { userId },
       });
 
-      // Se a lista de projetos foi enviada, sincroniza ProjectMember
-      if (Array.isArray(projects)) {
-        await tx.projectMember.deleteMany({
-          where: { userId },
-        });
-
-        for (const proj of projects) {
-          if (proj.projectId) {
-            await tx.projectMember.create({
-              data: {
-                userId,
-                projectId: proj.projectId,
-                role: proj.role || 'OPERATOR',
-                isBlinded: Boolean(proj.isBlinded),
-              },
-            });
-          }
+      for (const proj of projects) {
+        if (proj.projectId) {
+          await prisma.projectMember.create({
+            data: {
+              userId,
+              projectId: proj.projectId,
+              role: proj.role || 'OPERATOR',
+              isBlinded: Boolean(proj.isBlinded),
+            },
+          });
         }
       }
+    }
 
-      // Trilha de auditoria
-      await tx.auditLog.create({
+    // Trilha de auditoria
+    try {
+      await prisma.auditLog.create({
         data: {
           entityType: 'User',
           entityId: userId,
@@ -256,19 +258,19 @@ export async function PATCH(req: Request) {
           reason: `Alteração de dados cadastrais/permissões do membro ${user.name} (${user.email}).`,
         },
       });
-
-      return user;
-    });
+    } catch (auditErr) {
+      console.warn('Erro ao registrar log de auditoria:', auditErr);
+    }
 
     return NextResponse.json({
       success: true,
       message: 'Dados do pesquisador atualizados com sucesso.',
       user: {
-        id: updatedUser.id,
-        name: updatedUser.name,
-        email: updatedUser.email,
-        role: updatedUser.role,
-        isApproved: updatedUser.isApproved,
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        isApproved: user.isApproved,
       },
     });
   } catch (error: any) {
@@ -327,19 +329,20 @@ export async function DELETE(req: Request) {
       );
     }
 
-    await prisma.$transaction(async (tx) => {
-      // 1. Deletar vínculos de projetos
-      await tx.projectMember.deleteMany({
-        where: { userId },
-      });
+    // Execução sequencial para compatibilidade com o modo HTTP (PrismaNeonHTTP / Cloudflare Workers)
+    // 1. Deletar vínculos de projetos
+    await prisma.projectMember.deleteMany({
+      where: { userId },
+    });
 
-      // 2. Deletar usuário
-      await tx.user.delete({
-        where: { id: userId },
-      });
+    // 2. Deletar usuário
+    await prisma.user.delete({
+      where: { id: userId },
+    });
 
-      // 3. Auditoria
-      await tx.auditLog.create({
+    // 3. Auditoria
+    try {
+      await prisma.auditLog.create({
         data: {
           entityType: 'User',
           entityId: userId,
@@ -349,7 +352,9 @@ export async function DELETE(req: Request) {
           reason: `Exclusão do membro da equipe ${userToDelete.name} (${userToDelete.email}) por administrador.`,
         },
       });
-    });
+    } catch (auditErr) {
+      console.warn('Erro ao registrar log de auditoria:', auditErr);
+    }
 
     return NextResponse.json({
       success: true,
