@@ -2,6 +2,58 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/auth';
 
+export async function GET(req: Request) {
+  try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(req.url);
+    const search = searchParams.get('q')?.trim() || '';
+
+    const patients = await prisma.patient.findMany({
+      where: search ? {
+        OR: [
+          { fullName: { contains: search, mode: 'insensitive' } },
+          { cpf: { contains: search } },
+          { phoneWhatsApp: { contains: search } },
+          { email: { contains: search, mode: 'insensitive' } },
+        ]
+      } : undefined,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        participations: {
+          include: {
+            project: {
+              select: {
+                id: true,
+                name: true,
+                status: true,
+              }
+            },
+            sessions: {
+              select: {
+                id: true,
+                sessionNumber: true,
+                sessionDate: true,
+              }
+            }
+          }
+        }
+      }
+    });
+
+    return NextResponse.json({ patients });
+  } catch (error: any) {
+    console.error('Erro ao buscar pacientes:', error);
+    return NextResponse.json(
+      { error: error?.message || 'Erro ao carregar pacientes.' },
+      { status: 500 }
+    );
+  }
+}
+
 export async function POST(req: Request) {
   try {
     const data = await req.json();
