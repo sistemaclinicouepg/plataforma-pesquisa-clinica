@@ -39,14 +39,6 @@ export async function GET(
             },
           },
         },
-        ...(canViewAudit
-          ? {
-              auditLogs: {
-                orderBy: { createdAt: 'desc' as const },
-                take: 40,
-              },
-            }
-          : {}),
         members: {
           include: {
             user: {
@@ -102,11 +94,25 @@ export async function GET(
       return p;
     });
 
+    // Buscar todas as ações da trilha de auditoria (estudo + ações centrais)
+    let auditLogs: any[] = [];
+    if (canViewAudit) {
+      auditLogs = await prisma.auditLog.findMany({
+        where: {
+          OR: [
+            { projectId: id },
+            { projectId: null },
+          ],
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+    }
+
     return NextResponse.json(
       {
         project: {
           ...project,
-          auditLogs: (project as any).auditLogs || [],
+          auditLogs,
           participants: sanitizedParticipants,
         },
         currentUser,

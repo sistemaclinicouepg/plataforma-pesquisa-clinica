@@ -66,6 +66,7 @@ import {
   Sliders,
   MoreHorizontal,
   Menu,
+  UserPlus,
 } from 'lucide-react';
 
 type Patient = {
@@ -592,7 +593,7 @@ function DashboardContent() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [activeTab, setActiveTab] = useState<'active' | 'triage' | 'audit' | 'consort' | 'team' | 'export'>('active');
+  const [activeTab, setActiveTab] = useState<'active' | 'triage' | 'audit' | 'team' | 'export'>('active');
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [isBlindedUser, setIsBlindedUser] = useState<boolean>(false);
   const [currentMemberRole, setCurrentMemberRole] = useState<string>('COORDINATOR');
@@ -602,7 +603,7 @@ function DashboardContent() {
     currentUser?.email === 'admin@uepg.br' ||
     currentUser?.email === 'pesquisadora@uepg.br';
 
-  const handleSelectTab = (tab: 'active' | 'triage' | 'audit' | 'consort' | 'team' | 'export') => {
+  const handleSelectTab = (tab: 'active' | 'triage' | 'audit' | 'team' | 'export') => {
     setActiveTab(tab);
     if (project?.id && typeof window !== 'undefined') {
       try {
@@ -845,11 +846,11 @@ function DashboardContent() {
     const pendingCount = (data.project.participants || []).filter((p: any) => p.status === 'PENDING').length;
 
     const tabParam = searchParams.get('tab');
-    if (tabParam && ['active', 'triage', 'audit', 'consort', 'team', 'export'].includes(tabParam)) {
+    if (tabParam && ['active', 'triage', 'audit', 'team', 'export'].includes(tabParam)) {
       setActiveTab(tabParam as any);
     } else {
       const savedTab = typeof window !== 'undefined' ? sessionStorage.getItem(`uepg_tab_${data.project.id}`) : null;
-      if (savedTab && ['active', 'triage', 'audit', 'consort', 'team', 'export'].includes(savedTab)) {
+      if (savedTab && ['active', 'triage', 'audit', 'team', 'export'].includes(savedTab)) {
         setActiveTab(savedTab as any);
       } else if (approvedCount === 0 && pendingCount > 0) {
         setActiveTab('triage');
@@ -1096,7 +1097,7 @@ function DashboardContent() {
               const approvedCount = (cached.participants || []).filter((p: any) => p.status === 'APPROVED').length;
               const pendingCount = (cached.participants || []).filter((p: any) => p.status === 'PENDING').length;
               const savedTab = sessionStorage.getItem(`uepg_tab_${cached.id}`);
-              if (savedTab && ['active', 'triage', 'audit', 'consort', 'team', 'export'].includes(savedTab)) {
+              if (savedTab && ['active', 'triage', 'audit', 'team', 'export'].includes(savedTab)) {
                 setActiveTab(savedTab as any);
               } else if (approvedCount === 0 && pendingCount > 0) {
                 setActiveTab('triage');
@@ -2495,6 +2496,21 @@ function DashboardContent() {
               <Plus className="w-4 h-4" />
               <span>Cadastrar Paciente</span>
             </button>
+
+            {/* CTA Secundário de Adicionar Pesquisador */}
+            <button
+              onClick={() => {
+                setMobileMenuOpen(false);
+                setMemberError(null);
+                setNewMemberEmail('');
+                setShowAddMemberModal(true);
+              }}
+              className="w-full mt-2 py-2 px-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 hover:text-indigo-800 border border-indigo-200/90 text-xs font-bold rounded-xl shadow-2xs hover:shadow-xs transition flex items-center justify-center space-x-2 cursor-pointer"
+              title="Adicionar ou vincular pesquisador ao estudo"
+            >
+              <UserPlus className="w-4 h-4 text-indigo-600" />
+              <span>Adicionar Pesquisador</span>
+            </button>
           </div>
 
           {/* Menus e Navegação do Estudo */}
@@ -2558,79 +2574,7 @@ function DashboardContent() {
               </div>
             </div>
 
-            {/* GRUPO 2: DADOS & BIOESTATÍSTICA */}
-            <div>
-              <p className="px-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
-                Bioestatística & Dados
-              </p>
-              <div className="space-y-1">
-                <button
-                  type="button"
-                  onClick={() => {
-                    handleSelectTab('export');
-                    setMobileMenuOpen(false);
-                  }}
-                  className={`w-full px-3 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-2.5 text-left cursor-pointer ${
-                    activeTab === 'export'
-                      ? 'bg-blue-50 text-blue-700 border border-blue-200/80 shadow-2xs'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-                  }`}
-                >
-                  <Download className={`w-4 h-4 shrink-0 ${activeTab === 'export' ? 'text-blue-600' : 'text-slate-400'}`} />
-                  <span className="truncate">Exportar Dados & CSV</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    handleSelectTab('consort');
-                    setMobileMenuOpen(false);
-                  }}
-                  className={`w-full px-3 py-2 rounded-xl text-xs font-bold transition flex items-center justify-between text-left cursor-pointer ${
-                    activeTab === 'consort'
-                      ? 'bg-blue-50 text-blue-700 border border-blue-200/80 shadow-2xs'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-                  }`}
-                >
-                  <div className="flex items-center space-x-2.5 truncate">
-                    <BarChart3 className={`w-4 h-4 shrink-0 ${activeTab === 'consort' ? 'text-blue-600' : 'text-slate-400'}`} />
-                    <span className="truncate">Fluxo CONSORT</span>
-                  </div>
-                  {excludedList.length > 0 && (
-                    <span className="text-[10px] font-bold text-slate-400">
-                      {excludedList.length} excl.
-                    </span>
-                  )}
-                </button>
-
-                {isAdmin && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      handleSelectTab('audit');
-                      setMobileMenuOpen(false);
-                    }}
-                    className={`w-full px-3 py-2 rounded-xl text-xs font-bold transition flex items-center justify-between text-left cursor-pointer ${
-                      activeTab === 'audit'
-                        ? 'bg-indigo-50 text-indigo-700 border border-indigo-200/80 shadow-2xs'
-                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-                    }`}
-                  >
-                    <div className="flex items-center space-x-2.5 truncate">
-                      <ShieldCheck className={`w-4 h-4 shrink-0 ${activeTab === 'audit' ? 'text-indigo-600' : 'text-slate-400'}`} />
-                      <span className="truncate">Trilha Auditoria GCP</span>
-                    </div>
-                    <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
-                      activeTab === 'audit' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600'
-                    }`}>
-                      {project.auditLogs?.length || 0}
-                    </span>
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* GRUPO 3: CONFIGURAÇÕES DO ESTUDO */}
+            {/* GRUPO 2: CONFIGURAÇÕES DO ESTUDO */}
             <div>
               <p className="px-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
                 Configurações do Estudo
@@ -2694,6 +2638,55 @@ function DashboardContent() {
                   <Sliders className="w-4 h-4 text-slate-400 shrink-0" />
                   <span className="truncate">Editar Dados do Estudo</span>
                 </button>
+              </div>
+            </div>
+
+            {/* GRUPO 3: DADOS (Posicionado no fim do menu) */}
+            <div>
+              <p className="px-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                Dados
+              </p>
+              <div className="space-y-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleSelectTab('export');
+                    setMobileMenuOpen(false);
+                  }}
+                  className={`w-full px-3 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-2.5 text-left cursor-pointer ${
+                    activeTab === 'export'
+                      ? 'bg-blue-50 text-blue-700 border border-blue-200/80 shadow-2xs'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                  }`}
+                >
+                  <Download className={`w-4 h-4 shrink-0 ${activeTab === 'export' ? 'text-blue-600' : 'text-slate-400'}`} />
+                  <span className="truncate">Exportar Dados</span>
+                </button>
+
+                {isAdmin && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleSelectTab('audit');
+                      setMobileMenuOpen(false);
+                    }}
+                    className={`w-full px-3 py-2 rounded-xl text-xs font-bold transition flex items-center justify-between text-left cursor-pointer ${
+                      activeTab === 'audit'
+                        ? 'bg-indigo-50 text-indigo-700 border border-indigo-200/80 shadow-2xs'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-2.5 truncate">
+                      <ShieldCheck className={`w-4 h-4 shrink-0 ${activeTab === 'audit' ? 'text-indigo-600' : 'text-slate-400'}`} />
+                      <span className="truncate">Trilha de Auditoria</span>
+                    </div>
+                    <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                      activeTab === 'audit' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600'
+                    }`}>
+                      {project.auditLogs?.length || 0}
+                    </span>
+                  </button>
+                )}
               </div>
             </div>
           </nav>
@@ -2767,10 +2760,9 @@ function DashboardContent() {
                 <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2.5">
                   {activeTab === 'active' && 'Prontuários & Atendimento Clínico'}
                   {activeTab === 'triage' && 'Triagem & Inclusão de Candidatos'}
-                  {activeTab === 'export' && 'Bioestatística & Exportação de Dados'}
-                  {activeTab === 'consort' && 'Fluxo CONSORT do Ensaio Clínico'}
                   {activeTab === 'team' && 'Equipe do Projeto de Pesquisa'}
-                  {activeTab === 'audit' && 'Trilha de Auditoria Regulatória GCP'}
+                  {activeTab === 'export' && 'Exportação de Dados'}
+                  {activeTab === 'audit' && 'Trilha de Auditoria'}
 
                   <button
                     onClick={() => loadProject(true)}
@@ -2784,10 +2776,9 @@ function DashboardContent() {
                 <p className="text-xs text-slate-500 mt-1">
                   {activeTab === 'active' && 'Acompanhe as sessões clínicas, janelas regulatórias de retorno e registre atendimentos.'}
                   {activeTab === 'triage' && 'Avalie critérios de inclusão/exclusão e aprove voluntários para o protocolo.'}
-                  {activeTab === 'export' && 'Estatística descritiva pareada, escala Vita Classical (Delta SGU), dor e exportação.'}
-                  {activeTab === 'consort' && 'Diagrama de fluxo de participantes conforme o padrão internacional CONSORT.'}
                   {activeTab === 'team' && 'Membros do estudo, atribuições clínicas e mascaramento duplo-cego.'}
-                  {activeTab === 'audit' && 'Registro imutável de todas as ações para auditoria GCP / ANVISA.'}
+                  {activeTab === 'export' && 'Estatística descritiva pareada, escala de cor, escores de dor e exportação de matrizes.'}
+                  {activeTab === 'audit' && 'Registro imutável de todas as ações e alterações na plataforma.'}
                 </p>
               </div>
 
@@ -3551,7 +3542,7 @@ function DashboardContent() {
           </div>
         )}
 
-                {/* ABA: TRILHA DE AUDITORIA REGULATÓRIA GCP (ICH-GCP E6 & 21 CFR PART 11) */}
+                {/* ABA: TRILHA DE AUDITORIA */}
         {activeTab === 'audit' && isAdmin && (() => {
           const allLogs = project.auditLogs || [];
 
@@ -3569,42 +3560,17 @@ function DashboardContent() {
             const term = auditSearch.trim().toLowerCase();
             if (!term) return matchesEntity;
             const matchesSearch =
-              log.action.toLowerCase().includes(term) ||
-              log.changedBy.toLowerCase().includes(term) ||
-              log.reason.toLowerCase().includes(term) ||
-              log.fieldName.toLowerCase().includes(term) ||
-              log.entityId.toLowerCase().includes(term);
+              (log.action || '').toLowerCase().includes(term) ||
+              (log.changedBy || '').toLowerCase().includes(term) ||
+              (log.reason || '').toLowerCase().includes(term) ||
+              (log.fieldName || '').toLowerCase().includes(term) ||
+              (log.entityType || '').toLowerCase().includes(term) ||
+              (log.entityId || '').toLowerCase().includes(term);
             return matchesEntity && matchesSearch;
           });
 
           return (
             <div className="space-y-6">
-              {/* Banner de Contexto de Auditoria */}
-              <div className="bg-gradient-to-r from-indigo-50 to-slate-100 border border-indigo-200 rounded-2xl p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div className="flex items-start space-x-3.5">
-                  <div className="p-2.5 bg-indigo-100 rounded-xl text-indigo-700 shrink-0 mt-0.5">
-                    <ShieldCheck className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className="text-base font-bold text-slate-900">
-                      Trilha de Auditoria Regulatória (ICH-GCP E6 & 21 CFR Part 11)
-                    </h3>
-                    <p className="text-xs text-slate-600 mt-1 leading-relaxed max-w-3xl">
-                      Registro contínuo e imutável de todas as modificações no ensaio clínico: assinaturas de TCLE, alocações de grupos, edições de prontuário, resoluções de alertas e justificativas clínicas obrigatórias.
-                    </p>
-                  </div>
-                </div>
-
-                <button
-                  onClick={exportAuditLogsToCSV}
-                  className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center space-x-1.5 shrink-0"
-                  title="Exportar trilha completa em CSV para auditoria e submissão ao CEP"
-                >
-                  <Download className="w-4 h-4" />
-                  <span>Exportar Trilha (.CSV)</span>
-                </button>
-              </div>
-
               {/* Filtros e Busca de Auditoria */}
               <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="flex-1 flex flex-col sm:flex-row gap-2">
@@ -3632,9 +3598,20 @@ function DashboardContent() {
                   </select>
                 </div>
 
-                <span className="text-xs text-slate-400 shrink-0">
-                  {filteredLogs.length} registro(s) encontrado(s)
-                </span>
+                <div className="flex items-center space-x-3 shrink-0">
+                  <span className="text-xs text-slate-400">
+                    {filteredLogs.length} registro(s) encontrado(s)
+                  </span>
+
+                  <button
+                    onClick={exportAuditLogsToCSV}
+                    className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center space-x-1.5 cursor-pointer"
+                    title="Exportar trilha completa em CSV para auditoria e submissão ao CEP"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Exportar (.CSV)</span>
+                  </button>
+                </div>
               </div>
 
               {/* Tabela de Trilha de Auditoria */}
@@ -3709,223 +3686,6 @@ function DashboardContent() {
             </div>
           );
         })()}
-
-        {/* ABA 3: FLUXOGRAMA CONSORT 2010 & EXCLUÍDOS */}
-        {activeTab === 'consort' && (
-          <div className="space-y-6">
-            {/* Banner de Contexto Metodológico */}
-            <div className="bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div className="flex items-start space-x-3.5">
-                <BarChart3 className="w-5 h-5 text-emerald-800 mt-0.5 shrink-0" />
-                <div>
-                  <h3 className="text-base font-bold text-emerald-950">
-                    Fluxograma CONSORT 2010 & Auditoria Ética (CEP/CONEP)
-                  </h3>
-                  <p className="text-xs text-emerald-800 mt-0.5 leading-relaxed">
-                    Rastreabilidade metodológica exigida para publicações científicas de ensaios clínicos randomizados. Registre o fluxo completo de elegibilidade, inclusão, acompanhamento longitudinal e justificativas de exclusão.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Diagrama Visual das 4 Fases do CONSORT */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {/* Fase 1: Recrutamento / Triagem */}
-              <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs flex flex-col justify-between">
-                <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-[11px] font-bold text-blue-600 uppercase tracking-wider">Fase 1: Triagem</span>
-                    <span className="px-2 py-0.5 bg-blue-100 text-blue-800 rounded text-[11px] font-bold">Enrollment</span>
-                  </div>
-                  <h4 className="font-bold text-slate-900 text-sm mb-2">Avaliados p/ Elegibilidade</h4>
-                  <div className="space-y-1.5 text-xs text-slate-600">
-                    <p className="flex justify-between">
-                      <span>Inscritos totais:</span>
-                      <strong className="text-slate-900 font-mono text-sm">{project.participants.length}</strong>
-                    </p>
-                    <p className="flex justify-between text-red-600">
-                      <span>Excluídos na triagem:</span>
-                      <strong className="font-mono text-sm">{excludedList.length}</strong>
-                    </p>
-                    <p className="flex justify-between text-amber-700">
-                      <span>Aguardando triagem:</span>
-                      <strong className="font-mono text-sm">{pendingList.length}</strong>
-                    </p>
-                  </div>
-                </div>
-                <div className="mt-4 pt-3 border-t border-slate-100 text-[11px] text-slate-400">
-                  Critérios validados via Ficha Odontológica
-                </div>
-              </div>
-
-              {/* Fase 2: Alocação / Randomização */}
-              <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs flex flex-col justify-between">
-                <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-[11px] font-bold text-indigo-600 uppercase tracking-wider">Fase 2: Alocação</span>
-                    <span className="px-2 py-0.5 bg-indigo-100 text-indigo-800 rounded text-[11px] font-bold">Allocation</span>
-                  </div>
-                  <h4 className="font-bold text-slate-900 text-sm mb-2">Randomizados & Ativos</h4>
-                  <div className="space-y-1.5 text-xs text-slate-600">
-                    <p className="flex justify-between">
-                      <span>Total incluídos:</span>
-                      <strong className="text-slate-900 font-mono text-sm">{approvedList.length}</strong>
-                    </p>
-                    <p className="flex justify-between text-indigo-600">
-                      <span>Desenho do estudo:</span>
-                      <strong className="font-mono text-xs">Boca Dividida</strong>
-                    </p>
-                    <p className="text-[11px] text-slate-500 mt-1">
-                      Intervenções aplicadas bilateralmente (hemi-arcada D vs E)
-                    </p>
-                  </div>
-                </div>
-                <div className="mt-4 pt-3 border-t border-slate-100 text-[11px] text-slate-400">
-                  TCLE assinado & código gerado
-                </div>
-              </div>
-
-              {/* Fase 3: Seguimento Longitudinal */}
-              <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs flex flex-col justify-between">
-                <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-[11px] font-bold text-emerald-600 uppercase tracking-wider">Fase 3: Seguimento</span>
-                    <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded text-[11px] font-bold">Follow-Up</span>
-                  </div>
-                  <h4 className="font-bold text-slate-900 text-sm mb-2">Presença por Sessão</h4>
-                  <div className="space-y-1.5 text-xs text-slate-600 font-mono">
-                    <p className="flex justify-between">
-                      <span className="font-sans">S1 (Baseline):</span>
-                      <strong>{approvedList.filter(p => p.sessions?.some(s => s.sessionNumber === 1)).length}</strong>
-                    </p>
-                    <p className="flex justify-between">
-                      <span className="font-sans">S2 (7 dias):</span>
-                      <strong>{approvedList.filter(p => p.sessions?.some(s => s.sessionNumber === 2)).length}</strong>
-                    </p>
-                    <p className="flex justify-between">
-                      <span className="font-sans">R14d (14 dias):</span>
-                      <strong>{approvedList.filter(p => p.sessions?.some(s => s.sessionNumber === 3)).length}</strong>
-                    </p>
-                    <p className="flex justify-between">
-                      <span className="font-sans">R30d (30 dias):</span>
-                      <strong>{approvedList.filter(p => p.sessions?.some(s => s.sessionNumber === 4)).length}</strong>
-                    </p>
-                  </div>
-                </div>
-                <div className="mt-4 pt-3 border-t border-slate-100 text-[11px] text-slate-400 font-sans">
-                  Tolerâncias regulatórias monitoradas
-                </div>
-              </div>
-
-              {/* Fase 4: Análise / Conclusão */}
-              <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs flex flex-col justify-between">
-                <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-[11px] font-bold text-purple-600 uppercase tracking-wider">Fase 4: Análise</span>
-                    <span className="px-2 py-0.5 bg-purple-100 text-purple-800 rounded text-[11px] font-bold">Analysis</span>
-                  </div>
-                  <h4 className="font-bold text-slate-900 text-sm mb-2">Desfecho Completo</h4>
-                  <div className="space-y-1.5 text-xs text-slate-600">
-                    <p className="flex justify-between text-emerald-700">
-                      <span>Protocolo completo (4/4):</span>
-                      <strong className="font-mono text-sm">{allCompletedVisits.length}</strong>
-                    </p>
-                    <p className="flex justify-between text-blue-700">
-                      <span>Em andamento:</span>
-                      <strong className="font-mono text-sm">{approvedList.length - allCompletedVisits.length}</strong>
-                    </p>
-                    <p className="flex justify-between text-slate-500">
-                      <span>Perdas de seguimento:</span>
-                      <strong className="font-mono text-sm">0</strong>
-                    </p>
-                  </div>
-                </div>
-                <div className="mt-4 pt-3 border-t border-slate-100 text-[11px] text-slate-400">
-                  Exportação estatística (.CSV) liberada
-                </div>
-              </div>
-            </div>
-
-            {/* Tabela de Excluídos com Motivo */}
-            <div className="bg-white rounded-2xl shadow-xs border border-slate-200 overflow-hidden">
-              <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
-                <div>
-                  <h3 className="text-base font-bold text-slate-900">
-                    Registro Oficial de Candidatos Excluídos ({excludedList.length})
-                  </h3>
-                  <p className="text-xs text-slate-500">
-                    Justificativas clínicas arquivadas para comprovação e prestação de contas aos comitês éticos (CEP/CONEP).
-                  </p>
-                </div>
-              </div>
-
-              {excludedList.length === 0 ? (
-                <div className="p-12 text-center text-slate-400 text-sm">
-                  Nenhum paciente excluído na triagem deste estudo até o momento.
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
-                    <thead className="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider border-b border-slate-200">
-                      <tr>
-                        <th className="p-4">Código</th>
-                        <th className="p-4">Candidato(a)</th>
-                        <th className="p-4">WhatsApp</th>
-                        <th className="p-4">Justificativa Regulatória da Exclusão</th>
-                        <th className="p-4 text-right">Prontuário</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {excludedList.map((part) => (
-                        <tr key={part.id} className="hover:bg-slate-50/60 transition">
-                          <td className="p-4 font-mono font-bold text-slate-800">
-                            <button
-                              type="button"
-                              onClick={() => openPatientDossier(part)}
-                              className="px-2 py-0.5 bg-slate-900 hover:bg-blue-700 text-white font-mono font-bold text-[11px] rounded shadow-2xs transition cursor-pointer"
-                              title="Abrir Prontuário Clínico Completo"
-                            >
-                              {part.researchCode}
-                            </button>
-                          </td>
-                          <td className="p-4 font-bold text-slate-900">
-                            <button
-                              type="button"
-                              onClick={() => openPatientDossier(part)}
-                              className="font-bold text-slate-900 hover:text-blue-600 text-xs sm:text-sm text-left transition cursor-pointer"
-                              title={`Abrir Prontuário / Ficha de ${part.patient.fullName}`}
-                            >
-                              {part.patient.fullName}
-                            </button>
-                          </td>
-                          <td className="p-4 text-slate-500 font-mono">
-                            {part.patient.phoneWhatsApp}
-                          </td>
-                          <td className="p-4">
-                            <span className="inline-block px-3 py-1 bg-red-50 text-red-700 border border-red-200 rounded-lg font-medium">
-                              {part.exclusionReason || 'Critério de exclusão odontológico / desistência'}
-                            </span>
-                          </td>
-                          <td className="p-4 text-right">
-                            <button
-                              type="button"
-                              onClick={() => openPatientDossier(part)}
-                              className="h-7 px-2.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg text-xs font-bold transition inline-flex items-center justify-center gap-1 cursor-pointer"
-                              title="Ver prontuário e ficha preenchida deste candidato excluído"
-                            >
-                              <FileSpreadsheet className="w-3.5 h-3.5 text-blue-600" />
-                              <span>Ver Ficha</span>
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
 
         {/* ABA 2: EQUIPE DO ESTUDO & CEGAMENTO */}
         {activeTab === 'team' && (

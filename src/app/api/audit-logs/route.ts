@@ -43,11 +43,13 @@ export async function GET(req: Request) {
 
     const logs = await prisma.auditLog.findMany({
       where: {
-        projectId,
+        OR: [
+          { projectId },
+          { projectId: null },
+        ],
         ...(entityType ? { entityType } : {}),
       },
       orderBy: { createdAt: 'desc' },
-      take: 200,
     });
 
     return NextResponse.json({ success: true, logs });
