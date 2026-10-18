@@ -65,6 +65,7 @@ import {
   RefreshCw,
   Sliders,
   MoreHorizontal,
+  Menu,
 } from 'lucide-react';
 
 type Patient = {
@@ -620,6 +621,7 @@ function DashboardContent() {
 
   // Menu Dropdown de Exportação Bioestatística
   const [showExportMenu, setShowExportMenu] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
 
   useEffect(() => {
@@ -2405,301 +2407,406 @@ function DashboardContent() {
   });
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-800 pb-20">
-      {/* Sub-Header do Estudo */}
-      <div className="bg-white border-b border-slate-200 shadow-xs relative">
-        <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-10 py-3.5">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 min-h-12">
-            <div className="flex items-center space-x-3">
+    <div className="min-h-[calc(100vh-57px)] bg-slate-50 font-sans text-slate-800 flex flex-col">
+      <div className="flex-1 flex w-full relative">
+        {/* Backdrop para Gaveta Mobile */}
+        {mobileMenuOpen && (
+          <div
+            className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-40 lg:hidden transition-opacity"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+        )}
+
+        {/* SIDEBAR LATERAL PROFISSIONAL */}
+        <aside
+          className={`fixed lg:sticky top-[57px] bottom-0 left-0 z-40 w-72 bg-white border-r border-slate-200 flex flex-col transition-transform duration-300 ease-in-out lg:translate-x-0 ${
+            mobileMenuOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full lg:translate-x-0'
+          } h-[calc(100vh-57px)] shrink-0`}
+        >
+          {/* Topo do Sidebar: Navegação Superior e Estudo Ativo */}
+          <div className="p-4 border-b border-slate-100 flex flex-col gap-3 shrink-0">
+            <div className="flex items-center justify-between">
               <Link
                 href="/"
-                className="text-slate-500 hover:text-blue-600 text-xs font-semibold transition flex items-center space-x-1 px-2 py-1.5 rounded-lg hover:bg-slate-100"
-                title="Ver todos os projetos"
+                className="text-xs font-semibold text-slate-500 hover:text-blue-600 transition flex items-center space-x-1.5 py-1"
+                title="Voltar para Meus Estudos"
               >
                 <ChevronLeft className="w-4 h-4" />
-                <span className="hidden sm:inline">Meus Projetos</span>
+                <span>Meus Estudos</span>
               </Link>
-              <div className="h-5 w-px bg-slate-200" />
-
-              {allProjects.length > 1 ? (
-                <div className="flex items-center space-x-2">
-                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider hidden lg:inline">Estudo:</span>
-                  <select
-                    value={project.id}
-                    onChange={(e) => {
-                      const newId = e.target.value;
-                      if (typeof window !== 'undefined') {
-                        localStorage.setItem('app_active_project_id', newId);
-                      }
-                      router.push(`/dashboard?projectId=${newId}`);
-                    }}
-                    className="text-sm font-bold text-slate-900 bg-slate-50 hover:bg-slate-100 border border-slate-300 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer max-w-[240px] sm:max-w-xs truncate"
-                    title="Alternar entre projetos de pesquisa"
-                  >
-                    {allProjects.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              ) : (
-                <span className="text-base font-bold text-slate-900 truncate max-w-md">
-                  {project.name}
-                </span>
-              )}
-
-              {/* Badge de Status do Estudo */}
-              {project.status === 'COMPLETED' ? (
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-200 inline-flex items-center gap-1 shrink-0">
-                  <CheckCircle2 className="w-3 h-3 text-blue-600" />
-                  <span>Finalizado</span>
-                </span>
-              ) : project.status === 'CANCELLED' ? (
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-700 border border-slate-300 inline-flex items-center gap-1 shrink-0">
-                  <X className="w-3 h-3 text-slate-500" />
-                  <span>Cancelado</span>
-                </span>
-              ) : (
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 inline-flex items-center gap-1 shrink-0">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  <span>Ativo</span>
-                </span>
-              )}
-
               <button
-                onClick={() => loadProject(true)}
-                disabled={isRefreshing}
-                title="Recarregar dados do projeto"
-                className="p-1.5 text-slate-400 hover:text-blue-600 rounded-lg hover:bg-slate-100 transition disabled:opacity-50 cursor-pointer"
+                type="button"
+                onClick={() => setMobileMenuOpen(false)}
+                className="lg:hidden p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100"
               >
-                <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-blue-600' : ''}`} />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            {/* Ações e Ferramentas do Estudo Clínico */}
-            <div className="flex items-center gap-2.5 shrink-0">
-              <button
-                onClick={() => setShowNewPatientModal(true)}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-bold rounded-xl shadow-xs hover:shadow transition flex items-center space-x-1.5 cursor-pointer shrink-0"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Cadastrar Paciente</span>
-              </button>
+            {/* Identificação e Seletor do Estudo */}
+            <div className="space-y-1">
+              <div className="flex items-center justify-between gap-1.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Estudo Selecionado</span>
+                {project.status === 'COMPLETED' ? (
+                  <span className="px-2 py-0.2 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 inline-flex items-center gap-1">
+                    <CheckCircle2 className="w-2.5 h-2.5 text-blue-600" />
+                    <span>Finalizado</span>
+                  </span>
+                ) : project.status === 'CANCELLED' ? (
+                  <span className="px-2 py-0.2 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
+                    Cancelado
+                  </span>
+                ) : (
+                  <span className="px-2 py-0.2 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 inline-flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    <span>Ativo</span>
+                  </span>
+                )}
+              </div>
 
-              {/* Menu de Configurações do Estudo */}
-              <div className="relative settings-dropdown-container">
+              {allProjects.length > 1 ? (
+                <select
+                  value={project.id}
+                  onChange={(e) => {
+                    const newId = e.target.value;
+                    if (typeof window !== 'undefined') {
+                      localStorage.setItem('app_active_project_id', newId);
+                    }
+                    router.push(`/dashboard?projectId=${newId}`);
+                  }}
+                  className="w-full text-xs font-bold text-slate-900 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer truncate"
+                  title="Alternar entre estudos de pesquisa"
+                >
+                  {allProjects.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <h2 className="text-xs font-bold text-slate-900 line-clamp-2 leading-tight" title={project.name}>
+                  {project.name}
+                </h2>
+              )}
+            </div>
+
+            {/* CTA Primário de Cadastro de Paciente */}
+            <button
+              onClick={() => {
+                setMobileMenuOpen(false);
+                setShowNewPatientModal(true);
+              }}
+              className="w-full py-2 px-3 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-xs hover:shadow transition flex items-center justify-center space-x-2 cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Cadastrar Paciente</span>
+            </button>
+          </div>
+
+          {/* Menus e Navegação do Estudo */}
+          <nav className="flex-1 overflow-y-auto p-3 space-y-5">
+            {/* GRUPO 1: ATENDIMENTO CLÍNICO */}
+            <div>
+              <p className="px-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                Atendimento Clínico
+              </p>
+              <div className="space-y-1">
                 <button
                   type="button"
-                  onClick={() => setShowSettingsMenu(!showSettingsMenu)}
-                  className="px-3 py-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition flex items-center space-x-1.5 shadow-2xs shrink-0 cursor-pointer"
-                  title="Configurações do estudo, ficha clínica, eCRF e TCLE"
+                  onClick={() => {
+                    handleSelectTab('active');
+                    setMobileMenuOpen(false);
+                  }}
+                  className={`w-full px-3 py-2 rounded-xl text-xs font-bold transition flex items-center justify-between text-left cursor-pointer ${
+                    activeTab === 'active'
+                      ? 'bg-blue-50 text-blue-700 border border-blue-200/80 shadow-2xs'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                  }`}
                 >
-                  <Settings className="w-3.5 h-3.5 text-slate-500" />
-                  <span className="hidden sm:inline">Configurações</span>
-                  <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${showSettingsMenu ? 'rotate-180' : ''}`} />
+                  <div className="flex items-center space-x-2.5 truncate">
+                    <Stethoscope className={`w-4 h-4 shrink-0 ${activeTab === 'active' ? 'text-blue-600' : 'text-slate-400'}`} />
+                    <span className="truncate">Prontuários & Consultas</span>
+                  </div>
+                  <div className="flex items-center space-x-1 shrink-0 ml-1.5">
+                    {(overdueVisits.length > 0 || dueNowVisits.length > 0) && (
+                      <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" title="Retornos pendentes" />
+                    )}
+                    <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                      activeTab === 'active' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600'
+                    }`}>
+                      {approvedList.length}
+                    </span>
+                  </div>
                 </button>
 
-                {showSettingsMenu && (
-                  <div className="absolute right-0 mt-2 w-64 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 p-1.5 text-xs">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowSettingsMenu(false);
-                        openEditProjectModal();
-                      }}
-                      className="w-full px-3 py-2 text-left text-slate-700 hover:bg-slate-50 rounded-xl flex items-center space-x-2.5 transition cursor-pointer"
-                    >
-                      <Sliders className="w-4 h-4 text-slate-500 shrink-0" />
-                      <div>
-                        <p className="font-bold">Editar Dados do Estudo</p>
-                        <p className="text-[10px] text-slate-400">Título, descrição e status</p>
-                      </div>
-                    </button>
-
-                    <div className="my-1 border-t border-slate-100" />
-
-                    <Link
-                      href={`/anamnese?projectId=${project.id}`}
-                      onClick={() => setShowSettingsMenu(false)}
-                      className="w-full px-3 py-2 text-left text-slate-700 hover:bg-blue-50 hover:text-blue-700 rounded-xl flex items-center space-x-2.5 transition"
-                    >
-                      <Stethoscope className="w-4 h-4 text-blue-600 shrink-0" />
-                      <div>
-                        <p className="font-bold">Ficha Clínica & Critérios</p>
-                        <p className="text-[10px] text-slate-400">Odontograma e inclusão/exclusão</p>
-                      </div>
-                    </Link>
-
-                    <Link
-                      href={`/construtor?projectId=${project.id}`}
-                      onClick={() => setShowSettingsMenu(false)}
-                      className="w-full px-3 py-2 text-left text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 rounded-xl flex items-center space-x-2.5 transition"
-                    >
-                      <FileCode className="w-4 h-4 text-indigo-600 shrink-0" />
-                      <div>
-                        <p className="font-bold">Construtor de eCRF</p>
-                        <p className="text-[10px] text-slate-400">Formulários e escalas de avaliação</p>
-                      </div>
-                    </Link>
-
-                    <Link
-                      href={`/tcle/editor?projectId=${project.id}`}
-                      onClick={() => setShowSettingsMenu(false)}
-                      className="w-full px-3 py-2 text-left text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 rounded-xl flex items-center space-x-2.5 transition"
-                    >
-                      <FileText className="w-4 h-4 text-emerald-600 shrink-0" />
-                      <div>
-                        <p className="font-bold">Termo de Consentimento (TCLE)</p>
-                        <p className="text-[10px] text-slate-400">Personalizar termo e aceite digital</p>
-                      </div>
-                    </Link>
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleSelectTab('triage');
+                    setMobileMenuOpen(false);
+                  }}
+                  className={`w-full px-3 py-2 rounded-xl text-xs font-bold transition flex items-center justify-between text-left cursor-pointer ${
+                    activeTab === 'triage'
+                      ? 'bg-blue-50 text-blue-700 border border-blue-200/80 shadow-2xs'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                  }`}
+                >
+                  <div className="flex items-center space-x-2.5 truncate">
+                    <ClipboardList className={`w-4 h-4 shrink-0 ${activeTab === 'triage' ? 'text-blue-600' : 'text-slate-400'}`} />
+                    <span className="truncate">Triagem & Inclusão</span>
                   </div>
+                  <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold shrink-0 ml-1.5 ${
+                    activeTab === 'triage' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600'
+                  }`}>
+                    {pendingList.length}
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            {/* GRUPO 2: DADOS & BIOESTATÍSTICA */}
+            <div>
+              <p className="px-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                Bioestatística & Dados
+              </p>
+              <div className="space-y-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleSelectTab('export');
+                    setMobileMenuOpen(false);
+                  }}
+                  className={`w-full px-3 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-2.5 text-left cursor-pointer ${
+                    activeTab === 'export'
+                      ? 'bg-blue-50 text-blue-700 border border-blue-200/80 shadow-2xs'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                  }`}
+                >
+                  <Download className={`w-4 h-4 shrink-0 ${activeTab === 'export' ? 'text-blue-600' : 'text-slate-400'}`} />
+                  <span className="truncate">Exportar Dados & CSV</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleSelectTab('consort');
+                    setMobileMenuOpen(false);
+                  }}
+                  className={`w-full px-3 py-2 rounded-xl text-xs font-bold transition flex items-center justify-between text-left cursor-pointer ${
+                    activeTab === 'consort'
+                      ? 'bg-blue-50 text-blue-700 border border-blue-200/80 shadow-2xs'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                  }`}
+                >
+                  <div className="flex items-center space-x-2.5 truncate">
+                    <BarChart3 className={`w-4 h-4 shrink-0 ${activeTab === 'consort' ? 'text-blue-600' : 'text-slate-400'}`} />
+                    <span className="truncate">Fluxo CONSORT</span>
+                  </div>
+                  {excludedList.length > 0 && (
+                    <span className="text-[10px] font-bold text-slate-400">
+                      {excludedList.length} excl.
+                    </span>
+                  )}
+                </button>
+
+                {isAdmin && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleSelectTab('audit');
+                      setMobileMenuOpen(false);
+                    }}
+                    className={`w-full px-3 py-2 rounded-xl text-xs font-bold transition flex items-center justify-between text-left cursor-pointer ${
+                      activeTab === 'audit'
+                        ? 'bg-indigo-50 text-indigo-700 border border-indigo-200/80 shadow-2xs'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-2.5 truncate">
+                      <ShieldCheck className={`w-4 h-4 shrink-0 ${activeTab === 'audit' ? 'text-indigo-600' : 'text-slate-400'}`} />
+                      <span className="truncate">Trilha Auditoria GCP</span>
+                    </div>
+                    <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                      activeTab === 'audit' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600'
+                    }`}>
+                      {project.auditLogs?.length || 0}
+                    </span>
+                  </button>
                 )}
               </div>
             </div>
-          </div>
-        </div>
-      </div>
 
-      {/* Conteúdo Principal */}
-      <main className="w-full px-4 sm:px-6 lg:px-8 xl:px-10 py-6">
-        {/* Banner de Erro com Versão em Cache */}
-        {loadError && (
-          <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-amber-900 shadow-xs">
-            <div className="flex items-center space-x-2">
-              <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
-              <span>{loadError} Exibindo versão local em cache.</span>
+            {/* GRUPO 3: CONFIGURAÇÕES DO ESTUDO */}
+            <div>
+              <p className="px-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                Configurações do Estudo
+              </p>
+              <div className="space-y-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleSelectTab('team');
+                    setMobileMenuOpen(false);
+                  }}
+                  className={`w-full px-3 py-2 rounded-xl text-xs font-bold transition flex items-center justify-between text-left cursor-pointer ${
+                    activeTab === 'team'
+                      ? 'bg-blue-50 text-blue-700 border border-blue-200/80 shadow-2xs'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                  }`}
+                >
+                  <div className="flex items-center space-x-2.5 truncate">
+                    <Users className={`w-4 h-4 shrink-0 ${activeTab === 'team' ? 'text-blue-600' : 'text-slate-400'}`} />
+                    <span className="truncate">Equipe do Estudo</span>
+                  </div>
+                  <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                    activeTab === 'team' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600'
+                  }`}>
+                    {project.members?.length || 0}
+                  </span>
+                </button>
+
+                <Link
+                  href={`/anamnese?projectId=${project.id}`}
+                  className="w-full px-3 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition flex items-center space-x-2.5 text-left"
+                >
+                  <FileSpreadsheet className="w-4 h-4 text-blue-600 shrink-0" />
+                  <span className="truncate">Ficha Clínica & Critérios</span>
+                </Link>
+
+                <Link
+                  href={`/construtor?projectId=${project.id}`}
+                  className="w-full px-3 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:text-indigo-700 hover:bg-indigo-50 transition flex items-center space-x-2.5 text-left"
+                >
+                  <FileCode className="w-4 h-4 text-indigo-600 shrink-0" />
+                  <span className="truncate">Construtor de eCRF</span>
+                </Link>
+
+                <Link
+                  href={`/tcle/editor?projectId=${project.id}`}
+                  className="w-full px-3 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 transition flex items-center space-x-2.5 text-left"
+                >
+                  <FileText className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span className="truncate">Termo de Aceite (TCLE)</span>
+                </Link>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    openEditProjectModal();
+                  }}
+                  className="w-full px-3 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition flex items-center space-x-2.5 text-left cursor-pointer"
+                >
+                  <Sliders className="w-4 h-4 text-slate-400 shrink-0" />
+                  <span className="truncate">Editar Dados do Estudo</span>
+                </button>
+              </div>
             </div>
-            <button
-              onClick={() => loadProject(false)}
-              className="px-3 py-1.5 bg-amber-200 hover:bg-amber-300 font-bold rounded-lg transition shrink-0"
-            >
-              Tentar Novamente
-            </button>
-          </div>
-        )}
-        
-        {/* Abas Principais de Navegação (Consolidadas em 3) */}
-        <div className="bg-slate-100/90 p-1.5 rounded-2xl flex items-center gap-1.5 mb-5 border border-slate-200/80 overflow-x-auto no-scrollbar shadow-2xs">
-          <button
-            onClick={() => handleSelectTab('active')}
-            className={`px-4 py-2.5 text-xs font-bold rounded-xl transition-all flex items-center space-x-2 shrink-0 cursor-pointer ${
-              activeTab === 'active'
-                ? 'bg-blue-600 text-white shadow-xs'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-white/70'
-            }`}
-          >
-            <Stethoscope className="w-4 h-4" />
-            <span>Atendimento Clínico</span>
-            <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
-              activeTab === 'active' ? 'bg-blue-700 text-white' : 'bg-slate-200 text-slate-700'
-            }`}>
-              {approvedList.length}
-            </span>
-            {(overdueVisits.length > 0 || dueNowVisits.length > 0) && (
-              <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" title="Retornos pendentes" />
-            )}
-          </button>
+          </nav>
 
-          <button
-            onClick={() => handleSelectTab('triage')}
-            className={`px-4 py-2.5 text-xs font-bold rounded-xl transition-all flex items-center space-x-2 shrink-0 cursor-pointer ${
-              activeTab === 'triage'
-                ? 'bg-blue-600 text-white shadow-xs'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-white/70'
-            }`}
-          >
-            <ClipboardList className="w-4 h-4" />
-            <span>Triagem & Inclusão</span>
-            <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
-              activeTab === 'triage' ? 'bg-blue-700 text-white' : 'bg-slate-200 text-slate-700'
-            }`}>
-              {pendingList.length}
-            </span>
-          </button>
-
-          <button
-            onClick={() => {
-              if (!['export', 'consort', 'team', 'audit'].includes(activeTab)) {
-                handleSelectTab('export');
-              }
-            }}
-            className={`px-4 py-2.5 text-xs font-bold rounded-xl transition-all flex items-center space-x-2 shrink-0 cursor-pointer ${
-              ['export', 'consort', 'team', 'audit'].includes(activeTab)
-                ? 'bg-blue-600 text-white shadow-xs'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-white/70'
-            }`}
-          >
-            <BarChart3 className="w-4 h-4" />
-            <span>Dados & Relatórios</span>
-            <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
-              ['export', 'consort', 'team', 'audit'].includes(activeTab) ? 'bg-blue-700 text-white' : 'bg-slate-200 text-slate-700'
-            }`}>
-              Bioestatística • CONSORT • Equipe
-            </span>
-          </button>
-        </div>
-
-        {/* Sub-navegação para Dados & Relatórios */}
-        {['export', 'consort', 'team', 'audit'].includes(activeTab) && (
-          <div className="bg-slate-100 p-1 rounded-xl flex items-center gap-1 mb-6 border border-slate-200/80 shadow-2xs w-fit overflow-x-auto">
-            <button
-              onClick={() => handleSelectTab('export')}
-              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center space-x-1.5 shrink-0 cursor-pointer ${
-                activeTab === 'export'
-                  ? 'bg-white text-blue-600 shadow-2xs font-extrabold'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <Download className="w-3.5 h-3.5" />
-              <span>Bioestatística & Exportar</span>
-            </button>
-
-            <button
-              onClick={() => handleSelectTab('consort')}
-              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center space-x-1.5 shrink-0 cursor-pointer ${
-                activeTab === 'consort'
-                  ? 'bg-white text-blue-600 shadow-2xs font-extrabold'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <BarChart3 className="w-3.5 h-3.5" />
-              <span>Fluxo CONSORT</span>
-            </button>
-
-            <button
-              onClick={() => handleSelectTab('team')}
-              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center space-x-1.5 shrink-0 cursor-pointer ${
-                activeTab === 'team'
-                  ? 'bg-white text-blue-600 shadow-2xs font-extrabold'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <Users className="w-3.5 h-3.5" />
-              <span>Equipe do Estudo</span>
-              <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
-                activeTab === 'team' ? 'bg-blue-100 text-blue-800' : 'bg-slate-200 text-slate-700'
-              }`}>
-                {project.members?.length || 0}
-              </span>
-            </button>
-
-            {isAdmin && (
-              <button
-                onClick={() => handleSelectTab('audit')}
-                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center space-x-1.5 shrink-0 cursor-pointer ${
-                  activeTab === 'audit'
-                    ? 'bg-white text-indigo-700 shadow-2xs font-extrabold'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                <ShieldCheck className="w-3.5 h-3.5" />
-                <span>Auditoria GCP</span>
-              </button>
+          {/* Rodapé do Sidebar */}
+          <div className="p-3 border-t border-slate-100 bg-slate-50/60 shrink-0">
+            {isBlindedUser ? (
+              <div className="px-2.5 py-1.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 text-[11px] font-semibold flex items-center space-x-2">
+                <Lock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                <span className="truncate">Modo Avaliador Cego</span>
+              </div>
+            ) : (
+              <div className="text-[11px] text-slate-400 px-2 flex items-center justify-between">
+                <span>Protocolo Clínico UEPG</span>
+                <span>{studyProtocol.sessions.length} sessões</span>
+              </div>
             )}
           </div>
-        )}
+        </aside>
+
+        {/* ÁREA PRINCIPAL DE CONTEÚDO */}
+        <div className="flex-1 min-w-0 flex flex-col">
+          {/* Barra Superior Mobile para Abrir Sidebar */}
+          <div className="lg:hidden p-3 bg-white border-b border-slate-200 flex items-center justify-between sticky top-[57px] z-30 shadow-2xs">
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen(true)}
+              className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg flex items-center space-x-2 transition"
+            >
+              <Menu className="w-4 h-4" />
+              <span>Menu do Estudo</span>
+              {(overdueVisits.length > 0 || dueNowVisits.length > 0) && (
+                <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+              )}
+            </button>
+
+            <span className="text-xs font-bold text-slate-800 truncate max-w-[160px]">
+              {project.name}
+            </span>
+
+            <button
+              onClick={() => setShowNewPatientModal(true)}
+              className="p-1.5 bg-blue-600 text-white rounded-lg text-xs font-bold"
+              title="Cadastrar Paciente"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Canvas de Conteúdo Principal */}
+          <main className="flex-1 w-full px-4 sm:px-6 lg:px-8 xl:px-10 py-6">
+            {/* Banner de Erro com Versão em Cache */}
+            {loadError && (
+              <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-amber-900 shadow-xs">
+                <div className="flex items-center space-x-2">
+                  <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                  <span>{loadError} Exibindo versão local em cache.</span>
+                </div>
+                <button
+                  onClick={() => loadProject(false)}
+                  className="px-3 py-1.5 bg-amber-200 hover:bg-amber-300 font-bold rounded-lg transition shrink-0 cursor-pointer"
+                >
+                  Tentar Novamente
+                </button>
+              </div>
+            )}
+
+            {/* Cabeçalho Limpo da Seção Atual */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 pb-4 border-b border-slate-200/80">
+              <div>
+                <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2.5">
+                  {activeTab === 'active' && 'Prontuários & Atendimento Clínico'}
+                  {activeTab === 'triage' && 'Triagem & Inclusão de Candidatos'}
+                  {activeTab === 'export' && 'Bioestatística & Exportação de Dados'}
+                  {activeTab === 'consort' && 'Fluxo CONSORT do Ensaio Clínico'}
+                  {activeTab === 'team' && 'Equipe do Projeto de Pesquisa'}
+                  {activeTab === 'audit' && 'Trilha de Auditoria Regulatória GCP'}
+
+                  <button
+                    onClick={() => loadProject(true)}
+                    disabled={isRefreshing}
+                    title="Recarregar dados"
+                    className="p-1 text-slate-400 hover:text-blue-600 rounded-lg hover:bg-slate-100 transition disabled:opacity-50 cursor-pointer"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-blue-600' : ''}`} />
+                  </button>
+                </h1>
+                <p className="text-xs text-slate-500 mt-1">
+                  {activeTab === 'active' && 'Acompanhe as sessões clínicas, janelas regulatórias de retorno e registre atendimentos.'}
+                  {activeTab === 'triage' && 'Avalie critérios de inclusão/exclusão e aprove voluntários para o protocolo.'}
+                  {activeTab === 'export' && 'Estatística descritiva pareada, escala Vita Classical (Delta SGU), dor e exportação.'}
+                  {activeTab === 'consort' && 'Diagrama de fluxo de participantes conforme o padrão internacional CONSORT.'}
+                  {activeTab === 'team' && 'Membros do estudo, atribuições clínicas e mascaramento duplo-cego.'}
+                  {activeTab === 'audit' && 'Registro imutável de todas as ações para auditoria GCP / ANVISA.'}
+                </p>
+              </div>
+
+              {activeTab === 'active' && (
+                <button
+                  onClick={() => setShowNewPatientModal(true)}
+                  className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-xs hover:shadow transition flex items-center space-x-1.5 cursor-pointer shrink-0 self-start sm:self-auto"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Novo Paciente</span>
+                </button>
+              )}
+            </div>
 
         {/* ABA 1: PRONTUÁRIOS & ATENDIMENTO CLÍNICO */}
         {activeTab === 'active' && (
@@ -4496,7 +4603,9 @@ function DashboardContent() {
           );
         })()}
 
-      </main>
+          </main>
+        </div>
+      </div>
 
       {/* Modal de Alocação de Randomização / Grupos */}
       {showAllocationModal && allocatingParticipant && (
