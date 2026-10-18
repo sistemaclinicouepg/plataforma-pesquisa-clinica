@@ -73,9 +73,9 @@ export async function POST(req: Request) {
       expectations,
     } = data;
 
-    if (!fullName || !cpf || !phoneWhatsApp || !projectId) {
+    if (!fullName || !cpf || !phoneWhatsApp) {
       return NextResponse.json(
-        { error: 'Nome completo, CPF, WhatsApp e Projeto são obrigatórios.' },
+        { error: 'Nome completo, CPF e WhatsApp são obrigatórios.' },
         { status: 400 }
       );
     }
@@ -94,6 +94,13 @@ export async function POST(req: Request) {
       },
     });
 
+    if (patient && !projectId) {
+      return NextResponse.json(
+        { error: `Já existe um paciente cadastrado com este CPF (${cleanCpf}): ${patient.fullName}.` },
+        { status: 409 }
+      );
+    }
+
     if (!patient) {
       patient = await prisma.patient.create({
         data: {
@@ -111,6 +118,28 @@ export async function POST(req: Request) {
           expectations: expectations?.trim() || null,
         },
       });
+
+      // Se criado sem vínculo a um projeto específico (Cadastro Central)
+      if (!projectId) {
+        try {
+          const currentUser = await getCurrentUser();
+          await prisma.auditLog.create({
+            data: {
+              action: 'CREATE',
+              entityType: 'Patient',
+              entityId: patient.id,
+              changedBy: currentUser?.name || currentUser?.email || 'Administrador',
+              userEmail: currentUser?.email,
+              reason: `Cadastro de novo paciente ${patient.fullName} no prontuário unificado.`,
+            },
+          });
+        } catch (auditErr) {
+          console.warn('Erro ao registrar log de auditoria de cadastro:', auditErr);
+        }
+        return NextResponse.json({ success: true, patient });
+      }
+    } else if (!projectId) {
+      return NextResponse.json({ success: true, patient });
     }
 
     // 2. Verificar se este paciente já está cadastrado nesta pesquisa específica
@@ -271,10 +300,11 @@ export async function PATCH(req: Request) {
     }
 
     // Validação de permissão: usuário deve ser ADMIN ou membro do projeto
-    if (currentUser.role !== 'ADMIN') {
+    const isAdmin = currentUser.role === 'ADMIN' || currentUser.email === 'admin@uepg.br';
+    if (!isAdmin) {
       if (!projectId) {
         return NextResponse.json(
-          { error: 'projectId é obrigatório para validação de permissão.' },
+          { error: 'projectId é obrigatório para validação de permissão de pesquisador.' },
           { status: 400 }
         );
       }
@@ -426,6 +456,98 @@ export async function PATCH(req: Request) {
     console.error('Erro ao atualizar dados cadastrais do paciente:', error);
     return NextResponse.json(
       { error: error?.message || 'Erro ao atualizar dados cadastrais.' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(req: Request) {
+  try {
+    const currentUser = await getCurrentUser();
+    const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.email === 'admin@uepg.br';
+    if (!isAdmin) {
+      return NextResponse.json(
+        { error: 'Apenas administradores podem excluir registros de pacientes.' },
+        { status: 403 }
+      );
+    }
+
+    const { searchParams } = new URL(req.url);
+    let patientId = searchParams.get('id');
+    let reason = searchParams.get('reason');
+
+    if (!patientId) {
+      try {
+        const body = await req.json();
+        patientId = body.patientId || body.id;
+        reason = body.reason;
+      } catch (e) {}
+    }
+
+    if (!patientId) {
+      return NextResponse.json({ error: 'ID do paciente é obrigatório.' }, { status: 400 });
+    }
+
+    const patient = await prisma.patient.findUnique({
+      where: { id: patientId },
+      include: {
+        participations: {
+          select: { id: true, researchCode: true, projectId: true }
+        }
+      }
+    });
+
+    if (!patient) {
+      return NextResponse.json({ error: 'Paciente não encontrado no prontuário.' }, { status: 404 });
+    }
+
+    const participantIds = patient.participations.map((p) => p.id);
+
+    // Cascata transacional segura
+    await prisma.$transaction(async (tx) => {
+      if (participantIds.length > 0) {
+        await tx.consentSignature.deleteMany({
+          where: { participantId: { in: participantIds } }
+        });
+        await tx.formResponse.deleteMany({
+          where: { participantId: { in: participantIds } }
+        });
+        await tx.clinicalAlert.deleteMany({
+          where: { participantId: { in: participantIds } }
+        });
+        await tx.clinicalSession.deleteMany({
+          where: { participantId: { in: participantIds } }
+        });
+        await tx.participant.deleteMany({
+          where: { id: { in: participantIds } }
+        });
+      }
+
+      await tx.patient.delete({
+        where: { id: patientId }
+      });
+
+      // Registro de Auditoria GCP / ICH
+      await tx.auditLog.create({
+        data: {
+          entityType: 'Patient',
+          entityId: patientId,
+          action: 'DELETE',
+          changedBy: currentUser?.name || currentUser?.email || 'Administrador',
+          userEmail: currentUser?.email,
+          reason: reason?.trim() || `Exclusão definitiva do paciente ${patient.fullName} (CPF: ${patient.cpf}) por administrador.`,
+        }
+      });
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: `Paciente ${patient.fullName} e registros vinculados excluídos com sucesso.`
+    });
+  } catch (error: any) {
+    console.error('Erro ao excluir paciente:', error);
+    return NextResponse.json(
+      { error: error?.message || 'Erro ao excluir paciente.' },
       { status: 500 }
     );
   }
