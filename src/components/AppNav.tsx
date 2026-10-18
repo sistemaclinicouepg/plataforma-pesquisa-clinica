@@ -6,8 +6,8 @@ import { usePathname, useRouter } from 'next/navigation';
 import {
   FolderKanban,
   Activity,
-  FileEdit,
-  FileSpreadsheet,
+  FileCode,
+  FileText,
   ExternalLink,
   ShieldCheck,
   EyeOff,
@@ -15,6 +15,9 @@ import {
   LogOut,
   AlertTriangle,
   ArrowRight,
+  User as UserIcon,
+  ChevronDown,
+  Sparkles,
 } from 'lucide-react';
 
 type CurrentUser = {
@@ -33,6 +36,7 @@ export default function AppNav() {
   const [loading, setLoading] = useState(true);
   const [activeProjectId, setActiveProjectId] = useState<string>('b4360782-3701-4fad-8af4-263f0bd397ba');
   const [activeParticipantCode, setActiveParticipantCode] = useState<string>('P001');
+  const [userDropdownOpen, setUserDropdownOpen] = useState(false);
 
   // Não exibir cabeçalho de pesquisador em telas públicas/paciente ou tela de login dedicada
   const isPublicOrPatientScreen =
@@ -70,7 +74,6 @@ export default function AppNav() {
           } catch (e) {}
         }
       } else {
-        // Se a resposta não foi ok (ex: 401 não autenticado), limpa o cache de usuário anterior
         setCurrentUser(null);
         if (typeof window !== 'undefined') {
           localStorage.removeItem('uepg_cached_user');
@@ -78,7 +81,6 @@ export default function AppNav() {
         }
       }
     } catch {
-      // Falha de rede: se não havia cache válido, garante nulo
       if (!localStorage.getItem('uepg_cached_user')) {
         setCurrentUser(null);
       }
@@ -117,7 +119,6 @@ export default function AppNav() {
   const handleLogout = async () => {
     try {
       if (typeof window !== 'undefined') {
-        // Limpeza agressiva e completa de qualquer dado ou cache em memória
         localStorage.removeItem('uepg_auth_token');
         localStorage.removeItem('uepg_cached_user');
         localStorage.removeItem('uepg_cached_projects');
@@ -154,12 +155,10 @@ export default function AppNav() {
     }
   };
 
-  // Se estiver na tela de login ou portal do paciente, não renderiza a barra de navegação
   if (isPublicOrPatientScreen) {
     return null;
   }
 
-  // Se estiver em rota protegida e não autenticado
   const isProtectedPath =
     pathname === '/' ||
     pathname.startsWith('/projetos') ||
@@ -171,14 +170,14 @@ export default function AppNav() {
 
   if (!loading && !currentUser && isProtectedPath) {
     return (
-      <div className="bg-amber-600 text-white px-4 py-2 text-xs font-semibold flex items-center justify-between shadow-xs sticky top-0 z-50">
-        <div className="flex items-center space-x-2">
+      <div className="bg-gradient-to-r from-amber-600 to-amber-700 text-white px-4 py-2.5 text-xs font-semibold flex items-center justify-between shadow-sm sticky top-0 z-50">
+        <div className="flex items-center space-x-2.5">
           <AlertTriangle className="w-4 h-4 text-amber-200 shrink-0" />
-          <span>Acesso Restrito ao Pesquisador: Você não está autenticado.</span>
+          <span>Acesso Restrito ao Pesquisador: Você não está autenticado no sistema clínico.</span>
         </div>
         <Link
           href="/login"
-          className="px-3 py-1 bg-white text-amber-900 rounded-lg font-bold shadow-2xs hover:bg-amber-50 transition flex items-center space-x-1"
+          className="px-3.5 py-1 bg-white text-amber-950 rounded-lg font-bold shadow-xs hover:bg-amber-50 transition flex items-center space-x-1.5"
         >
           <span>Fazer Login</span>
           <ArrowRight className="w-3.5 h-3.5" />
@@ -187,33 +186,52 @@ export default function AppNav() {
     );
   }
 
-  // Links de navegação baseados na função
   const isEvaluator = currentUser?.email === 'carlos@uepg.br';
   const isAdmin = currentUser?.role === 'ADMIN';
 
-  const navLinks: Array<{
-    href: string;
-    label: string;
-    icon: React.ComponentType<{ className?: string }>;
-    roleBadge?: string;
-  }> = [
+  // Obter iniciais do usuário
+  const getInitials = (name?: string) => {
+    if (!name) return 'U';
+    const parts = name.trim().split(/\s+/);
+    if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  };
+
+  const navLinks = [
     { href: '/', label: 'Meus Projetos', icon: FolderKanban },
     { href: `/dashboard?projectId=${activeProjectId}`, label: 'Prontuário & Atendimento', icon: Activity },
+    { href: `/construtor?projectId=${activeProjectId}`, label: 'Construtor eCRF', icon: FileCode },
+    { href: `/anamnese?projectId=${activeProjectId}`, label: 'Ficha & Critérios', icon: Stethoscope },
   ];
 
   return (
-    <header className="bg-white/95 text-slate-800 border-b border-slate-200/90 text-xs sticky top-0 z-40 shadow-xs backdrop-blur-md">
-      <div className="w-full px-4 sm:px-6 lg:px-8 py-2.5 flex flex-col md:flex-row md:items-center justify-between gap-2.5">
+    <header className="bg-white/95 backdrop-blur-md text-slate-800 border-b border-slate-200/80 sticky top-0 z-40 shadow-card">
+      <div className="w-full px-4 sm:px-6 lg:px-8 py-2.5 flex flex-col md:flex-row md:items-center justify-between gap-3">
         
         {/* Identificação Oficial do Sistema */}
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-4">
           <Link
             href="/"
-            className="flex items-center space-x-2 bg-blue-50/80 hover:bg-blue-100/90 border border-blue-200/80 px-2.5 py-1.5 rounded-lg text-blue-900 font-bold tracking-tight text-xs transition"
+            className="flex items-center space-x-2.5 group transition"
           >
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="tracking-wide text-[11px] font-black">ODONTO-PESQUISA UEPG</span>
+            {/* Logomarca UEPG Pesquisa Clínica */}
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 flex items-center justify-center text-white shadow-xs group-hover:scale-105 transition-transform duration-200">
+              <span className="font-black text-sm tracking-tighter">U</span>
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 -ml-0.5 mb-2 animate-pulse" />
+            </div>
+            <div className="flex flex-col">
+              <div className="flex items-center space-x-1.5">
+                <span className="font-extrabold text-sm text-slate-900 tracking-tight">UEPG</span>
+                <span className="text-slate-300">•</span>
+                <span className="font-bold text-xs text-blue-600 tracking-tight">Pesquisa Clínica</span>
+              </div>
+              <span className="text-[10px] text-slate-400 font-medium tracking-wide">
+                Ensaios Odontológicos • GCP / ICH
+              </span>
+            </div>
           </Link>
+
+          <div className="hidden lg:block h-5 w-px bg-slate-200 mx-1" />
 
           {/* Links Principais da Aplicação */}
           <nav className="flex flex-wrap items-center gap-1">
@@ -225,19 +243,14 @@ export default function AppNav() {
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`px-2.5 py-1.5 rounded-lg transition-all font-semibold text-xs flex items-center space-x-1.5 ${
+                  className={`px-3 py-1.5 rounded-xl transition-all font-semibold text-xs flex items-center space-x-2 ${
                     isActive
-                      ? 'bg-slate-100 text-slate-900 font-bold border border-slate-200/90 shadow-2xs'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                      ? 'bg-blue-50 text-blue-700 font-bold border border-blue-200/80 shadow-2xs'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
                   }`}
                 >
-                  <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-blue-600' : 'text-slate-500'}`} />
+                  <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-blue-600' : 'text-slate-400'}`} />
                   <span>{link.label}</span>
-                  {link.roleBadge && !isActive && (
-                    <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-100 text-slate-500 font-mono">
-                      {link.roleBadge}
-                    </span>
-                  )}
                 </Link>
               );
             })}
@@ -245,65 +258,65 @@ export default function AppNav() {
         </div>
 
         {/* Lado Direito: Perfil Autêntico Logado e Controle de Sessão */}
-        <div className="flex items-center space-x-2 shrink-0 self-end md:self-center">
+        <div className="flex items-center space-x-2.5 shrink-0 self-end md:self-center">
           {currentUser ? (
-            <div className={`flex items-center space-x-1.5 p-1 rounded-xl border transition ${
-              pathname === '/perfil'
-                ? 'bg-blue-50/80 border-blue-300 shadow-2xs'
-                : 'bg-slate-50 border-slate-200'
-            }`}>
+            <div className="flex items-center space-x-2">
               
-              {/* Badge de Função e Cegamento */}
+              {/* Badge de Função e Mascaramento */}
               {isAdmin ? (
-                <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-200 flex items-center space-x-1">
-                  <ShieldCheck className="w-3 h-3 text-purple-700" />
-                  <span>Administrador</span>
+                <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-purple-50 text-purple-800 border border-purple-200/80 flex items-center space-x-1.5">
+                  <ShieldCheck className="w-3 h-3 text-purple-600" />
+                  <span className="hidden sm:inline">Coordenação Geral</span>
+                  <span className="sm:hidden">Admin</span>
                 </span>
               ) : isEvaluator ? (
-                <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300 flex items-center space-x-1">
-                  <EyeOff className="w-3 h-3 text-amber-700" />
+                <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-amber-50 text-amber-900 border border-amber-200/80 flex items-center space-x-1.5">
+                  <EyeOff className="w-3 h-3 text-amber-600" />
                   <span>Avaliador Cego</span>
                 </span>
               ) : (
-                <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-100 text-blue-900 border border-blue-200 flex items-center space-x-1">
-                  <Stethoscope className="w-3 h-3 text-blue-700" />
-                  <span>Coordenação</span>
+                <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-blue-50 text-blue-800 border border-blue-200/80 flex items-center space-x-1.5">
+                  <Stethoscope className="w-3 h-3 text-blue-600" />
+                  <span>Pesquisador</span>
                 </span>
               )}
 
-              {/* Link direto para a Área de Perfil */}
-              <Link
-                href="/perfil"
-                className={`flex items-center space-x-1 px-2 py-1 rounded-lg transition font-bold text-xs ${
-                  pathname === '/perfil'
-                    ? 'text-blue-700 bg-white shadow-2xs'
-                    : 'text-slate-800 hover:text-blue-600 hover:bg-slate-100'
-                }`}
-                title="Acessar meu perfil e alterar senha"
-              >
-                <span className="truncate max-w-[120px] sm:max-w-[160px]">
-                  {currentUser.name}
-                </span>
-              </Link>
+              {/* Botão Perfil & Avatar */}
+              <div className="flex items-center bg-slate-50 hover:bg-slate-100 border border-slate-200/90 rounded-xl p-1 transition shadow-2xs">
+                <Link
+                  href="/perfil"
+                  className="flex items-center space-x-2 px-2 py-1 text-slate-800 hover:text-blue-600 text-xs font-bold transition"
+                  title="Meu Perfil e Segurança"
+                >
+                  <div className="w-6 h-6 rounded-lg bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-black text-[11px] flex items-center justify-center shadow-2xs">
+                    {getInitials(currentUser.name)}
+                  </div>
+                  <span className="truncate max-w-[110px] sm:max-w-[150px]">
+                    {currentUser.name}
+                  </span>
+                </Link>
 
-              {/* Botão de Logout */}
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="px-2 py-1 text-slate-500 hover:text-red-700 hover:bg-red-50 rounded-md text-xs font-semibold transition flex items-center space-x-1 cursor-pointer"
-                title="Encerrar sessão"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Sair</span>
-              </button>
+                <div className="h-4 w-px bg-slate-200 mx-1" />
+
+                {/* Botão Logout */}
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition cursor-pointer"
+                  title="Encerrar sessão com segurança"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
             </div>
           ) : (
             <div className="flex items-center space-x-2">
               <Link
                 href="/login"
-                className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold shadow-xs transition flex items-center space-x-1"
+                className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-xs transition flex items-center space-x-1.5"
               >
-                <span>Entrar</span>
+                <span>Entrar no Sistema</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </Link>
             </div>
@@ -314,11 +327,12 @@ export default function AppNav() {
             href={`/paciente?code=${activeParticipantCode}&projectId=${activeProjectId}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-lg text-xs font-bold transition flex items-center space-x-1.5"
-            title="Abrir a tela externa que o paciente visualiza"
+            className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100/80 text-emerald-800 border border-emerald-200/90 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-2xs hover:shadow-xs group"
+            title="Abrir o Portal Externo do Paciente (Diário de Dor & eCRF)"
           >
-            <ExternalLink className="w-3.5 h-3.5 text-emerald-600" />
+            <span className="w-2 h-2 rounded-full bg-emerald-500 group-hover:scale-125 transition-transform" />
             <span className="hidden sm:inline">Portal Paciente</span>
+            <ExternalLink className="w-3 h-3 text-emerald-600 ml-0.5" />
           </a>
 
         </div>
@@ -327,4 +341,3 @@ export default function AppNav() {
     </header>
   );
 }
-

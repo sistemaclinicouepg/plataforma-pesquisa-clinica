@@ -722,23 +722,21 @@ function PacienteContent() {
   // TELA 2: ENTRADA COM CÓDIGO (CASO NÃO VENHA NA URL)
   if (!participant) {
     return (
-      <div className="min-h-screen bg-slate-50 font-sans text-slate-800 flex items-center justify-center p-4">
-        <div className="w-full max-w-md bg-white rounded-3xl shadow-xl border border-slate-200 p-6 sm:p-8">
+      <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100/80 font-sans text-slate-800 flex items-center justify-center p-4">
+        <div className="w-full max-w-md bg-white rounded-3xl shadow-card hover:shadow-card-hover border border-slate-200/90 p-6 sm:p-8 transition-all">
           <div className="text-center mb-6">
-            <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-blue-50 text-blue-600 mb-3 shadow-xs">
-              <svg className="w-7 h-7 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M4 8c0-3 2-6 8-6s8 3 8 6c0 3-1 6-2 9s-2 5-4 5c-1.5 0-2-2-2-3 0 1-.5 3-2 3-2 0-3-2-4-5S4 11 4 8z"/>
-              </svg>
+            <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white mb-3 shadow-md shadow-blue-500/20">
+              <span className="font-black text-xl">U</span>
             </div>
-            <h1 className="text-xl font-bold text-slate-900">Portal do Participante</h1>
+            <h1 className="text-xl font-extrabold text-slate-900 tracking-tight">Portal do Participante</h1>
             <p className="text-xs text-slate-500 mt-1">
               Universidade Estadual de Ponta Grossa • UEPG <br />
-              Pesquisa Clínica em Odontologia
+              Pesquisa Clínica Odontológica
             </p>
           </div>
 
           {errorMsg && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 flex items-center space-x-2">
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-800 font-semibold flex items-center space-x-2 animate-fadeIn">
               <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
               <span>{errorMsg}</span>
             </div>
@@ -746,26 +744,26 @@ function PacienteContent() {
 
           <form onSubmit={handleSearchParticipant} className="space-y-4">
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1.5">
                 Digite seu Código de Pesquisa:
               </label>
               <input
                 type="text"
                 required
-                placeholder="Ex: P01FV5K ou P07NN23"
+                placeholder="Ex: P001 ou P01FV5K"
                 value={inputCode}
                 onChange={(e) => setInputCode(e.target.value)}
-                className="w-full px-4 py-3 border border-slate-300 rounded-xl text-center text-lg font-mono font-bold tracking-widest uppercase focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                className="w-full px-4 py-3 border border-slate-200 rounded-xl text-center text-lg font-mono font-black tracking-widest uppercase focus-ring bg-slate-50/50 focus:bg-white transition"
               />
-              <p className="text-[11px] text-slate-400 mt-1 text-center">
-                O código foi enviado por WhatsApp pela equipe no dia da consulta.
+              <p className="text-[11px] text-slate-400 mt-1.5 text-center">
+                O código individual foi fornecido pela equipe de pesquisa no dia da consulta.
               </p>
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md transition disabled:opacity-50 flex items-center justify-center space-x-2"
+              className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs hover:shadow transition disabled:opacity-50 flex items-center justify-center space-x-2 cursor-pointer"
             >
               <span>{loading ? 'Identificando...' : 'Acessar Meu Diário de Pesquisa'}</span>
               <ArrowRight className="w-4 h-4" />
@@ -773,7 +771,7 @@ function PacienteContent() {
           </form>
 
           <div className="mt-8 pt-4 border-t border-slate-100 text-center text-[11px] text-slate-400">
-            Dúvidas? Entre em contato com a coordenação de pesquisa pelo e-mail institucional ou WhatsApp fornecido no TCLE.
+            Dúvidas? Entre em contato com a equipe de pesquisa pelo WhatsApp institucional informado no seu Termo de Consentimento (TCLE).
           </div>
         </div>
       </div>
@@ -789,22 +787,27 @@ function PacienteContent() {
       <div className="w-full max-w-md bg-white min-h-screen shadow-2xl flex flex-col justify-between">
         
         {/* Cabeçalho */}
-        <header className="bg-gradient-to-br from-blue-700 to-indigo-800 text-white p-6 rounded-b-3xl shadow-md shrink-0">
-          <div className="flex justify-between items-start">
+        <header className="bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 text-white p-6 rounded-b-3xl shadow-card shrink-0 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-48 h-48 bg-blue-600/10 rounded-full blur-2xl pointer-events-none" />
+          
+          <div className="relative z-10 flex justify-between items-start">
             <div>
-              <p className="text-blue-200 text-xs font-bold uppercase tracking-wider">UEPG • Pesquisa Clínica</p>
-              <h1 className="text-lg font-bold mt-0.5 leading-snug">
+              <div className="inline-flex items-center space-x-1.5 px-2 py-0.5 rounded-full bg-white/10 text-blue-200 text-[10px] font-bold uppercase tracking-wider mb-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                <span>UEPG • Pesquisa Clínica</span>
+              </div>
+              <h1 className="text-lg font-extrabold mt-0.5 leading-snug tracking-tight">
                 {activeTab === 'diary' ? 'Diário de Sensibilidade' : selectedForm ? selectedForm.title : 'Questionários da Pesquisa'}
               </h1>
             </div>
-            <span className="px-3 py-1 bg-white/20 backdrop-blur-xs text-white rounded-full text-xs font-mono font-bold">
+            <span className="px-3 py-1 bg-white/10 backdrop-blur-md border border-white/15 text-white rounded-full text-xs font-mono font-bold tracking-wider">
               {participant.researchCode}
             </span>
           </div>
 
-          <div className="mt-4 p-3 bg-white/10 rounded-2xl text-xs border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div className="relative z-10 mt-4 p-3.5 bg-white/10 rounded-2xl text-xs border border-white/10 backdrop-blur-md flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
             <div className="min-w-0">
-              <p className="font-semibold text-white truncate">{participant.patientName}</p>
+              <p className="font-bold text-white truncate text-xs">{participant.patientName}</p>
               <p className="text-blue-200 text-[11px] truncate mt-0.5">{participant.projectName}</p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
@@ -813,7 +816,7 @@ function PacienteContent() {
                   href={`/tcle/${participant.id}/pdf`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="px-2.5 py-1 bg-white/20 hover:bg-white/30 text-white rounded-lg text-[10px] font-bold transition flex items-center space-x-1"
+                  className="px-2.5 py-1 bg-white/15 hover:bg-white/25 border border-white/20 text-white rounded-lg text-[10px] font-bold transition flex items-center space-x-1"
                   title="Visualizar ou imprimir documento oficial do TCLE assinado em PDF"
                 >
                   <FileText className="w-3 h-3" />

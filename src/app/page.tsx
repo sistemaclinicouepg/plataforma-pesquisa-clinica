@@ -738,72 +738,87 @@ export default function HomePage() {
           </div>
         )}
 
-        {/* Topo: Título + Botão Novo Projeto */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-          <div>
-            <h1 className="text-3xl font-extrabold text-slate-900 flex items-center gap-3">
-              <span>Meus Projetos</span>
+        {/* Topo Hero & Apresentação Institucional */}
+        <div className="mb-6 p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-slate-900 via-blue-950 to-slate-900 text-white shadow-card relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-80 h-80 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute bottom-0 left-1/3 w-64 h-64 bg-teal-500/10 rounded-full blur-2xl pointer-events-none" />
+
+          <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            <div className="space-y-2 max-w-2xl">
+              <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-blue-200 text-xs font-semibold">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span>UEPG • Pós-Graduação em Odontologia Clínica</span>
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight leading-tight flex items-center gap-3">
+                <span>Estudos Clínicos & Prontuários</span>
+                <button
+                  onClick={() => loadData(true)}
+                  disabled={isRefreshing || loading}
+                  title="Recarregar projetos do banco de dados"
+                  className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-white/10 transition disabled:opacity-50 cursor-pointer"
+                >
+                  <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-blue-400' : ''}`} />
+                </button>
+              </h1>
+              <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                Gestão centralizada de ensaios clínicos randomizados, prontuário digital com odontograma interativo, mascaramento CONSORT e bioestatística.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3 shrink-0">
               <button
-                onClick={() => loadData(true)}
-                disabled={isRefreshing || loading}
-                title="Recarregar projetos do banco de dados"
-                className="p-1.5 text-slate-400 hover:text-blue-600 rounded-lg hover:bg-slate-100 transition disabled:opacity-50 cursor-pointer"
+                onClick={() => setIsCreateModalOpen(true)}
+                className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs sm:text-sm font-bold rounded-xl shadow-md hover:shadow-lg transition flex items-center space-x-2 cursor-pointer group"
               >
-                <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-blue-600' : ''}`} />
+                <Plus className="w-4 h-4 group-hover:rotate-90 transition-transform duration-200" />
+                <span>Novo Estudo Clínico</span>
               </button>
-            </h1>
-            <p className="text-slate-500 mt-1 text-sm">
-              Selecione uma pesquisa para acessar o prontuário, triagem clínica ou configurar formulários.
-            </p>
+            </div>
           </div>
-          <button
-            onClick={() => setIsCreateModalOpen(true)}
-            className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl shadow-sm hover:shadow transition flex items-center space-x-2 cursor-pointer shrink-0"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Novo Projeto</span>
-          </button>
         </div>
 
         {/* Barra de Estatísticas Resumidas (KPIs) */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
-          <div className="bg-white border border-slate-200/90 rounded-2xl p-3.5 sm:p-4 shadow-2xs flex items-center space-x-3 transition hover:border-slate-300">
-            <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4 mb-6">
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-card hover:shadow-card-hover transition-all flex items-center space-x-3.5">
+            <div className="w-11 h-11 rounded-xl bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center shrink-0">
               <FolderKanban className="w-5 h-5" />
             </div>
             <div className="min-w-0">
-              <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Total de Estudos</p>
-              <p className="text-xl font-extrabold text-slate-800 leading-tight">{counts.total}</p>
+              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total de Estudos</p>
+              <p className="text-2xl font-black text-slate-900 leading-tight">{counts.total}</p>
             </div>
           </div>
 
-          <div className="bg-white border border-slate-200/90 rounded-2xl p-3.5 sm:p-4 shadow-2xs flex items-center space-x-3 transition hover:border-slate-300">
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-card hover:shadow-card-hover transition-all flex items-center space-x-3.5">
+            <div className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center shrink-0">
               <Activity className="w-5 h-5" />
             </div>
             <div className="min-w-0">
-              <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Estudos Ativos</p>
-              <p className="text-xl font-extrabold text-emerald-600 leading-tight">{counts.active}</p>
+              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Estudos Ativos</p>
+              <div className="flex items-center space-x-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <p className="text-2xl font-black text-emerald-600 leading-tight">{counts.active}</p>
+              </div>
             </div>
           </div>
 
-          <div className="bg-white border border-slate-200/90 rounded-2xl p-3.5 sm:p-4 shadow-2xs flex items-center space-x-3 transition hover:border-slate-300">
-            <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-card hover:shadow-card-hover transition-all flex items-center space-x-3.5">
+            <div className="w-11 h-11 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-100 flex items-center justify-center shrink-0">
               <Users className="w-5 h-5" />
             </div>
             <div className="min-w-0">
-              <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Voluntários Ativos</p>
-              <p className="text-xl font-extrabold text-indigo-600 leading-tight">{counts.totalApproved}</p>
+              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Voluntários Aprovados</p>
+              <p className="text-2xl font-black text-indigo-600 leading-tight">{counts.totalApproved}</p>
             </div>
           </div>
 
-          <div className="bg-white border border-slate-200/90 rounded-2xl p-3.5 sm:p-4 shadow-2xs flex items-center space-x-3 transition hover:border-slate-300">
-            <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-card hover:shadow-card-hover transition-all flex items-center space-x-3.5">
+            <div className="w-11 h-11 rounded-xl bg-amber-50 text-amber-600 border border-amber-100 flex items-center justify-center shrink-0">
               <Clock className="w-5 h-5" />
             </div>
             <div className="min-w-0">
-              <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Em Triagem</p>
-              <p className="text-xl font-extrabold text-amber-600 leading-tight">{counts.totalPending}</p>
+              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Triagem / Pendentes</p>
+              <p className="text-2xl font-black text-amber-600 leading-tight">{counts.totalPending}</p>
             </div>
           </div>
         </div>
@@ -1038,25 +1053,34 @@ export default function HomePage() {
 
                   return (
                     <div key={project.id} className="block group">
-                      <div className="bg-white rounded-2xl shadow-2xs border border-slate-200/90 p-4 sm:p-5 h-full hover:shadow-md hover:border-blue-400 transition-all flex flex-col justify-between">
+                      <div className="bg-white rounded-2xl shadow-card hover:shadow-card-hover border border-slate-200/90 hover:border-blue-400/80 p-5 h-full transition-all duration-200 flex flex-col justify-between relative overflow-hidden">
+                        {/* Indicador sutil de topo */}
+                        <div className={`absolute top-0 left-0 right-0 h-1 ${
+                          pStatus === 'ACTIVE'
+                            ? 'bg-gradient-to-r from-emerald-500 to-teal-400'
+                            : pStatus === 'COMPLETED'
+                            ? 'bg-gradient-to-r from-blue-600 to-indigo-500'
+                            : 'bg-slate-300'
+                        }`} />
+
                         <div>
                           {/* Linha de Badges de Status e Papel */}
-                          <div className="flex justify-between items-center mb-2.5 gap-2">
+                          <div className="flex justify-between items-center mb-3 gap-2">
                             <div className="flex items-center gap-1.5 flex-wrap">
                               {pStatus === 'ACTIVE' && (
-                                <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200/60 text-[11px] font-bold rounded-full flex items-center gap-1">
+                                <span className="px-2.5 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200/80 text-[11px] font-bold rounded-full flex items-center gap-1.5">
                                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                                   <span>Ativo</span>
                                 </span>
                               )}
                               {pStatus === 'COMPLETED' && (
-                                <span className="px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-200/60 text-[11px] font-bold rounded-full flex items-center gap-1">
+                                <span className="px-2.5 py-0.5 bg-blue-50 text-blue-700 border border-blue-200/80 text-[11px] font-bold rounded-full flex items-center gap-1.5">
                                   <CheckCircle2 className="w-3 h-3 text-blue-600" />
                                   <span>Finalizado</span>
                                 </span>
                               )}
                               {pStatus === 'CANCELLED' && (
-                                <span className="px-2 py-0.5 bg-slate-100 text-slate-600 border border-slate-200 text-[11px] font-bold rounded-full flex items-center gap-1">
+                                <span className="px-2.5 py-0.5 bg-slate-100 text-slate-600 border border-slate-200 text-[11px] font-bold rounded-full flex items-center gap-1.5">
                                   <X className="w-3 h-3 text-slate-500" />
                                   <span>Cancelado</span>
                                 </span>
@@ -1065,12 +1089,12 @@ export default function HomePage() {
 
                             <div>
                               {isBlinded ? (
-                                <span className="px-2 py-0.5 bg-purple-50 text-purple-700 border border-purple-200/60 text-[11px] font-bold rounded-full flex items-center space-x-1">
-                                  <EyeOff className="w-3 h-3" />
+                                <span className="px-2.5 py-0.5 bg-purple-50 text-purple-700 border border-purple-200/80 text-[11px] font-bold rounded-full flex items-center space-x-1">
+                                  <EyeOff className="w-3 h-3 text-purple-600" />
                                   <span>Avaliador Cego</span>
                                 </span>
                               ) : (
-                                <span className="px-2 py-0.5 bg-slate-100 text-slate-600 text-[11px] font-medium rounded-full">
+                                <span className="px-2.5 py-0.5 bg-slate-100 text-slate-700 text-[11px] font-semibold rounded-full border border-slate-200/60">
                                   {roleName}
                                 </span>
                               )}
@@ -1084,37 +1108,37 @@ export default function HomePage() {
                             </h3>
                           </Link>
 
-                          <p className="text-xs text-slate-500 mt-1 line-clamp-2 min-h-[32px] leading-relaxed">
-                            {project.description || 'Sem descrição cadastrada.'}
+                          <p className="text-xs text-slate-500 mt-1.5 line-clamp-2 min-h-[34px] leading-relaxed">
+                            {project.description || 'Ensaio clínico odontológico registrado no sistema.'}
                           </p>
 
                           {/* Chips Compactos de Métricas */}
-                          <div className="mt-3 pt-2.5 border-t border-slate-100 flex flex-wrap items-center gap-1.5">
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-50 border border-slate-200/60 text-slate-600 text-[11px] font-medium">
-                              <Users className="w-3 h-3 text-slate-400" />
-                              <strong className="text-slate-800">{approvedCount}</strong> ativos
+                          <div className="mt-4 pt-3 border-t border-slate-100 flex flex-wrap items-center gap-2">
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-200/80 text-slate-700 text-[11px] font-medium">
+                              <Users className="w-3.5 h-3.5 text-blue-600" />
+                              <strong className="text-slate-900">{approvedCount}</strong> voluntários
                             </span>
                             {pendingCount > 0 && (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-50 border border-amber-200/60 text-amber-700 text-[11px] font-medium">
-                                <Clock className="w-3 h-3 text-amber-500" />
-                                <strong className="text-amber-800">{pendingCount}</strong> triagem
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-50 border border-amber-200/80 text-amber-800 text-[11px] font-medium">
+                                <Clock className="w-3.5 h-3.5 text-amber-600" />
+                                <strong className="text-amber-900">{pendingCount}</strong> triagem
                               </span>
                             )}
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-50/60 border border-blue-100 text-blue-700 text-[11px] font-medium">
-                              <FileText className="w-3 h-3 text-blue-500" />
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-50/70 border border-indigo-100 text-indigo-700 text-[11px] font-medium">
+                              <FileText className="w-3.5 h-3.5 text-indigo-600" />
                               <span>{formsCount} {formsCount === 1 ? 'eCRF' : 'eCRFs'}</span>
                             </span>
                           </div>
                         </div>
 
                         {/* Barra de Ações em Linha Única */}
-                        <div className="mt-3.5 pt-2.5 border-t border-slate-100 flex items-center gap-1.5">
+                        <div className="mt-4 pt-3 border-t border-slate-100 flex items-center gap-2">
                           <Link
                             href={`/dashboard?projectId=${project.id}`}
-                            className="flex-1 py-1.5 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold text-center transition flex items-center justify-center gap-1.5 shadow-2xs"
+                            className="flex-1 py-2 px-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold text-center transition flex items-center justify-center gap-1.5 shadow-xs hover:shadow"
                           >
                             <Activity className="w-3.5 h-3.5" />
-                            <span>Prontuário</span>
+                            <span>Abrir Prontuário</span>
                           </Link>
 
                           <button
@@ -1123,7 +1147,7 @@ export default function HomePage() {
                               e.stopPropagation();
                               openEditModal(project);
                             }}
-                            className="p-1.5 bg-slate-50 hover:bg-slate-100 text-slate-600 hover:text-slate-900 rounded-xl border border-slate-200 transition cursor-pointer shrink-0"
+                            className="p-2 bg-slate-50 hover:bg-slate-100 text-slate-600 hover:text-slate-900 rounded-xl border border-slate-200 transition cursor-pointer shrink-0"
                             title="Configurar particularidades do estudo, Odontograma e eCRF"
                           >
                             <Sliders className="w-4 h-4" />
@@ -1138,7 +1162,7 @@ export default function HomePage() {
                                 setProjectToDelete(project);
                               }}
                               title="Excluir Projeto de Pesquisa (Apenas Administrador)"
-                              className="p-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl border border-red-200 transition cursor-pointer shrink-0"
+                              className="p-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl border border-red-200 transition cursor-pointer shrink-0"
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>

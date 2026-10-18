@@ -2465,7 +2465,7 @@ function DashboardContent() {
             <div className="flex flex-wrap items-center gap-2 shrink-0">
               <button
                 onClick={() => setShowNewPatientModal(true)}
-                className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center space-x-1.5 cursor-pointer shrink-0"
+                className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-bold rounded-xl shadow-xs hover:shadow transition flex items-center space-x-1.5 cursor-pointer shrink-0"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Cadastrar Paciente</span>
@@ -2474,7 +2474,7 @@ function DashboardContent() {
               <button
                 type="button"
                 onClick={openEditProjectModal}
-                className="px-3 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-xl transition flex items-center space-x-1.5 shadow-2xs shrink-0 cursor-pointer"
+                className="px-3 py-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition flex items-center space-x-1.5 shadow-2xs shrink-0 cursor-pointer"
                 title="Editar nome, descrição e status deste estudo"
               >
                 <Sliders className="w-3.5 h-3.5 text-slate-600" />
@@ -2483,7 +2483,7 @@ function DashboardContent() {
 
               <Link
                 href={`/anamnese?projectId=${project.id}`}
-                className="px-3 py-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-semibold rounded-xl transition flex items-center space-x-1.5 shadow-2xs shrink-0"
+                className="px-3 py-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition flex items-center space-x-1.5 shadow-2xs shrink-0"
                 title="Configurar Odontograma, Critérios e Instrumentos do Estudo"
               >
                 <Stethoscope className="w-3.5 h-3.5 text-blue-600" />
@@ -2493,7 +2493,7 @@ function DashboardContent() {
 
               <Link
                 href={`/construtor?projectId=${project.id}`}
-                className="px-3 py-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-semibold rounded-xl transition flex items-center space-x-1.5 shadow-2xs shrink-0"
+                className="px-3 py-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition flex items-center space-x-1.5 shadow-2xs shrink-0"
                 title="Construtor de questionários eCRFs para pesquisador ou paciente"
               >
                 <FileCode className="w-3.5 h-3.5 text-indigo-600" />
@@ -2503,7 +2503,7 @@ function DashboardContent() {
 
               <Link
                 href={`/tcle/editor?projectId=${project.id}`}
-                className="px-3 py-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-semibold rounded-xl transition flex items-center space-x-1.5 shadow-2xs shrink-0"
+                className="px-3 py-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition flex items-center space-x-1.5 shadow-2xs shrink-0"
                 title="Personalizar Termo de Consentimento Livre e Esclarecido"
               >
                 <FileText className="w-3.5 h-3.5 text-emerald-600" />
@@ -2653,10 +2653,10 @@ function DashboardContent() {
             {/* Métricas Compactas de Atendimento (Cards com Altura e Hierarquia Rigorosamente Padronizadas) */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
               {/* Card 1: Ativos no Estudo */}
-              <div className="bg-white rounded-xl shadow-2xs border border-slate-200 p-4 flex flex-col justify-between h-[92px]">
+              <div className="bg-white rounded-2xl shadow-card hover:shadow-card-hover border border-slate-200/90 p-4 flex flex-col justify-between h-[96px] transition-all">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Ativos no Estudo</span>
-                  <div className="p-1.5 rounded-lg bg-blue-50 text-blue-600">
+                  <div className="p-1.5 rounded-xl bg-blue-50 text-blue-600 border border-blue-100">
                     <Users className="w-3.5 h-3.5" />
                   </div>
                 </div>
@@ -2667,21 +2667,21 @@ function DashboardContent() {
               </div>
 
               {/* Card 2: Retornos Clínicos */}
-              <div className={`rounded-xl shadow-2xs border p-4 flex flex-col justify-between h-[92px] transition ${
+              <div className={`rounded-2xl shadow-card hover:shadow-card-hover border p-4 flex flex-col justify-between h-[96px] transition-all ${
                 overdueVisits.length > 0
                   ? 'bg-red-50/40 border-red-200'
                   : dueNowVisits.length > 0
                   ? 'bg-amber-50/40 border-amber-200'
-                  : 'bg-white border-slate-200'
+                  : 'bg-white border-slate-200/90'
               }`}>
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Retornos Clínicos</span>
-                  <div className={`p-1.5 rounded-lg ${
+                  <div className={`p-1.5 rounded-xl border ${
                     overdueVisits.length > 0
-                      ? 'bg-red-100 text-red-700 animate-pulse'
+                      ? 'bg-red-100 text-red-700 border-red-200 animate-pulse'
                       : dueNowVisits.length > 0
-                      ? 'bg-amber-100 text-amber-700'
-                      : 'bg-emerald-50 text-emerald-700'
+                      ? 'bg-amber-100 text-amber-700 border-amber-200'
+                      : 'bg-emerald-50 text-emerald-700 border-emerald-100'
                   }`}>
                     {overdueVisits.length > 0 ? (
                       <AlertCircle className="w-3.5 h-3.5" />
@@ -2706,24 +2706,24 @@ function DashboardContent() {
               </div>
 
               {/* Card 3: Protocolos Concluídos */}
-              <div className="bg-white rounded-xl shadow-2xs border border-slate-200 p-4 flex flex-col justify-between h-[92px]">
+              <div className="bg-white rounded-2xl shadow-card hover:shadow-card-hover border border-slate-200/90 p-4 flex flex-col justify-between h-[96px] transition-all">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Protocolos Concluídos</span>
-                  <div className="p-1.5 rounded-lg bg-emerald-50 text-emerald-700">
+                  <div className="p-1.5 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-100">
                     <CheckCircle2 className="w-3.5 h-3.5" />
                   </div>
                 </div>
                 <div>
                   <div className="text-2xl font-black text-emerald-600 leading-none">{allCompletedVisits.length}</div>
-                  <p className="text-[10px] text-slate-500 mt-1 truncate">4 de 4 sessões finalizadas</p>
+                  <p className="text-[10px] text-slate-500 mt-1 truncate">Sessões finalizadas</p>
                 </div>
               </div>
 
               {/* Card 4: Próximos Retornos */}
-              <div className="bg-white rounded-xl shadow-2xs border border-slate-200 p-4 flex flex-col justify-between h-[92px]">
+              <div className="bg-white rounded-2xl shadow-card hover:shadow-card-hover border border-slate-200/90 p-4 flex flex-col justify-between h-[96px] transition-all">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Próximos Retornos</span>
-                  <div className="p-1.5 rounded-lg bg-slate-100 text-slate-600">
+                  <div className="p-1.5 rounded-xl bg-slate-100 text-slate-600 border border-slate-200">
                     <Clock className="w-3.5 h-3.5" />
                   </div>
                 </div>
