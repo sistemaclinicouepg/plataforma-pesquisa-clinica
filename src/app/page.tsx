@@ -738,89 +738,32 @@ export default function HomePage() {
           </div>
         )}
 
-        {/* Topo Hero & Apresentação Institucional */}
-        <div className="mb-6 p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-slate-900 via-blue-950 to-slate-900 text-white shadow-card relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-80 h-80 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute bottom-0 left-1/3 w-64 h-64 bg-teal-500/10 rounded-full blur-2xl pointer-events-none" />
-
-          <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-            <div className="space-y-2 max-w-2xl">
-              <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-blue-200 text-xs font-semibold">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span>UEPG • Pós-Graduação em Odontologia Clínica</span>
-              </div>
-              <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight leading-tight flex items-center gap-3">
-                <span>Estudos Clínicos & Prontuários</span>
-                <button
-                  onClick={() => loadData(true)}
-                  disabled={isRefreshing || loading}
-                  title="Recarregar projetos do banco de dados"
-                  className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-white/10 transition disabled:opacity-50 cursor-pointer"
-                >
-                  <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-blue-400' : ''}`} />
-                </button>
-              </h1>
-              <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-                Gestão centralizada de ensaios clínicos randomizados, prontuário digital com odontograma interativo, mascaramento CONSORT e bioestatística.
-              </p>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-3 shrink-0">
+        {/* Topo Limpo & Intuitivo */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2.5">
+              <span>Projetos de Pesquisa</span>
               <button
-                onClick={() => setIsCreateModalOpen(true)}
-                className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs sm:text-sm font-bold rounded-xl shadow-md hover:shadow-lg transition flex items-center space-x-2 cursor-pointer group"
+                onClick={() => loadData(true)}
+                disabled={isRefreshing || loading}
+                title="Recarregar projetos"
+                className="p-1.5 text-slate-400 hover:text-blue-600 rounded-lg hover:bg-slate-100 transition disabled:opacity-50 cursor-pointer"
               >
-                <Plus className="w-4 h-4 group-hover:rotate-90 transition-transform duration-200" />
-                <span>Novo Estudo Clínico</span>
+                <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-blue-600' : ''}`} />
               </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Barra de Estatísticas Resumidas (KPIs) */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4 mb-6">
-          <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-card hover:shadow-card-hover transition-all flex items-center space-x-3.5">
-            <div className="w-11 h-11 rounded-xl bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center shrink-0">
-              <FolderKanban className="w-5 h-5" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total de Estudos</p>
-              <p className="text-2xl font-black text-slate-900 leading-tight">{counts.total}</p>
-            </div>
+            </h1>
+            <p className="text-slate-500 mt-1 text-sm">
+              Selecione um estudo para realizar atendimentos clínicos ou gerenciar voluntários.
+            </p>
           </div>
 
-          <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-card hover:shadow-card-hover transition-all flex items-center space-x-3.5">
-            <div className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center shrink-0">
-              <Activity className="w-5 h-5" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Estudos Ativos</p>
-              <div className="flex items-center space-x-1.5">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <p className="text-2xl font-black text-emerald-600 leading-tight">{counts.active}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-card hover:shadow-card-hover transition-all flex items-center space-x-3.5">
-            <div className="w-11 h-11 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-100 flex items-center justify-center shrink-0">
-              <Users className="w-5 h-5" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Voluntários Aprovados</p>
-              <p className="text-2xl font-black text-indigo-600 leading-tight">{counts.totalApproved}</p>
-            </div>
-          </div>
-
-          <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-card hover:shadow-card-hover transition-all flex items-center space-x-3.5">
-            <div className="w-11 h-11 rounded-xl bg-amber-50 text-amber-600 border border-amber-100 flex items-center justify-center shrink-0">
-              <Clock className="w-5 h-5" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Triagem / Pendentes</p>
-              <p className="text-2xl font-black text-amber-600 leading-tight">{counts.totalPending}</p>
-            </div>
-          </div>
+          <button
+            onClick={() => setIsCreateModalOpen(true)}
+            className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-bold rounded-xl shadow-xs hover:shadow transition flex items-center space-x-2 cursor-pointer shrink-0"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Novo Estudo Clínico</span>
+          </button>
         </div>
 
         {/* Barra de Filtros, Busca e Alternador de Visão */}

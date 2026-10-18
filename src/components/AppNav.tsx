@@ -198,10 +198,9 @@ export default function AppNav() {
   };
 
   const navLinks = [
-    { href: '/', label: 'Meus Projetos', icon: FolderKanban },
-    { href: `/dashboard?projectId=${activeProjectId}`, label: 'Prontuário & Atendimento', icon: Activity },
-    { href: `/construtor?projectId=${activeProjectId}`, label: 'Construtor eCRF', icon: FileCode },
-    { href: `/anamnese?projectId=${activeProjectId}`, label: 'Ficha & Critérios', icon: Stethoscope },
+    { href: '/', label: 'Meus Estudos', icon: FolderKanban },
+    { href: `/dashboard?projectId=${activeProjectId}`, label: 'Atendimento Clínico', icon: Activity },
+    { href: '/paciente', label: 'Portal do Participante', icon: ExternalLink, external: true },
   ];
 
   return (
@@ -243,13 +242,15 @@ export default function AppNav() {
                 <Link
                   key={link.href}
                   href={link.href}
+                  target={link.external ? '_blank' : undefined}
+                  rel={link.external ? 'noopener noreferrer' : undefined}
                   className={`px-3 py-1.5 rounded-xl transition-all font-semibold text-xs flex items-center space-x-2 ${
-                    isActive
+                    isActive && !link.external
                       ? 'bg-blue-50 text-blue-700 font-bold border border-blue-200/80 shadow-2xs'
                       : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
                   }`}
                 >
-                  <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-blue-600' : 'text-slate-400'}`} />
+                  <Icon className={`w-3.5 h-3.5 ${isActive && !link.external ? 'text-blue-600' : 'text-slate-400'}`} />
                   <span>{link.label}</span>
                 </Link>
               );

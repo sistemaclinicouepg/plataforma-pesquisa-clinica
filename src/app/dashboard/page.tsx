@@ -620,6 +620,22 @@ function DashboardContent() {
 
   // Menu Dropdown de Exportação Bioestatística
   const [showExportMenu, setShowExportMenu] = useState(false);
+  const [showSettingsMenu, setShowSettingsMenu] = useState(false);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('.settings-dropdown-container')) {
+        setShowSettingsMenu(false);
+      }
+    };
+    if (showSettingsMenu) {
+      document.addEventListener('click', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, [showSettingsMenu]);
 
   // Proteção: Apenas o Administrador pode visualizar a aba de auditoria
   useEffect(() => {
@@ -2461,54 +2477,86 @@ function DashboardContent() {
               </button>
             </div>
 
-            {/* Ações e Ferramentas Conectadas do Estudo Clínico */}
-            <div className="flex flex-wrap items-center gap-2 shrink-0">
+            {/* Ações e Ferramentas do Estudo Clínico */}
+            <div className="flex items-center gap-2.5 shrink-0">
               <button
                 onClick={() => setShowNewPatientModal(true)}
-                className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-bold rounded-xl shadow-xs hover:shadow transition flex items-center space-x-1.5 cursor-pointer shrink-0"
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-bold rounded-xl shadow-xs hover:shadow transition flex items-center space-x-1.5 cursor-pointer shrink-0"
               >
-                <Plus className="w-3.5 h-3.5" />
+                <Plus className="w-4 h-4" />
                 <span>Cadastrar Paciente</span>
               </button>
 
-              <button
-                type="button"
-                onClick={openEditProjectModal}
-                className="px-3 py-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition flex items-center space-x-1.5 shadow-2xs shrink-0 cursor-pointer"
-                title="Editar nome, descrição e status deste estudo"
-              >
-                <Sliders className="w-3.5 h-3.5 text-slate-600" />
-                <span>Editar Estudo</span>
-              </button>
+              {/* Menu de Configurações do Estudo */}
+              <div className="relative settings-dropdown-container">
+                <button
+                  type="button"
+                  onClick={() => setShowSettingsMenu(!showSettingsMenu)}
+                  className="px-3 py-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition flex items-center space-x-1.5 shadow-2xs shrink-0 cursor-pointer"
+                  title="Configurações do estudo, ficha clínica, eCRF e TCLE"
+                >
+                  <Settings className="w-3.5 h-3.5 text-slate-500" />
+                  <span className="hidden sm:inline">Configurações</span>
+                  <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${showSettingsMenu ? 'rotate-180' : ''}`} />
+                </button>
 
-              <Link
-                href={`/anamnese?projectId=${project.id}`}
-                className="px-3 py-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition flex items-center space-x-1.5 shadow-2xs shrink-0"
-                title="Configurar Odontograma, Critérios e Instrumentos do Estudo"
-              >
-                <Stethoscope className="w-3.5 h-3.5 text-blue-600" />
-                <span className="hidden sm:inline">Ficha & Critérios</span>
-                <span className="sm:hidden">Ficha</span>
-              </Link>
+                {showSettingsMenu && (
+                  <div className="absolute right-0 mt-2 w-64 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 p-1.5 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowSettingsMenu(false);
+                        openEditProjectModal();
+                      }}
+                      className="w-full px-3 py-2 text-left text-slate-700 hover:bg-slate-50 rounded-xl flex items-center space-x-2.5 transition cursor-pointer"
+                    >
+                      <Sliders className="w-4 h-4 text-slate-500 shrink-0" />
+                      <div>
+                        <p className="font-bold">Editar Dados do Estudo</p>
+                        <p className="text-[10px] text-slate-400">Título, descrição e status</p>
+                      </div>
+                    </button>
 
-              <Link
-                href={`/construtor?projectId=${project.id}`}
-                className="px-3 py-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition flex items-center space-x-1.5 shadow-2xs shrink-0"
-                title="Construtor de questionários eCRFs para pesquisador ou paciente"
-              >
-                <FileCode className="w-3.5 h-3.5 text-indigo-600" />
-                <span className="hidden sm:inline">Construtor eCRF</span>
-                <span className="sm:hidden">eCRF</span>
-              </Link>
+                    <div className="my-1 border-t border-slate-100" />
 
-              <Link
-                href={`/tcle/editor?projectId=${project.id}`}
-                className="px-3 py-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition flex items-center space-x-1.5 shadow-2xs shrink-0"
-                title="Personalizar Termo de Consentimento Livre e Esclarecido"
-              >
-                <FileText className="w-3.5 h-3.5 text-emerald-600" />
-                <span>TCLE</span>
-              </Link>
+                    <Link
+                      href={`/anamnese?projectId=${project.id}`}
+                      onClick={() => setShowSettingsMenu(false)}
+                      className="w-full px-3 py-2 text-left text-slate-700 hover:bg-blue-50 hover:text-blue-700 rounded-xl flex items-center space-x-2.5 transition"
+                    >
+                      <Stethoscope className="w-4 h-4 text-blue-600 shrink-0" />
+                      <div>
+                        <p className="font-bold">Ficha Clínica & Critérios</p>
+                        <p className="text-[10px] text-slate-400">Odontograma e inclusão/exclusão</p>
+                      </div>
+                    </Link>
+
+                    <Link
+                      href={`/construtor?projectId=${project.id}`}
+                      onClick={() => setShowSettingsMenu(false)}
+                      className="w-full px-3 py-2 text-left text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 rounded-xl flex items-center space-x-2.5 transition"
+                    >
+                      <FileCode className="w-4 h-4 text-indigo-600 shrink-0" />
+                      <div>
+                        <p className="font-bold">Construtor de eCRF</p>
+                        <p className="text-[10px] text-slate-400">Formulários e escalas de avaliação</p>
+                      </div>
+                    </Link>
+
+                    <Link
+                      href={`/tcle/editor?projectId=${project.id}`}
+                      onClick={() => setShowSettingsMenu(false)}
+                      className="w-full px-3 py-2 text-left text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 rounded-xl flex items-center space-x-2.5 transition"
+                    >
+                      <FileText className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <div>
+                        <p className="font-bold">Termo de Consentimento (TCLE)</p>
+                        <p className="text-[10px] text-slate-400">Personalizar termo e aceite digital</p>
+                      </div>
+                    </Link>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -2532,19 +2580,19 @@ function DashboardContent() {
           </div>
         )}
         
-        {/* Abas de Navegação do Projeto (Segmented Control Padronizado) */}
-        <div className="bg-slate-100/90 p-1.5 rounded-2xl flex items-center gap-1.5 mb-6 border border-slate-200/80 overflow-x-auto no-scrollbar shadow-2xs">
+        {/* Abas Principais de Navegação (Consolidadas em 3) */}
+        <div className="bg-slate-100/90 p-1.5 rounded-2xl flex items-center gap-1.5 mb-5 border border-slate-200/80 overflow-x-auto no-scrollbar shadow-2xs">
           <button
             onClick={() => handleSelectTab('active')}
-            className={`px-3.5 py-2 text-xs font-bold rounded-xl transition-all flex items-center space-x-2 shrink-0 ${
+            className={`px-4 py-2.5 text-xs font-bold rounded-xl transition-all flex items-center space-x-2 shrink-0 cursor-pointer ${
               activeTab === 'active'
                 ? 'bg-blue-600 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-white/70'
             }`}
           >
-            <Stethoscope className="w-3.5 h-3.5" />
-            <span>Prontuários & Atendimento</span>
-            <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold ${
+            <Stethoscope className="w-4 h-4" />
+            <span>Atendimento Clínico</span>
+            <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
               activeTab === 'active' ? 'bg-blue-700 text-white' : 'bg-slate-200 text-slate-700'
             }`}>
               {approvedList.length}
@@ -2556,86 +2604,102 @@ function DashboardContent() {
 
           <button
             onClick={() => handleSelectTab('triage')}
-            className={`px-3.5 py-2 text-xs font-bold rounded-xl transition-all flex items-center space-x-2 shrink-0 ${
+            className={`px-4 py-2.5 text-xs font-bold rounded-xl transition-all flex items-center space-x-2 shrink-0 cursor-pointer ${
               activeTab === 'triage'
                 ? 'bg-blue-600 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-white/70'
             }`}
           >
-            <ClipboardList className="w-3.5 h-3.5" />
-            <span>Triagem & Critérios</span>
-            <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold ${
+            <ClipboardList className="w-4 h-4" />
+            <span>Triagem & Inclusão</span>
+            <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
               activeTab === 'triage' ? 'bg-blue-700 text-white' : 'bg-slate-200 text-slate-700'
             }`}>
               {pendingList.length}
             </span>
           </button>
 
-          {isAdmin && (
-            <button
-              onClick={() => handleSelectTab('audit')}
-              className={`px-3.5 py-2 text-xs font-bold rounded-xl transition-all flex items-center space-x-2 shrink-0 ${
-                activeTab === 'audit'
-                  ? 'bg-indigo-600 text-white shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/70'
-              }`}
-            >
-              <ShieldCheck className="w-3.5 h-3.5" />
-              <span>Trilha de Auditoria GCP</span>
-              <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold ${
-                activeTab === 'audit' ? 'bg-indigo-700 text-white' : 'bg-slate-200 text-slate-700'
-              }`}>
-                {project.auditLogs?.length || 0}
-              </span>
-            </button>
-          )}
-
           <button
-            onClick={() => handleSelectTab('consort')}
-            className={`px-3.5 py-2 text-xs font-bold rounded-xl transition-all flex items-center space-x-2 shrink-0 ${
-              activeTab === 'consort'
+            onClick={() => {
+              if (!['export', 'consort', 'team', 'audit'].includes(activeTab)) {
+                handleSelectTab('export');
+              }
+            }}
+            className={`px-4 py-2.5 text-xs font-bold rounded-xl transition-all flex items-center space-x-2 shrink-0 cursor-pointer ${
+              ['export', 'consort', 'team', 'audit'].includes(activeTab)
                 ? 'bg-blue-600 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-white/70'
             }`}
           >
-            <BarChart3 className="w-3.5 h-3.5" />
-            <span>Fluxo CONSORT</span>
-            <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold ${
-              activeTab === 'consort' ? 'bg-blue-700 text-white' : 'bg-slate-200 text-slate-700'
+            <BarChart3 className="w-4 h-4" />
+            <span>Dados & Relatórios</span>
+            <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
+              ['export', 'consort', 'team', 'audit'].includes(activeTab) ? 'bg-blue-700 text-white' : 'bg-slate-200 text-slate-700'
             }`}>
-              {excludedList.length}
+              Bioestatística • CONSORT • Equipe
             </span>
-          </button>
-
-          <button
-            onClick={() => handleSelectTab('team')}
-            className={`px-3.5 py-2 text-xs font-bold rounded-xl transition-all flex items-center space-x-2 shrink-0 ${
-              activeTab === 'team'
-                ? 'bg-blue-600 text-white shadow-xs'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-white/70'
-            }`}
-          >
-            <Users className="w-3.5 h-3.5" />
-            <span>Equipe</span>
-            <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold ${
-              activeTab === 'team' ? 'bg-blue-700 text-white' : 'bg-slate-200 text-slate-700'
-            }`}>
-              {project.members?.length || 0}
-            </span>
-          </button>
-
-          <button
-            onClick={() => handleSelectTab('export')}
-            className={`px-3.5 py-2 text-xs font-bold rounded-xl transition-all flex items-center space-x-2 shrink-0 ${
-              activeTab === 'export'
-                ? 'bg-blue-600 text-white shadow-xs'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-white/70'
-            }`}
-          >
-            <Download className="w-3.5 h-3.5" />
-            <span>Bioestatística & Exportar</span>
           </button>
         </div>
+
+        {/* Sub-navegação para Dados & Relatórios */}
+        {['export', 'consort', 'team', 'audit'].includes(activeTab) && (
+          <div className="bg-slate-100 p-1 rounded-xl flex items-center gap-1 mb-6 border border-slate-200/80 shadow-2xs w-fit overflow-x-auto">
+            <button
+              onClick={() => handleSelectTab('export')}
+              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center space-x-1.5 shrink-0 cursor-pointer ${
+                activeTab === 'export'
+                  ? 'bg-white text-blue-600 shadow-2xs font-extrabold'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Bioestatística & Exportar</span>
+            </button>
+
+            <button
+              onClick={() => handleSelectTab('consort')}
+              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center space-x-1.5 shrink-0 cursor-pointer ${
+                activeTab === 'consort'
+                  ? 'bg-white text-blue-600 shadow-2xs font-extrabold'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <BarChart3 className="w-3.5 h-3.5" />
+              <span>Fluxo CONSORT</span>
+            </button>
+
+            <button
+              onClick={() => handleSelectTab('team')}
+              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center space-x-1.5 shrink-0 cursor-pointer ${
+                activeTab === 'team'
+                  ? 'bg-white text-blue-600 shadow-2xs font-extrabold'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Users className="w-3.5 h-3.5" />
+              <span>Equipe do Estudo</span>
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
+                activeTab === 'team' ? 'bg-blue-100 text-blue-800' : 'bg-slate-200 text-slate-700'
+              }`}>
+                {project.members?.length || 0}
+              </span>
+            </button>
+
+            {isAdmin && (
+              <button
+                onClick={() => handleSelectTab('audit')}
+                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center space-x-1.5 shrink-0 cursor-pointer ${
+                  activeTab === 'audit'
+                    ? 'bg-white text-indigo-700 shadow-2xs font-extrabold'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span>Auditoria GCP</span>
+              </button>
+            )}
+          </div>
+        )}
 
         {/* ABA 1: PRONTUÁRIOS & ATENDIMENTO CLÍNICO */}
         {activeTab === 'active' && (
@@ -2649,90 +2713,6 @@ function DashboardContent() {
                 </span>
               </div>
             )}
-
-            {/* Métricas Compactas de Atendimento (Cards com Altura e Hierarquia Rigorosamente Padronizadas) */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
-              {/* Card 1: Ativos no Estudo */}
-              <div className="bg-white rounded-2xl shadow-card hover:shadow-card-hover border border-slate-200/90 p-4 flex flex-col justify-between h-[96px] transition-all">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Ativos no Estudo</span>
-                  <div className="p-1.5 rounded-xl bg-blue-50 text-blue-600 border border-blue-100">
-                    <Users className="w-3.5 h-3.5" />
-                  </div>
-                </div>
-                <div>
-                  <div className="text-2xl font-black text-slate-900 leading-none">{approvedList.length}</div>
-                  <p className="text-[10px] text-slate-500 mt-1 truncate">Participantes no protocolo</p>
-                </div>
-              </div>
-
-              {/* Card 2: Retornos Clínicos */}
-              <div className={`rounded-2xl shadow-card hover:shadow-card-hover border p-4 flex flex-col justify-between h-[96px] transition-all ${
-                overdueVisits.length > 0
-                  ? 'bg-red-50/40 border-red-200'
-                  : dueNowVisits.length > 0
-                  ? 'bg-amber-50/40 border-amber-200'
-                  : 'bg-white border-slate-200/90'
-              }`}>
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Retornos Clínicos</span>
-                  <div className={`p-1.5 rounded-xl border ${
-                    overdueVisits.length > 0
-                      ? 'bg-red-100 text-red-700 border-red-200 animate-pulse'
-                      : dueNowVisits.length > 0
-                      ? 'bg-amber-100 text-amber-700 border-amber-200'
-                      : 'bg-emerald-50 text-emerald-700 border-emerald-100'
-                  }`}>
-                    {overdueVisits.length > 0 ? (
-                      <AlertCircle className="w-3.5 h-3.5" />
-                    ) : dueNowVisits.length > 0 ? (
-                      <Clock className="w-3.5 h-3.5" />
-                    ) : (
-                      <Calendar className="w-3.5 h-3.5" />
-                    )}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-2xl font-black text-slate-900 leading-none">
-                    {overdueVisits.length + dueNowVisits.length}
-                  </div>
-                  <p className="text-[10px] text-slate-500 mt-1 truncate">
-                    {overdueVisits.length > 0 ? `${overdueVisits.length} atrasado(s)` : ''}
-                    {overdueVisits.length > 0 && dueNowVisits.length > 0 ? ' • ' : ''}
-                    {dueNowVisits.length > 0 ? `${dueNowVisits.length} na janela` : ''}
-                    {overdueVisits.length === 0 && dueNowVisits.length === 0 ? 'Todos os retornos em dia' : ''}
-                  </p>
-                </div>
-              </div>
-
-              {/* Card 3: Protocolos Concluídos */}
-              <div className="bg-white rounded-2xl shadow-card hover:shadow-card-hover border border-slate-200/90 p-4 flex flex-col justify-between h-[96px] transition-all">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Protocolos Concluídos</span>
-                  <div className="p-1.5 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-100">
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                  </div>
-                </div>
-                <div>
-                  <div className="text-2xl font-black text-emerald-600 leading-none">{allCompletedVisits.length}</div>
-                  <p className="text-[10px] text-slate-500 mt-1 truncate">Sessões finalizadas</p>
-                </div>
-              </div>
-
-              {/* Card 4: Próximos Retornos */}
-              <div className="bg-white rounded-2xl shadow-card hover:shadow-card-hover border border-slate-200/90 p-4 flex flex-col justify-between h-[96px] transition-all">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Próximos Retornos</span>
-                  <div className="p-1.5 rounded-xl bg-slate-100 text-slate-600 border border-slate-200">
-                    <Clock className="w-3.5 h-3.5" />
-                  </div>
-                </div>
-                <div>
-                  <div className="text-2xl font-black text-slate-900 leading-none">{upcomingVisits.length}</div>
-                  <p className="text-[10px] text-slate-500 mt-1 truncate">Dentro da janela futura</p>
-                </div>
-              </div>
-            </div>
 
             {/* Alerta de Retornos que Demandam Ação */}
             {(overdueVisits.length > 0 || dueNowVisits.length > 0) && (
