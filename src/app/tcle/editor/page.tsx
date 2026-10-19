@@ -5,11 +5,13 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, CheckCircle2, Eye, Save, Clock, Sparkles, FileText, Phone, Mail } from 'lucide-react';
 import { OFFICIAL_UEPG_TCLE } from '@/lib/tcleDefault';
+import { StudySidebar, StudyMobileBar } from '@/components/StudySidebar';
 
 function TcleEditorContent() {
   const searchParams = useSearchParams();
   const projectIdParam = searchParams.get('projectId');
 
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [projectId, setProjectId] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -123,9 +125,24 @@ function TcleEditorContent() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-100 font-sans text-slate-800 pb-20">
-      {/* Topbar */}
-      <div className="bg-white border-b border-slate-200 px-6 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 relative shadow-xs">
+    <div className="min-h-[calc(100vh-57px)] bg-slate-50 font-sans text-slate-800 flex flex-col">
+      <div className="flex-1 flex w-full relative">
+        <StudySidebar
+          projectId={projectId}
+          activeItem="tcle"
+          mobileMenuOpen={mobileMenuOpen}
+          setMobileMenuOpen={setMobileMenuOpen}
+        />
+
+        <div className="flex-1 min-w-0 flex flex-col pb-20">
+          {/* Barra Superior Mobile para Abrir Sidebar */}
+          <StudyMobileBar
+            projectName={formData.title || 'Termo de Aceite (TCLE)'}
+            onOpenMenu={() => setMobileMenuOpen(true)}
+          />
+
+          {/* Topbar */}
+          <div className="bg-white border-b border-slate-200 px-6 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 relative shadow-xs">
         <div className="flex items-center space-x-4">
           <Link href={`/dashboard?projectId=${projectId}`} className="text-slate-500 hover:text-blue-600 text-sm font-semibold transition inline-flex items-center">
             <ArrowLeft className="w-3.5 h-3.5 mr-1" />
@@ -342,6 +359,8 @@ function TcleEditorContent() {
           </div>
 
         </form>
+      </div>
+        </div>
       </div>
     </div>
   );

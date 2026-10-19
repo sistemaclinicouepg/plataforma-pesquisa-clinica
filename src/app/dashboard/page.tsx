@@ -6,6 +6,7 @@ import Link from 'next/link';
 import type { AnamnesisConfig, AnamnesisQuestion } from '@/app/anamnese/page';
 import { OdontogramChart, ToothSelectorModal, ToothStatus } from '@/components/odontogram';
 import { PatientDossierModal } from '@/components/PatientDossierModal';
+import { StudySidebar } from '@/components/StudySidebar';
 import {
   buildNumericCSVContent,
   generateCodebookMarkdown,
@@ -1154,6 +1155,19 @@ function DashboardContent() {
     );
     setShowEditProjectModal(true);
   };
+
+  useEffect(() => {
+    if (!project) return;
+    if (searchParams.get('newPatient') === 'true') {
+      setShowNewPatientModal(true);
+    }
+    if (searchParams.get('newMember') === 'true') {
+      setShowAddMemberModal(true);
+    }
+    if (searchParams.get('editProject') === 'true') {
+      openEditProjectModal();
+    }
+  }, [project, searchParams]);
 
   const handleSaveProjectEdit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -2410,302 +2424,24 @@ function DashboardContent() {
   return (
     <div className="min-h-[calc(100vh-57px)] bg-slate-50 font-sans text-slate-800 flex flex-col">
       <div className="flex-1 flex w-full relative">
-        {/* Backdrop para Gaveta Mobile */}
-        {mobileMenuOpen && (
-          <div
-            className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-40 lg:hidden transition-opacity"
-            onClick={() => setMobileMenuOpen(false)}
-          />
-        )}
-
-        {/* SIDEBAR LATERAL PROFISSIONAL */}
-        <aside
-          className={`fixed lg:sticky top-[57px] bottom-0 left-0 z-40 w-72 bg-white border-r border-slate-200 flex flex-col transition-transform duration-300 ease-in-out lg:translate-x-0 ${
-            mobileMenuOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full lg:translate-x-0'
-          } h-[calc(100vh-57px)] shrink-0`}
-        >
-          {/* Topo do Sidebar: Identificação e Ação do Estudo */}
-          <div className="p-4 border-b border-slate-100 flex flex-col gap-3 shrink-0">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Estudo Atual</span>
-                {project.status === 'COMPLETED' ? (
-                  <span className="px-2 py-0.2 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 inline-flex items-center gap-1">
-                    <CheckCircle2 className="w-2.5 h-2.5 text-blue-600" />
-                    <span>Finalizado</span>
-                  </span>
-                ) : project.status === 'CANCELLED' ? (
-                  <span className="px-2 py-0.2 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
-                    Cancelado
-                  </span>
-                ) : (
-                  <span className="px-2 py-0.2 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 inline-flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                    <span>Ativo</span>
-                  </span>
-                )}
-              </div>
-
-              {/* Botão fechar apenas no mobile */}
-              <button
-                type="button"
-                onClick={() => setMobileMenuOpen(false)}
-                className="lg:hidden p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100"
-                title="Fechar menu"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Nome do Estudo ou Seletor */}
-            <div>
-              {allProjects.length > 1 ? (
-                <select
-                  value={project.id}
-                  onChange={(e) => {
-                    const newId = e.target.value;
-                    if (typeof window !== 'undefined') {
-                      localStorage.setItem('app_active_project_id', newId);
-                    }
-                    router.push(`/dashboard?projectId=${newId}`);
-                  }}
-                  className="w-full text-xs font-bold text-slate-900 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer truncate"
-                  title="Alternar entre estudos de pesquisa"
-                >
-                  {allProjects.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <h2 className="text-xs font-bold text-slate-900 line-clamp-2 leading-snug" title={project.name}>
-                  {project.name}
-                </h2>
-              )}
-            </div>
-
-            {/* CTA Primário de Cadastro de Paciente */}
-            <button
-              onClick={() => {
-                setMobileMenuOpen(false);
-                setShowNewPatientModal(true);
-              }}
-              className="w-full py-2 px-3 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-xs hover:shadow transition flex items-center justify-center space-x-2 cursor-pointer"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Cadastrar Paciente</span>
-            </button>
-
-            {/* CTA Secundário de Adicionar Pesquisador */}
-            <button
-              onClick={() => {
-                setMobileMenuOpen(false);
-                setMemberError(null);
-                setNewMemberEmail('');
-                setShowAddMemberModal(true);
-              }}
-              className="w-full mt-2 py-2 px-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 hover:text-indigo-800 border border-indigo-200/90 text-xs font-bold rounded-xl shadow-2xs hover:shadow-xs transition flex items-center justify-center space-x-2 cursor-pointer"
-              title="Adicionar ou vincular pesquisador ao estudo"
-            >
-              <UserPlus className="w-4 h-4 text-indigo-600" />
-              <span>Adicionar Pesquisador</span>
-            </button>
-          </div>
-
-          {/* Menus e Navegação do Estudo */}
-          <nav className="flex-1 overflow-y-auto p-3 space-y-5">
-            {/* GRUPO 1: ATENDIMENTO CLÍNICO */}
-            <div>
-              <p className="px-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
-                Atendimento Clínico
-              </p>
-              <div className="space-y-1">
-                <button
-                  type="button"
-                  onClick={() => {
-                    handleSelectTab('active');
-                    setMobileMenuOpen(false);
-                  }}
-                  className={`w-full px-3 py-2 rounded-xl text-xs font-bold transition flex items-center justify-between text-left cursor-pointer ${
-                    activeTab === 'active'
-                      ? 'bg-blue-50 text-blue-700 border border-blue-200/80 shadow-2xs'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-                  }`}
-                >
-                  <div className="flex items-center space-x-2.5 truncate">
-                    <Stethoscope className={`w-4 h-4 shrink-0 ${activeTab === 'active' ? 'text-blue-600' : 'text-slate-400'}`} />
-                    <span className="truncate">Prontuários & Consultas</span>
-                  </div>
-                  <div className="flex items-center space-x-1 shrink-0 ml-1.5">
-                    {(overdueVisits.length > 0 || dueNowVisits.length > 0) && (
-                      <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" title="Retornos pendentes" />
-                    )}
-                    <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
-                      activeTab === 'active' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600'
-                    }`}>
-                      {approvedList.length}
-                    </span>
-                  </div>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    handleSelectTab('triage');
-                    setMobileMenuOpen(false);
-                  }}
-                  className={`w-full px-3 py-2 rounded-xl text-xs font-bold transition flex items-center justify-between text-left cursor-pointer ${
-                    activeTab === 'triage'
-                      ? 'bg-blue-50 text-blue-700 border border-blue-200/80 shadow-2xs'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-                  }`}
-                >
-                  <div className="flex items-center space-x-2.5 truncate">
-                    <ClipboardList className={`w-4 h-4 shrink-0 ${activeTab === 'triage' ? 'text-blue-600' : 'text-slate-400'}`} />
-                    <span className="truncate">Triagem & Inclusão</span>
-                  </div>
-                  <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold shrink-0 ml-1.5 ${
-                    activeTab === 'triage' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600'
-                  }`}>
-                    {pendingList.length}
-                  </span>
-                </button>
-              </div>
-            </div>
-
-            {/* GRUPO 2: CONFIGURAÇÕES DO ESTUDO */}
-            <div>
-              <p className="px-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
-                Configurações do Estudo
-              </p>
-              <div className="space-y-1">
-                <button
-                  type="button"
-                  onClick={() => {
-                    handleSelectTab('team');
-                    setMobileMenuOpen(false);
-                  }}
-                  className={`w-full px-3 py-2 rounded-xl text-xs font-bold transition flex items-center justify-between text-left cursor-pointer ${
-                    activeTab === 'team'
-                      ? 'bg-blue-50 text-blue-700 border border-blue-200/80 shadow-2xs'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-                  }`}
-                >
-                  <div className="flex items-center space-x-2.5 truncate">
-                    <Users className={`w-4 h-4 shrink-0 ${activeTab === 'team' ? 'text-blue-600' : 'text-slate-400'}`} />
-                    <span className="truncate">Equipe do Estudo</span>
-                  </div>
-                  <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
-                    activeTab === 'team' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600'
-                  }`}>
-                    {project.members?.length || 0}
-                  </span>
-                </button>
-
-                <Link
-                  href={`/anamnese?projectId=${project.id}`}
-                  className="w-full px-3 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition flex items-center space-x-2.5 text-left"
-                >
-                  <FileSpreadsheet className="w-4 h-4 text-blue-600 shrink-0" />
-                  <span className="truncate">Ficha Clínica & Critérios</span>
-                </Link>
-
-                <Link
-                  href={`/construtor?projectId=${project.id}`}
-                  className="w-full px-3 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:text-indigo-700 hover:bg-indigo-50 transition flex items-center space-x-2.5 text-left"
-                >
-                  <FileCode className="w-4 h-4 text-indigo-600 shrink-0" />
-                  <span className="truncate">Construtor de eCRF</span>
-                </Link>
-
-                <Link
-                  href={`/tcle/editor?projectId=${project.id}`}
-                  className="w-full px-3 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 transition flex items-center space-x-2.5 text-left"
-                >
-                  <FileText className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span className="truncate">Termo de Aceite (TCLE)</span>
-                </Link>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMobileMenuOpen(false);
-                    openEditProjectModal();
-                  }}
-                  className="w-full px-3 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition flex items-center space-x-2.5 text-left cursor-pointer"
-                >
-                  <Sliders className="w-4 h-4 text-slate-400 shrink-0" />
-                  <span className="truncate">Editar Dados do Estudo</span>
-                </button>
-              </div>
-            </div>
-
-            {/* GRUPO 3: DADOS (Posicionado no fim do menu) */}
-            <div>
-              <p className="px-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
-                Dados
-              </p>
-              <div className="space-y-1">
-                <button
-                  type="button"
-                  onClick={() => {
-                    handleSelectTab('export');
-                    setMobileMenuOpen(false);
-                  }}
-                  className={`w-full px-3 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-2.5 text-left cursor-pointer ${
-                    activeTab === 'export'
-                      ? 'bg-blue-50 text-blue-700 border border-blue-200/80 shadow-2xs'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-                  }`}
-                >
-                  <Download className={`w-4 h-4 shrink-0 ${activeTab === 'export' ? 'text-blue-600' : 'text-slate-400'}`} />
-                  <span className="truncate">Exportar Dados</span>
-                </button>
-
-                {isAdmin && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      handleSelectTab('audit');
-                      setMobileMenuOpen(false);
-                    }}
-                    className={`w-full px-3 py-2 rounded-xl text-xs font-bold transition flex items-center justify-between text-left cursor-pointer ${
-                      activeTab === 'audit'
-                        ? 'bg-indigo-50 text-indigo-700 border border-indigo-200/80 shadow-2xs'
-                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-                    }`}
-                  >
-                    <div className="flex items-center space-x-2.5 truncate">
-                      <ShieldCheck className={`w-4 h-4 shrink-0 ${activeTab === 'audit' ? 'text-indigo-600' : 'text-slate-400'}`} />
-                      <span className="truncate">Trilha de Auditoria</span>
-                    </div>
-                    <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
-                      activeTab === 'audit' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600'
-                    }`}>
-                      {project.auditLogs?.length || 0}
-                    </span>
-                  </button>
-                )}
-              </div>
-            </div>
-          </nav>
-
-          {/* Rodapé do Sidebar */}
-          <div className="p-3 border-t border-slate-100 bg-slate-50/60 shrink-0">
-            {isBlindedUser ? (
-              <div className="px-2.5 py-1.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 text-[11px] font-semibold flex items-center space-x-2">
-                <Lock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                <span className="truncate">Modo Avaliador Cego</span>
-              </div>
-            ) : (
-              <div className="text-[11px] text-slate-400 px-2 flex items-center justify-between">
-                <span>Protocolo Clínico UEPG</span>
-                <span>{studyProtocol.sessions.length} sessões</span>
-              </div>
-            )}
-          </div>
-        </aside>
+        {/* SIDEBAR LATERAL PROFISSIONAL COMPARTILHADA */}
+        <StudySidebar
+          projectId={project.id}
+          activeItem={activeTab}
+          project={project}
+          allProjects={allProjects}
+          isAdmin={isAdmin}
+          onSelectTab={handleSelectTab}
+          onNewPatient={() => setShowNewPatientModal(true)}
+          onNewMember={() => {
+            setMemberError(null);
+            setNewMemberEmail('');
+            setShowAddMemberModal(true);
+          }}
+          onEditProject={openEditProjectModal}
+          mobileMenuOpen={mobileMenuOpen}
+          setMobileMenuOpen={setMobileMenuOpen}
+        />
 
         {/* ÁREA PRINCIPAL DE CONTEÚDO */}
         <div className="flex-1 min-w-0 flex flex-col">

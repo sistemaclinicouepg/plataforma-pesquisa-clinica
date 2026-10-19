@@ -3,6 +3,7 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { StudySidebar, StudyMobileBar } from '@/components/StudySidebar';
 import {
   FileText,
   FilePlus,
@@ -151,6 +152,7 @@ function FormBuilderContent() {
   const searchParams = useSearchParams();
   const projectIdParam = searchParams.get('projectId');
 
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string>(projectIdParam || '');
   const [formTitle, setFormTitle] = useState('Questionário de Impacto na Qualidade de Vida (OHIP-14)');
@@ -442,9 +444,25 @@ function FormBuilderContent() {
   const selectedProjectObj = projects.find((p) => p.id === selectedProjectId);
 
   return (
-    <div className="min-h-screen bg-slate-100/80 font-sans text-slate-800 pb-28">
-      {/* Barra Superior de Comando Clínico */}
-      <header className="bg-white border-b border-slate-200/90 relative shadow-xs">
+    <div className="min-h-[calc(100vh-57px)] bg-slate-50 font-sans text-slate-800 flex flex-col">
+      <div className="flex-1 flex w-full relative">
+        <StudySidebar
+          projectId={selectedProjectId}
+          activeItem="construtor"
+          allProjects={projects}
+          mobileMenuOpen={mobileMenuOpen}
+          setMobileMenuOpen={setMobileMenuOpen}
+        />
+
+        <div className="flex-1 min-w-0 flex flex-col pb-28">
+          {/* Barra Superior Mobile para Abrir Sidebar */}
+          <StudyMobileBar
+            projectName={selectedProjectObj?.name}
+            onOpenMenu={() => setMobileMenuOpen(true)}
+          />
+
+          {/* Barra Superior de Comando Clínico */}
+          <header className="bg-white border-b border-slate-200/90 relative shadow-xs">
         <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-10 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           
           <div className="flex items-center space-x-3">
@@ -1550,6 +1568,8 @@ function FormBuilderContent() {
         </div>
       )}
 
+        </div>
+      </div>
     </div>
   );
 }

@@ -4,6 +4,7 @@ import React, { useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { OdontogramChart, ToothStatus } from '@/components/odontogram';
+import { StudySidebar, StudyMobileBar } from '@/components/StudySidebar';
 import {
   ArrowLeft,
   CheckCircle2,
@@ -181,6 +182,7 @@ function AnamnesisBuilderContent() {
   const projectId = searchParams.get('projectId') || '';
   const isNewProject = searchParams.get('new') === 'true';
 
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -549,9 +551,25 @@ function AnamnesisBuilderContent() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-100 font-sans text-slate-800 pb-20">
-      {/* Barra Superior */}
-      <header className="bg-white border-b border-slate-200 px-4 sm:px-6 lg:px-8 xl:px-10 py-4 relative shadow-xs flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div className="min-h-[calc(100vh-57px)] bg-slate-50 font-sans text-slate-800 flex flex-col">
+      <div className="flex-1 flex w-full relative">
+        <StudySidebar
+          projectId={projectId}
+          activeItem="anamnese"
+          allProjects={projectsList}
+          mobileMenuOpen={mobileMenuOpen}
+          setMobileMenuOpen={setMobileMenuOpen}
+        />
+
+        <div className="flex-1 min-w-0 flex flex-col pb-20">
+          {/* Barra Superior Mobile para Abrir Sidebar */}
+          <StudyMobileBar
+            projectName={projectName}
+            onOpenMenu={() => setMobileMenuOpen(true)}
+          />
+
+          {/* Barra Superior */}
+          <header className="bg-white border-b border-slate-200 px-4 sm:px-6 lg:px-8 py-3.5 relative shadow-xs flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex items-center space-x-3">
           <Link
             href={`/dashboard?projectId=${projectId}`}
@@ -1447,6 +1465,8 @@ function AnamnesisBuilderContent() {
           </div>
         </div>
       )}
+        </div>
+      </div>
     </div>
   );
 }
