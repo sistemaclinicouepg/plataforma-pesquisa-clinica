@@ -40,20 +40,22 @@ export async function POST(req: Request) {
       );
     }
 
-    // Identificar sessão alvo (ou a informada, ou a mais recente, ou criar a sessão 1)
+    // Identificar sessão alvo (ou a informada, ou a mais recente)
     let targetSession = sessionNumber
       ? participant.sessions.find((s: { sessionNumber: number }) => s.sessionNumber === Number(sessionNumber))
       : participant.sessions[0];
 
+    // O diário de sensibilidade pós-operatório (EVA) exige que o atendimento clínico
+    // tenha sido previamente realizado e registrado pelo pesquisador no consultório.
+    // Nunca criamos sessões clínicas fictícias a partir do portal do paciente.
     if (!targetSession) {
-      targetSession = await prisma.clinicalSession.create({
-        data: {
-          participantId: participant.id,
-          sessionNumber: Number(sessionNumber) || 1,
-          sessionType: 'BASELINE_INTERVENTION_1',
-          sessionDate: new Date(),
+      return NextResponse.json(
+        {
+          error:
+            'O atendimento clínico presencial desta sessão ainda não foi registrado pelo pesquisador. O diário de sensibilidade só deve ser preenchido após a consulta clínica no consultório.',
         },
-      });
+        { status: 400 }
+      );
     }
 
     // Montar objeto de atualização do score de dor

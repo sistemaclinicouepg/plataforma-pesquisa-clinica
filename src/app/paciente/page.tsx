@@ -916,6 +916,32 @@ function PacienteContent() {
 
           {/* ABA 1: DIÁRIO DE SENSIBILIDADE (EVA) */}
           {activeTab === 'diary' && (() => {
+            const hasAnySession = participant?.sessions && participant.sessions.length > 0;
+            if (!hasAnySession) {
+              return (
+                <div className="p-8 bg-slate-50 border border-slate-200 rounded-3xl text-center space-y-3 shadow-2xs">
+                  <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center mx-auto shadow-2xs">
+                    <Clock className="w-6 h-6" />
+                  </div>
+                  <h3 className="font-bold text-slate-800 text-sm">Aguardando Atendimento Clínico Presencial</h3>
+                  <p className="text-xs text-slate-500 max-w-xs mx-auto leading-relaxed">
+                    Sua consulta presencial da <strong>Sessão 1</strong> ainda não foi realizada no consultório. O diário de sensibilidade será liberado para preenchimento imediatamente após o seu atendimento pela equipe de pesquisa.
+                  </p>
+                  {participant.forms && participant.forms.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('forms')}
+                      className="mt-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition inline-flex items-center gap-1.5 cursor-pointer shadow-xs"
+                    >
+                      <ClipboardList className="w-3.5 h-3.5" />
+                      <span>Ver Questionários da Pesquisa</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+              );
+            }
+
             const activeSession = participant?.sessions?.find((s) => s.sessionNumber === selectedSessionNumber) || participant?.latestSession;
 
             const getMomentScore = (k: '0h' | '1h' | '24h' | '48h'): number | null => {
