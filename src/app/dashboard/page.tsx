@@ -6480,20 +6480,11 @@ function DashboardContent() {
                         <div className="flex justify-between items-center">
                           <span className="font-bold text-slate-800 text-xs inline-flex items-center gap-1.5">
                             <Zap className="w-4 h-4 text-amber-500" />
-                            <span>Sensibilidade Imediata no Consultório (EVA 0h)</span>
-                          </span>
-                          <span className={`px-2.5 py-0.5 rounded-full font-mono font-bold text-xs ${
-                            currentSessionForm.painScore0h >= 7
-                              ? 'bg-red-100 text-red-800 border border-red-300'
-                              : currentSessionForm.painScore0h > 0
-                              ? 'bg-amber-100 text-amber-800 border border-amber-300'
-                              : 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-                          }`}>
-                            EVA {Number(currentSessionForm.painScore0h).toFixed(1)} / 10
+                            <span>Sensibilidade Imediata no Consultório (Escala EVA)</span>
                           </span>
                         </div>
                         <p className="text-[11px] text-slate-500 leading-relaxed">
-                          Aferida com o voluntário na cadeira imediatamente após a lavagem e remoção do gel clareador.
+                          Solicite ao voluntário que deslize o marcador na linha até o ponto que melhor represente o nível de dor ou sensibilidade sentida no momento.
                         </p>
 
                         <div className="py-2 px-1 space-y-2">
@@ -6511,19 +6502,17 @@ function DashboardContent() {
                             }
                             className="w-full h-3 bg-slate-200 border border-slate-300 rounded-lg appearance-none cursor-pointer accent-blue-600 focus:outline-none"
                           />
-                          <div className="flex justify-between text-[10px] text-slate-400 font-medium">
-                            <span>0.0 - Nenhuma dor</span>
-                            <span>5.0 - Dor moderada</span>
-                            <span>10.0 - Pior dor possível</span>
+                          <div className="flex justify-between items-start text-xs pt-1 px-1">
+                            <div className="text-left max-w-[140px]">
+                              <span className="block font-bold text-slate-800">Nenhuma dor</span>
+                              <span className="text-[10px] text-slate-400 leading-tight block">Ausência total de sensibilidade</span>
+                            </div>
+                            <div className="text-right max-w-[140px]">
+                              <span className="block font-bold text-slate-800">Pior dor possível</span>
+                              <span className="text-[10px] text-slate-400 leading-tight block">Intensidade máxima suportável</span>
+                            </div>
                           </div>
                         </div>
-
-                        {currentSessionForm.painScore0h >= 7 && (
-                          <div className="p-2.5 bg-red-50 border border-red-200 rounded-xl text-red-800 text-[11px] flex items-center gap-2">
-                            <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
-                            <span>Atenção: Dor severa registrada. Considere aplicação tópica de agente dessensibilizante em consultório.</span>
-                          </div>
-                        )}
                       </div>
 
                       {/* Irritação Gengival Marginal */}
@@ -6590,23 +6579,31 @@ function DashboardContent() {
                           <label className="block font-bold text-slate-700 uppercase tracking-wider text-[11px] mb-1">
                             Pesquisador(a) Operador(a)
                           </label>
-                          <input
-                            type="text"
+                          <select
                             value={currentSessionForm.operatorName}
                             onChange={(e) =>
                               setCurrentSessionForm({ ...currentSessionForm, operatorName: e.target.value })
                             }
-                            placeholder="Quem aplicou o procedimento"
-                            className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                          />
+                            className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs bg-white text-slate-800 font-semibold focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                          >
+                            <option value="">Selecione o(a) operador(a)...</option>
+                            {(project?.members || []).map((m) => (
+                              <option key={m.id} value={m.user.name}>
+                                {m.user.name} ({m.role === 'OPERATOR' ? 'Operador(a)' : m.role === 'COORDINATOR' ? 'Coordenador(a)' : m.role === 'CO_ADVISOR' ? 'Co-orientador(a)' : m.role === 'EVALUATOR' ? 'Avaliador(a)' : m.role})
+                              </option>
+                            ))}
+                            {currentSessionForm.operatorName &&
+                              !(project?.members || []).some((m) => m.user.name === currentSessionForm.operatorName) && (
+                                <option value={currentSessionForm.operatorName}>{currentSessionForm.operatorName}</option>
+                              )}
+                          </select>
                         </div>
 
                         <div>
                           <label className="block font-bold text-slate-700 uppercase tracking-wider text-[11px] mb-1">
                             Pesquisador(a) Avaliador(a) Cego(a)
                           </label>
-                          <input
-                            type="text"
+                          <select
                             value={currentSessionForm.evaluatorName}
                             onChange={(e) =>
                               setCurrentSessionForm({
@@ -6614,9 +6611,19 @@ function DashboardContent() {
                                 evaluatorName: e.target.value,
                               })
                             }
-                            placeholder="Examinador independente da cor/dor"
-                            className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                          />
+                            className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs bg-white text-slate-800 font-semibold focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                          >
+                            <option value="">Selecione o(a) avaliador(a)...</option>
+                            {(project?.members || []).map((m) => (
+                              <option key={m.id} value={m.user.name}>
+                                {m.user.name} {m.isBlinded ? '👁️ (Cego)' : ''} ({m.role === 'EVALUATOR' ? 'Avaliador(a)' : m.role === 'COORDINATOR' ? 'Coordenador(a)' : m.role === 'CO_ADVISOR' ? 'Co-orientador(a)' : m.role === 'OPERATOR' ? 'Operador(a)' : m.role})
+                              </option>
+                            ))}
+                            {currentSessionForm.evaluatorName &&
+                              !(project?.members || []).some((m) => m.user.name === currentSessionForm.evaluatorName) && (
+                                <option value={currentSessionForm.evaluatorName}>{currentSessionForm.evaluatorName}</option>
+                              )}
+                          </select>
                         </div>
                       </div>
 
@@ -6633,22 +6640,6 @@ function DashboardContent() {
                           }
                           placeholder="Recomendações pós-clareamento dadas ao paciente, comportamento clínico ou observações..."
                           className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                        />
-                      </div>
-
-                      {/* Justificativa de Auditoria GCP */}
-                      <div className="p-3 bg-amber-50/70 border border-amber-200/80 rounded-xl space-y-1">
-                        <label className="block font-bold text-amber-900 uppercase tracking-wider text-[10px]">
-                          Motivo / Justificativa do Registro Clínico (GCP / 21 CFR Part 11)
-                        </label>
-                        <input
-                          type="text"
-                          value={currentSessionForm.justification || ''}
-                          onChange={(e) =>
-                            setCurrentSessionForm({ ...currentSessionForm, justification: e.target.value })
-                          }
-                          placeholder="Ex: Atendimento presencial regular, aferição de cor e sensibilidade..."
-                          className="w-full px-3 py-1.5 border border-amber-300 rounded-lg text-xs bg-white focus:ring-1 focus:ring-amber-500"
                         />
                       </div>
 
