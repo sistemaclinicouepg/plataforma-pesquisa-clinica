@@ -352,9 +352,30 @@ export function calculateSessionWindows(
 ): ParticipantWindowsSummary {
   const s1 = part.sessions?.find((s) => s.sessionNumber === 1);
   if (!s1) {
+    const s1Proto = customProtocol?.sessions?.find((s) => s.sessionNumber === 1);
+    const s1Config: ClinicalWindowConfig = {
+      sessionNumber: 1,
+      name: s1Proto?.name || 'Sessão 1 (Intervenção Inicial / Baseline)',
+      shortName: 'S1',
+      targetDaysFromAnchor: 0,
+      toleranceMinusDays: 0,
+      tolerancePlusDays: 0,
+      anchorSessionNumber: 1,
+    };
     return {
       hasS1: false,
       allCompleted: false,
+      nextPendingSessionNumber: 1,
+      nextStatus: {
+        sessionNumber: 1,
+        config: s1Config,
+        targetDate: new Date(),
+        windowStart: new Date(),
+        windowEnd: new Date(),
+        isCompleted: false,
+        pendingStatus: 'UPCOMING',
+        daysDiff: 0,
+      },
       sessions: {},
       overallAlert: 'WAITING_S1',
     };
@@ -2958,11 +2979,24 @@ function DashboardContent() {
                               <td className="py-2.5 px-4 align-middle text-right whitespace-nowrap">
                                 <div className="inline-flex items-center justify-end gap-1.5">
                                   {/* Botão Primário: Registrar Atendimento ou Concluído */}
-                                  {next ? (
+                                  {windows.allCompleted ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setTimelineParticipant(part);
+                                        setShowTimelineModal(true);
+                                      }}
+                                      className="h-8 px-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-lg text-xs font-bold transition inline-flex items-center justify-center gap-1.5 whitespace-nowrap shadow-2xs shrink-0 cursor-pointer"
+                                      title="Ver histórico completo das sessões clínicas concluídas"
+                                    >
+                                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                                      <span>Concluído ({studyProtocol.sessions.length}/{studyProtocol.sessions.length})</span>
+                                    </button>
+                                  ) : next ? (
                                     <button
                                       type="button"
                                       onClick={() => openSessionEditor(part, next.sessionNumber)}
-                                      className="h-8 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition inline-flex items-center justify-center gap-1.5 shadow-2xs whitespace-nowrap shrink-0"
+                                      className="h-8 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition inline-flex items-center justify-center gap-1.5 shadow-2xs whitespace-nowrap shrink-0 cursor-pointer"
                                       title={`Registrar atendimento clínico de ${next.config.name}`}
                                     >
                                       <Stethoscope className="w-3.5 h-3.5" />
@@ -2971,15 +3005,12 @@ function DashboardContent() {
                                   ) : (
                                     <button
                                       type="button"
-                                      onClick={() => {
-                                        setTimelineParticipant(part);
-                                        setShowTimelineModal(true);
-                                      }}
-                                      className="h-8 px-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-lg text-xs font-bold transition inline-flex items-center justify-center gap-1.5 whitespace-nowrap shadow-2xs shrink-0"
-                                      title="Ver histórico completo das sessões"
+                                      onClick={() => openSessionEditor(part, 1)}
+                                      className="h-8 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition inline-flex items-center justify-center gap-1.5 shadow-2xs whitespace-nowrap shrink-0 cursor-pointer"
+                                      title="Registrar primeira sessão clínica (S1)"
                                     >
-                                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                                      <span>Concluído (4/4)</span>
+                                      <Stethoscope className="w-3.5 h-3.5" />
+                                      <span>Registrar S1</span>
                                     </button>
                                   )}
 
@@ -3929,7 +3960,7 @@ function DashboardContent() {
                   <p className="text-xl font-black text-blue-600 mt-0.5">
                     {approvedList.length > 0 ? Math.round((allCompletedVisits.length / approvedList.length) * 100) : 0}%
                   </p>
-                  <p className="text-[10px] text-slate-500 mt-0.5">{allCompletedVisits.length} de {approvedList.length} com 4/4 sessões</p>
+                  <p className="text-[10px] text-slate-500 mt-0.5">{allCompletedVisits.length} de {approvedList.length} com {studyProtocol.sessions.length}/{studyProtocol.sessions.length} sessões</p>
                 </div>
               </div>
 
