@@ -55,6 +55,8 @@ export const PatientDossierModal: React.FC<PatientDossierModalProps> = ({
   const parsedAnamnesis = useMemo(() => {
     if (!participant?.anamnesisData) {
       return {
+        chiefComplaint: '',
+        allergies: '',
         odontogram: {} as Record<string, ToothStatus>,
         periodontogram: {
           bleedingOnProbing: '0-10%',
@@ -71,6 +73,8 @@ export const PatientDossierModal: React.FC<PatientDossierModalProps> = ({
     try {
       const data = JSON.parse(participant.anamnesisData);
       return {
+        chiefComplaint: data.chiefComplaint || '',
+        allergies: data.allergies || '',
         odontogram: (data.odontogram || {}) as Record<string, ToothStatus>,
         periodontogram: data.periodontogram || {
           bleedingOnProbing: '0-10%',
@@ -84,6 +88,8 @@ export const PatientDossierModal: React.FC<PatientDossierModalProps> = ({
       };
     } catch {
       return {
+        chiefComplaint: '',
+        allergies: '',
         odontogram: {} as Record<string, ToothStatus>,
         periodontogram: {
           bleedingOnProbing: '0-10%',
@@ -420,9 +426,11 @@ export const PatientDossierModal: React.FC<PatientDossierModalProps> = ({
 
                   <div className="space-y-2.5 text-xs">
                     <div>
-                      <span className="text-[11px] font-bold text-slate-700 block">Queixa Principal Relatada:</span>
+                      <span className="text-[11px] font-bold text-slate-700 block">
+                        Queixa Principal Relatada (específica deste estudo):
+                      </span>
                       <p className="p-2 bg-white rounded-lg border border-slate-200 text-slate-800 italic mt-0.5">
-                        &ldquo;{patient.chiefComplaint || 'Nenhuma queixa específica registrada no momento do cadastro.'}&rdquo;
+                        &ldquo;{parsedAnamnesis.chiefComplaint || patient.chiefComplaint || 'Nenhuma queixa específica registrada no momento do cadastro.'}&rdquo;
                       </p>
                     </div>
 
@@ -433,9 +441,11 @@ export const PatientDossierModal: React.FC<PatientDossierModalProps> = ({
                       </div>
 
                       <div className="p-2 bg-white rounded-lg border border-slate-200">
-                        <span className="text-[10px] font-bold uppercase text-slate-400 block">Alergias Conhecidas:</span>
-                        <span className={`font-semibold ${patient.allergies ? 'text-red-700' : 'text-slate-800'}`}>
-                          {patient.allergies || 'Nenhuma alergia relatada'}
+                        <span className="text-[10px] font-bold uppercase text-slate-400 block">
+                          Alergias Conhecidas (específicas deste estudo):
+                        </span>
+                        <span className={`font-semibold ${(parsedAnamnesis.allergies || patient.allergies) ? 'text-red-700' : 'text-slate-800'}`}>
+                          {parsedAnamnesis.allergies || patient.allergies || 'Nenhuma alergia relatada'}
                         </span>
                       </div>
 

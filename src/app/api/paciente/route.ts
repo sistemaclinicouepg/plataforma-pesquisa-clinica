@@ -123,13 +123,21 @@ export async function GET(req: Request) {
         codeVariants.push(`P${pNum}${sNum}`);
       }
 
-      // Buscar todos os participantes que compartilham ou correspondem a este código
+      // Buscar todos os participantes que compartilham ou correspondem a este código ou CPF
+      const isPossibleCpf = codeWithoutHyphen.length >= 8 || rawCode.includes('.') || rawCode.includes('-');
       let candidates = await prisma.participant.findMany({
         where: {
           OR: [
             { researchCode: { in: codeVariants } },
             { researchCode: codeWithoutHyphen },
             { researchCode: rawCode },
+            ...(isPossibleCpf
+              ? [
+                  { patient: { cpf: rawCode } },
+                  { patient: { cpf: codeWithoutHyphen } },
+                  { patient: { cpf: { contains: codeWithoutHyphen } } },
+                ]
+              : []),
           ],
           ...(projectId && { projectId }),
         },
@@ -361,6 +369,31 @@ export async function GET(req: Request) {
       };
     });
 
+    // Buscar se o mesmo paciente participa de outros estudos na plataforma (isolamento completo de dados)
+    const otherParticipations = await prisma.participant.findMany({
+      where: {
+        patientId: participant.patientId,
+        id: { not: participant.id },
+      },
+      select: {
+        id: true,
+        researchCode: true,
+        project: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+    const otherStudies = otherParticipations.map((op) => ({
+      participantId: op.id,
+      researchCode: op.researchCode,
+      projectId: op.project.id,
+      projectName: op.project.name,
+    }));
+
     return NextResponse.json({
       success: true,
       participant: {
@@ -376,6 +409,7 @@ export async function GET(req: Request) {
         sessions: participant.sessions,
         latestSession,
         forms: formsWithStatus,
+        otherStudies,
       },
     });
   } catch (error) {

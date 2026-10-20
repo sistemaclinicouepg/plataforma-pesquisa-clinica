@@ -208,6 +208,8 @@ type ProjectData = {
 };
 
 type DynamicAnamnesisState = {
+  chiefComplaint?: string;
+  allergies?: string;
   odontogram: Record<string, string>; // dente (ex: "11") -> "HIGIDO" | "RESTAURADO" | "CARIE" | "AUSENTE" | "FACETA"
   periodontogram: {
     bleedingOnProbing: string;
@@ -221,6 +223,8 @@ type DynamicAnamnesisState = {
 };
 
 const initialDynamicAnamnesis: DynamicAnamnesisState = {
+  chiefComplaint: '',
+  allergies: '',
   odontogram: {},
   periodontogram: {
     bleedingOnProbing: '0-10%',
@@ -675,6 +679,7 @@ function DashboardContent() {
   const [addMemberMode, setAddMemberMode] = useState<'select' | 'manual'>('select');
   const [systemResearchers, setSystemResearchers] = useState<Array<{ id: string; name: string; email: string; role: string }>>([]);
   const [loadingResearchers, setLoadingResearchers] = useState(false);
+  const [researcherSearchQuery, setResearcherSearchQuery] = useState('');
   const [selectedResearcherId, setSelectedResearcherId] = useState('');
   const [newMemberEmail, setNewMemberEmail] = useState('');
   const [newMemberRole, setNewMemberRole] = useState('EVALUATOR');
@@ -1349,6 +1354,16 @@ function DashboardContent() {
     );
   }, [systemResearchers, project?.members]);
 
+  const filteredAvailableResearchers = useMemo(() => {
+    const q = researcherSearchQuery.trim().toLowerCase();
+    if (!q) return availableResearchers;
+    return availableResearchers.filter(
+      (u) =>
+        (u.name || '').toLowerCase().includes(q) ||
+        (u.email || '').toLowerCase().includes(q)
+    );
+  }, [availableResearchers, researcherSearchQuery]);
+
   const filteredExistingPatients = useMemo(() => {
     const q = patientSearchQuery.trim().toLowerCase();
     if (!q) return existingPatients;
@@ -1751,8 +1766,10 @@ function DashboardContent() {
     if (part.anamnesisData) {
       try {
         const parsed = JSON.parse(part.anamnesisData);
-        if (parsed && (parsed.answers !== undefined || parsed.odontogram !== undefined || parsed.periodontogram !== undefined)) {
+        if (parsed && (parsed.answers !== undefined || parsed.odontogram !== undefined || parsed.periodontogram !== undefined || parsed.chiefComplaint !== undefined)) {
           setAnamnesisData({
+            chiefComplaint: parsed.chiefComplaint ?? part.patient?.chiefComplaint ?? '',
+            allergies: parsed.allergies ?? part.patient?.allergies ?? '',
             odontogram: parsed.odontogram || {},
             periodontogram: parsed.periodontogram || initialDynamicAnamnesis.periodontogram,
             answers: parsed.answers || {},
@@ -1760,6 +1777,8 @@ function DashboardContent() {
           });
         } else {
           setAnamnesisData({
+            chiefComplaint: parsed?.chiefComplaint ?? part.patient?.chiefComplaint ?? '',
+            allergies: parsed?.allergies ?? part.patient?.allergies ?? '',
             odontogram: {},
             periodontogram: initialDynamicAnamnesis.periodontogram,
             answers: typeof parsed === 'object' ? parsed : {},
@@ -1767,10 +1786,18 @@ function DashboardContent() {
           });
         }
       } catch {
-        setAnamnesisData(initialDynamicAnamnesis);
+        setAnamnesisData({
+          ...initialDynamicAnamnesis,
+          chiefComplaint: part.patient?.chiefComplaint || '',
+          allergies: part.patient?.allergies || '',
+        });
       }
     } else {
-      setAnamnesisData(initialDynamicAnamnesis);
+      setAnamnesisData({
+        ...initialDynamicAnamnesis,
+        chiefComplaint: part.patient?.chiefComplaint || '',
+        allergies: part.patient?.allergies || '',
+      });
     }
     setShowAnamnesisModal(true);
   };
@@ -3259,14 +3286,26 @@ function DashboardContent() {
                                 <div className="text-[11px] leading-tight">
                                   <span className="font-semibold text-slate-700">{part.patient?.phoneWhatsApp || 'Sem telefone'}</span>
                                   <span className="text-slate-400"> • {part.patient?.biologicalSex || 'N/I'}</span>
-                                  {(part.patient?.chiefComplaint || part.patient?.allergies) && (
-                                    <p
-                                      className="text-[10px] text-slate-500 truncate max-w-[240px] mt-0.5"
-                                      title={`Queixa: ${part.patient?.chiefComplaint || 'N/I'} | Alergias: ${part.patient?.allergies || 'Nenhuma'}`}
-                                    >
-                                      Qx: {part.patient?.chiefComplaint || 'N/I'} • Alerg: {part.patient?.allergies || 'Nenhuma'}
-                                    </p>
-                                  )}
+                                  {(() => {
+                                    let comp = part.patient?.chiefComplaint;
+                                    let aller = part.patient?.allergies;
+                                    if (part.anamnesisData) {
+                                      try {
+                                        const parsed = JSON.parse(part.anamnesisData);
+                                        if (parsed.chiefComplaint) comp = parsed.chiefComplaint;
+                                        if (parsed.allergies) aller = parsed.allergies;
+                                      } catch {}
+                                    }
+                                    if (!comp && !aller) return null;
+                                    return (
+                                      <p
+                                        className="text-[10px] text-slate-500 truncate max-w-[240px] mt-0.5"
+                                        title={`Queixa: ${comp || 'N/I'} | Alergias: ${aller || 'Nenhuma'}`}
+                                      >
+                                        Qx: {comp || 'N/I'} • Alerg: {aller || 'Nenhuma'}
+                                      </p>
+                                    );
+                                  })()}
                                 </div>
                               </td>
 
@@ -4336,35 +4375,89 @@ function DashboardContent() {
 
             <form onSubmit={handleAddMember} className="space-y-4 text-xs">
               {addMemberMode === 'select' ? (
-                <div>
-                  <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">
-                    Selecionar Pesquisador Cadastrado
-                  </label>
-                  {loadingResearchers ? (
-                    <div className="p-3 text-slate-400 text-center animate-pulse border border-slate-200 rounded-lg">
-                      Carregando pesquisadores...
+                <div className="space-y-3">
+                  <div>
+                    <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">
+                      Pesquisar Pesquisador Cadastrado
+                    </label>
+                    <div className="relative">
+                      <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                      <input
+                        type="text"
+                        placeholder="Buscar por nome ou e-mail..."
+                        value={researcherSearchQuery}
+                        onChange={(e) => setResearcherSearchQuery(e.target.value)}
+                        className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                      />
                     </div>
-                  ) : availableResearchers.length === 0 ? (
-                    <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-xs leading-relaxed">
-                      Todos os pesquisadores cadastrados na plataforma já fazem parte deste estudo. Caso queira convidar um novo, alterne para a aba <strong>Digitar por E-mail</strong>.
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                        Pesquisadores Disponíveis ({filteredAvailableResearchers.length})
+                      </p>
+                      {selectedResearcherId && (
+                        <span className="text-[10px] text-blue-600 font-bold">1 selecionado</span>
+                      )}
                     </div>
-                  ) : (
-                    <select
-                      value={selectedResearcherId}
-                      onChange={(e) => {
-                        setSelectedResearcherId(e.target.value);
-                        const sel = systemResearchers.find((u) => u.id === e.target.value);
-                        if (sel) setNewMemberEmail(sel.email);
-                      }}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                    >
-                      {availableResearchers.map((u) => (
-                        <option key={u.id} value={u.id}>
-                          {u.name} ({u.email}) - {u.role === 'ADMIN' ? 'Administrador' : 'Pesquisador'}
-                        </option>
-                      ))}
-                    </select>
-                  )}
+
+                    {loadingResearchers ? (
+                      <div className="p-4 text-slate-400 text-center animate-pulse border border-slate-200 rounded-xl text-xs">
+                        Carregando pesquisadores...
+                      </div>
+                    ) : availableResearchers.length === 0 ? (
+                      <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-xs leading-relaxed">
+                        Todos os pesquisadores cadastrados na plataforma já fazem parte deste estudo. Caso queira convidar um novo, alterne para a aba <strong>Digitar por E-mail</strong>.
+                      </div>
+                    ) : filteredAvailableResearchers.length === 0 ? (
+                      <div className="p-4 text-center text-slate-400 border border-dashed border-slate-300 rounded-xl text-xs">
+                        Nenhum pesquisador encontrado com &quot;{researcherSearchQuery}&quot;.
+                      </div>
+                    ) : (
+                      <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                        {filteredAvailableResearchers.map((u) => {
+                          const isSelected = selectedResearcherId === u.id;
+                          return (
+                            <div
+                              key={u.id}
+                              onClick={() => {
+                                setSelectedResearcherId(u.id);
+                                setNewMemberEmail(u.email);
+                              }}
+                              className={`p-2.5 rounded-xl border transition cursor-pointer flex items-center justify-between gap-2 ${
+                                isSelected
+                                  ? 'bg-blue-50 border-blue-400 ring-2 ring-blue-500/20 shadow-xs'
+                                  : 'bg-white border-slate-200 hover:border-blue-300 hover:bg-slate-50'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 font-bold flex items-center justify-center text-xs shrink-0">
+                                  {u.name.charAt(0).toUpperCase()}
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="font-bold text-slate-900 truncate text-xs">{u.name}</p>
+                                  <p className="text-[11px] text-slate-500 truncate font-mono">{u.email}</p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                  u.role === 'ADMIN' ? 'bg-purple-100 text-purple-800' : 'bg-slate-100 text-slate-700'
+                                }`}>
+                                  {u.role === 'ADMIN' ? 'Admin' : 'Pesquisador'}
+                                </span>
+                                {isSelected && (
+                                  <span className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-xs">
+                                    <Check className="w-3 h-3" />
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
                 </div>
               ) : (
                 <div>
@@ -4428,7 +4521,7 @@ function DashboardContent() {
                 </button>
                 <button
                   type="submit"
-                  disabled={addingMember || (addMemberMode === 'select' && availableResearchers.length === 0)}
+                  disabled={addingMember || (addMemberMode === 'select' && (!selectedResearcherId || availableResearchers.length === 0)) || (addMemberMode === 'manual' && !newMemberEmail.trim())}
                   className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow-sm transition disabled:opacity-50 cursor-pointer"
                 >
                   {addingMember ? 'Adicionando...' : 'Adicionar à Equipe'}
@@ -4586,6 +4679,44 @@ function DashboardContent() {
                     </div>
                   </div>
                 )}
+
+                {/* Módulo: Queixa Principal & Alergias Específicas deste Estudo (Isolamento de Dados Clínicos) */}
+                <div className="bg-slate-50 border border-slate-200 p-4 rounded-2xl space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-bold text-slate-800 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                      <FileText className="w-4 h-4 text-blue-600" />
+                      <span>Queixa Principal & Alergias (Específicas deste Estudo)</span>
+                    </h4>
+                    <span className="text-[10px] text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full font-bold">
+                      Isolado por Estudo
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500">
+                    Estes dados são gravados exclusivamente na ficha deste protocolo clínico e não afetam outras pesquisas onde o paciente participe.
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-slate-700 font-semibold mb-1">Queixa Principal Relatada no Estudo</label>
+                      <input
+                        type="text"
+                        value={anamnesisData.chiefComplaint || ''}
+                        onChange={(e) => setAnamnesisData({ ...anamnesisData, chiefComplaint: e.target.value })}
+                        placeholder="Ex: Quer clarear os dentes para formatura"
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-slate-700 font-semibold mb-1">Alergias Relatadas no Estudo</label>
+                      <input
+                        type="text"
+                        value={anamnesisData.allergies || ''}
+                        onChange={(e) => setAnamnesisData({ ...anamnesisData, allergies: e.target.value })}
+                        placeholder="Ex: Nenhuma ou Alergia a Penicilina / Látex"
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
 
                 {/* 1. MÓDULO ODONTOGRAMA COM ILUSTRAÇÃO ANATÔMICA (SE HABILITADO) */}
                 {config.enableOdontogram && (

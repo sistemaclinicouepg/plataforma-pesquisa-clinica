@@ -57,6 +57,13 @@ type FormItem = {
   myAnswers: Record<string, FormAnswerValue> | null;
 };
 
+type OtherStudyOption = {
+  participantId: string;
+  researchCode: string;
+  projectId: string;
+  projectName: string;
+};
+
 type ParticipantData = {
   id: string;
   researchCode: string;
@@ -70,6 +77,7 @@ type ParticipantData = {
   sessions: ParticipantSession[];
   latestSession: ParticipantSession | null;
   forms: FormItem[];
+  otherStudies?: OtherStudyOption[];
 };
 
 type CollisionOption = {
@@ -745,18 +753,18 @@ function PacienteContent() {
           <form onSubmit={handleSearchParticipant} className="space-y-4">
             <div>
               <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1.5">
-                Digite seu Código de Pesquisa:
+                Digite seu Código de Pesquisa ou CPF:
               </label>
               <input
                 type="text"
                 required
-                placeholder="Ex: P001 ou P01FV5K"
+                placeholder="Ex: P01FV5K ou seu CPF"
                 value={inputCode}
                 onChange={(e) => setInputCode(e.target.value)}
                 className="w-full px-4 py-3 border border-slate-200 rounded-xl text-center text-lg font-mono font-black tracking-widest uppercase focus-ring bg-slate-50/50 focus:bg-white transition"
               />
               <p className="text-[11px] text-slate-400 mt-1.5 text-center">
-                O código individual foi fornecido pela equipe de pesquisa no dia da consulta.
+                Você pode entrar com o código do estudo ou com seu CPF cadastrado.
               </p>
             </div>
 
@@ -825,6 +833,25 @@ function PacienteContent() {
               )}
             </div>
           </div>
+
+          {/* Banner de Alternância entre Estudos Clínicos Distintos (Isolamento de Dados) */}
+          {participant.otherStudies && participant.otherStudies.length > 0 && (
+            <div className="relative z-10 mt-2.5 p-2.5 bg-blue-900/60 border border-blue-400/30 rounded-2xl text-[11px] text-blue-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
+                <span className="truncate">
+                  Também inscrito em: <strong>{participant.otherStudies[0].projectName}</strong>
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => loadParticipant(null, participant.otherStudies![0].participantId)}
+                className="px-2.5 py-1 bg-white/20 hover:bg-white/30 text-white rounded-lg font-bold text-[10px] shrink-0 transition cursor-pointer self-end sm:self-auto"
+              >
+                Acessar Outra Pesquisa →
+              </button>
+            </div>
+          )}
         </header>
 
         {/* Abas Superiores do Paciente */}

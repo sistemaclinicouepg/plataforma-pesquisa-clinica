@@ -86,16 +86,10 @@ export async function POST(req: Request) {
           { status: 404 }
         );
       }
-      // Se forneceu queixa ou alergias específicas, atualizamos no prontuário
-      if (chiefComplaint?.trim() || allergies?.trim()) {
-        patient = await prisma.patient.update({
-          where: { id: patient.id },
-          data: {
-            ...(chiefComplaint?.trim() ? { chiefComplaint: chiefComplaint.trim() } : {}),
-            ...(allergies?.trim() ? { allergies: allergies.trim() } : {}),
-          },
-        });
-      }
+      // NOTA: Para preservar o isolamento absoluto entre pesquisas (LGPD e GCP),
+      // a queixa principal e alergias específicas desta entrada são gravadas
+      // exclusivamente na participação (Participant.anamnesisData) deste estudo,
+      // sem sobrescrever dados de outros projetos onde o paciente já participe.
     } else {
       if (!fullName || !cpf || !phoneWhatsApp) {
         return NextResponse.json(
@@ -245,12 +239,29 @@ export async function POST(req: Request) {
     }
 
     // 4. Criar a participação desidentificada vinculada ao projeto
+    // Isolamento completo: dados clínicos (queixa, alergias, critérios, odontograma) são exclusivos deste estudo
+    const initialAnamnesis = {
+      chiefComplaint: chiefComplaint?.trim() || patient.chiefComplaint || '',
+      allergies: allergies?.trim() || patient.allergies || '',
+      odontogram: {},
+      periodontogram: {
+        bleedingOnProbing: '0-10%',
+        visiblePlaque: '< 20%',
+        probingDepth: '≤ 3mm',
+        gingivalRecession: 'Ausente',
+        furcationOrMobility: 'Ausente',
+      },
+      answers: {},
+      clinicalNotes: '',
+    };
+
     const participant = await prisma.participant.create({
       data: {
         patientId: patient.id,
         projectId: projectId,
         researchCode: researchCode,
         status: 'PENDING', // Inicia aguardando triagem
+        anamnesisData: JSON.stringify(initialAnamnesis),
       },
     });
 
