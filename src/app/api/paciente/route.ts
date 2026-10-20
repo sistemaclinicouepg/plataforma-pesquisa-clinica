@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { parseStudyProtocol } from '@/lib/studyProtocol';
 
 function matchesBirthDate(dobRaw: Date | string | null | undefined, inputRaw: string): boolean {
   if (!dobRaw || !inputRaw) return false;
@@ -288,6 +289,7 @@ export async function GET(req: Request) {
           select: {
             id: true,
             name: true,
+            anamnesisTemplate: true,
             consentForm: {
               select: {
                 responsibleResearcher: true,
@@ -342,9 +344,68 @@ export async function GET(req: Request) {
     // Identificar a sessão ativa mais recente para registro do diário de dor
     const latestSession = participant.sessions[participant.sessions.length - 1] || null;
 
+    // Protocolo de sessões do estudo
+    const protocol = parseStudyProtocol(participant.project.anamnesisTemplate);
+    const totalSessions = Number(protocol.totalSessions) || 3;
+    const completedSessionNumbers = participant.sessions.map((s) => s.sessionNumber);
+    const maxCompletedSession = completedSessionNumbers.length > 0 ? Math.max(...completedSessionNumbers) : 0;
+
     // Processar formulários do projeto destinados ao paciente (PROMs)
+    // Regra GCP: Mostrar apenas os questionários cujas sessões já aconteceram no consultório
     const patientForms = participant.project.forms.filter(
-      (f: { description: string | null }) => !f.description?.includes('Preenchido por: Pesquisador')
+      (f: { title: string; description: string | null }) => {
+        // 1. Desconsiderar formulários de preenchimento exclusivo pelo pesquisador
+        if (f.description?.includes('Preenchido por: Pesquisador')) return false;
+
+        const lowerTitle = f.title.toLowerCase();
+        const lowerDesc = (f.description || '').toLowerCase();
+        const combined = `${lowerTitle} ${lowerDesc}`;
+
+        // 2. Não duplicar o diário de sensibilidade EVA na aba de questionários complementares
+        // (a sensibilidade pós-operatória possui aba própria e fluxo contínuo de farmacovigilância)
+        if (
+          lowerTitle.includes('escala visual analógica de sensibilidade') ||
+          lowerTitle.includes('diário de sensibilidade') ||
+          lowerTitle.includes('monitoramento longitudinal de sensibilidade')
+        ) {
+          return false;
+        }
+
+        // 3. Formulários que fazem menção expressa a uma sessão específica (ex: "Sessão 2", "2ª Sessão", "Sessão 3")
+        const sessMatch = combined.match(/sess[ãa]o\s*(\d+)/i) || combined.match(/(\d+)ª?\s*sess[ãa]o/i);
+        if (sessMatch) {
+          const requiredSession = parseInt(sessMatch[1], 10);
+          if (requiredSession > maxCompletedSession) {
+            return false; // Sessão ainda não realizada pelo pesquisador
+          }
+        }
+
+        // 4. Formulários de encerramento / sessão final de retorno (ex: Satisfação com o Sorriso)
+        const isFinalSession =
+          combined.includes('sessão final') ||
+          combined.includes('sessao final') ||
+          combined.includes('retorno final') ||
+          combined.includes('satisfação com o sorriso') ||
+          combined.includes('satisfacao com o sorriso') ||
+          combined.includes('satisfação estética');
+
+        if (isFinalSession && maxCompletedSession < totalSessions) {
+          return false; // A sessão de retorno final ainda não aconteceu
+        }
+
+        // 5. Formulários vinculados ao atendimento presencial ("A cada sessão clínica", "Pós-sessão")
+        const isPerSession =
+          combined.includes('a cada sessão clínica') ||
+          combined.includes('a cada sessao clinica') ||
+          combined.includes('pós-sessão') ||
+          combined.includes('pos-sessao');
+
+        if (isPerSession && maxCompletedSession === 0) {
+          return false; // Nenhuma sessão clínica aconteceu ainda
+        }
+
+        return true;
+      }
     );
 
     const formsWithStatus = patientForms.map((f: { id: string; title: string; description: string | null; questionsJson: string; expirationHours: number; allowLate: boolean; createdAt: Date }) => {
@@ -408,6 +469,8 @@ export async function GET(req: Request) {
         researcherPhone: null,
         sessions: participant.sessions,
         latestSession,
+        totalSessions,
+        maxCompletedSession,
         forms: formsWithStatus,
         otherStudies,
       },

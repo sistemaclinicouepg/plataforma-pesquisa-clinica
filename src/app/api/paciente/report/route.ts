@@ -58,6 +58,29 @@ export async function POST(req: Request) {
       );
     }
 
+    // Validação temporal GCP: Bloquear envio prematuro de relatos futuros (ex: diário do dia seguinte ou 48h)
+    const sessionCreatedAt = targetSession.createdAt ? new Date(targetSession.createdAt) : new Date(targetSession.sessionDate);
+    const now = new Date();
+    const elapsedHours = (now.getTime() - sessionCreatedAt.getTime()) / (1000 * 60 * 60);
+
+    const sessionDay = new Date(sessionCreatedAt.getFullYear(), sessionCreatedAt.getMonth(), sessionCreatedAt.getDate()).getTime();
+    const todayDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const diffDays = Math.floor((todayDay - sessionDay) / (1000 * 60 * 60 * 24));
+
+    if (timePoint === '24h' && diffDays < 1 && elapsedHours < 18) {
+      return NextResponse.json(
+        { error: 'O diário de 24 horas (dia seguinte) ainda não está disponível. Ele será liberado para preenchimento a partir de amanhã.' },
+        { status: 400 }
+      );
+    }
+
+    if (timePoint === '48h' && diffDays < 2 && elapsedHours < 40) {
+      return NextResponse.json(
+        { error: 'O diário de 48 horas (2 dias após) ainda não está disponível para envio.' },
+        { status: 400 }
+      );
+    }
+
     // Montar objeto de atualização do score de dor
     const updateData: Record<string, unknown> = {};
     if (timePoint === '0h') {

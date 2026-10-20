@@ -23,6 +23,7 @@ type ParticipantSession = {
   sessionNumber: number;
   sessionType: string;
   sessionDate: string;
+  createdAt?: string;
   painScore0h: number | null;
   painScore1h: number | null;
   painScore24h: number | null;
@@ -74,6 +75,8 @@ type ParticipantData = {
   ethicsNumber: string;
   ethicsContacts: string;
   researcherPhone?: string | null;
+  totalSessions?: number;
+  maxCompletedSession?: number;
   sessions: ParticipantSession[];
   latestSession: ParticipantSession | null;
   forms: FormItem[];
@@ -207,11 +210,6 @@ function PacienteContent() {
       }
       if (data.participant.latestSession) {
         setSelectedSessionNumber(data.participant.latestSession.sessionNumber);
-        const activeSess = data.participant.latestSession;
-        const currentScore = timePoint === '0h' ? activeSess.painScore0h : timePoint === '1h' ? activeSess.painScore1h : timePoint === '24h' ? activeSess.painScore24h : activeSess.painScore48h;
-        if (typeof currentScore === 'number') {
-          setPainScore(currentScore);
-        }
       }
       if (formIdParam && data.participant.forms) {
         const found = data.participant.forms.find((f: FormItem) => f.id === formIdParam);
@@ -255,6 +253,73 @@ function PacienteContent() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [codeParam, partIdParam, projectIdParam]);
+
+  // Auto-selecionar o primeiro momento de diário que esteja liberado e pendente de resposta
+  useEffect(() => {
+    if (!participant?.sessions || participant.sessions.length === 0) return;
+    const active =
+      participant.sessions.find((s) => s.sessionNumber === selectedSessionNumber) ||
+      participant.latestSession;
+    if (!active) return;
+
+    const sessionTime = active.createdAt
+      ? new Date(active.createdAt)
+      : new Date(active.sessionDate);
+    const now = new Date();
+    const elapsedHours = (now.getTime() - sessionTime.getTime()) / (1000 * 60 * 60);
+
+    const sessionDay = new Date(
+      sessionTime.getFullYear(),
+      sessionTime.getMonth(),
+      sessionTime.getDate()
+    ).getTime();
+    const todayDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const diffDays = Math.floor((todayDay - sessionDay) / (1000 * 60 * 60 * 24));
+
+    const moments: Array<{
+      key: '0h' | '1h' | '24h' | '48h';
+      available: boolean;
+      recorded: boolean;
+    }> = [
+      {
+        key: '0h',
+        available: true,
+        recorded: active.painScore0h !== null && active.painScore0h !== undefined,
+      },
+      {
+        key: '1h',
+        available:
+          diffDays >= 1 ||
+          elapsedHours >= 0.75 ||
+          (active.painScore1h !== null && active.painScore1h !== undefined),
+        recorded: active.painScore1h !== null && active.painScore1h !== undefined,
+      },
+      {
+        key: '24h',
+        available:
+          diffDays >= 1 ||
+          elapsedHours >= 18 ||
+          (active.painScore24h !== null && active.painScore24h !== undefined),
+        recorded: active.painScore24h !== null && active.painScore24h !== undefined,
+      },
+      {
+        key: '48h',
+        available:
+          diffDays >= 2 ||
+          elapsedHours >= 40 ||
+          (active.painScore48h !== null && active.painScore48h !== undefined),
+        recorded: active.painScore48h !== null && active.painScore48h !== undefined,
+      },
+    ];
+
+    const avail = moments.filter((m) => m.available);
+    const pending = avail.find((m) => !m.recorded);
+    if (pending) {
+      setTimePoint(pending.key);
+    } else if (avail.length > 0) {
+      setTimePoint(avail[avail.length - 1].key);
+    }
+  }, [participant, selectedSessionNumber]);
 
 
   const handleSearchParticipant = (e: React.FormEvent) => {
@@ -592,11 +657,10 @@ function PacienteContent() {
             <button
               onClick={() => {
                 setIsSubmitted(false);
-                setTimePoint('48h');
               }}
-              className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition"
+              className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition cursor-pointer"
             >
-              Registrar Outro Momento
+              Voltar ao Meu Diário
             </button>
           </div>
         </div>
@@ -944,16 +1008,69 @@ function PacienteContent() {
 
             const activeSession = participant?.sessions?.find((s) => s.sessionNumber === selectedSessionNumber) || participant?.latestSession;
 
-            const getMomentScore = (k: '0h' | '1h' | '24h' | '48h'): number | null => {
-              if (!activeSession) return null;
-              if (k === '0h') return activeSession.painScore0h ?? null;
-              if (k === '1h') return activeSession.painScore1h ?? null;
-              if (k === '24h') return activeSession.painScore24h ?? null;
-              if (k === '48h') return activeSession.painScore48h ?? null;
-              return null;
+            const sessionTime = activeSession?.createdAt
+              ? new Date(activeSession.createdAt)
+              : activeSession?.sessionDate
+              ? new Date(activeSession.sessionDate)
+              : new Date();
+            const now = new Date();
+            const elapsedHours = (now.getTime() - sessionTime.getTime()) / (1000 * 60 * 60);
+
+            const sessionDay = new Date(sessionTime.getFullYear(), sessionTime.getMonth(), sessionTime.getDate()).getTime();
+            const todayDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+            const diffDays = Math.floor((todayDay - sessionDay) / (1000 * 60 * 60 * 24));
+
+            const ALL_MOMENTS = [
+              { key: '0h' as const, label: '0h (Imed.)', sub: 'Na consulta' },
+              { key: '1h' as const, label: '1 Hora', sub: 'Pós-clareamento' },
+              { key: '24h' as const, label: '24 Horas', sub: 'Dia seguinte' },
+              { key: '48h' as const, label: '48 Horas', sub: '2 dias após' },
+            ];
+
+            const getMomentState = (k: '0h' | '1h' | '24h' | '48h') => {
+              if (!activeSession) return { available: false, recorded: false, unlockMessage: '' };
+
+              const score =
+                k === '0h'
+                  ? activeSession.painScore0h
+                  : k === '1h'
+                  ? activeSession.painScore1h
+                  : k === '24h'
+                  ? activeSession.painScore24h
+                  : activeSession.painScore48h;
+
+              const isRecorded = score !== null && score !== undefined;
+
+              let available = false;
+              let unlockMessage = '';
+
+              if (k === '0h') {
+                available = true;
+              } else if (k === '1h') {
+                available = diffDays >= 1 || elapsedHours >= 0.75 || isRecorded;
+                if (!available) {
+                  const waitMinutes = Math.max(1, Math.round((0.75 - elapsedHours) * 60));
+                  unlockMessage = `em cerca de ${waitMinutes} minutos`;
+                }
+              } else if (k === '24h') {
+                available = diffDays >= 1 || elapsedHours >= 18 || isRecorded;
+                if (!available) {
+                  unlockMessage = 'amanhã (Dia seguinte)';
+                }
+              } else if (k === '48h') {
+                available = diffDays >= 2 || elapsedHours >= 40 || isRecorded;
+                if (!available) {
+                  unlockMessage = 'em 2 dias';
+                }
+              }
+
+              return { available, recorded: isRecorded, unlockMessage };
             };
 
-            const recordedCount = [getMomentScore('0h'), getMomentScore('1h'), getMomentScore('24h'), getMomentScore('48h')].filter((v) => v !== null).length;
+            const availableMoments = ALL_MOMENTS.filter((m) => getMomentState(m.key).available);
+            const recordedCount = availableMoments.filter((m) => getMomentState(m.key).recorded).length;
+            const nextUnavailable = ALL_MOMENTS.find((m) => !getMomentState(m.key).available);
+            const isCurrentMomentRecorded = getMomentState(timePoint).recorded;
 
             return (
               <form onSubmit={handleSubmitReport} className="space-y-6">
@@ -968,36 +1085,40 @@ function PacienteContent() {
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                       recordedCount > 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'
                     }`}>
-                      {recordedCount} de 4 registrados
+                      {recordedCount} de {availableMoments.length} preenchido{recordedCount !== 1 ? 's' : ''}
                     </span>
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 text-[11px]">
-                    {[
-                      { key: '0h' as const, label: '0h (Imed.)', val: getMomentScore('0h') },
-                      { key: '1h' as const, label: '1 Hora', val: getMomentScore('1h') },
-                      { key: '24h' as const, label: '24 Horas', val: getMomentScore('24h') },
-                      { key: '48h' as const, label: '48 Horas', val: getMomentScore('48h') },
-                    ].map((m) => (
-                      <div
-                        key={m.key}
-                        onClick={() => {
-                          setTimePoint(m.key);
-                          if (m.val !== null && typeof m.val === 'number') {
-                            setPainScore(m.val);
-                          }
-                        }}
-                        className={`p-2 rounded-xl border flex flex-col justify-between cursor-pointer transition ${
-                          m.val !== null
-                            ? 'bg-emerald-50/80 border-emerald-300 text-emerald-900 hover:bg-emerald-100'
-                            : 'bg-white border-slate-200 text-slate-400 hover:border-slate-300'
-                        } ${timePoint === m.key ? 'ring-2 ring-blue-500' : ''}`}
-                      >
-                        <span className="font-semibold">{m.label}</span>
-                        <span className="font-mono font-bold mt-0.5">
-                          {m.val !== null ? `✓ EVA ${Number(m.val).toFixed(1)}` : 'Aguardando'}
-                        </span>
-                      </div>
-                    ))}
+                    {availableMoments.map((m) => {
+                      const state = getMomentState(m.key);
+                      const isSelected = timePoint === m.key;
+                      return (
+                        <div
+                          key={m.key}
+                          onClick={() => setTimePoint(m.key)}
+                          className={`p-2 rounded-xl border flex flex-col justify-between cursor-pointer transition ${
+                            state.recorded
+                              ? 'bg-emerald-50/80 border-emerald-300 text-emerald-900 hover:bg-emerald-100'
+                              : 'bg-white border-blue-200 text-blue-800 hover:border-blue-300'
+                          } ${isSelected ? 'ring-2 ring-blue-500 font-bold' : ''}`}
+                        >
+                          <span className="font-semibold text-xs">{m.label}</span>
+                          <span className="font-semibold mt-1 inline-flex items-center gap-1 text-[10px]">
+                            {state.recorded ? (
+                              <span className="text-emerald-700 font-bold flex items-center gap-0.5">
+                                <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                <span>Registrado</span>
+                              </span>
+                            ) : (
+                              <span className="text-blue-600 font-semibold flex items-center gap-0.5">
+                                <Clock className="w-3 h-3 text-blue-500" />
+                                <span>Pendente</span>
+                              </span>
+                            )}
+                          </span>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
 
@@ -1007,51 +1128,68 @@ function PacienteContent() {
                     1. Momento do relato após a sessão:
                   </label>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                    {[
-                      { key: '0h' as const, label: '0h (Imed.)', sub: 'Na consulta' },
-                      { key: '1h' as const, label: '1 Hora', sub: 'Pós-clareamento' },
-                      { key: '24h' as const, label: '24 Horas', sub: 'Dia seguinte' },
-                      { key: '48h' as const, label: '48 Horas', sub: '2 dias após' },
-                    ].map((item) => {
+                    {availableMoments.map((item) => {
                       const isSelected = timePoint === item.key;
-                      const score = getMomentScore(item.key);
-                      const isRecorded = score !== null && score !== undefined;
+                      const state = getMomentState(item.key);
 
                       return (
                         <button
                           key={item.key}
                           type="button"
-                          onClick={() => {
-                            setTimePoint(item.key);
-                            if (isRecorded && typeof score === 'number') {
-                              setPainScore(score);
-                            }
-                          }}
-                          className={`p-2.5 rounded-xl border text-center transition flex flex-col justify-between items-center ${
+                          onClick={() => setTimePoint(item.key)}
+                          className={`p-3 rounded-xl border text-center transition flex flex-col justify-between items-center cursor-pointer ${
                             isSelected
                               ? 'bg-blue-600 text-white border-blue-600 shadow-xs font-bold'
-                              : isRecorded
+                              : state.recorded
                               ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100 font-medium'
                               : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
                           }`}
                         >
                           <div className="w-full">
-                            <span className="block text-xs">{item.label}</span>
-                            <span className={`block text-[10px] ${isSelected ? 'text-blue-100' : isRecorded ? 'text-emerald-600 font-semibold' : 'text-slate-400'}`}>
+                            <span className="block text-xs font-bold">{item.label}</span>
+                            <span className={`block text-[10px] mt-0.5 ${
+                              isSelected
+                                ? 'text-blue-100'
+                                : state.recorded
+                                ? 'text-emerald-700 font-semibold'
+                                : 'text-slate-400'
+                            }`}>
                               {item.sub}
                             </span>
                           </div>
-                          {isRecorded && (
-                            <span className={`mt-1 px-1.5 py-0.5 rounded text-[9px] font-bold ${
+                          {state.recorded && (
+                            <span className={`mt-1.5 px-2 py-0.5 rounded-full text-[9px] font-bold flex items-center gap-1 ${
                               isSelected ? 'bg-blue-700 text-white' : 'bg-emerald-200/80 text-emerald-900'
                             }`}>
-                              ✓ Salvo ({Number(score).toFixed(1)})
+                              <CheckCircle2 className="w-2.5 h-2.5" />
+                              <span>Registrado</span>
                             </span>
                           )}
                         </button>
                       );
                     })}
                   </div>
+
+                  {nextUnavailable && (
+                    <div className="mt-2.5 p-3 bg-blue-50/70 border border-blue-200 rounded-xl text-[11px] text-blue-900 flex items-center gap-2">
+                      <Info className="w-4 h-4 text-blue-600 shrink-0" />
+                      <span>
+                        O próximo momento (<strong>{nextUnavailable.label} - {nextUnavailable.sub}</strong>) será liberado <strong>{getMomentState(nextUnavailable.key).unlockMessage}</strong>.
+                      </span>
+                    </div>
+                  )}
+
+                  {isCurrentMomentRecorded && (
+                    <div className="mt-2.5 p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-900 flex items-start gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                      <div>
+                        <span className="font-bold">Relato deste momento já enviado e gravado!</span>
+                        <p className="text-[11px] text-emerald-700 mt-0.5 leading-relaxed">
+                          Conforme o protocolo metodológico do ensaio clínico, os valores numéricos anteriores não são reexibidos para evitar viés de resposta. Você pode atualizar seu envio se necessário.
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
               {/* Escala Visual Analógica (EVA) Contínua e Neutra */}
@@ -1221,7 +1359,11 @@ function PacienteContent() {
                   ) : (
                     <>
                       <CheckCircle2 className="w-4 h-4" />
-                      <span>Enviar Meu Diário Clínico</span>
+                      <span>
+                        {isCurrentMomentRecorded
+                          ? 'Atualizar Relato deste Momento'
+                          : 'Enviar Meu Diário Clínico'}
+                      </span>
                     </>
                   )}
                 </button>
@@ -1269,7 +1411,7 @@ function PacienteContent() {
                         <span>Orientações Imediatas de Suporte Clínico:</span>
                       </h4>
                       <p className="text-red-900 text-[11px] leading-relaxed">
-                        Seu relato identificou sintoma severo{formRedAlert.maxVasScore !== null ? ` (EVA ${formRedAlert.maxVasScore}/10)` : ''}{formRedAlert.severeDesc ? ` - "${formRedAlert.severeDesc}"` : ''}. A equipe clínica foi alertada.
+                        Seu relato identificou sintoma severo{formRedAlert.severeDesc ? ` - "${formRedAlert.severeDesc}"` : ''}. A equipe clínica foi alertada.
                       </p>
                       <ul className="text-red-900 text-[11px] leading-relaxed space-y-1 list-disc pl-4">
                         <li>Evite ingerir líquidos ou alimentos em temperaturas extremas (gelados ou muito quentes).</li>
@@ -1531,9 +1673,9 @@ function PacienteContent() {
                                     })}
                                   </div>
                                   {currentAnswer !== undefined && currentAnswer !== null && currentAnswer !== '' && (
-                                    <div className="flex justify-end items-center text-[11px] font-bold text-blue-700 pt-0.5">
+                                    <div className="flex justify-end items-center text-[11px] font-semibold text-emerald-700 pt-0.5">
                                       <span>
-                                        Opção escolhida: {currentAnswer === 'NA' ? 'NA (Não se aplica)' : `Nota ${currentAnswer}`}
+                                        {currentAnswer === 'NA' ? '✓ NA (Não se aplica)' : '✓ Opção selecionada'}
                                       </span>
                                     </div>
                                   )}
@@ -1547,17 +1689,18 @@ function PacienteContent() {
                                 q.options && q.options.length > 0
                                   ? q.options
                                   : [
-                                      { label: 'Nunca (0)', value: '0' },
-                                      { label: 'Raramente (1)', value: '1' },
-                                      { label: 'Às vezes (2)', value: '2' },
-                                      { label: 'Frequentemente (3)', value: '3' },
-                                      { label: 'Sempre (4)', value: '4' },
+                                      { label: 'Nunca', value: '0' },
+                                      { label: 'Raramente', value: '1' },
+                                      { label: 'Às vezes', value: '2' },
+                                      { label: 'Frequentemente', value: '3' },
+                                      { label: 'Sempre', value: '4' },
                                     ];
 
                               return (
                                 <div className="grid grid-cols-1 gap-1.5 pt-1">
                                   {options.map((opt) => {
                                     const isSelected = String(currentAnswer) === String(opt.value);
+                                    const cleanLabel = opt.label.replace(/\s*\(\d+\)/g, '').trim();
                                     return (
                                       <button
                                         key={opt.value}
@@ -1569,7 +1712,7 @@ function PacienteContent() {
                                             : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
                                         }`}
                                       >
-                                        <span>{opt.label}</span>
+                                        <span>{cleanLabel}</span>
                                         {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-white" />}
                                       </button>
                                     );
