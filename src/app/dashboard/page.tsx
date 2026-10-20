@@ -69,6 +69,9 @@ import {
   Menu,
   UserPlus,
   UserCheck,
+  Play,
+  Pause,
+  RotateCcw,
 } from 'lucide-react';
 
 type Patient = {
@@ -116,6 +119,7 @@ type Participant = {
   anamnesisData: string | null;
   patient: Patient;
   sessions?: ClinicalSession[];
+  signatures?: Array<any>;
   responses?: Array<{
     id: string;
     formId: string;
@@ -776,8 +780,27 @@ function DashboardContent() {
     } catch {}
   };
 
-  // Modal de Registro/Edição de Sessão Clínica
+  // Modal de Registro/Edição de Sessão Clínica (Trilha de Atendimento)
   const [showSessionModal, setShowSessionModal] = useState(false);
+  const [sessionStep, setSessionStep] = useState<number>(1);
+  const [currentSessionParticipant, setCurrentSessionParticipant] = useState<Participant | null>(null);
+  const [gelTimerSeconds, setGelTimerSeconds] = useState<number>(0);
+  const [gelTimerRunning, setGelTimerRunning] = useState<boolean>(false);
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+    if (gelTimerRunning) {
+      interval = setInterval(() => {
+        setGelTimerSeconds((prev) => prev + 1);
+      }, 1000);
+    } else if (!gelTimerRunning && gelTimerSeconds !== 0 && interval) {
+      clearInterval(interval);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [gelTimerRunning, gelTimerSeconds]);
+
   const [currentSessionForm, setCurrentSessionForm] = useState<{
     participantId: string;
     sessionNumber: number;
@@ -1889,6 +1912,11 @@ function DashboardContent() {
     };
     const defaultType = sessionTypes[sessionNumber] || 'INTERVENTION';
 
+    setCurrentSessionParticipant(participant);
+    setSessionStep(1);
+    setGelTimerRunning(false);
+    setGelTimerSeconds(0);
+
     setCurrentSessionForm({
       participantId: participant.id,
       sessionNumber,
@@ -2997,20 +3025,20 @@ function DashboardContent() {
                                       type="button"
                                       onClick={() => openSessionEditor(part, next.sessionNumber)}
                                       className="h-8 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition inline-flex items-center justify-center gap-1.5 shadow-2xs whitespace-nowrap shrink-0 cursor-pointer"
-                                      title={`Registrar atendimento clínico de ${next.config.name}`}
+                                      title={`Iniciar atendimento clínico de ${next.config.name}`}
                                     >
-                                      <Stethoscope className="w-3.5 h-3.5" />
-                                      <span>Registrar {next.config.shortName}</span>
+                                      <Play className="w-3 h-3 fill-current" />
+                                      <span>Iniciar Atendimento ({next.config.shortName})</span>
                                     </button>
                                   ) : (
                                     <button
                                       type="button"
                                       onClick={() => openSessionEditor(part, 1)}
                                       className="h-8 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition inline-flex items-center justify-center gap-1.5 shadow-2xs whitespace-nowrap shrink-0 cursor-pointer"
-                                      title="Registrar primeira sessão clínica (S1)"
+                                      title="Iniciar primeiro atendimento clínico (S1)"
                                     >
-                                      <Stethoscope className="w-3.5 h-3.5" />
-                                      <span>Registrar S1</span>
+                                      <Play className="w-3 h-3 fill-current" />
+                                      <span>Iniciar Atendimento</span>
                                     </button>
                                   )}
 
@@ -5939,8 +5967,8 @@ function DashboardContent() {
                             </>
                           ) : (
                             <>
-                              <Plus className="w-3.5 h-3.5" />
-                              <span>Registrar</span>
+                              <Play className="w-3.5 h-3.5 fill-current" />
+                              <span>Iniciar Atendimento</span>
                             </>
                           )}
                         </button>
@@ -6072,320 +6100,634 @@ function DashboardContent() {
         const displayTitle = protoSession?.name || sessionInfo?.title || `Registro Clínico: Sessão ${currentSessionForm.sessionNumber}`;
         const displaySubtitle = sessionInfo?.subtitle || 'Preencha os desfechos aferidos durante a consulta.';
 
+        const formatTimer = (sec: number) => {
+          const m = Math.floor(sec / 60);
+          const s = sec % 60;
+          return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+        };
+
+        const getPatientDiaryWhatsAppUrl = () => {
+          if (!currentSessionParticipant) return '';
+          const phone = currentSessionParticipant.patient.phoneWhatsApp.replace(/\D/g, '');
+          const cleanPhone = phone.startsWith('55') ? phone : `55${phone}`;
+          const code = currentSessionParticipant.researchCode;
+          const patientFirstName = currentSessionParticipant.patient.fullName.split(' ')[0];
+          const origin = typeof window !== 'undefined' ? window.location.origin : 'https://pesquisaclinicapuc.com.br';
+          const diaryUrl = `${origin}/paciente?code=${code}`;
+          
+          const text = `Olá, ${patientFirstName}! Seu atendimento clínico da Sessão ${currentSessionForm.sessionNumber} foi realizado com sucesso na UEPG.\n\nPor favor, acompanhe e registre sua sensibilidade no seu Diário Clínico no celular:\n👉 ${diaryUrl}\n\nLembretes de preenchimento:\n• 1 Hora pós-atendimento (hoje)\n• 24 Horas (amanhã)\n• 48 Horas (em 2 dias)\n\nQualquer dúvida ou desconforto incomum, estamos à sua disposição!`;
+
+          return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`;
+        };
+
         return (
-          <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto">
-            <div className="bg-white rounded-2xl shadow-2xl max-w-xl w-full p-6 border border-slate-200 my-8 max-h-[90vh] overflow-y-auto">
-              <div className="border-b border-slate-100 pb-4 mb-5 flex justify-between items-start">
-                <div>
-                  <div className="flex items-center space-x-2">
-                    <h3 className="text-lg font-bold text-slate-900">
-                      {displayTitle}
-                    </h3>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
-                    {protoSession && (
-                      <>
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-200">
-                          {protoSession.type === 'CLINICAL' ? '🩺 Intervenção / Procedimento' : protoSession.type === 'EVALUATION' ? '📋 Avaliação' : '🔍 Acompanhamento'}
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 z-50 overflow-y-auto">
+            <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full border border-slate-200 my-6 max-h-[92vh] flex flex-col overflow-hidden animate-fadeIn">
+              
+              {/* Cabeçalho do Atendimento Clínico */}
+              <div className="border-b border-slate-100 p-5 sm:p-6 pb-4 bg-gradient-to-r from-slate-50 via-white to-blue-50/40">
+                <div className="flex justify-between items-start gap-3">
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-blue-600 text-white shadow-2xs font-mono">
+                        Sessão {currentSessionForm.sessionNumber}
+                      </span>
+                      <h3 className="text-lg font-bold text-slate-900 tracking-tight">
+                        {displayTitle}
+                      </h3>
+                    </div>
+
+                    {/* Ficha Resumida do Voluntário na Cadeira */}
+                    {currentSessionParticipant && (
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-xs text-slate-600">
+                        <span>
+                          Voluntário(a): <strong className="text-slate-900 font-bold">{currentSessionParticipant.patient.fullName}</strong>
                         </span>
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200 inline-flex items-center gap-1">
-                          <Clock className="w-2.5 h-2.5" />
-                          Duração prevista: {protoSession.durationMinutes} min
+                        <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-mono font-bold text-[11px] border border-slate-200">
+                          {currentSessionParticipant.researchCode}
                         </span>
-                        {protoSession.daysFromPrevious > 0 && (
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
-                            Intervalo: {protoSession.daysFromPrevious} dias
+                        {currentSessionParticipant.signatures && currentSessionParticipant.signatures.length > 0 && (
+                          <span className="inline-flex items-center gap-1 text-[11px] text-emerald-700 font-semibold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                            <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                            TCLE Assinado
                           </span>
                         )}
-                      </>
+                      </div>
                     )}
                   </div>
-                  <p className="text-xs text-slate-500 mt-1">
-                    {displaySubtitle}
-                  </p>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowSessionModal(false)}
+                    className="text-slate-400 hover:text-slate-600 p-1.5 rounded-xl hover:bg-slate-100 transition shrink-0 cursor-pointer"
+                    title="Fechar atendimento"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setShowSessionModal(false)}
-                  className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition"
-                >
-                  <X className="w-5 h-5" />
-                </button>
               </div>
 
-              <form onSubmit={handleSaveSession} className="space-y-4 text-xs">
-                {/* Data do Atendimento */}
-                <div>
-                  <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">
-                    Data do Atendimento Clínico
-                  </label>
-                  <input
-                    type="date"
-                    required
-                    value={currentSessionForm.sessionDate}
-                    onChange={(e) =>
-                      setCurrentSessionForm({ ...currentSessionForm, sessionDate: e.target.value })
-                    }
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white"
-                  />
-                </div>
-
-                {/* Registro de Cor Escala VITA Classical */}
-                <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-slate-800 text-xs inline-flex items-center gap-1.5">
-                      <Sparkles className="w-4 h-4 text-amber-500" />
-                      <span>Escala de Cor VITA Classical (Boca Dividida)</span>
-                    </span>
-                    <span className="text-[11px] text-slate-500">16 tons (B1 mais claro a C4 mais escuro)</span>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block font-semibold text-slate-700 mb-1">
-                        Hemi-arco Direito (13 a 11)
-                      </label>
-                      <select
-                        value={currentSessionForm.shadeRight}
-                        onChange={(e) =>
-                          setCurrentSessionForm({ ...currentSessionForm, shadeRight: e.target.value })
-                        }
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white font-mono font-bold"
-                      >
-                        {VITA_CLASSICAL_SHADES.map((sh, idx) => (
-                          <option key={sh} value={sh}>
-                            {sh} (Passo {idx + 1})
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block font-semibold text-slate-700 mb-1">
-                        Hemi-arco Esquerdo (21 a 23)
-                      </label>
-                      <select
-                        value={currentSessionForm.shadeLeft}
-                        onChange={(e) =>
-                          setCurrentSessionForm({ ...currentSessionForm, shadeLeft: e.target.value })
-                        }
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white font-mono font-bold"
-                      >
-                        {VITA_CLASSICAL_SHADES.map((sh, idx) => (
-                          <option key={sh} value={sh}>
-                            {sh} (Passo {idx + 1})
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Escala Visual Analógica (EVA) de Sensibilidade Dentinária */}
-                <div className="p-4 bg-blue-50/60 border border-blue-200 rounded-xl space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-blue-950 text-xs inline-flex items-center gap-1.5">
-                      <Zap className="w-4 h-4 text-blue-600" />
-                      <span>Sensibilidade Dentinária - Escala Visual Analógica (EVA 0-10)</span>
-                    </span>
-                    <span className="text-[11px] text-blue-700">0 = Sem dor | 10 = Pior dor imaginável</span>
-                  </div>
-
+              {/* Trilha Guiada de Atendimento (Stepper Ribbon) */}
+              <div className="bg-slate-50/80 border-b border-slate-200 px-5 sm:px-6 py-3 shrink-0">
+                <div className="flex items-center justify-between">
                   {[
-                    { label: '0h (Imediato pós-clareamento)', key: 'painScore0h' as const },
-                    { label: '1 hora pós-atendimento', key: 'painScore1h' as const },
-                    { label: '24 horas pós-atendimento', key: 'painScore24h' as const },
-                    { label: '48 horas pós-atendimento', key: 'painScore48h' as const },
-                  ].map((tp) => (
-                    <div key={tp.key} className="space-y-1.5 bg-white/70 p-3 rounded-xl border border-blue-100">
-                      <div className="flex justify-between items-center text-xs">
-                        <span className="font-semibold text-slate-700">{tp.label}:</span>
-                        <div className="flex items-center space-x-2">
-                          {currentSessionForm[tp.key] === null ? (
-                            <span className="font-mono font-medium text-amber-700 text-xs bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
-                              Pendente (Aguardando diário)
-                            </span>
-                          ) : (
-                            <span className="font-mono font-bold text-blue-800 text-sm">
-                              {Number(currentSessionForm[tp.key]).toFixed(1)}{' '}
-                              <span className="text-[10px] text-slate-400 font-normal">/ 10</span>
-                            </span>
-                          )}
-                          {tp.key !== 'painScore0h' && (
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setCurrentSessionForm({
-                                  ...currentSessionForm,
-                                  [tp.key]: currentSessionForm[tp.key] === null ? 0 : null,
-                                })
-                              }
-                              className="text-[10px] text-blue-600 hover:text-blue-800 underline font-medium"
+                    { step: 1, title: 'Linha de Base', sub: 'Cor & Checagem' },
+                    { step: 2, title: 'Aplicação', sub: 'Gel & Timer' },
+                    { step: 3, title: 'Desfechos', sub: 'EVA 0h & Gengiva' },
+                    { step: 4, title: 'Conclusão', sub: 'Equipe & Diário' },
+                  ].map((s, idx, arr) => {
+                    const isCurrent = sessionStep === s.step;
+                    const isPast = sessionStep > s.step;
+                    return (
+                      <React.Fragment key={s.step}>
+                        <button
+                          type="button"
+                          onClick={() => setSessionStep(s.step)}
+                          className="flex items-center gap-2 group cursor-pointer focus:outline-none"
+                        >
+                          <div
+                            className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
+                              isPast
+                                ? 'bg-emerald-600 text-white shadow-2xs'
+                                : isCurrent
+                                ? 'bg-blue-600 text-white ring-4 ring-blue-100 shadow-2xs'
+                                : 'bg-white border-2 border-slate-300 text-slate-400 group-hover:border-slate-400'
+                            }`}
+                          >
+                            {isPast ? <Check className="w-3.5 h-3.5 stroke-[3]" /> : s.step}
+                          </div>
+                          <div className="hidden sm:block text-left">
+                            <span
+                              className={`block text-xs font-bold leading-tight ${
+                                isCurrent ? 'text-blue-700' : isPast ? 'text-slate-800' : 'text-slate-400'
+                              }`}
                             >
-                              {currentSessionForm[tp.key] === null ? 'Definir EVA' : 'Marcar pendente'}
-                            </button>
-                          )}
+                              {s.title}
+                            </span>
+                            <span className="block text-[10px] text-slate-400 leading-tight">
+                              {s.sub}
+                            </span>
+                          </div>
+                        </button>
+                        {idx < arr.length - 1 && (
+                          <div
+                            className={`flex-1 h-0.5 mx-2 rounded transition-all ${
+                              sessionStep > idx + 1 ? 'bg-emerald-500' : 'bg-slate-200'
+                            }`}
+                          />
+                        )}
+                      </React.Fragment>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Formulário com Passos */}
+              <form onSubmit={handleSaveSession} className="flex-1 flex flex-col justify-between overflow-hidden">
+                <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-5 text-xs">
+                  
+                  {/* ===================== PASSO 1: LINHA DE BASE & CHECAGEM ===================== */}
+                  {sessionStep === 1 && (
+                    <div className="space-y-4 animate-fadeIn">
+                      <div className="flex items-center gap-2 text-slate-900 font-bold text-sm border-b border-slate-100 pb-2">
+                        <Sparkles className="w-4 h-4 text-amber-500" />
+                        <span>Passo 1: Checagem Inicial e Aferição de Cor (Linha de Base)</span>
+                      </div>
+
+                      {/* Data do Atendimento */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block font-bold text-slate-700 uppercase tracking-wider text-[11px] mb-1">
+                            Data do Atendimento Clínico <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="date"
+                            required
+                            value={currentSessionForm.sessionDate}
+                            onChange={(e) =>
+                              setCurrentSessionForm({ ...currentSessionForm, sessionDate: e.target.value })
+                            }
+                            className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block font-bold text-slate-700 uppercase tracking-wider text-[11px] mb-1">
+                            Tipo de Atendimento
+                          </label>
+                          <div className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 font-semibold flex items-center gap-1.5">
+                            <Stethoscope className="w-3.5 h-3.5 text-blue-600" />
+                            <span>
+                              {currentSessionForm.sessionNumber === 1
+                                ? 'Sessão 1: Atendimento Inicial / 1ª Intervenção'
+                                : currentSessionForm.sessionNumber === 2
+                                ? 'Sessão 2: 2ª Intervenção Clínica'
+                                : `Sessão ${currentSessionForm.sessionNumber}: Avaliação Clínica`}
+                            </span>
+                          </div>
                         </div>
                       </div>
 
-                      {currentSessionForm[tp.key] !== null ? (
-                        <>
+                      {/* Registro de Cor Escala VITA Classical (Boca Dividida) */}
+                      <div className="p-4 bg-amber-50/50 border border-amber-200/80 rounded-2xl space-y-3 shadow-2xs">
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-amber-950 text-xs inline-flex items-center gap-1.5">
+                            <Sparkles className="w-4 h-4 text-amber-600" />
+                            <span>Tom de Cor Dental Inicial (Linha de Base - VITA Classical)</span>
+                          </span>
+                          <span className="text-[10px] text-amber-800 font-medium">Boca Dividida (Split-mouth)</span>
+                        </div>
+                        <p className="text-[11px] text-amber-900/80 leading-relaxed">
+                          Aferir a cor no terço médio dos incisivos e caninos sob luz padronizada antes de qualquer manipulação ou desidratação dental.
+                        </p>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                          <div className="bg-white p-3 rounded-xl border border-amber-200 shadow-2xs">
+                            <label className="block font-bold text-slate-700 text-xs mb-1.5">
+                              Hemi-arco Direito (13 a 11)
+                            </label>
+                            <select
+                              value={currentSessionForm.shadeRight}
+                              onChange={(e) =>
+                                setCurrentSessionForm({ ...currentSessionForm, shadeRight: e.target.value })
+                              }
+                              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs bg-white font-mono font-bold text-slate-800 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                            >
+                              {VITA_CLASSICAL_SHADES.map((sh, idx) => (
+                                <option key={sh} value={sh}>
+                                  Tom {sh} (Passo {idx + 1})
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div className="bg-white p-3 rounded-xl border border-amber-200 shadow-2xs">
+                            <label className="block font-bold text-slate-700 text-xs mb-1.5">
+                              Hemi-arco Esquerdo (21 a 23)
+                            </label>
+                            <select
+                              value={currentSessionForm.shadeLeft}
+                              onChange={(e) =>
+                                setCurrentSessionForm({ ...currentSessionForm, shadeLeft: e.target.value })
+                              }
+                              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs bg-white font-mono font-bold text-slate-800 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                            >
+                              {VITA_CLASSICAL_SHADES.map((sh, idx) => (
+                                <option key={sh} value={sh}>
+                                  Tom {sh} (Passo {idx + 1})
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Checagem de Tecidos e Critérios de Manutenção */}
+                      <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1.5 text-slate-600 text-[11px]">
+                        <span className="font-bold text-slate-800 text-xs flex items-center gap-1.5">
+                          <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>Confirmação Pré-Procedimento:</span>
+                        </span>
+                        <p className="leading-relaxed">
+                          • Ausência de queixas de dor aguda espontânea antes do atendimento.<br />
+                          • Tecidos moles (mucosa jugal, lábios e gengiva marginal) íntegros e aptos para a intervenção.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ===================== PASSO 2: APLICAÇÃO DO GEL & CRONÔMETRO ===================== */}
+                  {sessionStep === 2 && (
+                    <div className="space-y-4 animate-fadeIn">
+                      <div className="flex items-center gap-2 text-slate-900 font-bold text-sm border-b border-slate-100 pb-2">
+                        <Clock className="w-4 h-4 text-blue-600" />
+                        <span>Passo 2: Execução Clínica e Cronômetro de Aplicação</span>
+                      </div>
+
+                      {/* Checklist Clínico */}
+                      <div className="p-3.5 bg-blue-50/60 border border-blue-200 rounded-2xl space-y-2 text-xs">
+                        <span className="font-bold text-blue-950 flex items-center gap-1.5">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" />
+                          <span>Etapas Clínicas Padronizadas (Protocolo Experimental):</span>
+                        </span>
+                        <ul className="space-y-1.5 text-[11px] text-blue-900">
+                          <li className="flex items-center gap-2">
+                            <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                            <span>Profilaxia coronária realizada com pedra-pomes e água.</span>
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                            <span>Barreira gengival fotopolimerizada com vedamento absoluto das papilas.</span>
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                            <span>Aplicação homogênea do gel clareador em hemi-arco direito e esquerdo.</span>
+                          </li>
+                        </ul>
+                      </div>
+
+                      {/* Cronômetro Clínico do Gel Integrado */}
+                      <div className="p-5 bg-gradient-to-br from-slate-900 to-indigo-950 rounded-2xl text-white space-y-3.5 shadow-md text-center">
+                        <div className="flex items-center justify-between text-xs text-slate-300">
+                          <span className="font-semibold flex items-center gap-1.5">
+                            <Clock className="w-3.5 h-3.5 text-blue-400" />
+                            <span>Tempo de Contato do Gel na Cadeira</span>
+                          </span>
+                          <span className="text-[10px] text-slate-400">
+                            {gelTimerRunning ? 'Cronometrando...' : 'Pausado'}
+                          </span>
+                        </div>
+
+                        {/* Display Digital */}
+                        <div className="py-2">
+                          <span className="font-mono font-black text-4xl sm:text-5xl tracking-widest text-emerald-400">
+                            {formatTimer(gelTimerSeconds)}
+                          </span>
+                        </div>
+
+                        {/* Controles do Cronômetro */}
+                        <div className="flex items-center justify-center gap-2 pt-1">
+                          <button
+                            type="button"
+                            onClick={() => setGelTimerRunning(!gelTimerRunning)}
+                            className={`px-4 py-2 rounded-xl font-bold text-xs transition inline-flex items-center gap-1.5 cursor-pointer shadow-xs ${
+                              gelTimerRunning
+                                ? 'bg-amber-500 hover:bg-amber-600 text-white'
+                                : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                            }`}
+                          >
+                            {gelTimerRunning ? (
+                              <>
+                                <Pause className="w-3.5 h-3.5 fill-current" />
+                                <span>Pausar Cronômetro</span>
+                              </>
+                            ) : (
+                              <>
+                                <Play className="w-3.5 h-3.5 fill-current" />
+                                <span>Iniciar Tempo</span>
+                              </>
+                            )}
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setGelTimerRunning(false);
+                              setGelTimerSeconds(0);
+                            }}
+                            className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold transition inline-flex items-center gap-1 cursor-pointer"
+                            title="Zerar cronômetro"
+                          >
+                            <RotateCcw className="w-3 h-3" />
+                            <span>Zerar</span>
+                          </button>
+                        </div>
+
+                        {/* Atalhos de Minutos */}
+                        <div className="flex justify-center gap-2 pt-1 text-[10px]">
+                          <button
+                            type="button"
+                            onClick={() => setGelTimerSeconds(15 * 60)}
+                            className="px-2.5 py-1 bg-white/10 hover:bg-white/20 rounded-lg text-slate-200 transition"
+                          >
+                            +15 min (1ª apl.)
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setGelTimerSeconds(30 * 60)}
+                            className="px-2.5 py-1 bg-white/10 hover:bg-white/20 rounded-lg text-slate-200 transition"
+                          >
+                            +30 min (2ª apl.)
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setGelTimerSeconds(45 * 60)}
+                            className="px-2.5 py-1 bg-white/10 hover:bg-white/20 rounded-lg text-slate-200 transition"
+                          >
+                            +45 min (Total)
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Observações da Aplicação */}
+                      <div>
+                        <label className="block font-bold text-slate-700 uppercase tracking-wider text-[11px] mb-1">
+                          Intercorrências durante o tempo de ação do gel (opcional):
+                        </label>
+                        <input
+                          type="text"
+                          value={currentSessionForm.adverseEvents}
+                          onChange={(e) =>
+                            setCurrentSessionForm({ ...currentSessionForm, adverseEvents: e.target.value })
+                          }
+                          placeholder="Ex: Leve desconforto térmico no incisivo aos 20 min, barreira intacta..."
+                          className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ===================== PASSO 3: DESFECHOS CLÍNICOS IMEDIATOS ===================== */}
+                  {sessionStep === 3 && (
+                    <div className="space-y-4 animate-fadeIn">
+                      <div className="flex items-center gap-2 text-slate-900 font-bold text-sm border-b border-slate-100 pb-2">
+                        <Zap className="w-4 h-4 text-blue-600" />
+                        <span>Passo 3: Desfechos Clínicos Imediatos (Sensibilidade & Tecidos Moles)</span>
+                      </div>
+
+                      {/* Sensibilidade Imediata EVA 0h na Cadeira */}
+                      <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-3 shadow-2xs">
+                        <div className="flex justify-between items-center">
+                          <span className="font-bold text-slate-800 text-xs inline-flex items-center gap-1.5">
+                            <Zap className="w-4 h-4 text-amber-500" />
+                            <span>Sensibilidade Imediata no Consultório (EVA 0h)</span>
+                          </span>
+                          <span className={`px-2.5 py-0.5 rounded-full font-mono font-bold text-xs ${
+                            currentSessionForm.painScore0h >= 7
+                              ? 'bg-red-100 text-red-800 border border-red-300'
+                              : currentSessionForm.painScore0h > 0
+                              ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                              : 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                          }`}>
+                            EVA {Number(currentSessionForm.painScore0h).toFixed(1)} / 10
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-500 leading-relaxed">
+                          Aferida com o voluntário na cadeira imediatamente após a lavagem e remoção do gel clareador.
+                        </p>
+
+                        <div className="py-2 px-1 space-y-2">
                           <input
                             type="range"
                             min="0"
                             max="10"
                             step="0.1"
-                            value={currentSessionForm[tp.key] ?? 0}
+                            value={currentSessionForm.painScore0h}
                             onChange={(e) =>
                               setCurrentSessionForm({
                                 ...currentSessionForm,
-                                [tp.key]: parseFloat(parseFloat(e.target.value).toFixed(1)),
+                                painScore0h: parseFloat(parseFloat(e.target.value).toFixed(1)),
                               })
                             }
-                            className="w-full h-2.5 bg-gradient-to-r from-emerald-400 via-amber-400 via-orange-400 to-red-500 rounded-lg appearance-none cursor-pointer accent-blue-600 focus:outline-none"
+                            className="w-full h-3 bg-slate-200 border border-slate-300 rounded-lg appearance-none cursor-pointer accent-blue-600 focus:outline-none"
                           />
-
                           <div className="flex justify-between text-[10px] text-slate-400 font-medium">
                             <span>0.0 - Nenhuma dor</span>
-                            <span>5.0 - Moderada</span>
-                            <span>10.0 - Pior dor</span>
+                            <span>5.0 - Dor moderada</span>
+                            <span>10.0 - Pior dor possível</span>
                           </div>
-                        </>
-                      ) : (
-                        <p className="text-[11px] text-slate-400 italic">
-                          Aguardando registro pelo paciente no portal.
-                        </p>
+                        </div>
+
+                        {currentSessionForm.painScore0h >= 7 && (
+                          <div className="p-2.5 bg-red-50 border border-red-200 rounded-xl text-red-800 text-[11px] flex items-center gap-2">
+                            <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
+                            <span>Atenção: Dor severa registrada. Considere aplicação tópica de agente dessensibilizante em consultório.</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Irritação Gengival Marginal */}
+                      <div>
+                        <label className="block font-bold text-slate-700 uppercase tracking-wider text-[11px] mb-1.5">
+                          Exame da Margem Gengival / Tecidos Moles:
+                        </label>
+                        <div className="grid grid-cols-2 gap-2">
+                          {[
+                            { val: 'Ausente', title: 'Ausente', desc: 'Gengiva hígida e rósea' },
+                            { val: 'Leve', title: 'Leve', desc: 'Eritema marginal transitório' },
+                            { val: 'Moderada', title: 'Moderada', desc: 'Eritema acentuado / branqueamento' },
+                            { val: 'Severa', title: 'Severa', desc: 'Ulceração / queimação relatada' },
+                          ].map((item) => {
+                            const isSelected = currentSessionForm.gingivalIrritation === item.val;
+                            return (
+                              <button
+                                key={item.val}
+                                type="button"
+                                onClick={() =>
+                                  setCurrentSessionForm({
+                                    ...currentSessionForm,
+                                    gingivalIrritation: item.val,
+                                  })
+                                }
+                                className={`p-3 rounded-xl border text-left transition cursor-pointer ${
+                                  isSelected
+                                    ? 'bg-blue-50 border-blue-500 text-blue-900 shadow-2xs ring-1 ring-blue-500'
+                                    : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                                }`}
+                              >
+                                <span className="block font-bold text-xs">{item.title}</span>
+                                <span className="block text-[10px] text-slate-500 mt-0.5">{item.desc}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Aviso sobre os Diários de 1h, 24h e 48h */}
+                      <div className="p-3.5 bg-blue-50/70 border border-blue-200 rounded-2xl flex items-start gap-2.5 text-xs text-blue-900">
+                        <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                        <div className="space-y-0.5 text-[11px]">
+                          <strong className="block font-bold">Relatos Pós-Operatórios (1h, 24h, 48h):</strong>
+                          <p className="text-blue-800 leading-relaxed">
+                            Serão respondidos exclusivamente pelo voluntário no celular pelo <strong>Portal do Paciente</strong>. O sistema sincronizará os dados automaticamente no banco do estudo.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ===================== PASSO 4: CONCLUSÃO & DIÁRIO ===================== */}
+                  {sessionStep === 4 && (
+                    <div className="space-y-4 animate-fadeIn">
+                      <div className="flex items-center gap-2 text-slate-900 font-bold text-sm border-b border-slate-100 pb-2">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                        <span>Passo 4: Equipe Responsável e Envio do Diário ao Paciente</span>
+                      </div>
+
+                      {/* Operador e Avaliador Cegado */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block font-bold text-slate-700 uppercase tracking-wider text-[11px] mb-1">
+                            Pesquisador(a) Operador(a)
+                          </label>
+                          <input
+                            type="text"
+                            value={currentSessionForm.operatorName}
+                            onChange={(e) =>
+                              setCurrentSessionForm({ ...currentSessionForm, operatorName: e.target.value })
+                            }
+                            placeholder="Quem aplicou o procedimento"
+                            className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block font-bold text-slate-700 uppercase tracking-wider text-[11px] mb-1">
+                            Pesquisador(a) Avaliador(a) Cego(a)
+                          </label>
+                          <input
+                            type="text"
+                            value={currentSessionForm.evaluatorName}
+                            onChange={(e) =>
+                              setCurrentSessionForm({
+                                ...currentSessionForm,
+                                evaluatorName: e.target.value,
+                              })
+                            }
+                            placeholder="Examinador independente da cor/dor"
+                            className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Observações Clínicas Adicionais */}
+                      <div>
+                        <label className="block font-bold text-slate-700 uppercase tracking-wider text-[11px] mb-1">
+                          Anotações Clínicas da Consulta:
+                        </label>
+                        <textarea
+                          rows={2}
+                          value={currentSessionForm.notes}
+                          onChange={(e) =>
+                            setCurrentSessionForm({ ...currentSessionForm, notes: e.target.value })
+                          }
+                          placeholder="Recomendações pós-clareamento dadas ao paciente, comportamento clínico ou observações..."
+                          className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                        />
+                      </div>
+
+                      {/* Justificativa de Auditoria GCP */}
+                      <div className="p-3 bg-amber-50/70 border border-amber-200/80 rounded-xl space-y-1">
+                        <label className="block font-bold text-amber-900 uppercase tracking-wider text-[10px]">
+                          Motivo / Justificativa do Registro Clínico (GCP / 21 CFR Part 11)
+                        </label>
+                        <input
+                          type="text"
+                          value={currentSessionForm.justification || ''}
+                          onChange={(e) =>
+                            setCurrentSessionForm({ ...currentSessionForm, justification: e.target.value })
+                          }
+                          placeholder="Ex: Atendimento presencial regular, aferição de cor e sensibilidade..."
+                          className="w-full px-3 py-1.5 border border-amber-300 rounded-lg text-xs bg-white focus:ring-1 focus:ring-amber-500"
+                        />
+                      </div>
+
+                      {/* Card de Ativação e Envio do Diário pelo WhatsApp */}
+                      {currentSessionParticipant && (
+                        <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl space-y-2.5 shadow-2xs">
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-emerald-950 text-xs flex items-center gap-1.5">
+                              <MessageSquare className="w-4 h-4 text-emerald-600" />
+                              <span>Ativação do Diário de Sensibilidade do Voluntário:</span>
+                            </span>
+                            <span className="text-[10px] text-emerald-800 font-bold">1 Clique</span>
+                          </div>
+                          <p className="text-[11px] text-emerald-900 leading-relaxed">
+                            Envie o link do portal para o WhatsApp do paciente para que ele possa registrar os relatos de <strong>1 Hora</strong> (hoje) e de <strong>24 Horas</strong> (amanhã).
+                          </p>
+
+                          <a
+                            href={getPatientDiaryWhatsAppUrl()}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="w-full py-2.5 bg-[#25D366] hover:bg-[#128C7E] text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center justify-center space-x-2"
+                          >
+                            <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+                            </svg>
+                            <span>Enviar Link do Diário no WhatsApp do Paciente</span>
+                          </a>
+                        </div>
                       )}
                     </div>
-                  ))}
+                  )}
+
                 </div>
 
-                {/* Reação Tecidual / Irritação Gengival */}
-                <div>
-                  <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">
-                    Irritação Gengival (Margem Gengival)
-                  </label>
-                  <select
-                    value={currentSessionForm.gingivalIrritation}
-                    onChange={(e) =>
-                      setCurrentSessionForm({
-                        ...currentSessionForm,
-                        gingivalIrritation: e.target.value,
-                      })
-                    }
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white"
-                  >
-                    <option value="Ausente">Ausente (Tecido gengival hígido)</option>
-                    <option value="Leve">Leve (Eritema marginal transitório)</option>
-                    <option value="Moderada">Moderada (Eritema acentuado / branqueamento focal)</option>
-                    <option value="Severa">Severa (Ulceração química / queimação relatada)</option>
-                  </select>
-                </div>
-
-                {/* Eventos Adversos */}
-                <div>
-                  <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">
-                    Eventos Adversos Espontâneos
-                  </label>
-                  <input
-                    type="text"
-                    value={currentSessionForm.adverseEvents}
-                    onChange={(e) =>
-                      setCurrentSessionForm({ ...currentSessionForm, adverseEvents: e.target.value })
-                    }
-                    placeholder="Ex: Cefaleia leve, gosto amargo, desconforto oclusal transitório..."
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs"
-                  />
-                </div>
-
-                {/* Operador e Avaliador */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Rodapé da Trilha com Navegação em Passos */}
+                <div className="p-4 sm:p-5 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-3 shrink-0">
                   <div>
-                    <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">
-                      Operador(a) da Intervenção
-                    </label>
-                    <input
-                      type="text"
-                      value={currentSessionForm.operatorName}
-                      onChange={(e) =>
-                        setCurrentSessionForm({ ...currentSessionForm, operatorName: e.target.value })
-                      }
-                      placeholder="Nome do operador que aplicou"
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs"
-                    />
+                    {sessionStep > 1 ? (
+                      <button
+                        type="button"
+                        onClick={() => setSessionStep((prev) => Math.max(1, prev - 1))}
+                        className="px-4 py-2 bg-white hover:bg-slate-100 text-slate-700 font-bold text-xs rounded-xl border border-slate-300 transition inline-flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                        <span>Voltar</span>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setShowSessionModal(false)}
+                        className="px-4 py-2 bg-white hover:bg-slate-100 text-slate-600 font-bold text-xs rounded-xl border border-slate-300 transition cursor-pointer"
+                      >
+                        Cancelar
+                      </button>
+                    )}
                   </div>
 
-                  <div>
-                    <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">
-                      Avaliador(a) Cego(a)
-                    </label>
-                    <input
-                      type="text"
-                      value={currentSessionForm.evaluatorName}
-                      onChange={(e) =>
-                        setCurrentSessionForm({
-                          ...currentSessionForm,
-                          evaluatorName: e.target.value,
-                        })
-                      }
-                      placeholder="Nome do examinador da cor"
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs"
-                    />
+                  <div className="flex items-center gap-2">
+                    {sessionStep < 4 ? (
+                      <button
+                        type="button"
+                        onClick={() => setSessionStep((prev) => Math.min(4, prev + 1))}
+                        className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs transition inline-flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <span>Avançar para Passo {sessionStep + 1}</span>
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+                    ) : (
+                      <button
+                        type="submit"
+                        disabled={savingSession}
+                        className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-md transition disabled:opacity-50 inline-flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <CheckCircle2 className="w-4 h-4" />
+                        <span>{savingSession ? 'Salvando...' : 'Concluir & Gravar Atendimento'}</span>
+                      </button>
+                    )}
                   </div>
-                </div>
-
-                {/* Observações Clínicas Adicionais */}
-                <div>
-                  <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">
-                    Anotações Clínicas Adicionais
-                  </label>
-                  <textarea
-                    rows={2}
-                    value={currentSessionForm.notes}
-                    onChange={(e) =>
-                      setCurrentSessionForm({ ...currentSessionForm, notes: e.target.value })
-                    }
-                    placeholder="Observações do atendimento, comportamento do paciente ou intercorrências..."
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs"
-                  />
-                </div>
-
-                {/* Justificativa de Alteração / Registro Clínico (GCP / ICH E6 e 21 CFR Part 11) */}
-                <div className="p-3 bg-amber-50/70 border border-amber-200/80 rounded-xl space-y-1">
-                  <label className="block font-bold text-amber-900 uppercase tracking-wider text-[10px]">
-                    Justificativa Clínica / Motivo do Registro (GCP / 21 CFR Part 11)
-                  </label>
-                  <input
-                    type="text"
-                    value={currentSessionForm.justification || ''}
-                    onChange={(e) =>
-                      setCurrentSessionForm({ ...currentSessionForm, justification: e.target.value })
-                    }
-                    placeholder="Ex: Consulta regular, ajuste de sensibilidade, retificação de cor..."
-                    className="w-full px-3 py-1.5 border border-amber-300 rounded-lg text-xs bg-white focus:ring-1 focus:ring-amber-500"
-                  />
-                  <p className="text-[10px] text-amber-700">
-                    Obrigatório para rastreabilidade e integridade regulatória na Trilha de Auditoria.
-                  </p>
-                </div>
-
-                {/* Ações do Rodapé */}
-                <div className="flex justify-end space-x-3 pt-4 border-t border-slate-100">
-                  <button
-                    type="button"
-                    onClick={() => setShowSessionModal(false)}
-                    className="px-4 py-2 border border-slate-300 rounded-lg font-bold text-slate-600 hover:bg-slate-50"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={savingSession}
-                    className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow-sm transition disabled:opacity-50 inline-flex items-center gap-1.5"
-                  >
-                    <CheckCircle2 className="w-4 h-4" />
-                    <span>{savingSession ? 'Gravando...' : 'Salvar Sessão Clínica'}</span>
-                  </button>
                 </div>
               </form>
             </div>
