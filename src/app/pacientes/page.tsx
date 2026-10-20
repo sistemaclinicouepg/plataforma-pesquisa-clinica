@@ -18,6 +18,8 @@ import {
   X,
   UserCheck,
   ChevronRight,
+  ChevronDown,
+  FolderKanban,
   Shield,
   Stethoscope,
   ExternalLink,
@@ -88,6 +90,18 @@ export default function PacientesPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'PENDING'>('ALL');
   const [error, setError] = useState<string | null>(null);
+
+  // Controle de linhas expandidas para exibir detalhes de estudos e sessões
+  const [expandedPatientIds, setExpandedPatientIds] = useState<Set<string>>(new Set());
+
+  const toggleExpandPatient = (patientId: string) => {
+    setExpandedPatientIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(patientId)) next.delete(patientId);
+      else next.add(patientId);
+      return next;
+    });
+  };
 
   // Modais de Administração
   const [showNewModal, setShowNewModal] = useState(false);
@@ -610,8 +624,7 @@ export default function PacientesPage() {
                   <tr className="border-b border-slate-200 bg-slate-50/90 text-[11px] font-bold uppercase tracking-wider text-slate-500 h-11">
                     <th className="py-3 px-5">Paciente</th>
                     <th className="py-3 px-4">Documento & Contato</th>
-                    <th className="py-3 px-4">Estudos & Protocolos</th>
-                    <th className="py-3 px-4">Sessões Clínicas</th>
+                    <th className="py-3 px-4">Estudos & Sessões</th>
                     <th className="py-3 px-5 text-right">Ações</th>
                   </tr>
                 </thead>
@@ -619,154 +632,315 @@ export default function PacientesPage() {
                   {filteredPatients.map((patient) => {
                     const age = calculateAge(patient.dateOfBirth);
                     const primaryParticipation = patient.participations[0];
+                    const isExpanded = expandedPatientIds.has(patient.id);
 
                     return (
-                      <tr key={patient.id} className="hover:bg-slate-50/80 transition-colors">
-                        {/* Nome & Dados Demográficos */}
-                        <td className="py-3.5 px-5 align-middle">
-                          <div className="font-bold text-slate-900 text-sm">
-                            {patient.fullName}
-                          </div>
-                          <div className="text-[11px] text-slate-500 mt-0.5 flex items-center space-x-2">
-                            <span>{patient.biologicalSex}</span>
-                            {age !== null && (
-                              <>
-                                <span>•</span>
-                                <span>{age} anos</span>
-                              </>
-                            )}
-                          </div>
-                        </td>
-
-                        {/* Documento & Contato WhatsApp */}
-                        <td className="py-3.5 px-4 align-middle whitespace-nowrap">
-                          <div className="font-mono text-xs font-semibold text-slate-700">
-                            {formatCPF(patient.cpf)}
-                          </div>
-                          <div className="mt-1 flex items-center space-x-1.5">
-                            <button
-                              type="button"
-                              onClick={() => openWhatsApp(patient.phoneWhatsApp, patient.fullName)}
-                              className="text-[11px] text-emerald-700 hover:text-emerald-800 font-medium flex items-center space-x-1 hover:underline cursor-pointer"
-                              title="Abrir conversa no WhatsApp"
-                            >
-                              <Phone className="w-3 h-3 text-emerald-600" />
-                              <span>{patient.phoneWhatsApp}</span>
-                            </button>
-                          </div>
-                        </td>
-
-                        {/* Estudos em que participa */}
-                        <td className="py-3.5 px-4 align-middle">
-                          {patient.participations.length === 0 ? (
-                            <span className="text-[11px] text-slate-400 italic">Nenhum estudo associado</span>
-                          ) : (
-                            <div className="space-y-1.5">
-                              {patient.participations.map((part) => (
-                                <div key={part.id} className="flex items-center space-x-2">
-                                  <span className="px-1.5 py-0.5 bg-slate-900 text-white rounded font-mono text-[10px] font-bold">
-                                    {part.researchCode}
-                                  </span>
-                                  <Link
-                                    href={`/dashboard?projectId=${part.project.id}`}
-                                    className="text-xs font-semibold text-slate-800 hover:text-blue-600 truncate max-w-[180px] inline-block transition"
-                                    title={part.project.name}
+                      <React.Fragment key={patient.id}>
+                        <tr className={`hover:bg-slate-50/80 transition-colors ${isExpanded ? 'bg-blue-50/20' : ''}`}>
+                          {/* Nome & Dados Demográficos */}
+                          <td className="py-3.5 px-5 align-middle">
+                            <div className="flex items-start space-x-1.5">
+                              <button
+                                type="button"
+                                onClick={() => toggleExpandPatient(patient.id)}
+                                className="font-bold text-slate-900 hover:text-blue-600 text-sm transition text-left flex items-center gap-1.5 group cursor-pointer"
+                                title="Clique para ver os estudos e sessões deste paciente"
+                              >
+                                <span>{patient.fullName}</span>
+                                <ChevronDown
+                                  className={`w-3.5 h-3.5 text-slate-400 group-hover:text-blue-600 transition-transform ${
+                                    isExpanded ? 'rotate-180 text-blue-600' : ''
+                                  }`}
+                                />
+                              </button>
+                            </div>
+                            <div className="text-[11px] text-slate-500 mt-0.5 flex items-center space-x-2">
+                              <span>{patient.biologicalSex}</span>
+                              {age !== null && (
+                                <>
+                                  <span>•</span>
+                                  <span>{age} anos</span>
+                                </>
+                              )}
+                              {patient.participations.length > 0 && (
+                                <>
+                                  <span>•</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => toggleExpandPatient(patient.id)}
+                                    className="text-[10px] text-blue-600 hover:text-blue-800 font-semibold cursor-pointer hover:underline"
                                   >
-                                    {part.project.name}
+                                    {isExpanded ? 'Ocultar estudos' : 'Ver estudos'}
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          </td>
+
+                          {/* Documento & Contato WhatsApp */}
+                          <td className="py-3.5 px-4 align-middle whitespace-nowrap">
+                            <div className="font-mono text-xs font-semibold text-slate-700">
+                              {formatCPF(patient.cpf)}
+                            </div>
+                            <div className="mt-1 flex items-center space-x-1.5">
+                              <button
+                                type="button"
+                                onClick={() => openWhatsApp(patient.phoneWhatsApp, patient.fullName)}
+                                className="text-[11px] text-emerald-700 hover:text-emerald-800 font-medium flex items-center space-x-1 hover:underline cursor-pointer"
+                                title="Abrir conversa no WhatsApp"
+                              >
+                                <Phone className="w-3 h-3 text-emerald-600" />
+                                <span>{patient.phoneWhatsApp}</span>
+                              </button>
+                            </div>
+                          </td>
+
+                          {/* Estudos e Sessões Clínicas Integradas */}
+                          <td className="py-3.5 px-4 align-middle">
+                            {patient.participations.length === 0 ? (
+                              <span className="text-[11px] text-slate-400 italic">Sem estudos associados</span>
+                            ) : patient.participations.length === 1 ? (
+                              (() => {
+                                const part = patient.participations[0];
+                                const sessCount = part.sessions?.length || 0;
+                                return (
+                                  <div className="flex items-center space-x-2">
+                                    <span className="px-1.5 py-0.5 bg-slate-900 text-white rounded font-mono text-[10px] font-bold shrink-0">
+                                      {part.researchCode}
+                                    </span>
+                                    <Link
+                                      href={`/dashboard?projectId=${part.project.id}`}
+                                      className="text-xs font-semibold text-slate-800 hover:text-blue-600 truncate max-w-[190px] inline-block transition"
+                                      title={part.project.name}
+                                    >
+                                      {part.project.name}
+                                    </Link>
+                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 shrink-0 flex items-center gap-1">
+                                      <Activity className="w-3 h-3 text-blue-600" />
+                                      <span>
+                                        {sessCount} {sessCount === 1 ? 'sessão' : 'sessões'}
+                                      </span>
+                                    </span>
+                                  </div>
+                                );
+                              })()
+                            ) : (
+                              (() => {
+                                const totalSessions = patient.participations.reduce(
+                                  (acc, p) => acc + (p.sessions?.length || 0),
+                                  0
+                                );
+                                return (
+                                  <button
+                                    type="button"
+                                    onClick={() => toggleExpandPatient(patient.id)}
+                                    className="px-2.5 py-1.5 bg-slate-50 hover:bg-blue-50 text-slate-800 hover:text-blue-700 rounded-xl text-xs font-semibold border border-slate-200 hover:border-blue-300 transition flex items-center space-x-2 cursor-pointer shadow-2xs"
+                                    title="Clique para ver todos os estudos e sessões deste paciente"
+                                  >
+                                    <FolderKanban className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                                    <span>
+                                      <strong>{patient.participations.length}</strong> estudos
+                                    </span>
+                                    <span className="text-slate-300">•</span>
+                                    <span className="text-slate-600">
+                                      <strong>{totalSessions}</strong> {totalSessions === 1 ? 'sessão' : 'sessões'}
+                                    </span>
+                                    <ChevronDown
+                                      className={`w-3.5 h-3.5 text-slate-400 transition-transform ${
+                                        isExpanded ? 'rotate-180 text-blue-600' : ''
+                                      }`}
+                                    />
+                                  </button>
+                                );
+                              })()
+                            )}
+                          </td>
+
+                          {/* Ações */}
+                          <td className="py-3.5 px-5 align-middle text-right whitespace-nowrap">
+                            <div className="inline-flex items-center justify-end space-x-1.5">
+                              {/* WhatsApp Direct */}
+                              <button
+                                type="button"
+                                onClick={() => openWhatsApp(patient.phoneWhatsApp, patient.fullName)}
+                                className="p-1.5 text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 rounded-lg border border-slate-200 hover:border-emerald-300 transition cursor-pointer"
+                                title="Conversar no WhatsApp"
+                              >
+                                <MessageSquare className="w-3.5 h-3.5 text-emerald-600" />
+                              </button>
+
+                              {/* Abrir Prontuário Clínico */}
+                              {primaryParticipation && (
+                                patient.participations.length === 1 ? (
+                                  <Link
+                                    href={`/dashboard?projectId=${primaryParticipation.project.id}`}
+                                    className="px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg text-xs font-bold transition flex items-center space-x-1 shadow-2xs"
+                                    title="Abrir prontuário no estudo"
+                                  >
+                                    <FileText className="w-3.5 h-3.5" />
+                                    <span>Prontuário</span>
+                                    <ChevronRight className="w-3.5 h-3.5" />
                                   </Link>
-                                  {part.status === 'APPROVED' ? (
-                                    <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                      Ativo
-                                    </span>
-                                  ) : part.status === 'PENDING' ? (
-                                    <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
-                                      Triagem
-                                    </span>
-                                  ) : (
-                                    <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-slate-100 text-slate-600">
-                                      {part.status}
-                                    </span>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => toggleExpandPatient(patient.id)}
+                                    className="px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg text-xs font-bold transition flex items-center space-x-1 shadow-2xs cursor-pointer"
+                                    title="Ver prontuários em cada estudo"
+                                  >
+                                    <FileText className="w-3.5 h-3.5" />
+                                    <span>Prontuário</span>
+                                    <ChevronDown
+                                      className={`w-3.5 h-3.5 transition-transform ${
+                                        isExpanded ? 'rotate-180' : ''
+                                      }`}
+                                    />
+                                  </button>
+                                )
+                              )}
+
+                              {/* Controles de Administração: Editar e Excluir */}
+                              {isAdmin && (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenEdit(patient)}
+                                    className="p-1.5 text-slate-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg border border-slate-200 hover:border-blue-300 transition cursor-pointer"
+                                    title="Editar dados cadastrais deste paciente"
+                                  >
+                                    <Pencil className="w-3.5 h-3.5" />
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setDeletingPatient(patient);
+                                      setDeleteReason('Exclusão solicitada por administrador geral');
+                                      setModalFeedback(null);
+                                      setShowDeleteModal(true);
+                                    }}
+                                    className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg border border-slate-200 hover:border-red-300 transition cursor-pointer"
+                                    title="Excluir paciente e vínculos"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+
+                        {/* LINHA EXPANDIDA: Estudos e Sessões Clínicas do Paciente */}
+                        {isExpanded && (
+                          <tr className="bg-slate-50/70 border-b border-slate-200">
+                            <td colSpan={4} className="p-4 sm:p-5">
+                              <div className="bg-white rounded-2xl border border-slate-200/90 p-4 shadow-xs space-y-4">
+                                {/* Header do Detalhamento */}
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 gap-2">
+                                  <div>
+                                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                                      <FolderKanban className="w-4 h-4 text-blue-600" />
+                                      <span>Estudos & Sessões Clínicas de {patient.fullName}</span>
+                                    </h4>
+                                    <p className="text-[11px] text-slate-500 mt-0.5">
+                                      Acesse o prontuário em cada pesquisa e visualize as sessões clínicas realizadas.
+                                    </p>
+                                  </div>
+
+                                  {(patient.allergies || patient.comorbidities) && (
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      {patient.allergies && (
+                                        <span className="px-2.5 py-1 bg-red-50 text-red-700 border border-red-200 rounded-lg text-[10px] font-bold">
+                                          ⚠️ Alergias: {patient.allergies}
+                                        </span>
+                                      )}
+                                      {patient.comorbidities && (
+                                        <span className="px-2.5 py-1 bg-amber-50 text-amber-800 border border-amber-200 rounded-lg text-[10px] font-bold">
+                                          Comorbidades: {patient.comorbidities}
+                                        </span>
+                                      )}
+                                    </div>
                                   )}
                                 </div>
-                              ))}
-                            </div>
-                          )}
-                        </td>
 
-                        {/* Sessões Clínicas Realizadas */}
-                        <td className="py-3.5 px-4 align-middle whitespace-nowrap">
-                          {patient.participations.length === 0 ? (
-                            <span className="text-[11px] text-slate-400 italic">—</span>
-                          ) : (
-                            patient.participations.map((part) => {
-                              const sessionCount = part.sessions?.length || 0;
-                              return (
-                                <div key={part.id} className="flex items-center space-x-1.5 text-xs text-slate-600">
-                                  <Activity className="w-3.5 h-3.5 text-blue-600" />
-                                  <span>
-                                    <strong>{sessionCount}</strong> sessão(ões)
-                                  </span>
-                                </div>
-                              );
-                            })
-                          )}
-                        </td>
+                                {/* Lista de Cards de cada Estudo */}
+                                {patient.participations.length === 0 ? (
+                                  <div className="text-center py-6 text-slate-400 text-xs">
+                                    Este paciente ainda não está associado a nenhum estudo clínico.
+                                  </div>
+                                ) : (
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    {patient.participations.map((part) => {
+                                      const sessCount = part.sessions?.length || 0;
+                                      return (
+                                        <div
+                                          key={part.id}
+                                          className="p-4 bg-slate-50/80 hover:bg-slate-50 rounded-2xl border border-slate-200 hover:border-blue-300 transition space-y-3"
+                                        >
+                                          <div className="flex items-start justify-between gap-2">
+                                            <div className="space-y-1 min-w-0">
+                                              <div className="flex items-center gap-2 flex-wrap">
+                                                <span className="px-2 py-0.5 bg-slate-900 text-white rounded font-mono text-[10px] font-bold shadow-2xs">
+                                                  {part.researchCode}
+                                                </span>
+                                                {part.status === 'APPROVED' ? (
+                                                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                                    Ativo no Estudo
+                                                  </span>
+                                                ) : part.status === 'PENDING' ? (
+                                                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                                                    Em Triagem
+                                                  </span>
+                                                ) : (
+                                                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600">
+                                                    {part.status}
+                                                  </span>
+                                                )}
+                                                {part.group && (
+                                                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200">
+                                                    {part.group}
+                                                  </span>
+                                                )}
+                                              </div>
+                                              <h5 className="font-bold text-slate-900 text-sm mt-1" title={part.project.name}>
+                                                {part.project.name}
+                                              </h5>
+                                            </div>
 
-                        {/* Ações */}
-                        <td className="py-3.5 px-5 align-middle text-right whitespace-nowrap">
-                          <div className="inline-flex items-center justify-end space-x-1.5">
-                            {/* WhatsApp Direct */}
-                            <button
-                              type="button"
-                              onClick={() => openWhatsApp(patient.phoneWhatsApp, patient.fullName)}
-                              className="p-1.5 text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 rounded-lg border border-slate-200 hover:border-emerald-300 transition"
-                              title="Conversar no WhatsApp"
-                            >
-                              <MessageSquare className="w-3.5 h-3.5 text-emerald-600" />
-                            </button>
+                                            <Link
+                                              href={`/dashboard?projectId=${part.project.id}`}
+                                              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center space-x-1 shrink-0"
+                                            >
+                                              <FileText className="w-3.5 h-3.5" />
+                                              <span>Abrir Prontuário</span>
+                                              <ChevronRight className="w-3.5 h-3.5" />
+                                            </Link>
+                                          </div>
 
-                            {/* Abrir Prontuário no Estudo */}
-                            {primaryParticipation && (
-                              <Link
-                                href={`/dashboard?projectId=${primaryParticipation.project.id}`}
-                                className="px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg text-xs font-bold transition flex items-center space-x-1 shadow-2xs"
-                                title="Abrir prontuário no estudo"
-                              >
-                                <span>Dossiê</span>
-                                <ChevronRight className="w-3.5 h-3.5" />
-                              </Link>
-                            )}
-
-                            {/* Controles de Administração: Editar e Excluir */}
-                            {isAdmin && (
-                              <>
-                                <button
-                                  type="button"
-                                  onClick={() => handleOpenEdit(patient)}
-                                  className="p-1.5 text-slate-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg border border-slate-200 hover:border-blue-300 transition cursor-pointer"
-                                  title="Editar dados cadastrais deste paciente"
-                                >
-                                  <Pencil className="w-3.5 h-3.5" />
-                                </button>
-
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setDeletingPatient(patient);
-                                    setDeleteReason('Exclusão solicitada por administrador geral');
-                                    setModalFeedback(null);
-                                    setShowDeleteModal(true);
-                                  }}
-                                  className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg border border-slate-200 hover:border-red-300 transition cursor-pointer"
-                                  title="Excluir paciente e vínculos"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
-                              </>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
+                                          {/* Sessões Clínicas deste Estudo */}
+                                          <div className="pt-2.5 border-t border-slate-200 flex items-center justify-between text-xs">
+                                            <div className="flex items-center space-x-1.5 text-slate-700 font-semibold">
+                                              <Activity className="w-4 h-4 text-blue-600" />
+                                              <span>
+                                                <strong>{sessCount}</strong> {sessCount === 1 ? 'sessão realizada' : 'sessões realizadas'}
+                                              </span>
+                                            </div>
+                                            {part.sessions && part.sessions.length > 0 && (
+                                              <span className="text-slate-500 text-[11px]">
+                                                Última sessão: {new Date(part.sessions[part.sessions.length - 1].sessionDate).toLocaleDateString('pt-BR')}
+                                              </span>
+                                            )}
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
                     );
                   })}
                 </tbody>
