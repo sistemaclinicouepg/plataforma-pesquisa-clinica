@@ -43,19 +43,23 @@ export async function POST(
       return NextResponse.json({ error: auth.error }, { status: auth.status });
     }
 
-    const { email, role, isBlinded } = await req.json();
+    const { email, userId, role, isBlinded } = await req.json();
 
-    if (!email) {
-      return NextResponse.json({ error: 'E-mail do pesquisador é obrigatório.' }, { status: 400 });
+    if (!email && !userId) {
+      return NextResponse.json({ error: 'Pesquisador ou e-mail é obrigatório.' }, { status: 400 });
     }
 
-    const user = await prisma.user.findUnique({
-      where: { email: email.trim().toLowerCase() },
-    });
+    const user = userId
+      ? await prisma.user.findUnique({
+          where: { id: userId },
+        })
+      : await prisma.user.findUnique({
+          where: { email: email.trim().toLowerCase() },
+        });
 
     if (!user) {
       return NextResponse.json(
-        { error: 'Nenhum usuário cadastrado com este e-mail no sistema.' },
+        { error: 'Nenhum usuário cadastrado encontrado no sistema.' },
         { status: 404 }
       );
     }

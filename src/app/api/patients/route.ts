@@ -58,6 +58,7 @@ export async function POST(req: Request) {
   try {
     const data = await req.json();
     const {
+      patientId,
       projectId,
       fullName,
       cpf,
@@ -73,73 +74,97 @@ export async function POST(req: Request) {
       expectations,
     } = data;
 
-    if (!fullName || !cpf || !phoneWhatsApp) {
-      return NextResponse.json(
-        { error: 'Nome completo, CPF e WhatsApp são obrigatórios.' },
-        { status: 400 }
-      );
-    }
+    let patient = null;
 
-    const cleanCpf = cpf.trim();
-    const cleanDigits = cpf.replace(/\D/g, '');
+    if (patientId) {
+      patient = await prisma.patient.findUnique({
+        where: { id: patientId },
+      });
+      if (!patient) {
+        return NextResponse.json(
+          { error: 'Paciente selecionado não foi encontrado no sistema.' },
+          { status: 404 }
+        );
+      }
+      // Se forneceu queixa ou alergias específicas, atualizamos no prontuário
+      if (chiefComplaint?.trim() || allergies?.trim()) {
+        patient = await prisma.patient.update({
+          where: { id: patient.id },
+          data: {
+            ...(chiefComplaint?.trim() ? { chiefComplaint: chiefComplaint.trim() } : {}),
+            ...(allergies?.trim() ? { allergies: allergies.trim() } : {}),
+          },
+        });
+      }
+    } else {
+      if (!fullName || !cpf || !phoneWhatsApp) {
+        return NextResponse.json(
+          { error: 'Nome completo, CPF e WhatsApp são obrigatórios.' },
+          { status: 400 }
+        );
+      }
 
-    // 1. Localizar ou criar o paciente central (LGPD: Prontuário Global)
-    // Permite localizar tanto formatado ("000.000.000-00") quanto apenas dígitos
-    let patient = await prisma.patient.findFirst({
-      where: {
-        OR: [
-          { cpf: cleanCpf },
-          ...(cleanDigits.length >= 6 ? [{ cpf: cleanDigits }] : []),
-        ],
-      },
-    });
+      const cleanCpf = cpf.trim();
+      const cleanDigits = cpf.replace(/\D/g, '');
 
-    if (patient && !projectId) {
-      return NextResponse.json(
-        { error: `Já existe um paciente cadastrado com este CPF (${cleanCpf}): ${patient.fullName}.` },
-        { status: 409 }
-      );
-    }
-
-    if (!patient) {
-      patient = await prisma.patient.create({
-        data: {
-          fullName: fullName.trim(),
-          cpf: cleanCpf,
-          email: email?.trim() || null,
-          phoneWhatsApp: phoneWhatsApp.trim(),
-          address: address?.trim() || null,
-          dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : new Date('2000-01-01'),
-          biologicalSex: biologicalSex || 'Não informado',
-          comorbidities: comorbidities?.trim() || null,
-          allergies: allergies?.trim() || null,
-          medications: medications?.trim() || null,
-          chiefComplaint: chiefComplaint?.trim() || null,
-          expectations: expectations?.trim() || null,
+      // 1. Localizar ou criar o paciente central (LGPD: Prontuário Global)
+      // Permite localizar tanto formatado ("000.000.000-00") quanto apenas dígitos
+      patient = await prisma.patient.findFirst({
+        where: {
+          OR: [
+            { cpf: cleanCpf },
+            ...(cleanDigits.length >= 6 ? [{ cpf: cleanDigits }] : []),
+          ],
         },
       });
 
-      // Se criado sem vínculo a um projeto específico (Cadastro Central)
-      if (!projectId) {
-        try {
-          const currentUser = await getCurrentUser();
-          await prisma.auditLog.create({
-            data: {
-              action: 'CREATE',
-              entityType: 'Patient',
-              entityId: patient.id,
-              changedBy: currentUser?.name || currentUser?.email || 'Administrador',
-              userEmail: currentUser?.email,
-              reason: `Cadastro de novo paciente ${patient.fullName} no prontuário unificado.`,
-            },
-          });
-        } catch (auditErr) {
-          console.warn('Erro ao registrar log de auditoria de cadastro:', auditErr);
+      if (patient && !projectId) {
+        return NextResponse.json(
+          { error: `Já existe um paciente cadastrado com este CPF (${cleanCpf}): ${patient.fullName}.` },
+          { status: 409 }
+        );
+      }
+
+      if (!patient) {
+        patient = await prisma.patient.create({
+          data: {
+            fullName: fullName.trim(),
+            cpf: cleanCpf,
+            email: email?.trim() || null,
+            phoneWhatsApp: phoneWhatsApp.trim(),
+            address: address?.trim() || null,
+            dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : new Date('2000-01-01'),
+            biologicalSex: biologicalSex || 'Não informado',
+            comorbidities: comorbidities?.trim() || null,
+            allergies: allergies?.trim() || null,
+            medications: medications?.trim() || null,
+            chiefComplaint: chiefComplaint?.trim() || null,
+            expectations: expectations?.trim() || null,
+          },
+        });
+
+        // Se criado sem vínculo a um projeto específico (Cadastro Central)
+        if (!projectId) {
+          try {
+            const currentUser = await getCurrentUser();
+            await prisma.auditLog.create({
+              data: {
+                action: 'CREATE',
+                entityType: 'Patient',
+                entityId: patient.id,
+                changedBy: currentUser?.name || currentUser?.email || 'Administrador',
+                userEmail: currentUser?.email,
+                reason: `Cadastro de novo paciente ${patient.fullName} no prontuário unificado.`,
+              },
+            });
+          } catch (auditErr) {
+            console.warn('Erro ao registrar log de auditoria de cadastro:', auditErr);
+          }
+          return NextResponse.json({ success: true, patient });
         }
+      } else if (!projectId) {
         return NextResponse.json({ success: true, patient });
       }
-    } else if (!projectId) {
-      return NextResponse.json({ success: true, patient });
     }
 
     // 2. Verificar se este paciente já está cadastrado nesta pesquisa específica

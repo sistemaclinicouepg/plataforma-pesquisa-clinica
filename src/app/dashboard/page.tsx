@@ -68,6 +68,7 @@ import {
   MoreHorizontal,
   Menu,
   UserPlus,
+  UserCheck,
 } from 'lucide-react';
 
 type Patient = {
@@ -671,6 +672,10 @@ function DashboardContent() {
 
   // Modal de Gestão de Equipe
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
+  const [addMemberMode, setAddMemberMode] = useState<'select' | 'manual'>('select');
+  const [systemResearchers, setSystemResearchers] = useState<Array<{ id: string; name: string; email: string; role: string }>>([]);
+  const [loadingResearchers, setLoadingResearchers] = useState(false);
+  const [selectedResearcherId, setSelectedResearcherId] = useState('');
   const [newMemberEmail, setNewMemberEmail] = useState('');
   const [newMemberRole, setNewMemberRole] = useState('EVALUATOR');
   const [newMemberBlinded, setNewMemberBlinded] = useState(true);
@@ -784,7 +789,16 @@ function DashboardContent() {
   });
   const [savingSession, setSavingSession] = useState(false);
 
-  // Form Novo Paciente
+  // Form Novo / Seleção de Paciente
+  const [patientModalMode, setPatientModalMode] = useState<'select' | 'new'>('select');
+  const [existingPatients, setExistingPatients] = useState<Array<any>>([]);
+  const [loadingExistingPatients, setLoadingExistingPatients] = useState(false);
+  const [patientSearchQuery, setPatientSearchQuery] = useState('');
+  const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
+  const [selectedPatientAdmissionData, setSelectedPatientAdmissionData] = useState({
+    chiefComplaint: '',
+    allergies: '',
+  });
   const [savingPatient, setSavingPatient] = useState(false);
   const [newPatientData, setNewPatientData] = useState({
     fullName: '',
@@ -1286,9 +1300,92 @@ function DashboardContent() {
     }
   };
 
+  // Carregamento de pesquisadores da plataforma ao abrir modal de membros
+  useEffect(() => {
+    if (showAddMemberModal) {
+      setLoadingResearchers(true);
+      fetch('/api/team')
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.users) {
+            setSystemResearchers(data.users);
+            const memberIds = new Set((project?.members || []).map((m: any) => m.userId || m.user?.id));
+            const memberEmails = new Set((project?.members || []).map((m: any) => (m.user?.email || '').toLowerCase()));
+            const available = (data.users || []).filter(
+              (u: any) => !memberIds.has(u.id) && !memberEmails.has((u.email || '').toLowerCase())
+            );
+            if (available.length > 0) {
+              setSelectedResearcherId(available[0].id);
+              setNewMemberEmail(available[0].email);
+            }
+          }
+        })
+        .catch((e) => console.error('Erro ao buscar pesquisadores:', e))
+        .finally(() => setLoadingResearchers(false));
+    }
+  }, [showAddMemberModal, project?.members]);
+
+  // Carregamento de pacientes existentes ao abrir o modal de pacientes
+  useEffect(() => {
+    if (showNewPatientModal) {
+      setLoadingExistingPatients(true);
+      fetch('/api/patients')
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.patients) {
+            setExistingPatients(data.patients);
+          }
+        })
+        .catch((e) => console.error('Erro ao buscar pacientes:', e))
+        .finally(() => setLoadingExistingPatients(false));
+    }
+  }, [showNewPatientModal]);
+
+  const availableResearchers = useMemo(() => {
+    const memberIds = new Set((project?.members || []).map((m: any) => m.userId || m.user?.id));
+    const memberEmails = new Set((project?.members || []).map((m: any) => (m.user?.email || '').toLowerCase()));
+    return systemResearchers.filter(
+      (u) => !memberIds.has(u.id) && !memberEmails.has((u.email || '').toLowerCase())
+    );
+  }, [systemResearchers, project?.members]);
+
+  const filteredExistingPatients = useMemo(() => {
+    const q = patientSearchQuery.trim().toLowerCase();
+    if (!q) return existingPatients;
+    return existingPatients.filter(
+      (p) =>
+        (p.fullName || '').toLowerCase().includes(q) ||
+        (p.cpf || '').includes(q) ||
+        (p.phoneWhatsApp || '').includes(q)
+    );
+  }, [existingPatients, patientSearchQuery]);
+
+  const selectedPatient = useMemo(() => {
+    if (!selectedPatientId) return null;
+    return existingPatients.find((p) => p.id === selectedPatientId) || null;
+  }, [existingPatients, selectedPatientId]);
+
   const handleAddMember = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!project || !newMemberEmail.trim()) return;
+    if (!project) return;
+
+    let targetEmail = newMemberEmail.trim();
+    let targetUserId: string | undefined = undefined;
+
+    if (addMemberMode === 'select') {
+      const selected = systemResearchers.find((u) => u.id === selectedResearcherId);
+      if (!selected) {
+        setMemberError('Selecione um pesquisador cadastrado.');
+        return;
+      }
+      targetEmail = selected.email;
+      targetUserId = selected.id;
+    } else {
+      if (!targetEmail) {
+        setMemberError('Informe o e-mail do pesquisador.');
+        return;
+      }
+    }
 
     try {
       setAddingMember(true);
@@ -1298,7 +1395,8 @@ function DashboardContent() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          email: newMemberEmail.trim(),
+          userId: targetUserId,
+          email: targetEmail,
           role: newMemberRole,
           isBlinded: newMemberBlinded,
         }),
@@ -1311,6 +1409,7 @@ function DashboardContent() {
 
       setShowAddMemberModal(false);
       setNewMemberEmail('');
+      setSelectedResearcherId('');
       loadProject();
     } catch (err: any) {
       setMemberError(err.message);
@@ -1471,10 +1570,15 @@ function DashboardContent() {
     }
   };
 
-  // Cadastro de Novo Paciente
+  // Cadastro ou Vínculo de Paciente
   const handleSaveNewPatient = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!project) return;
+
+    if (patientModalMode === 'select' && !selectedPatientId) {
+      alert('Selecione um paciente cadastrado na lista para vincular ao estudo.');
+      return;
+    }
 
     try {
       setSavingPatient(true);
@@ -1482,19 +1586,31 @@ function DashboardContent() {
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
 
+      const payload =
+        patientModalMode === 'select'
+          ? {
+              patientId: selectedPatientId,
+              projectId: project.id,
+              chiefComplaint: selectedPatientAdmissionData.chiefComplaint,
+              allergies: selectedPatientAdmissionData.allergies,
+            }
+          : {
+              ...newPatientData,
+              projectId: project.id,
+            };
+
       const res = await fetch('/api/patients', {
         method: 'POST',
         headers,
         credentials: 'include',
-        body: JSON.stringify({
-          ...newPatientData,
-          projectId: project.id,
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (res.ok) {
         const result = await res.json();
         setShowNewPatientModal(false);
+        setSelectedPatientId(null);
+        setPatientSearchQuery('');
         setNewPatientData({
           fullName: '',
           cpf: '',
@@ -1532,11 +1648,11 @@ function DashboardContent() {
         }
       } else {
         const errorData = await res.json().catch(() => ({}));
-        alert(errorData.error || 'Erro ao cadastrar paciente.');
+        alert(errorData.error || 'Erro ao cadastrar ou vincular paciente.');
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error('Erro ao cadastrar paciente:', e);
-      alert('Erro de rede ao cadastrar paciente.');
+      alert(e.message || 'Erro de rede ao cadastrar paciente.');
     } finally {
       setSavingPatient(false);
     }
@@ -4170,10 +4286,47 @@ function DashboardContent() {
       {showAddMemberModal && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-slate-200">
-            <h3 className="text-lg font-bold text-slate-900 mb-1">Adicionar Pesquisador ao Estudo</h3>
-            <p className="text-xs text-slate-500 mb-5">
-              Vincule um pesquisador já cadastrado na plataforma ao protocolo deste projeto.
+            <div className="flex items-center justify-between mb-1">
+              <h3 className="text-lg font-bold text-slate-900">Adicionar Pesquisador ao Estudo</h3>
+              <button
+                type="button"
+                onClick={() => setShowAddMemberModal(false)}
+                className="p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <p className="text-xs text-slate-500 mb-4">
+              Vincule um pesquisador cadastrado na plataforma ao protocolo deste projeto.
             </p>
+
+            {/* Alternância de Modo: Selecionar vs Digitar E-mail */}
+            <div className="flex bg-slate-100 p-1 rounded-xl mb-4 border border-slate-200">
+              <button
+                type="button"
+                onClick={() => setAddMemberMode('select')}
+                className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center space-x-1.5 cursor-pointer ${
+                  addMemberMode === 'select'
+                    ? 'bg-white text-blue-700 shadow-2xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <Users className="w-3.5 h-3.5" />
+                <span>Pesquisador Cadastrado</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setAddMemberMode('manual')}
+                className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center space-x-1.5 cursor-pointer ${
+                  addMemberMode === 'manual'
+                    ? 'bg-white text-blue-700 shadow-2xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Digitar por E-mail</span>
+              </button>
+            </div>
 
             {memberError && (
               <div className="mb-4 p-3 bg-red-50 border-l-4 border-red-500 rounded-r text-xs text-red-700">
@@ -4182,19 +4335,52 @@ function DashboardContent() {
             )}
 
             <form onSubmit={handleAddMember} className="space-y-4 text-xs">
-              <div>
-                <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">
-                  E-mail do Pesquisador ou Aluno
-                </label>
-                <input
-                  type="email"
-                  required
-                  value={newMemberEmail}
-                  onChange={(e) => setNewMemberEmail(e.target.value)}
-                  placeholder="exemplo@uepg.br"
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                />
-              </div>
+              {addMemberMode === 'select' ? (
+                <div>
+                  <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">
+                    Selecionar Pesquisador Cadastrado
+                  </label>
+                  {loadingResearchers ? (
+                    <div className="p-3 text-slate-400 text-center animate-pulse border border-slate-200 rounded-lg">
+                      Carregando pesquisadores...
+                    </div>
+                  ) : availableResearchers.length === 0 ? (
+                    <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-xs leading-relaxed">
+                      Todos os pesquisadores cadastrados na plataforma já fazem parte deste estudo. Caso queira convidar um novo, alterne para a aba <strong>Digitar por E-mail</strong>.
+                    </div>
+                  ) : (
+                    <select
+                      value={selectedResearcherId}
+                      onChange={(e) => {
+                        setSelectedResearcherId(e.target.value);
+                        const sel = systemResearchers.find((u) => u.id === e.target.value);
+                        if (sel) setNewMemberEmail(sel.email);
+                      }}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    >
+                      {availableResearchers.map((u) => (
+                        <option key={u.id} value={u.id}>
+                          {u.name} ({u.email}) - {u.role === 'ADMIN' ? 'Administrador' : 'Pesquisador'}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+              ) : (
+                <div>
+                  <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">
+                    E-mail do Pesquisador ou Aluno
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    value={newMemberEmail}
+                    onChange={(e) => setNewMemberEmail(e.target.value)}
+                    placeholder="exemplo@uepg.br"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  />
+                </div>
+              )}
 
               <div>
                 <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">
@@ -4203,7 +4389,7 @@ function DashboardContent() {
                 <select
                   value={newMemberRole}
                   onChange={(e) => setNewMemberRole(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
                 >
                   <option value="COORDINATOR">Coordenador</option>
                   <option value="CO_ADVISOR">Co-orientador</option>
@@ -4226,7 +4412,7 @@ function DashboardContent() {
                       Pesquisador Cego
                     </span>
                     <span className="text-[11px] text-purple-700">
-                      Oculta os grupos alocados deste membro no sistema.
+                      Oculta os grupos alocados deste membro no sistema para garantir o cegamento metodológico.
                     </span>
                   </div>
                 </label>
@@ -4236,14 +4422,14 @@ function DashboardContent() {
                 <button
                   type="button"
                   onClick={() => setShowAddMemberModal(false)}
-                  className="px-4 py-2 border border-slate-300 rounded-lg font-bold text-slate-600 hover:bg-slate-50"
+                  className="px-4 py-2 border border-slate-300 rounded-lg font-bold text-slate-600 hover:bg-slate-50 cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  disabled={addingMember}
-                  className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow-sm transition disabled:opacity-50"
+                  disabled={addingMember || (addMemberMode === 'select' && availableResearchers.length === 0)}
+                  className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow-sm transition disabled:opacity-50 cursor-pointer"
                 >
                   {addingMember ? 'Adicionando...' : 'Adicionar à Equipe'}
                 </button>
@@ -4841,102 +5027,293 @@ function DashboardContent() {
         </div>
       )}
 
-      {/* Modal de Cadastro de Novo Paciente e Prontuário */}
+      {/* Modal de Cadastro / Seleção de Paciente no Estudo */}
       {showNewPatientModal && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto">
           <div className="bg-white rounded-2xl shadow-2xl max-w-xl w-full p-6 border border-slate-200 my-8 max-h-[90vh] overflow-y-auto">
-            <h2 className="text-xl font-bold text-slate-900 mb-1">Cadastrar Paciente e Prontuário</h2>
-            <p className="text-xs text-slate-500 mb-6">
-              Os dados de identificação ficam guardados com segurança e o sistema gera automaticamente o código cego (Ex: P00X) para a pesquisa.
+            <div className="flex items-center justify-between mb-1">
+              <h2 className="text-xl font-bold text-slate-900">Adicionar Paciente ao Estudo</h2>
+              <button
+                type="button"
+                onClick={() => setShowNewPatientModal(false)}
+                className="p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <p className="text-xs text-slate-500 mb-4">
+              Selecione um paciente já cadastrado no sistema ou cadastre um novo voluntário.
             </p>
 
+            {/* Alternância de Modo: Selecionar Já Cadastrado vs Cadastrar Novo */}
+            <div className="flex bg-slate-100 p-1 rounded-xl mb-5 border border-slate-200">
+              <button
+                type="button"
+                onClick={() => setPatientModalMode('select')}
+                className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center space-x-2 cursor-pointer ${
+                  patientModalMode === 'select'
+                    ? 'bg-white text-blue-700 shadow-2xs font-extrabold'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <UserCheck className="w-4 h-4" />
+                <span>Selecionar Já Cadastrado</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setPatientModalMode('new')}
+                className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center space-x-2 cursor-pointer ${
+                  patientModalMode === 'new'
+                    ? 'bg-white text-blue-700 shadow-2xs font-extrabold'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <Plus className="w-4 h-4" />
+                <span>Cadastrar Novo Paciente</span>
+              </button>
+            </div>
+
             <form onSubmit={handleSaveNewPatient} className="space-y-4 text-xs">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">Nome Completo</label>
-                  <input
-                    type="text"
-                    required
-                    value={newPatientData.fullName}
-                    onChange={(e) => setNewPatientData({ ...newPatientData, fullName: e.target.value })}
-                    placeholder="Nome do paciente"
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">CPF</label>
-                  <input
-                    type="text"
-                    required
-                    value={newPatientData.cpf}
-                    onChange={(e) => setNewPatientData({ ...newPatientData, cpf: e.target.value })}
-                    placeholder="000.000.000-00"
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div>
-                  <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">WhatsApp</label>
-                  <input
-                    type="text"
-                    required
-                    value={newPatientData.phoneWhatsApp}
-                    onChange={(e) => setNewPatientData({ ...newPatientData, phoneWhatsApp: e.target.value })}
-                    placeholder="(42) 99999-9999"
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">Data Nascimento</label>
-                  <input
-                    type="date"
-                    required
-                    value={newPatientData.dateOfBirth}
-                    onChange={(e) => setNewPatientData({ ...newPatientData, dateOfBirth: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">Sexo Biológico</label>
-                  <select
-                    value={newPatientData.biologicalSex}
-                    onChange={(e) => setNewPatientData({ ...newPatientData, biologicalSex: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
-                  >
-                    <option value="Feminino">Feminino</option>
-                    <option value="Masculino">Masculino</option>
-                    <option value="Outro">Outro</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="pt-2 border-t border-slate-100">
-                <h4 className="font-bold text-slate-800 text-sm mb-3">Dados Iniciais de Triagem</h4>
-                <div className="space-y-3">
+              {patientModalMode === 'select' ? (
+                <div className="space-y-4">
                   <div>
-                    <label className="block text-slate-600 mb-1">Queixa Principal / Motivo da Consulta</label>
-                    <input
-                      type="text"
-                      value={newPatientData.chiefComplaint}
-                      onChange={(e) => setNewPatientData({ ...newPatientData, chiefComplaint: e.target.value })}
-                      placeholder="Ex: Quer clarear os dentes para formatura"
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
-                    />
+                    <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">
+                      Pesquisar Paciente Cadastrado
+                    </label>
+                    <div className="relative">
+                      <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                      <input
+                        type="text"
+                        placeholder="Buscar por nome, CPF ou WhatsApp..."
+                        value={patientSearchQuery}
+                        onChange={(e) => setPatientSearchQuery(e.target.value)}
+                        className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                      />
+                    </div>
                   </div>
+
+                  {/* Lista de Pacientes Encontrados */}
                   <div>
-                    <label className="block text-slate-600 mb-1">Alergias Prévias Relatadas</label>
-                    <input
-                      type="text"
-                      value={newPatientData.allergies}
-                      onChange={(e) => setNewPatientData({ ...newPatientData, allergies: e.target.value })}
-                      placeholder="Ex: Nenhuma ou Alergia a Penicilina"
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
-                    />
+                    <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">
+                      Resultados ({filteredExistingPatients.length})
+                    </p>
+
+                    {loadingExistingPatients ? (
+                      <div className="p-6 text-center text-slate-400 border border-slate-200 rounded-xl animate-pulse">
+                        Carregando lista de pacientes...
+                      </div>
+                    ) : filteredExistingPatients.length === 0 ? (
+                      <div className="p-6 text-center text-slate-400 border border-dashed border-slate-300 rounded-xl">
+                        <Users className="w-8 h-8 mx-auto text-slate-300 mb-1" />
+                        <p className="text-xs font-semibold text-slate-600">Nenhum paciente encontrado com esses dados.</p>
+                        <p className="text-[11px] text-slate-400 mt-1">
+                          Você pode alternar para a aba <strong>"Cadastrar Novo Paciente"</strong> acima.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                        {filteredExistingPatients.map((p) => {
+                          const alreadyIn = (project?.participants || []).some(
+                            (part: any) => part.patientId === p.id || part.patient?.id === p.id
+                          );
+                          const isSelected = selectedPatientId === p.id;
+                          const otherProjects = (p.participations || []).filter(
+                            (part: any) => part.projectId !== project?.id
+                          );
+
+                          return (
+                            <div
+                              key={p.id}
+                              onClick={() => {
+                                if (!alreadyIn) {
+                                  setSelectedPatientId(p.id);
+                                  setSelectedPatientAdmissionData({
+                                    chiefComplaint: p.chiefComplaint || '',
+                                    allergies: p.allergies || '',
+                                  });
+                                }
+                              }}
+                              className={`p-3 rounded-xl border transition ${
+                                alreadyIn
+                                  ? 'bg-slate-50 border-slate-200 opacity-60 cursor-not-allowed'
+                                  : isSelected
+                                  ? 'bg-blue-50/80 border-blue-400 ring-2 ring-blue-500/20 shadow-xs cursor-pointer'
+                                  : 'bg-white border-slate-200 hover:border-blue-300 hover:bg-slate-50/60 cursor-pointer'
+                              }`}
+                            >
+                              <div className="flex items-start justify-between gap-2">
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <h4 className="font-bold text-slate-900 text-sm">{p.fullName}</h4>
+                                    {isSelected && (
+                                      <span className="px-1.5 py-0.2 bg-blue-600 text-white rounded text-[10px] font-bold inline-flex items-center gap-0.5">
+                                        <Check className="w-3 h-3" /> Selecionado
+                                      </span>
+                                    )}
+                                    {alreadyIn && (
+                                      <span className="px-2 py-0.5 bg-amber-100 text-amber-800 rounded text-[10px] font-bold">
+                                        Já inscrito neste estudo
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-slate-500 text-[11px] mt-1 font-mono">
+                                    <span>CPF: {p.cpf}</span>
+                                    <span>•</span>
+                                    <span>Tel: {p.phoneWhatsApp}</span>
+                                    {p.biologicalSex && (
+                                      <>
+                                        <span>•</span>
+                                        <span className="font-sans">{p.biologicalSex}</span>
+                                      </>
+                                    )}
+                                  </div>
+
+                                  {otherProjects.length > 0 && (
+                                    <p className="text-[10px] text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded mt-1.5 inline-block">
+                                      Participa de outro estudo: {otherProjects.map((op: any) => op.project?.name || 'Pesquisa').join(', ')}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Informações da Admissão neste Estudo */}
+                  {selectedPatient && (
+                    <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
+                      <h4 className="font-bold text-slate-800 text-xs">
+                        Dados de Admissão no Estudo para <strong>{selectedPatient.fullName}</strong>
+                      </h4>
+                      <div>
+                        <label className="block text-slate-600 mb-1">Queixa Principal / Motivo da Consulta</label>
+                        <input
+                          type="text"
+                          value={selectedPatientAdmissionData.chiefComplaint}
+                          onChange={(e) =>
+                            setSelectedPatientAdmissionData({
+                              ...selectedPatientAdmissionData,
+                              chiefComplaint: e.target.value,
+                            })
+                          }
+                          placeholder="Ex: Quer clarear os dentes para formatura"
+                          className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-slate-600 mb-1">Alergias Relatadas</label>
+                        <input
+                          type="text"
+                          value={selectedPatientAdmissionData.allergies}
+                          onChange={(e) =>
+                            setSelectedPatientAdmissionData({
+                              ...selectedPatientAdmissionData,
+                              allergies: e.target.value,
+                            })
+                          }
+                          placeholder="Ex: Nenhuma ou Alergia a Penicilina"
+                          className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                /* Modo Cadastrar Novo Paciente */
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">Nome Completo</label>
+                      <input
+                        type="text"
+                        required={patientModalMode === 'new'}
+                        value={newPatientData.fullName}
+                        onChange={(e) => setNewPatientData({ ...newPatientData, fullName: e.target.value })}
+                        placeholder="Nome do paciente"
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">CPF</label>
+                      <input
+                        type="text"
+                        required={patientModalMode === 'new'}
+                        value={newPatientData.cpf}
+                        onChange={(e) => setNewPatientData({ ...newPatientData, cpf: e.target.value })}
+                        placeholder="000.000.000-00"
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">WhatsApp</label>
+                      <input
+                        type="text"
+                        required={patientModalMode === 'new'}
+                        value={newPatientData.phoneWhatsApp}
+                        onChange={(e) => setNewPatientData({ ...newPatientData, phoneWhatsApp: e.target.value })}
+                        placeholder="(42) 99999-9999"
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">Data Nascimento</label>
+                      <input
+                        type="date"
+                        required={patientModalMode === 'new'}
+                        value={newPatientData.dateOfBirth}
+                        onChange={(e) => setNewPatientData({ ...newPatientData, dateOfBirth: e.target.value })}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">Sexo Biológico</label>
+                      <select
+                        value={newPatientData.biologicalSex}
+                        onChange={(e) => setNewPatientData({ ...newPatientData, biologicalSex: e.target.value })}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white"
+                      >
+                        <option value="Feminino">Feminino</option>
+                        <option value="Masculino">Masculino</option>
+                        <option value="Outro">Outro</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="pt-2 border-t border-slate-100">
+                    <h4 className="font-bold text-slate-800 text-sm mb-3">Dados Iniciais de Triagem</h4>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-slate-600 mb-1">Queixa Principal / Motivo da Consulta</label>
+                        <input
+                          type="text"
+                          value={newPatientData.chiefComplaint}
+                          onChange={(e) => setNewPatientData({ ...newPatientData, chiefComplaint: e.target.value })}
+                          placeholder="Ex: Quer clarear os dentes para formatura"
+                          className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-slate-600 mb-1">Alergias Prévias Relatadas</label>
+                        <input
+                          type="text"
+                          value={newPatientData.allergies}
+                          onChange={(e) => setNewPatientData({ ...newPatientData, allergies: e.target.value })}
+                          placeholder="Ex: Nenhuma ou Alergia a Penicilina"
+                          className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
 
               {/* Opção para abrir a Ficha Clínica imediatamente */}
               <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl flex items-center space-x-2">
@@ -4945,7 +5322,7 @@ function DashboardContent() {
                   id="openAnamnesisCheck"
                   checked={openAnamnesisAfterCreate}
                   onChange={(e) => setOpenAnamnesisAfterCreate(e.target.checked)}
-                  className="w-4 h-4 text-blue-600 rounded"
+                  className="w-4 h-4 text-blue-600 rounded cursor-pointer"
                 />
                 <label htmlFor="openAnamnesisCheck" className="text-xs text-blue-900 font-semibold cursor-pointer">
                   Abrir a ficha clínica e anamnese do projeto imediatamente após salvar
@@ -4957,22 +5334,24 @@ function DashboardContent() {
                   type="button"
                   onClick={() => setShowNewPatientModal(false)}
                   disabled={savingPatient}
-                  className="px-4 py-2 border border-slate-300 rounded-lg font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+                  className="px-4 py-2 border border-slate-300 rounded-lg font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-50 cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  disabled={savingPatient}
-                  className="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg font-bold shadow-sm transition flex items-center gap-2"
+                  disabled={savingPatient || (patientModalMode === 'select' && !selectedPatientId)}
+                  className="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg font-bold shadow-sm transition flex items-center gap-2 cursor-pointer"
                 >
                   {savingPatient ? (
                     <>
                       <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                      Salvando Candidato...
+                      <span>Salvando...</span>
                     </>
+                  ) : patientModalMode === 'select' ? (
+                    'Vincular Paciente ao Estudo'
                   ) : (
-                    'Salvar Paciente'
+                    'Salvar e Vincular Novo Paciente'
                   )}
                 </button>
               </div>
