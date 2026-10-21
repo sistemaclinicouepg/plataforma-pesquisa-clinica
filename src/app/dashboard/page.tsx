@@ -20,6 +20,8 @@ import {
   StudyProtocolConfig,
   getRespondentLabel,
   getFrequencyLabel,
+  RESEARCH_SPECIALTIES,
+  ResearchSpecialty,
 } from '@/lib/studyProtocol';
 import {
   Stethoscope,
@@ -254,28 +256,28 @@ const getVitaSGU = (shade: string | null | undefined): number => {
 
 const SESSION_DEFINITIONS: Record<number, { title: string; subtitle: string; tag: string; defaultType: string }> = {
   1: {
-    title: 'Sessão 1: Baseline & 1ª Aplicação',
-    subtitle: 'Aferição da cor de base (VITA), aplicação dos géis (boca dividida) e registro da dor (EVA 0-48h)',
+    title: 'Sessão 1: Linha de Base & 1ª Intervenção',
+    subtitle: 'Registro inicial, aplicação do protocolo clínico e monitoramento da dor pós-operatória (EVA 0-48h)',
     tag: 'S1',
     defaultType: 'BASELINE_INTERVENTION_1',
   },
   2: {
-    title: 'Sessão 2: 2ª Aplicação (7 dias)',
-    subtitle: 'Segunda aplicação clínica do protocolo clareador e monitoramento de sensibilidade',
+    title: 'Sessão 2: 2ª Intervenção Clínica',
+    subtitle: 'Segunda intervenção do protocolo clínico e acompanhamento de sensibilidade e desfechos',
     tag: 'S2',
     defaultType: 'INTERVENTION_2',
   },
   3: {
-    title: 'Sessão 3: Retorno de 14 Dias',
-    subtitle: 'Avaliação pós-tratamento imediato: estabilidade de cor e ausência de efeitos adversos',
-    tag: 'R14d',
-    defaultType: 'FOLLOW_UP_14D',
+    title: 'Sessão 3: Retorno de Acompanhamento',
+    subtitle: 'Avaliação pós-tratamento: longevidade clínica, cicatrização e ausência de efeitos adversos',
+    tag: 'R1',
+    defaultType: 'FOLLOW_UP_1',
   },
   4: {
-    title: 'Sessão 4: Retorno de 30 Dias',
-    subtitle: 'Avaliação final de longevidade, eficácia clareadora e encerramento do protocolo do participante',
-    tag: 'R30d',
-    defaultType: 'FOLLOW_UP_30D',
+    title: 'Sessão 4: Avaliação Final e Encerramento',
+    subtitle: 'Avaliação final de longevidade, eficácia clínica e encerramento do protocolo do participante',
+    tag: 'R_FINAL',
+    defaultType: 'FOLLOW_UP_FINAL',
   },
 };
 
@@ -620,6 +622,12 @@ function DashboardContent() {
     () => parseStudyProtocol(project?.anamnesisTemplate),
     [project?.anamnesisTemplate]
   );
+  const currentSpecialty = React.useMemo(() => {
+    return (
+      RESEARCH_SPECIALTIES.find((s) => s.id === studyProtocol.specialty) ||
+      RESEARCH_SPECIALTIES.find((s) => s.id === 'GENERAL')!
+    );
+  }, [studyProtocol.specialty]);
   const [allProjects, setAllProjects] = useState<Array<{ id: string; name: string }>>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -2729,7 +2737,7 @@ function DashboardContent() {
               <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-center space-x-2.5 text-xs text-amber-900 shadow-2xs">
                 <Lock className="w-4 h-4 text-amber-700 shrink-0" />
                 <span>
-                  <strong>Modo Avaliador Cego Ativo ({currentUser?.name || currentUser?.email}):</strong> Os grupos de intervenção (Gel A vs Gel B) e respostas subjetivas permanecem mascarados conforme diretrizes CONSORT.
+                  <strong>Modo Avaliador Cego Ativo ({currentUser?.name || currentUser?.email}):</strong> Os grupos de intervenção (Grupo A vs Grupo B / Intervenção vs Controle) e respostas subjetivas permanecem mascarados conforme diretrizes CONSORT.
                 </span>
               </div>
             )}
@@ -3650,8 +3658,8 @@ function DashboardContent() {
                     Controle Metodológico de Cegamento (Blinding)
                   </h3>
                   <p className="text-xs text-blue-800 mt-1 leading-relaxed">
-                    Em ensaios clínicos randomizados de boca dividida (split-mouth), os avaliadores que medem a cor ou examinam o paciente 
-                    <strong> nunca devem saber qual gel ou grupo foi aplicado em qual lado</strong>. 
+                    Em ensaios clínicos randomizados (split-mouth ou grupos paralelos), os avaliadores que medem desfechos ou examinam o paciente 
+                    <strong> nunca devem saber qual material, grupo ou intervenção foi aplicada em cada lado</strong>. 
                     Membros marcados como <strong>'Avaliador Cego'</strong> verão os grupos alocados como <span className="font-mono bg-blue-100 px-1 py-0.5 rounded font-bold inline-flex items-center"><Lock className="w-3 h-3 mr-1 inline" />OCULTO</span>.
                   </p>
                 </div>
@@ -3843,7 +3851,7 @@ function DashboardContent() {
                 <div>
                   <h2 className="text-base font-bold text-slate-900">Bioestatística & Resultados do Ensaio</h2>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    Desfechos clínicos primários (Cinética de Dor EVA e Clareamento ΔSGU Vita) e exportação científica.
+                    Desfechos clínicos primários (Cinética de Dor EVA, Desfechos Operatórios e Eficácia Clínica) e exportação científica.
                   </p>
                 </div>
 
@@ -3968,11 +3976,11 @@ function DashboardContent() {
                 </div>
 
                 <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-2xs">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Clareamento Médio</p>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Eficácia Estética / ΔSGU</p>
                   <p className="text-xl font-black text-emerald-600 mt-0.5">
                     +{deltaCount > 0 ? ((avgDeltaR + avgDeltaL) / 2).toFixed(1) : 0} <span className="text-xs font-normal text-slate-400">ΔSGU</span>
                   </p>
-                  <p className="text-[10px] text-slate-500 mt-0.5">Escala Vita Classical (16 passos)</p>
+                  <p className="text-[10px] text-slate-500 mt-0.5">Escala Vita Classical (quando aferido)</p>
                 </div>
 
                 <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-2xs">
@@ -4001,12 +4009,12 @@ function DashboardContent() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-2">
                         <Zap className="w-5 h-5 text-amber-600" />
-                        <h3 className="text-base font-bold text-slate-900">Cinética da Sensibilidade (EVA)</h3>
+                        <h3 className="text-base font-bold text-slate-900">Cinética de Dor / Sensibilidade (EVA)</h3>
                       </div>
                       <span className="text-xs font-semibold text-slate-400">Média ± DP (0-10)</span>
                     </div>
                     <p className="text-xs text-slate-500 mt-1">
-                      Média ± Desvio Padrão (DP) e Intervalo de Confiança (IC 95%) ao longo de 48 horas pós-clareamento.
+                      Média ± Desvio Padrão (DP) e Intervalo de Confiança (IC 95%) ao longo de 48 horas pós-atendimento.
                     </p>
                   </div>
 
@@ -4085,7 +4093,7 @@ function DashboardContent() {
 
                   <div className="mt-4 p-3 bg-slate-50 border border-slate-100 rounded-xl text-[11px] text-slate-600 flex items-start space-x-1.5">
                     <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
-                    <span><strong>Interpretação Clínica:</strong> O perfil cinético da dor em clareamento reflete a difusão dos radicais livres através dos túbulos dentinários, sensibilizando as fibras nociceptivas A-delta pulpares.</span>
+                    <span><strong>Interpretação Clínica:</strong> O perfil cinético da dor pós-operatória reflete a resposta inflamatória e nociceptiva das primeiras horas após a intervenção clínica, decrescendo progressivamente ao longo de 48 horas.</span>
                   </div>
                 </div>
 
@@ -4095,12 +4103,12 @@ function DashboardContent() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-2">
                         <Sparkles className="w-5 h-5 text-blue-600" />
-                        <h3 className="text-base font-bold text-slate-900">Eficácia Clareadora (ΔSGU Vita)</h3>
+                        <h3 className="text-base font-bold text-slate-900">Eficácia Estética / Alteração de Cor (ΔSGU Vita)</h3>
                       </div>
                       <span className="text-xs font-semibold text-slate-400">Escala Vita Classical</span>
                     </div>
                     <p className="text-xs text-slate-500 mt-1">
-                      Clareamento médio por hemi-arco em unidades da guia Vita (16 passos de B1 a C4).
+                      Alteração média por hemi-arco em unidades da guia Vita (quando aplicável ao protocolo de pesquisa).
                     </p>
                   </div>
 
@@ -4125,7 +4133,7 @@ function DashboardContent() {
                           />
                         </div>
                         <span className="text-[10px] text-slate-400 mt-0.5 block">
-                          Clareamento médio no quadrante direito (Média ± DP).
+                          Alteração de cor média no quadrante direito (Média ± DP).
                         </span>
                       </div>
 
@@ -4144,7 +4152,7 @@ function DashboardContent() {
                           />
                         </div>
                         <span className="text-[10px] text-slate-400 mt-0.5 block">
-                          Clareamento médio no quadrante esquerdo (Média ± DP).
+                          Alteração de cor média no quadrante esquerdo (Média ± DP).
                         </span>
                       </div>
 
@@ -6171,9 +6179,9 @@ function DashboardContent() {
               <div className="bg-slate-50/80 border-b border-slate-200 px-5 sm:px-6 py-3 shrink-0">
                 <div className="flex items-center justify-between">
                   {[
-                    { step: 1, title: 'Linha de Base', sub: 'Cor & Checagem' },
-                    { step: 2, title: 'Aplicação', sub: 'Gel & Timer' },
-                    { step: 3, title: 'Desfechos', sub: 'EVA 0h & Gengiva' },
+                    { step: 1, title: 'Linha de Base', sub: 'Exame & Elementos' },
+                    { step: 2, title: 'Intervenção', sub: 'Procedimento & Timer' },
+                    { step: 3, title: 'Desfechos', sub: 'EVA 0h & Tecidos' },
                     { step: 4, title: 'Conclusão', sub: 'Equipe & Diário' },
                   ].map((s, idx, arr) => {
                     const isCurrent = sessionStep === s.step;
@@ -6231,7 +6239,7 @@ function DashboardContent() {
                     <div className="space-y-4 animate-fadeIn">
                       <div className="flex items-center gap-2 text-slate-900 font-bold text-sm border-b border-slate-100 pb-2">
                         <Sparkles className="w-4 h-4 text-amber-500" />
-                        <span>Passo 1: Checagem Inicial e Aferição de Cor (Linha de Base)</span>
+                        <span>Passo 1: Checagem Inicial e Linha de Base</span>
                       </div>
 
                       {/* Data do Atendimento */}
@@ -6268,23 +6276,23 @@ function DashboardContent() {
                         </div>
                       </div>
 
-                      {/* Registro de Cor Escala VITA Classical (Boca Dividida) */}
+                      {/* Aferição de Cor Dental (Escala VITA Classical - Quando Aplicável) */}
                       <div className="p-4 bg-amber-50/50 border border-amber-200/80 rounded-2xl space-y-3 shadow-2xs">
                         <div className="flex items-center justify-between">
                           <span className="font-bold text-amber-950 text-xs inline-flex items-center gap-1.5">
                             <Sparkles className="w-4 h-4 text-amber-600" />
-                            <span>Tom de Cor Dental Inicial (Linha de Base - VITA Classical)</span>
+                            <span>Aferição de Cor Dental (VITA Classical - se aplicável ao estudo)</span>
                           </span>
-                          <span className="text-[10px] text-amber-800 font-medium">Boca Dividida (Split-mouth)</span>
+                          <span className="text-[10px] text-amber-800 font-medium">Boca Dividida ou Dentes Teste</span>
                         </div>
                         <p className="text-[11px] text-amber-900/80 leading-relaxed">
-                          Aferir a cor no terço médio dos incisivos e caninos sob luz padronizada antes de qualquer manipulação ou desidratação dental.
+                          Aferição sob luz padronizada antes da intervenção. Aplicável a clareamento dental, compósitos e cerâmicas. Em ensaios cirúrgicos ou endodônticos sem aferição de cor, pode-se manter o valor padrão.
                         </p>
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                           <div className="bg-white p-3 rounded-xl border border-amber-200 shadow-2xs">
                             <label className="block font-bold text-slate-700 text-xs mb-1.5">
-                              Hemi-arco Direito (13 a 11)
+                              Lado Direito / Hemi-arco 1 (ou Dente Teste A)
                             </label>
                             <select
                               value={currentSessionForm.shadeRight}
@@ -6303,7 +6311,7 @@ function DashboardContent() {
 
                           <div className="bg-white p-3 rounded-xl border border-amber-200 shadow-2xs">
                             <label className="block font-bold text-slate-700 text-xs mb-1.5">
-                              Hemi-arco Esquerdo (21 a 23)
+                              Lado Esquerdo / Hemi-arco 2 (ou Dente Teste B)
                             </label>
                             <select
                               value={currentSessionForm.shadeLeft}
@@ -6329,49 +6337,48 @@ function DashboardContent() {
                           <span>Confirmação Pré-Procedimento:</span>
                         </span>
                         <p className="leading-relaxed">
-                          • Ausência de queixas de dor aguda espontânea antes do atendimento.<br />
-                          • Tecidos moles (mucosa jugal, lábios e gengiva marginal) íntegros e aptos para a intervenção.
+                          • Ausência de contraindicações imediatas ou dor aguda espontânea impeditiva antes do atendimento.<br />
+                          • Tecidos moles (mucosa jugal, lábios e margem gengival) avaliados e aptos para a intervenção clínica.
                         </p>
                       </div>
                     </div>
                   )}
 
-                  {/* ===================== PASSO 2: APLICAÇÃO DO GEL & CRONÔMETRO ===================== */}
+                  {/* ===================== PASSO 2: EXECUÇÃO CLÍNICA & CRONÔMETRO ===================== */}
                   {sessionStep === 2 && (
                     <div className="space-y-4 animate-fadeIn">
                       <div className="flex items-center gap-2 text-slate-900 font-bold text-sm border-b border-slate-100 pb-2">
                         <Clock className="w-4 h-4 text-blue-600" />
-                        <span>Passo 2: Execução Clínica e Cronômetro de Aplicação</span>
+                        <span>Passo 2: {currentSpecialty.procedureTitle || 'Execução do Procedimento Clínico'}</span>
                       </div>
 
-                      {/* Checklist Clínico */}
+                      {/* Checklist Clínico Dinâmico Adaptado à Especialidade */}
                       <div className="p-3.5 bg-blue-50/60 border border-blue-200 rounded-2xl space-y-2 text-xs">
-                        <span className="font-bold text-blue-950 flex items-center gap-1.5">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" />
-                          <span>Etapas Clínicas Padronizadas (Protocolo Experimental):</span>
+                        <span className="font-bold text-blue-950 flex items-center justify-between">
+                          <span className="flex items-center gap-1.5">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" />
+                            <span>Etapas Padronizadas ({currentSpecialty.name}):</span>
+                          </span>
+                          <span className="text-[10px] font-semibold text-blue-700 bg-blue-100/70 px-2 py-0.5 rounded-full">
+                            {currentSpecialty.badge}
+                          </span>
                         </span>
                         <ul className="space-y-1.5 text-[11px] text-blue-900">
-                          <li className="flex items-center gap-2">
-                            <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                            <span>Profilaxia coronária realizada com pedra-pomes e água.</span>
-                          </li>
-                          <li className="flex items-center gap-2">
-                            <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                            <span>Barreira gengival fotopolimerizada com vedamento absoluto das papilas.</span>
-                          </li>
-                          <li className="flex items-center gap-2">
-                            <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                            <span>Aplicação homogênea do gel clareador em hemi-arco direito e esquerdo.</span>
-                          </li>
+                          {currentSpecialty.checklist.map((item, idx) => (
+                            <li key={idx} className="flex items-start gap-2">
+                              <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                              <span>{item}</span>
+                            </li>
+                          ))}
                         </ul>
                       </div>
 
-                      {/* Cronômetro Clínico do Gel Integrado */}
+                      {/* Cronômetro Clínico Integrado */}
                       <div className="p-5 bg-gradient-to-br from-slate-900 to-indigo-950 rounded-2xl text-white space-y-3.5 shadow-md text-center">
                         <div className="flex items-center justify-between text-xs text-slate-300">
                           <span className="font-semibold flex items-center gap-1.5">
                             <Clock className="w-3.5 h-3.5 text-blue-400" />
-                            <span>Tempo de Contato do Gel na Cadeira</span>
+                            <span>Cronômetro Clínico do Atendimento</span>
                           </span>
                           <span className="text-[10px] text-slate-400">
                             {gelTimerRunning ? 'Cronometrando...' : 'Pausado'}
@@ -6399,7 +6406,7 @@ function DashboardContent() {
                             {gelTimerRunning ? (
                               <>
                                 <Pause className="w-3.5 h-3.5 fill-current" />
-                                <span>Pausar Cronômetro</span>
+                                <span>Pausar Tempo</span>
                               </>
                             ) : (
                               <>
@@ -6424,35 +6431,49 @@ function DashboardContent() {
                         </div>
 
                         {/* Atalhos de Minutos */}
-                        <div className="flex justify-center gap-2 pt-1 text-[10px]">
+                        <div className="flex justify-center gap-2 pt-1 text-[10px] flex-wrap">
+                          <button
+                            type="button"
+                            onClick={() => setGelTimerSeconds(10 * 60)}
+                            className="px-2.5 py-1 bg-white/10 hover:bg-white/20 rounded-lg text-slate-200 transition"
+                          >
+                            +10 min
+                          </button>
                           <button
                             type="button"
                             onClick={() => setGelTimerSeconds(15 * 60)}
                             className="px-2.5 py-1 bg-white/10 hover:bg-white/20 rounded-lg text-slate-200 transition"
                           >
-                            +15 min (1ª apl.)
+                            +15 min
                           </button>
                           <button
                             type="button"
                             onClick={() => setGelTimerSeconds(30 * 60)}
                             className="px-2.5 py-1 bg-white/10 hover:bg-white/20 rounded-lg text-slate-200 transition"
                           >
-                            +30 min (2ª apl.)
+                            +30 min
                           </button>
                           <button
                             type="button"
                             onClick={() => setGelTimerSeconds(45 * 60)}
                             className="px-2.5 py-1 bg-white/10 hover:bg-white/20 rounded-lg text-slate-200 transition"
                           >
-                            +45 min (Total)
+                            +45 min
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setGelTimerSeconds(60 * 60)}
+                            className="px-2.5 py-1 bg-white/10 hover:bg-white/20 rounded-lg text-slate-200 transition"
+                          >
+                            +60 min
                           </button>
                         </div>
                       </div>
 
-                      {/* Observações da Aplicação */}
+                      {/* Observações da Intervenção */}
                       <div>
                         <label className="block font-bold text-slate-700 uppercase tracking-wider text-[11px] mb-1">
-                          Intercorrências durante o tempo de ação do gel (opcional):
+                          Intercorrências durante o procedimento (opcional):
                         </label>
                         <input
                           type="text"
@@ -6460,7 +6481,7 @@ function DashboardContent() {
                           onChange={(e) =>
                             setCurrentSessionForm({ ...currentSessionForm, adverseEvents: e.target.value })
                           }
-                          placeholder="Ex: Leve desconforto térmico no incisivo aos 20 min, barreira intacta..."
+                          placeholder="Ex: Leve desconforto térmico, sangramento local controlado, tempo de polimerização extra..."
                           className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
                         />
                       </div>
@@ -6480,7 +6501,7 @@ function DashboardContent() {
                         <div className="flex justify-between items-center">
                           <span className="font-bold text-slate-800 text-xs inline-flex items-center gap-1.5">
                             <Zap className="w-4 h-4 text-amber-500" />
-                            <span>Sensibilidade Imediata no Consultório (Escala EVA)</span>
+                            <span>Dor ou Sensibilidade Imediata no Consultório (Escala EVA)</span>
                           </span>
                         </div>
                         <p className="text-[11px] text-slate-500 leading-relaxed">
@@ -6515,17 +6536,17 @@ function DashboardContent() {
                         </div>
                       </div>
 
-                      {/* Irritação Gengival Marginal */}
+                      {/* Exame de Tecidos Moles / Margem / Alvéolo */}
                       <div>
                         <label className="block font-bold text-slate-700 uppercase tracking-wider text-[11px] mb-1.5">
-                          Exame da Margem Gengival / Tecidos Moles:
+                          Exame de Tecidos Moles / Margem Gengival / Alvéolo / Ferida Operatória:
                         </label>
                         <div className="grid grid-cols-2 gap-2">
                           {[
-                            { val: 'Ausente', title: 'Ausente', desc: 'Gengiva hígida e rósea' },
-                            { val: 'Leve', title: 'Leve', desc: 'Eritema marginal transitório' },
-                            { val: 'Moderada', title: 'Moderada', desc: 'Eritema acentuado / branqueamento' },
-                            { val: 'Severa', title: 'Severa', desc: 'Ulceração / queimação relatada' },
+                            { val: 'Ausente', title: 'Ausente', desc: 'Tecidos sadios, mucosa íntegra e hemostasia normal' },
+                            { val: 'Leve', title: 'Leve', desc: 'Hiperemia discreta, eritema transitório' },
+                            { val: 'Moderada', title: 'Moderada', desc: 'Eritema acentuado, edema localizado ou branqueamento' },
+                            { val: 'Severa', title: 'Severa', desc: 'Ulceração, sangramento persistente ou queimação intensa' },
                           ].map((item) => {
                             const isSelected = currentSessionForm.gingivalIrritation === item.val;
                             return (
@@ -6638,7 +6659,7 @@ function DashboardContent() {
                           onChange={(e) =>
                             setCurrentSessionForm({ ...currentSessionForm, notes: e.target.value })
                           }
-                          placeholder="Recomendações pós-clareamento dadas ao paciente, comportamento clínico ou observações..."
+                          placeholder="Recomendações pós-operatórias dadas ao paciente (cuidados mastigatórios, repouso, higiene), intercorrências ou observações..."
                           className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
                         />
                       </div>
@@ -6649,12 +6670,12 @@ function DashboardContent() {
                           <div className="flex items-center justify-between">
                             <span className="font-bold text-emerald-950 text-xs flex items-center gap-1.5">
                               <MessageSquare className="w-4 h-4 text-emerald-600" />
-                              <span>Ativação do Diário de Sensibilidade do Voluntário:</span>
+                              <span>Ativação do Diário de Desfechos / Dor do Voluntário:</span>
                             </span>
                             <span className="text-[10px] text-emerald-800 font-bold">1 Clique</span>
                           </div>
                           <p className="text-[11px] text-emerald-900 leading-relaxed">
-                            Envie o link do portal para o WhatsApp do paciente para que ele possa registrar os relatos de <strong>1 Hora</strong> (hoje) e de <strong>24 Horas</strong> (amanhã).
+                            Envie o link do portal para o WhatsApp do paciente para que ele possa registrar os relatos pós-operatórios de <strong>1 Hora</strong> (hoje), <strong>24 Horas</strong> (amanhã) e <strong>48 Horas</strong> (em 2 dias).
                           </p>
 
                           <a

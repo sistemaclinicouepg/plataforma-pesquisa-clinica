@@ -570,7 +570,7 @@ function PacienteContent() {
               </div>
               <div className="flex justify-between border-b border-slate-200 pb-2">
                 <span className="text-slate-500 font-medium">Momento Avaliado:</span>
-                <span className="font-bold text-slate-800">{submittedData.timePoint} pós-clareamento</span>
+                <span className="font-bold text-slate-800">{submittedData.timePoint} pós-atendimento</span>
               </div>
               <div className="flex justify-between border-b border-slate-200 pb-2">
                 <span className="text-slate-500 font-medium">Sensibilidade Reportada:</span>
@@ -595,13 +595,13 @@ function PacienteContent() {
                 </h4>
                 <ul className="text-red-900 text-[11px] leading-relaxed space-y-1.5 list-disc pl-4">
                   <li>
-                    <strong>Evite estímulos térmicos:</strong> Não consuma alimentos ou bebidas geladas ou quentes, nem bebidas ácidas (refrigerantes, sucos cítricos).
+                    <strong>Cuidados pós-operatórios:</strong> Evite estímulos térmicos excessivos (alimentos muito gelados ou muito quentes) e mastigação de alimentos duros na região do atendimento.
                   </li>
                   <li>
-                    <strong>Higiene suave:</strong> Realize escovação delicada; evite bochechos com força. Bocheche apenas com água morna.
+                    <strong>Higiene suave:</strong> Realize escovação delicada; evite bochechos com força nas primeiras horas.
                   </li>
                   <li>
-                    <strong>Medicação & Dessensibilizante:</strong> Se a equipe de pesquisa forneceu agente dessensibilizante tópico na consulta, aplique pontualmente conforme orientado.
+                    <strong>Medicação & Recomendações:</strong> Siga rigorosamente as orientações e medicações prescritas ou recomendadas pela equipe de pesquisa na consulta.
                   </li>
                   <li>
                     <strong>Prontidão Clínica:</strong> Entre em contato imediatamente com o pesquisador responsável pelo botão de emergência abaixo.
@@ -615,7 +615,7 @@ function PacienteContent() {
                   <span>Suporte Clínico aos Participantes</span>
                 </h4>
                 <p className="text-blue-800 text-[11px] leading-relaxed">
-                  A sensibilidade após clareamento é um efeito transitório que costuma regredir nas primeiras 24 a 48 horas. Se sentir qualquer dor persistente ou desconforto incomum, você tem suporte direto da equipe de pesquisa.
+                  O desconforto ou sensibilidade após procedimentos clínicos odontológicos é geralmente transitório e costuma regredir nas primeiras 24 a 48 horas. Se sentir qualquer dor persistente ou desconforto incomum, você tem suporte direto da equipe de pesquisa.
                 </p>
               </div>
             )}
@@ -625,8 +625,8 @@ function PacienteContent() {
             <a
               href={`https://wa.me/${getWhatsAppTarget()}?text=${encodeURIComponent(
                 isRedAlertTriggered
-                  ? `[ALERTA VERMELHO CLÍNICO - UEPG] Olá! Sou o voluntário ${participant?.patientName} (${participant?.researchCode}) do projeto "${participant?.projectName}". Registrei agora dor severa EVA ${submittedData.painScore}/10 no momento ${submittedData.timePoint} pós-clareamento. Solicito suporte e orientação clínica imediata.`
-                  : `Olá, sou participante da pesquisa ${participant?.projectName} (${participant?.researchCode}) e gostaria de tirar uma dúvida sobre o protocolo clareador.`
+                  ? `[ALERTA VERMELHO CLÍNICO - UEPG] Olá! Sou o voluntário ${participant?.patientName} (${participant?.researchCode}) do projeto "${participant?.projectName}". Registrei agora dor severa EVA ${submittedData.painScore}/10 no momento ${submittedData.timePoint} pós-atendimento. Solicito suporte e orientação clínica imediata.`
+                  : `Olá, sou participante da pesquisa ${participant?.projectName} (${participant?.researchCode}) e gostaria de tirar uma dúvida sobre o protocolo do meu atendimento.`
               )}`}
               target="_blank"
               rel="noopener noreferrer"
@@ -1022,7 +1022,7 @@ function PacienteContent() {
 
             const ALL_MOMENTS = [
               { key: '0h' as const, label: '0h (Imed.)', sub: 'Na consulta' },
-              { key: '1h' as const, label: '1 Hora', sub: 'Pós-clareamento' },
+              { key: '1h' as const, label: '1 Hora', sub: 'Pós-atendimento' },
               { key: '24h' as const, label: '24 Horas', sub: 'Dia seguinte' },
               { key: '48h' as const, label: '48 Horas', sub: '2 dias após' },
             ];

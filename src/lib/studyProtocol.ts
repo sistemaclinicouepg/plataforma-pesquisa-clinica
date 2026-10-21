@@ -5,6 +5,119 @@
 
 export type SessionType = 'CLINICAL' | 'EVALUATION' | 'FOLLOW_UP';
 
+export type ResearchSpecialty =
+  | 'RESTORATIVE' // Dentística Restauradora & Adesão
+  | 'SURGERY' // Cirurgia & Exodontia
+  | 'ENDODONTICS' // Endodontia
+  | 'PERIODONTICS' // Periodontia & Implante
+  | 'BLEACHING' // Clareamento Dental
+  | 'GENERAL'; // Ensaio Clínico Geral
+
+export interface SpecialtyDefinition {
+  id: ResearchSpecialty;
+  name: string;
+  badge: string;
+  icon: string;
+  color: string;
+  description: string;
+  procedureTitle: string;
+  hasColorGuide: boolean;
+  checklist: string[];
+}
+
+export const RESEARCH_SPECIALTIES: SpecialtyDefinition[] = [
+  {
+    id: 'RESTORATIVE',
+    name: 'Dentística Restauradora & Adesão',
+    badge: 'Dentística / Adesão',
+    icon: '🦷',
+    color: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    description: 'Restaurações diretas/indiretas, adesivos dentinários, critérios FDI/USPHS e longevidade.',
+    procedureTitle: 'Protocolo de Restauração / Aplicação Adesiva',
+    hasColorGuide: true,
+    checklist: [
+      'Preparo cavitário e/ou profilaxia com isolamento absoluto realizado.',
+      'Aplicação e fotoativação do sistema adesivo conforme protocolo do fabricante.',
+      'Inserção, fotoativação da resina composta e acabamento/polimento imediato.',
+    ],
+  },
+  {
+    id: 'SURGERY',
+    name: 'Cirurgia & Exodontia',
+    badge: 'Cirurgia / Exodontia',
+    icon: '🩺',
+    color: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+    description: 'Exodontias (3º molares), osteotomia, analgesia pré-emptiva, trismo, edema e dor pós-operatória.',
+    procedureTitle: 'Procedimento Cirúrgico / Exodontia',
+    hasColorGuide: false,
+    checklist: [
+      'Assepsia, antissepsia de campos e anestesia local adequada.',
+      'Ato operatório, ostectomia/odontosecção e exodontia realizada.',
+      'Irrigação abundante, hemostasia e sutura cirúrgica adequada.',
+    ],
+  },
+  {
+    id: 'ENDODONTICS',
+    name: 'Endodontia',
+    badge: 'Endodontia',
+    icon: '🔬',
+    color: 'bg-amber-50 text-amber-700 border-amber-200',
+    description: 'Preparo químico-mecânico, medicação intracanal, obturação e dor pós-endodôntica.',
+    procedureTitle: 'Intervenção Endodôntica',
+    hasColorGuide: false,
+    checklist: [
+      'Isolamento absoluto e odontometria eletrônica confirmada.',
+      'Preparo químico-mecânico e irrigação final padronizada.',
+      'Medicação intracanal ou obturação e selamento provisório/definitivo.',
+    ],
+  },
+  {
+    id: 'PERIODONTICS',
+    name: 'Periodontia & Implantodontia',
+    badge: 'Periodontia',
+    icon: '🌿',
+    color: 'bg-teal-50 text-teal-700 border-teal-200',
+    description: 'Raspagem e alisamento radicular, cirurgias periodontais e sensibilidade cervical.',
+    procedureTitle: 'Terapia Periodontal / Intervenção',
+    hasColorGuide: false,
+    checklist: [
+      'Mapeamento inicial de índices (IPV e SS) realizado.',
+      'Instrumentação periodontal/cirúrgica conforme grupo experimental.',
+      'Irrigação local, hemostasia e orientações de higiene específicas.',
+    ],
+  },
+  {
+    id: 'BLEACHING',
+    name: 'Clareamento Dental',
+    badge: 'Clareamento Dental',
+    icon: '✨',
+    color: 'bg-blue-50 text-blue-700 border-blue-200',
+    description: 'Eficácia estética (ΔSGU / espectrofotometria), sensibilidade dental imediata e remota.',
+    procedureTitle: 'Aplicação do Gel Clareador / Protocolo',
+    hasColorGuide: true,
+    checklist: [
+      'Profilaxia coronária realizada com pedra-pomes e água.',
+      'Barreira gengival fotopolimerizada com vedamento absoluto das papilas.',
+      'Aplicação homogênea do produto clareador nos hemi-arcos conforme protocolo.',
+    ],
+  },
+  {
+    id: 'GENERAL',
+    name: 'Ensaio Clínico Geral / Multidisciplinar',
+    badge: 'Ensaio Clínico Geral',
+    icon: '📋',
+    color: 'bg-purple-50 text-purple-700 border-purple-200',
+    description: 'Estudos clínicos biomédicos, farmacológicos, preventivos e multidisciplinares.',
+    procedureTitle: 'Execução da Intervenção Clínica Padronizada',
+    hasColorGuide: true,
+    checklist: [
+      'Checagem de antissepsia, biossegurança e consentimento do participante.',
+      'Execução do protocolo clínico experimental conforme aprovado pelo CEP.',
+      'Finalização da intervenção e orientações pós-operatórias na cadeira.',
+    ],
+  },
+];
+
 export type StudySessionProtocol = {
   id: string;
   sessionNumber: number;
@@ -37,6 +150,7 @@ export type FormTargetProtocol = {
 };
 
 export type StudyProtocolConfig = {
+  specialty?: ResearchSpecialty; // Área/Linha de pesquisa clínica do estudo
   projectPrefix?: string; // Prefixo personalizado do código dos participantes (ex: 'P01', 'EXP', 'CLAR')
   totalSessions: number;
   sessions: StudySessionProtocol[];
@@ -248,7 +362,22 @@ export function parseStudyProtocol(templateStringOrObj: any): StudyProtocolConfi
     ? studyProtocol.forms
     : DEFAULT_FORM_TARGETS;
 
+  const validSpecialties: ResearchSpecialty[] = [
+    'RESTORATIVE',
+    'SURGERY',
+    'ENDODONTICS',
+    'PERIODONTICS',
+    'BLEACHING',
+    'GENERAL',
+  ];
+
+  let specialty: ResearchSpecialty = 'GENERAL';
+  if (studyProtocol.specialty && validSpecialties.includes(studyProtocol.specialty)) {
+    specialty = studyProtocol.specialty;
+  }
+
   return {
+    specialty,
     projectPrefix: studyProtocol.projectPrefix ? String(studyProtocol.projectPrefix).trim().toUpperCase() : undefined,
     totalSessions: Number(studyProtocol.totalSessions) || sessions.length,
     sessions,

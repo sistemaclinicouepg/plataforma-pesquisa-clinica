@@ -40,6 +40,8 @@ import {
   parseStudyProtocol,
   StudySessionProtocol,
   FormTargetProtocol,
+  RESEARCH_SPECIALTIES,
+  ResearchSpecialty,
 } from '@/lib/studyProtocol';
 
 type Project = {
@@ -114,6 +116,7 @@ export default function HomePage() {
   const [newProjectDesc, setNewProjectDesc] = useState('');
   const [newProjectPrefix, setNewProjectPrefix] = useState('');
   const [newProjectStatus, setNewProjectStatus] = useState<'ACTIVE' | 'COMPLETED' | 'CANCELLED'>('ACTIVE');
+  const [newProjectSpecialty, setNewProjectSpecialty] = useState<ResearchSpecialty>('GENERAL');
   const [enableOdontogram, setEnableOdontogram] = useState(true);
   const [odontogramScope, setOdontogramScope] = useState<'anterior' | 'full'>('anterior');
   const [enablePeriodontogram, setEnablePeriodontogram] = useState(false);
@@ -129,6 +132,7 @@ export default function HomePage() {
   const [editProjectDesc, setEditProjectDesc] = useState('');
   const [editProjectPrefix, setEditProjectPrefix] = useState('');
   const [editProjectStatus, setEditProjectStatus] = useState<'ACTIVE' | 'COMPLETED' | 'CANCELLED'>('ACTIVE');
+  const [editProjectSpecialty, setEditProjectSpecialty] = useState<ResearchSpecialty>('GENERAL');
   const [editEnableOdontogram, setEditEnableOdontogram] = useState(true);
   const [editOdontogramScope, setEditOdontogramScope] = useState<'anterior' | 'full'>('anterior');
   const [editEnablePeriodontogram, setEditEnablePeriodontogram] = useState(false);
@@ -240,6 +244,7 @@ export default function HomePage() {
     setEditStudySessions(protocol.sessions);
     setEditFormTargets(protocol.forms);
     setEditProjectPrefix(protocol.projectPrefix || '');
+    setEditProjectSpecialty(protocol.specialty || 'GENERAL');
   };
 
   const handleSaveProjectEdit = async (e: React.FormEvent) => {
@@ -266,6 +271,7 @@ export default function HomePage() {
       enablePeriodontogram: editEnablePeriodontogram,
       enableAnamnesis: editEnableAnamnesis,
       studyProtocol: {
+        specialty: editProjectSpecialty,
         projectPrefix: editProjectPrefix.trim().toUpperCase() || undefined,
         totalSessions: editStudySessions.length,
         sessions: editStudySessions,
@@ -571,6 +577,7 @@ export default function HomePage() {
         },
         questions: [],
         studyProtocol: {
+          specialty: newProjectSpecialty,
           projectPrefix: newProjectPrefix.trim().toUpperCase() || undefined,
           totalSessions: studySessions.length,
           sessions: studySessions,
@@ -601,6 +608,7 @@ export default function HomePage() {
         setNewProjectDesc('');
         setNewProjectPrefix('');
         setNewProjectStatus('ACTIVE');
+        setNewProjectSpecialty('GENERAL');
         if (data.project?.id) {
           if (typeof window !== 'undefined') {
             localStorage.setItem('app_active_project_id', data.project.id);
@@ -993,6 +1001,8 @@ export default function HomePage() {
                   const formsCount = (project.forms || []).length;
                   const pStatus = project.status || 'ACTIVE';
                   const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.email === 'admin@uepg.br';
+                  const proto = parseStudyProtocol(project.anamnesisTemplate);
+                  const specDef = RESEARCH_SPECIALTIES.find((s) => s.id === proto.specialty) || RESEARCH_SPECIALTIES.find((s) => s.id === 'GENERAL');
 
                   return (
                     <div key={project.id} className="block group">
@@ -1007,9 +1017,15 @@ export default function HomePage() {
                         }`} />
 
                         <div>
-                          {/* Linha de Badges de Status e Papel */}
-                          <div className="flex justify-between items-center mb-3 gap-2">
+                          {/* Linha de Badges de Status, Especialidade e Papel */}
+                          <div className="flex justify-between items-center mb-3 gap-2 flex-wrap">
                             <div className="flex items-center gap-1.5 flex-wrap">
+                              {specDef && (
+                                <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold border inline-flex items-center gap-1 ${specDef.color}`}>
+                                  <span>{specDef.icon}</span>
+                                  <span>{specDef.badge}</span>
+                                </span>
+                              )}
                               {pStatus === 'ACTIVE' && (
                                 <span className="px-2.5 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200/80 text-[11px] font-bold rounded-full flex items-center gap-1.5">
                                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -1165,6 +1181,8 @@ export default function HomePage() {
                         const formsCount = (project.forms || []).length;
                         const pStatus = project.status || 'ACTIVE';
                         const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.email === 'admin@uepg.br';
+                        const listProto = parseStudyProtocol(project.anamnesisTemplate);
+                        const listSpecDef = RESEARCH_SPECIALTIES.find((s) => s.id === listProto.specialty) || RESEARCH_SPECIALTIES.find((s) => s.id === 'GENERAL');
 
                         return (
                           <tr key={project.id} className="hover:bg-slate-50/70 transition-colors group">
@@ -1173,11 +1191,19 @@ export default function HomePage() {
                                 <span className="font-bold text-slate-900 group-hover:text-blue-600 transition-colors text-sm">
                                   {project.name}
                                 </span>
-                                {project.description && (
-                                  <p className="text-slate-400 text-xs truncate max-w-xs sm:max-w-md mt-0.5">
-                                    {project.description}
-                                  </p>
-                                )}
+                                <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                                  {listSpecDef && (
+                                    <span className={`px-2 py-0.2 rounded-full text-[10px] font-bold border inline-flex items-center gap-1 ${listSpecDef.color}`}>
+                                      <span>{listSpecDef.icon}</span>
+                                      <span>{listSpecDef.badge}</span>
+                                    </span>
+                                  )}
+                                  {project.description && (
+                                    <p className="text-slate-400 text-xs truncate max-w-xs sm:max-w-md">
+                                      {project.description}
+                                    </p>
+                                  )}
+                                </div>
                               </Link>
                             </td>
                             <td className="px-4 py-3.5 hidden md:table-cell whitespace-nowrap">
@@ -1361,9 +1387,42 @@ export default function HomePage() {
                       required
                       value={newProjectName}
                       onChange={(e) => setNewProjectName(e.target.value)}
-                      placeholder="Ex: Eficácia de Agentes Dessensibilizantes em Clareamento Dental"
+                      placeholder="Ex: Longevidade Clínica de Restaurações em Resina Bulk-Fill"
                       className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
                     />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+                      Especialidade / Linha de Pesquisa Clínica *
+                    </label>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {RESEARCH_SPECIALTIES.map((spec) => {
+                        const isSelected = newProjectSpecialty === spec.id;
+                        return (
+                          <button
+                            key={spec.id}
+                            type="button"
+                            onClick={() => setNewProjectSpecialty(spec.id)}
+                            className={`p-2.5 rounded-xl border text-left transition cursor-pointer flex flex-col justify-between ${
+                              isSelected
+                                ? 'bg-blue-50 border-blue-500 shadow-xs ring-2 ring-blue-500/20'
+                                : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-700'
+                            }`}
+                          >
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-base">{spec.icon}</span>
+                              <span className={`text-xs font-bold leading-tight ${isSelected ? 'text-blue-900' : 'text-slate-800'}`}>
+                                {spec.badge}
+                              </span>
+                            </div>
+                            <p className="text-[10px] text-slate-500 line-clamp-2 mt-1 leading-snug">
+                              {spec.description}
+                            </p>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
 
                   <div>
@@ -1934,6 +1993,39 @@ export default function HomePage() {
                       onChange={(e) => setEditProjectName(e.target.value)}
                       className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
                     />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+                      Especialidade / Linha de Pesquisa Clínica *
+                    </label>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {RESEARCH_SPECIALTIES.map((spec) => {
+                        const isSelected = editProjectSpecialty === spec.id;
+                        return (
+                          <button
+                            key={spec.id}
+                            type="button"
+                            onClick={() => setEditProjectSpecialty(spec.id)}
+                            className={`p-2.5 rounded-xl border text-left transition cursor-pointer flex flex-col justify-between ${
+                              isSelected
+                                ? 'bg-blue-50 border-blue-500 shadow-xs ring-2 ring-blue-500/20'
+                                : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-700'
+                            }`}
+                          >
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-base">{spec.icon}</span>
+                              <span className={`text-xs font-bold leading-tight ${isSelected ? 'text-blue-900' : 'text-slate-800'}`}>
+                                {spec.badge}
+                              </span>
+                            </div>
+                            <p className="text-[10px] text-slate-500 line-clamp-2 mt-1 leading-snug">
+                              {spec.description}
+                            </p>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
 
                   <div>
