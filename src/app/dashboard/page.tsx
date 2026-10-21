@@ -639,7 +639,7 @@ function DashboardContent() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [activeTab, setActiveTab] = useState<'active' | 'triage' | 'audit' | 'team' | 'export'>('active');
+  const [activeTab, setActiveTab] = useState<'active' | 'triage' | 'audit' | 'team' | 'export' | 'settings'>('active');
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [isBlindedUser, setIsBlindedUser] = useState<boolean>(false);
   const [currentMemberRole, setCurrentMemberRole] = useState<string>('COORDINATOR');
@@ -649,7 +649,7 @@ function DashboardContent() {
     currentUser?.email === 'admin@uepg.br' ||
     currentUser?.email === 'pesquisadora@uepg.br';
 
-  const handleSelectTab = (tab: 'active' | 'triage' | 'audit' | 'team' | 'export') => {
+  const handleSelectTab = (tab: 'active' | 'triage' | 'audit' | 'team' | 'export' | 'settings') => {
     setActiveTab(tab);
     if (project?.id && typeof window !== 'undefined') {
       try {
@@ -706,6 +706,7 @@ function DashboardContent() {
   const [editProjectDesc, setEditProjectDesc] = useState('');
   const [editProjectStatus, setEditProjectStatus] = useState<'ACTIVE' | 'COMPLETED' | 'CANCELLED'>('ACTIVE');
   const [savingProjectEdit, setSavingProjectEdit] = useState(false);
+  const [projectEditSuccess, setProjectEditSuccess] = useState(false);
 
   // Modal de Ficha Clínica & Anamnese do Projeto
   const [showAnamnesisModal, setShowAnamnesisModal] = useState(false);
@@ -1032,11 +1033,11 @@ function DashboardContent() {
     const pendingCount = (data.project.participants || []).filter((p: any) => p.status === 'PENDING').length;
 
     const tabParam = searchParams.get('tab');
-    if (tabParam && ['active', 'triage', 'audit', 'team', 'export'].includes(tabParam)) {
+    if (tabParam && ['active', 'triage', 'audit', 'team', 'export', 'settings'].includes(tabParam)) {
       setActiveTab(tabParam as any);
     } else {
       const savedTab = typeof window !== 'undefined' ? sessionStorage.getItem(`uepg_tab_${data.project.id}`) : null;
-      if (savedTab && ['active', 'triage', 'audit', 'team', 'export'].includes(savedTab)) {
+      if (savedTab && ['active', 'triage', 'audit', 'team', 'export', 'settings'].includes(savedTab)) {
         setActiveTab(savedTab as any);
       } else if (approvedCount === 0 && pendingCount > 0) {
         setActiveTab('triage');
@@ -1283,7 +1284,7 @@ function DashboardContent() {
               const approvedCount = (cached.participants || []).filter((p: any) => p.status === 'APPROVED').length;
               const pendingCount = (cached.participants || []).filter((p: any) => p.status === 'PENDING').length;
               const savedTab = sessionStorage.getItem(`uepg_tab_${cached.id}`);
-              if (savedTab && ['active', 'triage', 'audit', 'team', 'export'].includes(savedTab)) {
+              if (savedTab && ['active', 'triage', 'audit', 'team', 'export', 'settings'].includes(savedTab)) {
                 setActiveTab(savedTab as any);
               } else if (approvedCount === 0 && pendingCount > 0) {
                 setActiveTab('triage');
@@ -1338,7 +1339,7 @@ function DashboardContent() {
     setEditProjectStatus(
       project.status === 'COMPLETED' ? 'COMPLETED' : project.status === 'CANCELLED' ? 'CANCELLED' : 'ACTIVE'
     );
-    setShowEditProjectModal(true);
+    handleSelectTab('settings');
   };
 
   useEffect(() => {
@@ -1349,7 +1350,7 @@ function DashboardContent() {
     if (searchParams.get('newMember') === 'true') {
       setShowAddMemberModal(true);
     }
-    if (searchParams.get('editProject') === 'true') {
+    if (searchParams.get('editProject') === 'true' || searchParams.get('tab') === 'settings') {
       openEditProjectModal();
     }
   }, [project, searchParams]);
@@ -1385,6 +1386,8 @@ function DashboardContent() {
         setProject(updated);
         projectRef.current = updated;
         setShowEditProjectModal(false);
+        setProjectEditSuccess(true);
+        setTimeout(() => setProjectEditSuccess(false), 4000);
 
         setAllProjects((prev) =>
           prev.map((p) => (p.id === project.id ? { ...p, name: editProjectName.trim() } : p))
@@ -2813,6 +2816,7 @@ function DashboardContent() {
                   {activeTab === 'team' && 'Equipe do Projeto de Pesquisa'}
                   {activeTab === 'export' && 'Exportação de Dados'}
                   {activeTab === 'audit' && 'Trilha de Auditoria'}
+                  {activeTab === 'settings' && 'Dados & Configurações do Estudo'}
 
                   <button
                     onClick={() => loadProject(true)}
@@ -2829,6 +2833,7 @@ function DashboardContent() {
                   {activeTab === 'team' && 'Membros do estudo, atribuições clínicas e mascaramento duplo-cego.'}
                   {activeTab === 'export' && 'Estatística descritiva pareada, escala de cor, escores de dor e exportação de matrizes.'}
                   {activeTab === 'audit' && 'Registro imutável de todas as ações e alterações na plataforma.'}
+                  {activeTab === 'settings' && 'Ajuste o título, a descrição, hipótese científica e o status de andamento deste projeto.'}
                 </p>
               </div>
 
@@ -4436,6 +4441,362 @@ function DashboardContent() {
                   </div>
                 )}
               </div>
+            </div>
+          );
+        })()}
+
+        {/* ABA: DADOS & CONFIGURAÇÕES DO ESTUDO CLÍNICO (INCORPORADA À PÁGINA) */}
+        {activeTab === 'settings' && (() => {
+          const specDef = RESEARCH_SPECIALTIES.find((s) => s.id === studyProtocol.specialty) || RESEARCH_SPECIALTIES.find((s) => s.id === 'GENERAL');
+          const totalApproved = (project.participants || []).filter((p) => p.status === 'APPROVED').length;
+          const totalPending = (project.participants || []).filter((p) => p.status === 'PENDING').length;
+          const totalMembers = (project.members || []).length;
+          const totalForms = (project.forms || []).length;
+
+          return (
+            <div className="space-y-6 max-w-5xl animate-in fade-in duration-200">
+              {/* Feedback de Sucesso */}
+              {projectEditSuccess && (
+                <div className="p-4 bg-emerald-50 border border-emerald-300 rounded-2xl flex items-center justify-between text-emerald-900 text-xs font-bold shadow-xs">
+                  <div className="flex items-center space-x-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>Alterações do estudo clínico salvas com sucesso no banco de dados!</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setProjectEditSuccess(false)}
+                    className="p-1 hover:bg-emerald-100 rounded-lg text-emerald-700 transition cursor-pointer"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
+
+              <form onSubmit={handleSaveProjectEdit} className="space-y-6">
+                {/* CARD 1: IDENTIFICAÇÃO DO PROJETO */}
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-6 space-y-5">
+                  <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                        <Sliders className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h3 className="text-base font-bold text-slate-900">
+                          Identificação & Dados Cadastrais
+                        </h3>
+                        <p className="text-xs text-slate-500">
+                          Informações gerais do projeto registradas na instituição e comitê de ética (CEP/CONEP).
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Status Badge no topo do card */}
+                    <div className="hidden sm:flex items-center">
+                      {editProjectStatus === 'ACTIVE' && (
+                        <span className="px-3 py-1 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-full text-xs font-bold inline-flex items-center gap-1.5 shadow-2xs">
+                          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                          <span>Em Andamento / Ativo</span>
+                        </span>
+                      )}
+                      {editProjectStatus === 'COMPLETED' && (
+                        <span className="px-3 py-1 bg-blue-50 text-blue-800 border border-blue-200 rounded-full text-xs font-bold inline-flex items-center gap-1.5 shadow-2xs">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" />
+                          <span>Finalizado / Concluído</span>
+                        </span>
+                      )}
+                      {editProjectStatus === 'CANCELLED' && (
+                        <span className="px-3 py-1 bg-rose-50 text-rose-800 border border-rose-200 rounded-full text-xs font-bold inline-flex items-center gap-1.5 shadow-2xs">
+                          <X className="w-3.5 h-3.5 text-rose-600" />
+                          <span>Cancelado / Interrompido</span>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    {/* Nome do Projeto */}
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                        Nome do Projeto / Ensaio Clínico <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={editProjectName}
+                        onChange={(e) => setEditProjectName(e.target.value)}
+                        placeholder="Ex: Clareamento Dental em Consultório: HP 6% vs CP 37% (Split-Mouth)"
+                        className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-sm font-medium text-slate-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition shadow-2xs"
+                      />
+                      <p className="text-[11px] text-slate-400 mt-1">
+                        Título oficial do estudo utilizado em relatórios do CEP, termos de consentimento e publicações científicas.
+                      </p>
+                    </div>
+
+                    {/* Descrição / Hipótese */}
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                        Descrição / Hipótese do Estudo <span className="text-slate-400 font-normal">(Opcional)</span>
+                      </label>
+                      <textarea
+                        rows={4}
+                        value={editProjectDesc}
+                        onChange={(e) => setEditProjectDesc(e.target.value)}
+                        placeholder="Descreva os objetivos principais, hipótese clínica e delineamento metodológico deste ensaio..."
+                        className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-sm text-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition shadow-2xs leading-relaxed"
+                      />
+                      <p className="text-[11px] text-slate-400 mt-1">
+                        Resumo dos objetivos científicos acessível a toda a equipe de pesquisadores do estudo.
+                      </p>
+                    </div>
+
+                    {/* Status do Estudo */}
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
+                        Status do Estudo
+                      </label>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setEditProjectStatus('ACTIVE')}
+                          className={`p-4 rounded-xl border text-left transition cursor-pointer flex flex-col justify-between ${
+                            editProjectStatus === 'ACTIVE'
+                              ? 'bg-emerald-50/70 border-emerald-400 ring-2 ring-emerald-200'
+                              : 'bg-slate-50/60 border-slate-200 hover:bg-slate-100/70'
+                          }`}
+                        >
+                          <div className="flex items-center space-x-2">
+                            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                            <span className="text-xs font-bold text-slate-800">Em Andamento / Ativo</span>
+                          </div>
+                          <p className="text-[11px] text-slate-500 mt-2 leading-snug">
+                            Recebendo novos voluntários, triagens e atendimentos clínicos regulares.
+                          </p>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setEditProjectStatus('COMPLETED')}
+                          className={`p-4 rounded-xl border text-left transition cursor-pointer flex flex-col justify-between ${
+                            editProjectStatus === 'COMPLETED'
+                              ? 'bg-blue-50/70 border-blue-400 ring-2 ring-blue-200'
+                              : 'bg-slate-50/60 border-slate-200 hover:bg-slate-100/70'
+                          }`}
+                        >
+                          <div className="flex items-center space-x-2">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" />
+                            <span className="text-xs font-bold text-slate-800">Finalizado / Concluído</span>
+                          </div>
+                          <p className="text-[11px] text-slate-500 mt-2 leading-snug">
+                            Protocolo finalizado. Bloqueado para novas inclusões de pacientes.
+                          </p>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setEditProjectStatus('CANCELLED')}
+                          className={`p-4 rounded-xl border text-left transition cursor-pointer flex flex-col justify-between ${
+                            editProjectStatus === 'CANCELLED'
+                              ? 'bg-rose-50/70 border-rose-400 ring-2 ring-rose-200'
+                              : 'bg-slate-50/60 border-slate-200 hover:bg-slate-100/70'
+                          }`}
+                        >
+                          <div className="flex items-center space-x-2">
+                            <X className="w-3.5 h-3.5 text-rose-600" />
+                            <span className="text-xs font-bold text-slate-800">Cancelado / Interrompido</span>
+                          </div>
+                          <p className="text-[11px] text-slate-500 mt-2 leading-snug">
+                            Interrompido antes da conclusão prevista por critérios clínicos ou regulatórios.
+                          </p>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* CARD 2: PROTOCOLO & ESPECIALIDADE ODONTOLÓGICA */}
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-6 space-y-4">
+                  <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                        <Stethoscope className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h3 className="text-base font-bold text-slate-900">
+                          Especialidade & Delineamento Clínico
+                        </h3>
+                        <p className="text-xs text-slate-500">
+                          Parâmetros metodológicos aplicados neste ensaio odontológico da UEPG.
+                        </p>
+                      </div>
+                    </div>
+
+                    {specDef && (
+                      <span className={`px-3 py-1 rounded-full text-xs font-bold border inline-flex items-center gap-1.5 ${specDef.color}`}>
+                        <span>{specDef.icon}</span>
+                        <span>{specDef.name}</span>
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 text-xs">
+                    <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/80">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Sessões Clínicas</span>
+                      <span className="text-lg font-black text-slate-800 mt-0.5 block">
+                        {studyProtocol.sessions?.length || 4} sessões
+                      </span>
+                      <span className="text-[11px] text-slate-500">Longitudinais com janelas de retorno</span>
+                    </div>
+
+                    <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/80">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Delineamento</span>
+                      <span className="text-lg font-black text-slate-800 mt-0.5 block">
+                        {(project.name || '').toLowerCase().includes('split') || studyProtocol.specialty === 'BLEACHING'
+                          ? 'Boca Dividida'
+                          : 'Grupos Paralelos'}
+                      </span>
+                      <span className="text-[11px] text-slate-500">Randomizado e Duplo-Cego</span>
+                    </div>
+
+                    <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/80">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Voluntários</span>
+                      <span className="text-lg font-black text-slate-800 mt-0.5 block">
+                        {totalApproved} ativos
+                      </span>
+                      <span className="text-[11px] text-slate-500">{totalPending} aguardando triagem</span>
+                    </div>
+
+                    <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/80">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Equipe Vinculada</span>
+                      <span className="text-lg font-black text-slate-800 mt-0.5 block">
+                        {totalMembers} membros
+                      </span>
+                      <span className="text-[11px] text-slate-500">{totalForms} formulários eCRF</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* CARD 3: EDITORES ESPECIALIZADOS DESTE ESTUDO */}
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-6 space-y-4">
+                  <div className="pb-3 border-b border-slate-100">
+                    <h3 className="text-base font-bold text-slate-900">
+                      Editores Especializados deste Estudo
+                    </h3>
+                    <p className="text-xs text-slate-500">
+                      Acesse as ferramentas dedicadas para customizar os critérios clínicos, termos de consentimento e formulários eCRF.
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                    <Link
+                      href={`/anamnese?projectId=${project.id}`}
+                      className="p-4 bg-gradient-to-br from-blue-50/70 to-blue-100/40 hover:from-blue-100 hover:to-blue-200/60 border border-blue-200 rounded-2xl text-blue-900 transition flex items-center justify-between group shadow-2xs cursor-pointer"
+                    >
+                      <div className="space-y-1">
+                        <div className="flex items-center space-x-2">
+                          <FileSpreadsheet className="w-4 h-4 text-blue-700" />
+                          <span className="font-bold text-sm text-blue-950">Ficha Clínica & Critérios</span>
+                        </div>
+                        <p className="text-xs text-blue-800/80">
+                          Critérios de inclusão, exclusão, anamnese personalizada e odontograma.
+                        </p>
+                      </div>
+                      <ChevronRight className="w-5 h-5 text-blue-600 group-hover:translate-x-1 transition-transform shrink-0 ml-3" />
+                    </Link>
+
+                    <Link
+                      href={`/construtor?projectId=${project.id}`}
+                      className="p-4 bg-gradient-to-br from-indigo-50/70 to-indigo-100/40 hover:from-indigo-100 hover:to-indigo-200/60 border border-indigo-200 rounded-2xl text-indigo-900 transition flex items-center justify-between group shadow-2xs cursor-pointer"
+                    >
+                      <div className="space-y-1">
+                        <div className="flex items-center space-x-2">
+                          <FileCode className="w-4 h-4 text-indigo-700" />
+                          <span className="font-bold text-sm text-indigo-950">Construtor de eCRF</span>
+                        </div>
+                        <p className="text-xs text-indigo-800/80">
+                          Questionários do paciente (PROMs, OHIP-14), escalas de dor e satisfação.
+                        </p>
+                      </div>
+                      <ChevronRight className="w-5 h-5 text-indigo-600 group-hover:translate-x-1 transition-transform shrink-0 ml-3" />
+                    </Link>
+
+                    <Link
+                      href={`/tcle/editor?projectId=${project.id}`}
+                      className="p-4 bg-gradient-to-br from-emerald-50/70 to-emerald-100/40 hover:from-emerald-100 hover:to-emerald-200/60 border border-emerald-200 rounded-2xl text-emerald-900 transition flex items-center justify-between group shadow-2xs cursor-pointer"
+                    >
+                      <div className="space-y-1">
+                        <div className="flex items-center space-x-2">
+                          <FileText className="w-4 h-4 text-emerald-700" />
+                          <span className="font-bold text-sm text-emerald-950">Termo de Aceite (TCLE)</span>
+                        </div>
+                        <p className="text-xs text-emerald-800/80">
+                          Modelo institucional, consentimento livre e esclarecido e assinaturas digitais.
+                        </p>
+                      </div>
+                      <ChevronRight className="w-5 h-5 text-emerald-600 group-hover:translate-x-1 transition-transform shrink-0 ml-3" />
+                    </Link>
+
+                    <button
+                      type="button"
+                      onClick={() => handleSelectTab('team')}
+                      className="p-4 bg-gradient-to-br from-slate-50 to-slate-100 hover:from-slate-100 hover:to-slate-200/70 border border-slate-200 rounded-2xl text-slate-800 transition flex items-center justify-between text-left group shadow-2xs cursor-pointer"
+                    >
+                      <div className="space-y-1">
+                        <div className="flex items-center space-x-2">
+                          <Users className="w-4 h-4 text-slate-700" />
+                          <span className="font-bold text-sm text-slate-900">Equipe & Mascaramento</span>
+                        </div>
+                        <p className="text-xs text-slate-600">
+                          Pesquisadores vinculados, atribuições clínicas e regras do duplo-cego.
+                        </p>
+                      </div>
+                      <ChevronRight className="w-5 h-5 text-slate-500 group-hover:translate-x-1 transition-transform shrink-0 ml-3" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* BARRA DE AÇÕES INFERIOR */}
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 sticky bottom-4 z-20">
+                  <div className="text-xs text-slate-500">
+                    <span className="font-semibold text-slate-700">Conformidade GCP:</span> As alterações são registradas na trilha de auditoria do estudo.
+                  </div>
+
+                  <div className="flex items-center space-x-3 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (project) {
+                          setEditProjectName(project.name);
+                          setEditProjectDesc(project.description || '');
+                          setEditProjectStatus(
+                            project.status === 'COMPLETED' ? 'COMPLETED' : project.status === 'CANCELLED' ? 'CANCELLED' : 'ACTIVE'
+                          );
+                        }
+                      }}
+                      className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition cursor-pointer border border-slate-200"
+                    >
+                      Descartar Alterações
+                    </button>
+
+                    <button
+                      type="submit"
+                      disabled={savingProjectEdit || !editProjectName.trim()}
+                      className="px-6 py-2.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-xs transition disabled:opacity-50 flex items-center gap-2 cursor-pointer"
+                    >
+                      {savingProjectEdit ? (
+                        <>
+                          <RefreshCw className="w-4 h-4 animate-spin" />
+                          <span>Salvando alterações...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Check className="w-4 h-4" />
+                          <span>Salvar Alterações do Estudo</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </form>
             </div>
           );
         })()}
@@ -7904,125 +8265,6 @@ function DashboardContent() {
           </div>
         );
       })()}
-
-      {/* Modal de Edição de Dados do Estudo Clínico */}
-      {showEditProjectModal && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-xl w-full p-6 border border-slate-200">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
-              <div className="flex items-center space-x-2.5">
-                <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
-                  <Sliders className="w-4 h-4" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-bold text-slate-900">Editar Dados do Estudo Clínico</h2>
-                  <p className="text-xs text-slate-500">
-                    Ajuste o título, a descrição e o status de andamento deste projeto.
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowEditProjectModal(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSaveProjectEdit} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
-                  Nome do Projeto / Ensaio Clínico *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={editProjectName}
-                  onChange={(e) => setEditProjectName(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
-                  Descrição / Hipótese do Estudo (Opcional)
-                </label>
-                <textarea
-                  rows={3}
-                  value={editProjectDesc}
-                  onChange={(e) => setEditProjectDesc(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
-                  Status do Estudo
-                </label>
-                <select
-                  value={editProjectStatus}
-                  onChange={(e) => setEditProjectStatus(e.target.value as any)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white font-medium"
-                >
-                  <option value="ACTIVE">🟢 Em Andamento / Ativo</option>
-                  <option value="COMPLETED">🔵 Finalizado / Concluído</option>
-                  <option value="CANCELLED">⚪ Cancelado / Interrompido</option>
-                </select>
-              </div>
-
-              <div className="pt-2 border-t border-slate-100">
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">
-                  Editores Especializados deste Estudo:
-                </label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                  <Link
-                    href={`/anamnese?projectId=${project.id}`}
-                    className="p-2.5 bg-blue-50/70 hover:bg-blue-100/80 border border-blue-200 rounded-xl text-blue-900 font-semibold transition flex items-center justify-between"
-                  >
-                    <span>Ficha Clínica & Critérios</span>
-                    <ChevronRight className="w-4 h-4 text-blue-600" />
-                  </Link>
-                  <Link
-                    href={`/construtor?projectId=${project.id}`}
-                    className="p-2.5 bg-indigo-50/70 hover:bg-indigo-100/80 border border-indigo-200 rounded-xl text-indigo-900 font-semibold transition flex items-center justify-between"
-                  >
-                    <span>Construtor de eCRF</span>
-                    <ChevronRight className="w-4 h-4 text-indigo-600" />
-                  </Link>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-end space-x-3 pt-4 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setShowEditProjectModal(false)}
-                  className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition cursor-pointer"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={savingProjectEdit || !editProjectName.trim()}
-                  className="px-5 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-xs transition disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
-                >
-                  {savingProjectEdit ? (
-                    <>
-                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                      <span>Salvando...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Check className="w-3.5 h-3.5" />
-                      <span>Salvar Alterações</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
       {/* Modal de Prontuário Clínico Completo / Dossiê do Paciente */}
       {showDossierModal && currentDossierParticipant && (

@@ -24,7 +24,7 @@ import { parseStudyProtocol, RESEARCH_SPECIALTIES } from '@/lib/studyProtocol';
 
 export interface StudySidebarProps {
   projectId?: string | null;
-  activeItem?: 'active' | 'triage' | 'team' | 'anamnese' | 'construtor' | 'tcle' | 'export' | 'audit' | string;
+  activeItem?: 'active' | 'triage' | 'team' | 'anamnese' | 'construtor' | 'tcle' | 'export' | 'audit' | 'settings' | string;
   project?: any;
   allProjects?: any[];
   isAdmin?: boolean;
@@ -177,10 +177,12 @@ export function StudySidebar({
 
   const handleEditProjectClick = () => {
     setMobileOpen(false);
-    if (onEditProject) {
+    if (onSelectTab) {
+      onSelectTab('settings');
+    } else if (onEditProject) {
       onEditProject();
     } else {
-      router.push(`/dashboard?projectId=${currentProjectId}&editProject=true`);
+      router.push(`/dashboard?projectId=${currentProjectId}&tab=settings`);
     }
   };
 
@@ -441,9 +443,15 @@ export function StudySidebar({
               <button
                 type="button"
                 onClick={handleEditProjectClick}
-                className="w-full px-3 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition flex items-center space-x-2.5 text-left cursor-pointer"
+                className={`w-full px-3 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-2.5 text-left cursor-pointer ${
+                  activeItem === 'settings'
+                    ? 'bg-blue-50 text-blue-700 border border-blue-200/80 shadow-2xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                }`}
               >
-                <Sliders className="w-4 h-4 text-slate-400 shrink-0" />
+                <Sliders
+                  className={`w-4 h-4 shrink-0 ${activeItem === 'settings' ? 'text-blue-600' : 'text-slate-400'}`}
+                />
                 <span className="truncate">Editar Dados do Estudo</span>
               </button>
             </div>
