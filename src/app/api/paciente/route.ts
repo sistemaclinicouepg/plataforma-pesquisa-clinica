@@ -471,6 +471,8 @@ export async function GET(req: Request) {
         latestSession,
         totalSessions,
         maxCompletedSession,
+        studyProtocol: protocol,
+        specialty: protocol.specialty,
         forms: formsWithStatus,
         otherStudies,
       },

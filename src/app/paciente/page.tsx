@@ -16,7 +16,13 @@ import {
   FileText,
   Phone,
   Smartphone,
+  Sparkles,
 } from 'lucide-react';
+import {
+  StudyProtocolConfig,
+  StudySessionProtocol,
+  PRESET_QUESTIONNAIRES_CATALOG,
+} from '@/lib/studyProtocol';
 
 type ParticipantSession = {
   id: string;
@@ -81,6 +87,8 @@ type ParticipantData = {
   latestSession: ParticipantSession | null;
   forms: FormItem[];
   otherStudies?: OtherStudyOption[];
+  studyProtocol?: StudyProtocolConfig;
+  specialty?: string;
 };
 
 type CollisionOption = {
@@ -1007,6 +1015,134 @@ function PacienteContent() {
             }
 
             const activeSession = participant?.sessions?.find((s) => s.sessionNumber === selectedSessionNumber) || participant?.latestSession;
+            const protoSession = participant?.studyProtocol?.sessions?.find((s: StudySessionProtocol) => s.sessionNumber === selectedSessionNumber);
+
+            const renderSessionSwitcher = () => {
+              if (!participant?.sessions || participant.sessions.length <= 1) return null;
+              return (
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-2 mb-2 scrollbar-none">
+                  <span className="text-[11px] font-bold text-slate-500 whitespace-nowrap mr-1">
+                    Consulta:
+                  </span>
+                  {participant.sessions.map((sess) => {
+                    const isSel = sess.sessionNumber === selectedSessionNumber;
+                    const pSess = participant.studyProtocol?.sessions?.find((s: StudySessionProtocol) => s.sessionNumber === sess.sessionNumber);
+                    return (
+                      <button
+                        key={sess.id || sess.sessionNumber}
+                        type="button"
+                        onClick={() => setSelectedSessionNumber(sess.sessionNumber)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer whitespace-nowrap shadow-2xs ${
+                          isSel
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
+                        }`}
+                      >
+                        <span>Sessão {sess.sessionNumber}</span>
+                        {pSess?.name && (
+                          <span className="text-[10px] font-normal opacity-80 max-w-[120px] truncate hidden sm:inline">
+                            ({pSess.name.replace(/^Sessão\s*\d+:\s*/i, '')})
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              );
+            };
+
+            // Caso o protocolo determine que a sessão não exige questionários do paciente:
+            if (protoSession && protoSession.requiresPatientQuestionnaire === false) {
+              return (
+                <div className="space-y-4">
+                  {renderSessionSwitcher()}
+                  <div className="p-8 bg-gradient-to-br from-slate-50 to-blue-50/40 border border-slate-200 rounded-3xl text-center space-y-3.5 shadow-2xs">
+                    <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto shadow-2xs">
+                      <CheckCircle2 className="w-6 h-6" />
+                    </div>
+                    <div className="space-y-1">
+                      <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-blue-600 text-white">
+                        Sessão {selectedSessionNumber}: {protoSession.name}
+                      </span>
+                      <h3 className="font-bold text-slate-800 text-sm mt-2">
+                        Atendimento Clínico Concluído
+                      </h3>
+                    </div>
+                    <p className="text-xs text-slate-600 max-w-md mx-auto leading-relaxed">
+                      Sua consulta presencial foi realizada e todos os desfechos clínicos foram registrados diretamente pelo pesquisador na cadeira. <strong>Para esta sessão, não é necessário preencher diário de dor ou questionário no celular.</strong>
+                    </p>
+                    {protoSession.patientInstructions && (
+                      <div className="p-3.5 bg-white/90 border border-blue-200 rounded-2xl text-left text-xs max-w-md mx-auto space-y-1 shadow-2xs">
+                        <span className="font-bold text-blue-950 flex items-center gap-1.5">
+                          <Sparkles className="w-4 h-4 text-blue-600" />
+                          <span>Recomendações da Equipe de Pesquisa:</span>
+                        </span>
+                        <p className="text-slate-600 leading-relaxed text-[11px]">
+                          {protoSession.patientInstructions}
+                        </p>
+                      </div>
+                    )}
+                    {participant.forms && participant.forms.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab('forms')}
+                        className="mt-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition inline-flex items-center gap-1.5 cursor-pointer shadow-xs"
+                      >
+                        <ClipboardList className="w-3.5 h-3.5" />
+                        <span>Ver Questionários da Pesquisa</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            }
+
+            // Caso a sessão exija questionários, mas NÃO o diário de sensibilidade EVA:
+            const requiresEva = !protoSession?.patientQuestionnaireIds || protoSession.patientQuestionnaireIds.includes('eva');
+            if (!requiresEva) {
+              return (
+                <div className="space-y-4">
+                  {renderSessionSwitcher()}
+                  <div className="p-8 bg-gradient-to-br from-slate-50 to-indigo-50/40 border border-slate-200 rounded-3xl text-center space-y-3.5 shadow-2xs">
+                    <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center mx-auto shadow-2xs">
+                      <ClipboardList className="w-6 h-6" />
+                    </div>
+                    <div className="space-y-1">
+                      <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-blue-600 text-white">
+                        Sessão {selectedSessionNumber}: {protoSession?.name || 'Avaliação Clínica'}
+                      </span>
+                      <h3 className="font-bold text-slate-800 text-sm mt-2">
+                        Questionários Disponíveis no Portal
+                      </h3>
+                    </div>
+                    <p className="text-xs text-slate-600 max-w-md mx-auto leading-relaxed">
+                      Para esta sessão, não há diário de sensibilidade/dor (EVA). Por favor, responda aos questionários de acompanhamento da pesquisa clicando no botão abaixo:
+                    </p>
+                    {protoSession?.patientInstructions && (
+                      <div className="p-3.5 bg-white/90 border border-blue-200 rounded-2xl text-left text-xs max-w-md mx-auto space-y-1 shadow-2xs">
+                        <span className="font-bold text-blue-950 flex items-center gap-1.5">
+                          <Sparkles className="w-4 h-4 text-blue-600" />
+                          <span>Recomendações da Equipe:</span>
+                        </span>
+                        <p className="text-slate-600 leading-relaxed text-[11px]">
+                          {protoSession.patientInstructions}
+                        </p>
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('forms')}
+                      className="mt-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition inline-flex items-center gap-1.5 cursor-pointer shadow-xs"
+                    >
+                      <ClipboardList className="w-4 h-4" />
+                      <span>Responder Questionários da Sessão</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              );
+            }
 
             const sessionTime = activeSession?.createdAt
               ? new Date(activeSession.createdAt)
@@ -1074,6 +1210,20 @@ function PacienteContent() {
 
             return (
               <form onSubmit={handleSubmitReport} className="space-y-6">
+                {renderSessionSwitcher()}
+
+                {/* Orientações específicas do pesquisador para esta sessão */}
+                {protoSession?.patientInstructions && (
+                  <div className="p-3.5 bg-blue-50/80 border border-blue-200 rounded-2xl text-xs text-blue-950 space-y-1 shadow-2xs">
+                    <span className="font-bold flex items-center gap-1.5 text-blue-900">
+                      <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+                      <span>Recomendações da Equipe para esta Sessão:</span>
+                    </span>
+                    <p className="text-[11px] text-blue-800 leading-relaxed">
+                      {protoSession.patientInstructions}
+                    </p>
+                  </div>
+                )}
                 
                 {/* Painel de Registros Confirmados do Participante */}
                 <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 space-y-2.5 shadow-2xs">

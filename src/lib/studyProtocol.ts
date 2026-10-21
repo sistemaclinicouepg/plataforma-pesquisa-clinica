@@ -118,6 +118,17 @@ export const RESEARCH_SPECIALTIES: SpecialtyDefinition[] = [
   },
 ];
 
+export interface SessionClinicalModules {
+  toothMapping?: boolean; // Mapeamento de dentes/quadrantes
+  colorGuide?: boolean; // Escala Vita Classical
+  painVAS?: boolean; // Escala EVA na cadeira (0h)
+  softTissueExam?: boolean; // Exame de tecidos moles / alvéolo / margem
+  edemaTrismus?: boolean; // Aferição de edema facial e trismo (Cirurgia)
+  fdiCriteria?: boolean; // Critérios FDI de longevidade (Dentística)
+  percussionPalpation?: boolean; // Percussão e palpação (Endodontia)
+  periodontogram?: boolean; // Sondagem e sangramento (Periodontia)
+}
+
 export type StudySessionProtocol = {
   id: string;
   sessionNumber: number;
@@ -127,6 +138,13 @@ export type StudySessionProtocol = {
   durationMinutes: number; // Duração estimada em minutos (ex: 15, 30, 45, 60, 90, 120)
   toleranceDays: number; // Tolerância em dias (ex: ±2 dias)
   description?: string;
+  // Configurações por sessão para o Voluntário / Paciente
+  requiresPatientQuestionnaire?: boolean; // Se o paciente precisa responder questionários nesta sessão (default: true)
+  patientQuestionnaireIds?: string[]; // IDs dos questionários atribuídos a esta sessão (ex: ['eva', 'ohip', 'satisfaction'])
+  patientInstructions?: string; // Orientações personalizadas da sessão enviadas ao paciente
+  // Configurações por sessão para o Pesquisador
+  clinicalModules?: SessionClinicalModules;
+  clinicalChecklist?: string[]; // Etapas clínicas padronizadas desta sessão
 };
 
 export type RespondentType = 'RESEARCHER' | 'PATIENT';
@@ -149,6 +167,73 @@ export type FormTargetProtocol = {
   isPreset?: boolean;
 };
 
+export interface AvailableQuestionnaireOption {
+  id: string;
+  title: string;
+  badge: string;
+  icon: string;
+  category: string;
+  description: string;
+  defaultRespondent: RespondentType;
+}
+
+export const PRESET_QUESTIONNAIRES_CATALOG: AvailableQuestionnaireOption[] = [
+  {
+    id: 'eva',
+    title: 'Diário de Dor & Sensibilidade (Escala EVA)',
+    badge: 'Dor & Sensibilidade',
+    icon: '⚡',
+    category: 'Farmacovigilância & Desfechos',
+    description: 'Monitoramento longitudinal com escala EVA (0 a 10) e gatilho de alerta vermelho clínico.',
+    defaultRespondent: 'PATIENT',
+  },
+  {
+    id: 'ohip',
+    title: 'Qualidade de Vida em Saúde Bucal (OHIP-14)',
+    badge: 'OHIP-14',
+    icon: '📊',
+    category: 'Qualidade de Vida (PROMs)',
+    description: '14 perguntas em escala Likert de 5 pontos validada internacionalmente.',
+    defaultRespondent: 'PATIENT',
+  },
+  {
+    id: 'satisfaction',
+    title: 'Questionário de Satisfação do Voluntário',
+    badge: 'Satisfação',
+    icon: '⭐',
+    category: 'Percepção Estética & Sucesso',
+    description: 'Avaliação da percepção de conforto, resultado e recomendação do tratamento.',
+    defaultRespondent: 'PATIENT',
+  },
+  {
+    id: 'habits',
+    title: 'Mapeamento de Hábitos, Dieta & Higiene',
+    badge: 'Hábitos & Estilo de Vida',
+    icon: '☕',
+    category: 'Variáveis Intervenientes',
+    description: 'Controle de tabagismo/vape, café, chimarrão, alimentos corantes e escovação.',
+    defaultRespondent: 'PATIENT',
+  },
+  {
+    id: 'fdi',
+    title: 'Critérios Clínicos FDI (Dentística / Longevidade)',
+    badge: 'FDI World Dental',
+    icon: '🦷',
+    category: 'Restauração & Adesão',
+    description: 'Avaliação estética, funcional e biológica de materiais restauradores.',
+    defaultRespondent: 'RESEARCHER',
+  },
+  {
+    id: 'surgery_edema',
+    title: 'Aferição de Edema Facial & Trismo (Cirurgia)',
+    badge: 'Cirurgia / Edema',
+    icon: '🩺',
+    category: 'Pós-Operatório Cirúrgico',
+    description: 'Mensurações anatômicas em mm e abertura máxima interincisal.',
+    defaultRespondent: 'RESEARCHER',
+  },
+];
+
 export type StudyProtocolConfig = {
   specialty?: ResearchSpecialty; // Área/Linha de pesquisa clínica do estudo
   projectPrefix?: string; // Prefixo personalizado do código dos participantes (ex: 'P01', 'EXP', 'CLAR')
@@ -167,6 +252,19 @@ export const DEFAULT_STUDY_SESSIONS: StudySessionProtocol[] = [
     durationMinutes: 60,
     toleranceDays: 0,
     description: 'Procedimento clínico inicial e linha de base.',
+    requiresPatientQuestionnaire: true,
+    patientQuestionnaireIds: ['eva'],
+    clinicalModules: {
+      toothMapping: true,
+      colorGuide: true,
+      painVAS: true,
+      softTissueExam: true,
+    },
+    clinicalChecklist: [
+      'Checagem de antissepsia, biossegurança e consentimento do participante.',
+      'Execução do protocolo clínico experimental conforme aprovado pelo CEP.',
+      'Finalização da intervenção e orientações pós-operatórias na cadeira.',
+    ],
   },
   {
     id: 'sess_2',
@@ -177,6 +275,19 @@ export const DEFAULT_STUDY_SESSIONS: StudySessionProtocol[] = [
     durationMinutes: 45,
     toleranceDays: 2,
     description: 'Segunda aplicação clínica do protocolo experimental.',
+    requiresPatientQuestionnaire: true,
+    patientQuestionnaireIds: ['eva'],
+    clinicalModules: {
+      toothMapping: true,
+      colorGuide: true,
+      painVAS: true,
+      softTissueExam: true,
+    },
+    clinicalChecklist: [
+      'Avaliação clínica prévia da integridade tecidual.',
+      'Execução da segunda etapa do protocolo experimental.',
+      'Checagem de desfechos imediatos e liberação do participante.',
+    ],
   },
   {
     id: 'sess_3',
@@ -187,8 +298,530 @@ export const DEFAULT_STUDY_SESSIONS: StudySessionProtocol[] = [
     durationMinutes: 30,
     toleranceDays: 3,
     description: 'Exame clínico de acompanhamento e verificação de desfechos.',
+    requiresPatientQuestionnaire: true,
+    patientQuestionnaireIds: ['satisfaction', 'ohip'],
+    clinicalModules: {
+      toothMapping: true,
+      colorGuide: true,
+      painVAS: true,
+      softTissueExam: true,
+    },
+    clinicalChecklist: [
+      'Exame clínico de longevidade e ausência de efeitos adversos.',
+      'Aferição de desfechos primários e secundários do protocolo.',
+      'Encerramento do acompanhamento clínico do participante.',
+    ],
   },
 ];
+
+/**
+ * Retorna o protocolo de sessões e critérios padrão recomendados para cada especialidade odontológica
+ */
+export function getSpecialtyDefaultSessions(specialty: ResearchSpecialty): StudySessionProtocol[] {
+  switch (specialty) {
+    case 'RESTORATIVE':
+      return [
+        {
+          id: 'sess_1',
+          sessionNumber: 1,
+          name: 'Sessão 1: Procedimento Restaurador & Aplicação Adesiva',
+          type: 'CLINICAL',
+          daysFromPrevious: 0,
+          durationMinutes: 60,
+          toleranceDays: 0,
+          description: 'Preparo, isolamento absoluto, aplicação adesiva e restauração.',
+          requiresPatientQuestionnaire: true,
+          patientQuestionnaireIds: ['eva'],
+          patientInstructions: 'Registre a sensibilidade pós-operatória ao mastigar e ao frio.',
+          clinicalModules: {
+            toothMapping: true,
+            colorGuide: true,
+            painVAS: true,
+            softTissueExam: true,
+            fdiCriteria: false,
+          },
+          clinicalChecklist: [
+            'Exame do elemento dental, cor de base e profilaxia com pedra-pomes e água.',
+            'Isolamento absoluto estrito com lençol de borracha e amarria.',
+            'Condicionamento do substrato e aplicação do sistema adesivo conforme fabricante.',
+            'Inserção da resina composta, fotoativação e checagem oclusal.',
+            'Acabamento imediato e polimento prévio da restauração.',
+          ],
+        },
+        {
+          id: 'sess_2',
+          sessionNumber: 2,
+          name: 'Sessão 2: Reavaliação Imediata & Polimento Final (7 dias)',
+          type: 'EVALUATION',
+          daysFromPrevious: 7,
+          durationMinutes: 30,
+          toleranceDays: 2,
+          description: 'Aferição de sensibilidade mastigatória e refinamento oclusal.',
+          requiresPatientQuestionnaire: true,
+          patientQuestionnaireIds: ['eva'],
+          clinicalModules: {
+            toothMapping: true,
+            colorGuide: false,
+            painVAS: true,
+            softTissueExam: true,
+            fdiCriteria: true,
+          },
+          clinicalChecklist: [
+            'Verificação de queixas de dor ou sensibilidade ao ar e mastigação.',
+            'Refinamento de contatos oclusais com papel carbono de alta precisão.',
+            'Polimento final de alto brilho com pastas diamantadas.',
+          ],
+        },
+        {
+          id: 'sess_3',
+          sessionNumber: 3,
+          name: 'Sessão 3: Avaliação de 6 Meses (Critérios FDI)',
+          type: 'FOLLOW_UP',
+          daysFromPrevious: 180,
+          durationMinutes: 40,
+          toleranceDays: 15,
+          description: 'Avaliação de longevidade clínica segundo critérios padronizados FDI.',
+          requiresPatientQuestionnaire: true,
+          patientQuestionnaireIds: ['ohip', 'satisfaction'],
+          clinicalModules: {
+            toothMapping: true,
+            colorGuide: true,
+            painVAS: false,
+            softTissueExam: true,
+            fdiCriteria: true,
+          },
+          clinicalChecklist: [
+            'Critérios Estéticos FDI: brilho superficial, manchamento marginal e cor.',
+            'Critérios Funcionais FDI: fratura de material, retenção e adaptação de margem.',
+            'Critérios Biológicos FDI: cárie secundária, sensibilidade e vitalidade pulpar.',
+          ],
+        },
+        {
+          id: 'sess_4',
+          sessionNumber: 4,
+          name: 'Sessão 4: Avaliação de 12 Meses (Longevidade Final)',
+          type: 'FOLLOW_UP',
+          daysFromPrevious: 180,
+          durationMinutes: 40,
+          toleranceDays: 15,
+          description: 'Acompanhamento longitudinal de 1 ano e classificação de sucesso.',
+          requiresPatientQuestionnaire: true,
+          patientQuestionnaireIds: ['satisfaction'],
+          clinicalModules: {
+            toothMapping: true,
+            colorGuide: true,
+            painVAS: false,
+            softTissueExam: true,
+            fdiCriteria: true,
+          },
+          clinicalChecklist: [
+            'Avaliação cega independente segundo os critérios FDI World Dental.',
+            'Registro fotográfico padronizado da interface adesiva.',
+            'Classificação final do desfecho restaurador.',
+          ],
+        },
+      ];
+
+    case 'SURGERY':
+      return [
+        {
+          id: 'sess_1',
+          sessionNumber: 1,
+          name: 'Sessão 1: Ato Cirúrgico / Exodontia',
+          type: 'CLINICAL',
+          daysFromPrevious: 0,
+          durationMinutes: 60,
+          toleranceDays: 0,
+          description: 'Ato cirúrgico padronizado, exodontia e sutura.',
+          requiresPatientQuestionnaire: true,
+          patientQuestionnaireIds: ['eva'],
+          patientInstructions: 'Preencha o diário de dor e informe qualquer analgésico de resgate tomado.',
+          clinicalModules: {
+            toothMapping: true,
+            colorGuide: false,
+            painVAS: true,
+            softTissueExam: true,
+            edemaTrismus: true,
+          },
+          clinicalChecklist: [
+            'Aferição de sinais vitais, antissepsia extra e intrabucal.',
+            'Anestesia local e anotação do número de tubetes utilizados.',
+            'Incisão, descolamento mucoperiosteal e osteotomia/odontosecção.',
+            'Exodontia com mínimo trauma e curetagem cuidadosa do alvéolo.',
+            'Irrigação abundante com soro fisiológico 0,9% e sutura oclusiva.',
+          ],
+        },
+        {
+          id: 'sess_2',
+          sessionNumber: 2,
+          name: 'Sessão 2: Retorno 48 Horas (Pico Inflamatório: Edema & Trismo)',
+          type: 'EVALUATION',
+          daysFromPrevious: 2,
+          durationMinutes: 20,
+          toleranceDays: 1,
+          description: 'Aferição de edema facial em mm, abertura interincisal e dor.',
+          requiresPatientQuestionnaire: true,
+          patientQuestionnaireIds: ['eva'],
+          clinicalModules: {
+            toothMapping: true,
+            colorGuide: false,
+            painVAS: true,
+            softTissueExam: true,
+            edemaTrismus: true,
+          },
+          clinicalChecklist: [
+            'Mensuração do edema facial em mm (linhas anatômicas tragus-pogônio e comissura).',
+            'Aferição da abertura máxima interincisal (trismo) com paquímetro milimetrado.',
+            'Exame do coágulo sanguíneo e integridade dos pontos de sutura.',
+          ],
+        },
+        {
+          id: 'sess_3',
+          sessionNumber: 3,
+          name: 'Sessão 3: Retorno 7 Dias (Remoção de Sutura & Cicatrização)',
+          type: 'EVALUATION',
+          daysFromPrevious: 5,
+          durationMinutes: 20,
+          toleranceDays: 2,
+          description: 'Remoção de sutura e controle de complicações infecciosas/alveolite.',
+          requiresPatientQuestionnaire: true,
+          patientQuestionnaireIds: ['ohip', 'satisfaction'],
+          clinicalModules: {
+            toothMapping: true,
+            colorGuide: false,
+            painVAS: true,
+            softTissueExam: true,
+            edemaTrismus: true,
+          },
+          clinicalChecklist: [
+            'Inspeção do alvéolo: epitelização tecidual e ausência de alveolite seca/úmida.',
+            'Remoção delicada dos pontos de sutura com fio estéril.',
+            'Avaliação de sensibilidade ou parestesia de nervo alveolar e lingual.',
+          ],
+        },
+        {
+          id: 'sess_4',
+          sessionNumber: 4,
+          name: 'Sessão 4: Controle de 30 Dias (Cicatrização Óssea Final)',
+          type: 'FOLLOW_UP',
+          daysFromPrevious: 23,
+          durationMinutes: 20,
+          toleranceDays: 5,
+          description: 'Encerramento do protocolo cirúrgico do voluntário.',
+          requiresPatientQuestionnaire: false,
+          patientQuestionnaireIds: [],
+          clinicalModules: {
+            toothMapping: true,
+            colorGuide: false,
+            painVAS: false,
+            softTissueExam: true,
+          },
+          clinicalChecklist: [
+            'Inspeção do contorno mucoso e ausência de sintomatologia residual.',
+            'Encerramento do protocolo cirúrgico e alta do voluntário.',
+          ],
+        },
+      ];
+
+    case 'ENDODONTICS':
+      return [
+        {
+          id: 'sess_1',
+          sessionNumber: 1,
+          name: 'Sessão 1: Intervenção Endodôntica (PQC & Obturação)',
+          type: 'CLINICAL',
+          daysFromPrevious: 0,
+          durationMinutes: 90,
+          toleranceDays: 0,
+          description: 'Acesso, instrumentação, desinfecção e selamento do canal.',
+          requiresPatientQuestionnaire: true,
+          patientQuestionnaireIds: ['eva'],
+          clinicalModules: {
+            toothMapping: true,
+            colorGuide: false,
+            painVAS: true,
+            softTissueExam: true,
+            percussionPalpation: true,
+          },
+          clinicalChecklist: [
+            'Isolamento absoluto estrito com lençol de borracha.',
+            'Acesso coronário e odontometria eletrônica foraminal confirmada.',
+            'Preparo químico-mecânico padronizado e agitação de irrigantes (PUI).',
+            'Secagem e obturação termoplastificada do sistema de canais.',
+            'Selamento coronário imediato e radiografia periapical final.',
+          ],
+        },
+        {
+          id: 'sess_2',
+          sessionNumber: 2,
+          name: 'Sessão 2: Retorno 7 Dias (Dor Pós-Endodôntica & Sintomas)',
+          type: 'EVALUATION',
+          daysFromPrevious: 7,
+          durationMinutes: 20,
+          toleranceDays: 2,
+          description: 'Avaliação de dor à mastigação, percussão e palpação.',
+          requiresPatientQuestionnaire: true,
+          patientQuestionnaireIds: ['eva'],
+          clinicalModules: {
+            toothMapping: true,
+            colorGuide: false,
+            painVAS: true,
+            softTissueExam: true,
+            percussionPalpation: true,
+          },
+          clinicalChecklist: [
+            'Palpação apical vestibular e percussão vertical/horizontal.',
+            'Checagem da integridade do selamento coronário provisório/definitivo.',
+          ],
+        },
+        {
+          id: 'sess_3',
+          sessionNumber: 3,
+          name: 'Sessão 3: Acompanhamento de 6 Meses (Índice Periapical PAI)',
+          type: 'FOLLOW_UP',
+          daysFromPrevious: 180,
+          durationMinutes: 30,
+          toleranceDays: 15,
+          description: 'Tomada radiográfica padronizada e regressão de lesão periapical.',
+          requiresPatientQuestionnaire: true,
+          patientQuestionnaireIds: ['ohip', 'satisfaction'],
+          clinicalModules: {
+            toothMapping: true,
+            colorGuide: false,
+            painVAS: false,
+            softTissueExam: true,
+            percussionPalpation: true,
+          },
+          clinicalChecklist: [
+            'Tomada radiográfica periapical com posicionador milimetrado.',
+            'Classificação do escore periapical (Índice PAI de Ørstavik 1 a 5).',
+            'Inspeção de fístulas, mobilidade dental e integridade estrutural.',
+          ],
+        },
+        {
+          id: 'sess_4',
+          sessionNumber: 4,
+          name: 'Sessão 4: Controle de 12 Meses (Sucesso Endodôntico Final)',
+          type: 'FOLLOW_UP',
+          daysFromPrevious: 180,
+          durationMinutes: 30,
+          toleranceDays: 15,
+          description: 'Confirmação do sucesso clínico e radiográfico a longo prazo.',
+          requiresPatientQuestionnaire: false,
+          patientQuestionnaireIds: [],
+          clinicalModules: {
+            toothMapping: true,
+            colorGuide: false,
+            painVAS: false,
+            softTissueExam: true,
+            percussionPalpation: true,
+          },
+          clinicalChecklist: [
+            'Radiografia periapical final para confirmação de cicatrização óssea periapical.',
+            'Classificação do desfecho endodôntico (Sucesso estrito vs Incerteza vs Falha).',
+          ],
+        },
+      ];
+
+    case 'PERIODONTICS':
+      return [
+        {
+          id: 'sess_1',
+          sessionNumber: 1,
+          name: 'Sessão 1: Terapia Periodontal Básica / Raspagem (RAR)',
+          type: 'CLINICAL',
+          daysFromPrevious: 0,
+          durationMinutes: 60,
+          toleranceDays: 0,
+          description: 'Mapeamento periodontal completo e raspagem/alisamento radicular.',
+          requiresPatientQuestionnaire: true,
+          patientQuestionnaireIds: ['eva'],
+          clinicalModules: {
+            toothMapping: true,
+            colorGuide: false,
+            painVAS: true,
+            softTissueExam: true,
+            periodontogram: true,
+          },
+          clinicalChecklist: [
+            'Mapeamento inicial de Profundidade de Sondagem (PS) e Nível de Inserção Clínica (NIC).',
+            'Registro de Sangramento à Sondagem (SS %) e Índice de Placa Visível (IPV).',
+            'Raspagem e alisamento radicular (RAR) com ultrassom e curetas padronizadas.',
+            'Instrução de higiene bucal personalizada e escovas interdentais.',
+          ],
+        },
+        {
+          id: 'sess_2',
+          sessionNumber: 2,
+          name: 'Sessão 2: Reavaliação Periodontal de 30 Dias',
+          type: 'EVALUATION',
+          daysFromPrevious: 30,
+          durationMinutes: 40,
+          toleranceDays: 5,
+          description: 'Aferição de resposta tecidual, redução de bolsas e SS.',
+          requiresPatientQuestionnaire: true,
+          patientQuestionnaireIds: ['eva', 'habits'],
+          clinicalModules: {
+            toothMapping: true,
+            colorGuide: false,
+            painVAS: true,
+            softTissueExam: true,
+            periodontogram: true,
+          },
+          clinicalChecklist: [
+            'Sondagem dos sítios tratados e contagem de bolsas residuais (PS ≥ 5mm).',
+            'Verificação da redução de sangramento e adesão do paciente à higiene bucal.',
+          ],
+        },
+        {
+          id: 'sess_3',
+          sessionNumber: 3,
+          name: 'Sessão 3: Terapia Periodontal de Suporte (90 Dias)',
+          type: 'FOLLOW_UP',
+          daysFromPrevious: 60,
+          durationMinutes: 30,
+          toleranceDays: 7,
+          description: 'Controle de biofilme, sensibilidade cervical e raspagem localizada.',
+          requiresPatientQuestionnaire: true,
+          patientQuestionnaireIds: ['ohip'],
+          clinicalModules: {
+            toothMapping: true,
+            colorGuide: false,
+            painVAS: false,
+            softTissueExam: true,
+            periodontogram: true,
+          },
+          clinicalChecklist: [
+            'Instrumentação localizada de sítios com sangramento persistente.',
+            'Aplicação de agentes dessensibilizantes em áreas de recessão gengival.',
+          ],
+        },
+        {
+          id: 'sess_4',
+          sessionNumber: 4,
+          name: 'Sessão 4: Manutenção & Estabilidade de 180 Dias',
+          type: 'FOLLOW_UP',
+          daysFromPrevious: 90,
+          durationMinutes: 30,
+          toleranceDays: 10,
+          description: 'Periograma comparativo de 6 meses e estabilidade periodontal.',
+          requiresPatientQuestionnaire: true,
+          patientQuestionnaireIds: ['ohip', 'satisfaction'],
+          clinicalModules: {
+            toothMapping: true,
+            colorGuide: false,
+            painVAS: false,
+            softTissueExam: true,
+            periodontogram: true,
+          },
+          clinicalChecklist: [
+            'Periograma completo de 6 meses para bioestatística comparativa.',
+            'Cálculo do ganho médio de inserção clínica (NIC) e estabilidade de suporte.',
+          ],
+        },
+      ];
+
+    case 'BLEACHING':
+      return [
+        {
+          id: 'sess_1',
+          sessionNumber: 1,
+          name: 'Sessão 1: Linha de Base & 1ª Aplicação do Gel',
+          type: 'CLINICAL',
+          daysFromPrevious: 0,
+          durationMinutes: 60,
+          toleranceDays: 0,
+          description: 'Aferição de cor inicial VITA, aplicação do gel clareador e diário 0-48h.',
+          requiresPatientQuestionnaire: true,
+          patientQuestionnaireIds: ['eva', 'habits'],
+          clinicalModules: {
+            toothMapping: true,
+            colorGuide: true,
+            painVAS: true,
+            softTissueExam: true,
+          },
+          clinicalChecklist: [
+            'Aferição do tom de cor de base no terço médio (Escala VITA Classical ou Bleachedguide).',
+            'Profilaxia coronária com pedra-pomes e água.',
+            'Aplicação da barreira gengival fotopolimerizável com vedamento absoluto.',
+            'Aplicação homogênea do gel clareador nos hemi-arcos conforme protocolo.',
+            'Aspiração abundante, lavagem e remoção da barreira.',
+          ],
+        },
+        {
+          id: 'sess_2',
+          sessionNumber: 2,
+          name: 'Sessão 2: 2ª Aplicação Clínica (7 Dias)',
+          type: 'CLINICAL',
+          daysFromPrevious: 7,
+          durationMinutes: 60,
+          toleranceDays: 2,
+          description: 'Segunda sessão de aplicação do agente clareador.',
+          requiresPatientQuestionnaire: true,
+          patientQuestionnaireIds: ['eva'],
+          clinicalModules: {
+            toothMapping: true,
+            colorGuide: true,
+            painVAS: true,
+            softTissueExam: true,
+          },
+          clinicalChecklist: [
+            'Aferição prévia de cor e ausência de irritação gengival.',
+            'Barreira gengival e aplicação da 2ª sessão do gel clareador.',
+            'Registro da sensibilidade imediata na cadeira.',
+          ],
+        },
+        {
+          id: 'sess_3',
+          sessionNumber: 3,
+          name: 'Sessão 3: Retorno de 14 Dias (Estabilidade de Cor)',
+          type: 'EVALUATION',
+          daysFromPrevious: 7,
+          durationMinutes: 30,
+          toleranceDays: 3,
+          description: 'Aferição de cor após reidratação dental (cálculo de ΔSGU).',
+          requiresPatientQuestionnaire: true,
+          patientQuestionnaireIds: ['satisfaction'],
+          clinicalModules: {
+            toothMapping: true,
+            colorGuide: true,
+            painVAS: true,
+            softTissueExam: true,
+          },
+          clinicalChecklist: [
+            'Aferição de cor sob luz padronizada após reidratação dental completa.',
+            'Cálculo do Delta de cor (ΔSGU) e exame da margem gengival.',
+          ],
+        },
+        {
+          id: 'sess_4',
+          sessionNumber: 4,
+          name: 'Sessão 4: Retorno de 30 Dias (Longevidade Estética)',
+          type: 'FOLLOW_UP',
+          daysFromPrevious: 16,
+          durationMinutes: 30,
+          toleranceDays: 5,
+          description: 'Avaliação final da eficácia e longevidade do clareamento.',
+          requiresPatientQuestionnaire: true,
+          patientQuestionnaireIds: ['satisfaction', 'ohip'],
+          clinicalModules: {
+            toothMapping: true,
+            colorGuide: true,
+            painVAS: false,
+            softTissueExam: true,
+          },
+          clinicalChecklist: [
+            'Aferição final da cor dental sob condições padronizadas.',
+            'Avaliação da satisfação estética do sorriso e encerramento.',
+          ],
+        },
+      ];
+
+    case 'GENERAL':
+    default:
+      return DEFAULT_STUDY_SESSIONS;
+  }
+}
 
 export const DEFAULT_FORM_TARGETS: FormTargetProtocol[] = [
   {
@@ -354,13 +987,6 @@ export function parseStudyProtocol(templateStringOrObj: any): StudyProtocolConfi
   }
 
   const studyProtocol = parsed.studyProtocol || {};
-  const sessions = Array.isArray(studyProtocol.sessions) && studyProtocol.sessions.length > 0
-    ? studyProtocol.sessions
-    : DEFAULT_STUDY_SESSIONS;
-
-  const forms = Array.isArray(studyProtocol.forms) && studyProtocol.forms.length > 0
-    ? studyProtocol.forms
-    : DEFAULT_FORM_TARGETS;
 
   const validSpecialties: ResearchSpecialty[] = [
     'RESTORATIVE',
@@ -375,6 +1001,47 @@ export function parseStudyProtocol(templateStringOrObj: any): StudyProtocolConfi
   if (studyProtocol.specialty && validSpecialties.includes(studyProtocol.specialty)) {
     specialty = studyProtocol.specialty;
   }
+
+  const rawSessions = Array.isArray(studyProtocol.sessions) && studyProtocol.sessions.length > 0
+    ? studyProtocol.sessions
+    : getSpecialtyDefaultSessions(specialty);
+
+  const sessions: StudySessionProtocol[] = rawSessions.map((s: any, idx: number) => {
+    return {
+      id: s.id || `sess_${idx + 1}`,
+      sessionNumber: Number(s.sessionNumber) || idx + 1,
+      name: s.name || `Sessão ${idx + 1}`,
+      type: s.type || (idx === 0 ? 'CLINICAL' : 'EVALUATION'),
+      daysFromPrevious: Number(s.daysFromPrevious) ?? (idx === 0 ? 0 : 7),
+      durationMinutes: Number(s.durationMinutes) || (idx === 0 ? 60 : 30),
+      toleranceDays: Number(s.toleranceDays) || (idx === 0 ? 0 : 2),
+      description: s.description || '',
+      requiresPatientQuestionnaire: s.requiresPatientQuestionnaire !== undefined
+        ? Boolean(s.requiresPatientQuestionnaire)
+        : true,
+      patientQuestionnaireIds: Array.isArray(s.patientQuestionnaireIds)
+        ? s.patientQuestionnaireIds
+        : (s.requiresPatientQuestionnaire === false ? [] : ['eva']),
+      patientInstructions: s.patientInstructions || '',
+      clinicalModules: s.clinicalModules || {
+        toothMapping: true,
+        colorGuide: specialty === 'BLEACHING' || specialty === 'RESTORATIVE',
+        painVAS: true,
+        softTissueExam: true,
+        fdiCriteria: specialty === 'RESTORATIVE',
+        edemaTrismus: specialty === 'SURGERY',
+        percussionPalpation: specialty === 'ENDODONTICS',
+        periodontogram: specialty === 'PERIODONTICS',
+      },
+      clinicalChecklist: Array.isArray(s.clinicalChecklist) && s.clinicalChecklist.length > 0
+        ? s.clinicalChecklist
+        : undefined,
+    };
+  });
+
+  const forms = Array.isArray(studyProtocol.forms) && studyProtocol.forms.length > 0
+    ? studyProtocol.forms
+    : DEFAULT_FORM_TARGETS;
 
   return {
     specialty,

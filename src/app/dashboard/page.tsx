@@ -22,6 +22,7 @@ import {
   getFrequencyLabel,
   RESEARCH_SPECIALTIES,
   ResearchSpecialty,
+  PRESET_QUESTIONNAIRES_CATALOG,
 } from '@/lib/studyProtocol';
 import {
   Stethoscope,
@@ -6122,8 +6123,40 @@ function DashboardContent() {
           const patientFirstName = currentSessionParticipant.patient.fullName.split(' ')[0];
           const origin = typeof window !== 'undefined' ? window.location.origin : 'https://pesquisaclinicapuc.com.br';
           const diaryUrl = `${origin}/paciente?code=${code}`;
-          
-          const text = `Olá, ${patientFirstName}! Seu atendimento clínico da Sessão ${currentSessionForm.sessionNumber} foi realizado com sucesso na UEPG.\n\nPor favor, acompanhe e registre sua sensibilidade no seu Diário Clínico no celular:\n👉 ${diaryUrl}\n\nLembretes de preenchimento:\n• 1 Hora pós-atendimento (hoje)\n• 24 Horas (amanhã)\n• 48 Horas (em 2 dias)\n\nQualquer dúvida ou desconforto incomum, estamos à sua disposição!`;
+          const sessionName = protoSession?.name || `Sessão ${currentSessionForm.sessionNumber}`;
+          const requiresProms = protoSession?.requiresPatientQuestionnaire !== false;
+
+          if (!requiresProms) {
+            const text = `Olá, ${patientFirstName}! Seu atendimento clínico da ${sessionName} foi realizado com sucesso na UEPG.\n\nPara esta consulta, o procedimento foi 100% clínico e não há questionários ou diários para responder no celular.\n\nQualquer dúvida ou intercorrência, nossa equipe está sempre à sua disposição!`;
+            return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`;
+          }
+
+          const qIds = protoSession?.patientQuestionnaireIds || ['eva'];
+          const bullets: string[] = [];
+          if (qIds.includes('eva')) {
+            bullets.push('• Diário de Sensibilidade & Dor (1h hoje, 24h amanhã, 48h em 2 dias)');
+          }
+          if (qIds.includes('ohip')) {
+            bullets.push('• Questionário OHIP-14 (Qualidade de Vida em Saúde Bucal)');
+          }
+          if (qIds.includes('satisfaction')) {
+            bullets.push('• Avaliação de Satisfação com o Tratamento');
+          }
+          if (qIds.includes('habits')) {
+            bullets.push('• Diário de Hábitos, Higiene e Dieta');
+          }
+          if (qIds.includes('surgery_edema')) {
+            bullets.push('• Acompanhamento de Edema Facial e Conforto Mastigatório');
+          }
+
+          let text = `Olá, ${patientFirstName}! Seu atendimento clínico da ${sessionName} foi realizado com sucesso na UEPG.\n\nPor favor, acompanhe e registre seus relatos no seu Portal do Paciente:\n👉 ${diaryUrl}\n\n`;
+          if (bullets.length > 0) {
+            text += `Questionários disponíveis para esta sessão:\n${bullets.join('\n')}\n\n`;
+          }
+          if (protoSession?.patientInstructions) {
+            text += `📌 Orientações da equipe:\n${protoSession.patientInstructions}\n\n`;
+          }
+          text += `Qualquer dúvida ou desconforto incomum, estamos à sua inteira disposição!`;
 
           return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`;
         };
@@ -6277,58 +6310,68 @@ function DashboardContent() {
                       </div>
 
                       {/* Aferição de Cor Dental (Escala VITA Classical - Quando Aplicável) */}
-                      <div className="p-4 bg-amber-50/50 border border-amber-200/80 rounded-2xl space-y-3 shadow-2xs">
-                        <div className="flex items-center justify-between">
-                          <span className="font-bold text-amber-950 text-xs inline-flex items-center gap-1.5">
-                            <Sparkles className="w-4 h-4 text-amber-600" />
-                            <span>Aferição de Cor Dental (VITA Classical - se aplicável ao estudo)</span>
+                      {((protoSession?.clinicalModules ? protoSession.clinicalModules.colorGuide : currentSpecialty.hasColorGuide) !== false) ? (
+                        <div className="p-4 bg-amber-50/50 border border-amber-200/80 rounded-2xl space-y-3 shadow-2xs">
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-amber-950 text-xs inline-flex items-center gap-1.5">
+                              <Sparkles className="w-4 h-4 text-amber-600" />
+                              <span>Aferição de Cor Dental (VITA Classical - se aplicável ao estudo)</span>
+                            </span>
+                            <span className="text-[10px] text-amber-800 font-medium">Boca Dividida ou Dentes Teste</span>
+                          </div>
+                          <p className="text-[11px] text-amber-900/80 leading-relaxed">
+                            Aferição sob luz padronizada antes da intervenção. Aplicável a clareamento dental, compósitos e cerâmicas. Em ensaios cirúrgicos ou endodônticos sem aferição de cor, pode-se manter o valor padrão.
+                          </p>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                            <div className="bg-white p-3 rounded-xl border border-amber-200 shadow-2xs">
+                              <label className="block font-bold text-slate-700 text-xs mb-1.5">
+                                Lado Direito / Hemi-arco 1 (ou Dente Teste A)
+                              </label>
+                              <select
+                                value={currentSessionForm.shadeRight}
+                                onChange={(e) =>
+                                  setCurrentSessionForm({ ...currentSessionForm, shadeRight: e.target.value })
+                                }
+                                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs bg-white font-mono font-bold text-slate-800 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                              >
+                                {VITA_CLASSICAL_SHADES.map((sh, idx) => (
+                                  <option key={sh} value={sh}>
+                                    Tom {sh} (Passo {idx + 1})
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+
+                            <div className="bg-white p-3 rounded-xl border border-amber-200 shadow-2xs">
+                              <label className="block font-bold text-slate-700 text-xs mb-1.5">
+                                Lado Esquerdo / Hemi-arco 2 (ou Dente Teste B)
+                              </label>
+                              <select
+                                value={currentSessionForm.shadeLeft}
+                                onChange={(e) =>
+                                  setCurrentSessionForm({ ...currentSessionForm, shadeLeft: e.target.value })
+                                }
+                                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs bg-white font-mono font-bold text-slate-800 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                              >
+                                {VITA_CLASSICAL_SHADES.map((sh, idx) => (
+                                  <option key={sh} value={sh}>
+                                    Tom {sh} (Passo {idx + 1})
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-xs text-slate-600">
+                          <span className="flex items-center gap-1.5 font-bold text-slate-700">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                            <span>Tomada de cor VITA não necessária para esta consulta / especialidade</span>
                           </span>
-                          <span className="text-[10px] text-amber-800 font-medium">Boca Dividida ou Dentes Teste</span>
+                          <span className="text-[10px] text-slate-500 font-semibold">{currentSpecialty.name}</span>
                         </div>
-                        <p className="text-[11px] text-amber-900/80 leading-relaxed">
-                          Aferição sob luz padronizada antes da intervenção. Aplicável a clareamento dental, compósitos e cerâmicas. Em ensaios cirúrgicos ou endodônticos sem aferição de cor, pode-se manter o valor padrão.
-                        </p>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                          <div className="bg-white p-3 rounded-xl border border-amber-200 shadow-2xs">
-                            <label className="block font-bold text-slate-700 text-xs mb-1.5">
-                              Lado Direito / Hemi-arco 1 (ou Dente Teste A)
-                            </label>
-                            <select
-                              value={currentSessionForm.shadeRight}
-                              onChange={(e) =>
-                                setCurrentSessionForm({ ...currentSessionForm, shadeRight: e.target.value })
-                              }
-                              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs bg-white font-mono font-bold text-slate-800 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                            >
-                              {VITA_CLASSICAL_SHADES.map((sh, idx) => (
-                                <option key={sh} value={sh}>
-                                  Tom {sh} (Passo {idx + 1})
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-
-                          <div className="bg-white p-3 rounded-xl border border-amber-200 shadow-2xs">
-                            <label className="block font-bold text-slate-700 text-xs mb-1.5">
-                              Lado Esquerdo / Hemi-arco 2 (ou Dente Teste B)
-                            </label>
-                            <select
-                              value={currentSessionForm.shadeLeft}
-                              onChange={(e) =>
-                                setCurrentSessionForm({ ...currentSessionForm, shadeLeft: e.target.value })
-                              }
-                              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs bg-white font-mono font-bold text-slate-800 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                            >
-                              {VITA_CLASSICAL_SHADES.map((sh, idx) => (
-                                <option key={sh} value={sh}>
-                                  Tom {sh} (Passo {idx + 1})
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                        </div>
-                      </div>
+                      )}
 
                       {/* Checagem de Tecidos e Critérios de Manutenção */}
                       <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1.5 text-slate-600 text-[11px]">
@@ -6352,19 +6395,22 @@ function DashboardContent() {
                         <span>Passo 2: {currentSpecialty.procedureTitle || 'Execução do Procedimento Clínico'}</span>
                       </div>
 
-                      {/* Checklist Clínico Dinâmico Adaptado à Especialidade */}
+                      {/* Checklist Clínico Dinâmico Adaptado à Sessão ou Especialidade */}
                       <div className="p-3.5 bg-blue-50/60 border border-blue-200 rounded-2xl space-y-2 text-xs">
                         <span className="font-bold text-blue-950 flex items-center justify-between">
                           <span className="flex items-center gap-1.5">
                             <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" />
-                            <span>Etapas Padronizadas ({currentSpecialty.name}):</span>
+                            <span>Etapas Padronizadas ({protoSession?.name || currentSpecialty.name}):</span>
                           </span>
                           <span className="text-[10px] font-semibold text-blue-700 bg-blue-100/70 px-2 py-0.5 rounded-full">
                             {currentSpecialty.badge}
                           </span>
                         </span>
                         <ul className="space-y-1.5 text-[11px] text-blue-900">
-                          {currentSpecialty.checklist.map((item, idx) => (
+                          {((protoSession?.clinicalChecklist && protoSession.clinicalChecklist.length > 0)
+                            ? protoSession.clinicalChecklist
+                            : currentSpecialty.checklist
+                          ).map((item, idx) => (
                             <li key={idx} className="flex items-start gap-2">
                               <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
                               <span>{item}</span>
@@ -6372,6 +6418,43 @@ function DashboardContent() {
                           ))}
                         </ul>
                       </div>
+
+                      {/* Módulos Clínicos Especiais Ativos nesta Sessão */}
+                      {protoSession?.clinicalModules?.edemaTrismus && (
+                        <div className="p-3 bg-amber-50/70 border border-amber-200 rounded-xl space-y-1 text-xs text-amber-950">
+                          <span className="font-bold flex items-center gap-1.5">
+                            <span>📏</span>
+                            <span>Módulo Cirúrgico: Avaliação de Edema e Abertura Bucal (Trismo)</span>
+                          </span>
+                          <p className="text-[11px] text-amber-800">
+                            Aferir distância interincisal máxima e inspecionar contorno facial para documentar na ficha clínica.
+                          </p>
+                        </div>
+                      )}
+
+                      {protoSession?.clinicalModules?.fdiCriteria && (
+                        <div className="p-3 bg-indigo-50/70 border border-indigo-200 rounded-xl space-y-1 text-xs text-indigo-950">
+                          <span className="font-bold flex items-center gap-1.5">
+                            <span>💎</span>
+                            <span>Módulo Restaurador: Critérios Clínicos FDI</span>
+                          </span>
+                          <p className="text-[11px] text-indigo-800">
+                            Exame sistemático de Estética (brilho, translucidez), Função (fratura, retenção, contorno) e Biologia (resposta pulpar, mancha marginal).
+                          </p>
+                        </div>
+                      )}
+
+                      {protoSession?.clinicalModules?.percussionPalpation && (
+                        <div className="p-3 bg-rose-50/70 border border-rose-200 rounded-xl space-y-1 text-xs text-rose-950">
+                          <span className="font-bold flex items-center gap-1.5">
+                            <span>🔨</span>
+                            <span>Módulo Endodôntico: Testes de Percussão & Palpação</span>
+                          </span>
+                          <p className="text-[11px] text-rose-800">
+                            Testes periapicais de percussão vertical/horizontal e palpação do fundo de vestíbulo para acompanhamento biológico.
+                          </p>
+                        </div>
+                      )}
 
                       {/* Cronômetro Clínico Integrado */}
                       <div className="p-5 bg-gradient-to-br from-slate-900 to-indigo-950 rounded-2xl text-white space-y-3.5 shadow-md text-center">
@@ -6666,30 +6749,73 @@ function DashboardContent() {
 
                       {/* Card de Ativação e Envio do Diário pelo WhatsApp */}
                       {currentSessionParticipant && (
-                        <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl space-y-2.5 shadow-2xs">
-                          <div className="flex items-center justify-between">
-                            <span className="font-bold text-emerald-950 text-xs flex items-center gap-1.5">
-                              <MessageSquare className="w-4 h-4 text-emerald-600" />
-                              <span>Ativação do Diário de Desfechos / Dor do Voluntário:</span>
-                            </span>
-                            <span className="text-[10px] text-emerald-800 font-bold">1 Clique</span>
-                          </div>
-                          <p className="text-[11px] text-emerald-900 leading-relaxed">
-                            Envie o link do portal para o WhatsApp do paciente para que ele possa registrar os relatos pós-operatórios de <strong>1 Hora</strong> (hoje), <strong>24 Horas</strong> (amanhã) e <strong>48 Horas</strong> (em 2 dias).
-                          </p>
+                        protoSession?.requiresPatientQuestionnaire === false ? (
+                          <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-2.5 shadow-2xs">
+                            <div className="flex items-center justify-between">
+                              <span className="font-bold text-slate-800 text-xs flex items-center gap-1.5">
+                                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                                <span>Sessão Estritamente Clínica</span>
+                              </span>
+                              <span className="text-[10px] text-slate-600 bg-slate-200 px-2 py-0.5 rounded-full font-bold">
+                                Sem Questionários no Celular
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-slate-600 leading-relaxed">
+                              Para esta sessão, não há exigência de questionários ou diários para o voluntário responder no celular. Os desfechos clínicos foram registrados pelo pesquisador nesta consulta.
+                            </p>
 
-                          <a
-                            href={getPatientDiaryWhatsAppUrl()}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="w-full py-2.5 bg-[#25D366] hover:bg-[#128C7E] text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center justify-center space-x-2"
-                          >
-                            <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
-                              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
-                            </svg>
-                            <span>Enviar Link do Diário no WhatsApp do Paciente</span>
-                          </a>
-                        </div>
+                            <a
+                              href={getPatientDiaryWhatsAppUrl()}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="w-full py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center justify-center space-x-2 cursor-pointer"
+                            >
+                              <MessageSquare className="w-4 h-4" />
+                              <span>Enviar Confirmação de Atendimento Realizado no WhatsApp</span>
+                            </a>
+                          </div>
+                        ) : (
+                          <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl space-y-2.5 shadow-2xs">
+                            <div className="flex items-center justify-between">
+                              <span className="font-bold text-emerald-950 text-xs flex items-center gap-1.5">
+                                <MessageSquare className="w-4 h-4 text-emerald-600" />
+                                <span>Ativação de Questionários & Diário do Voluntário:</span>
+                              </span>
+                              <span className="text-[10px] text-emerald-800 font-bold">1 Clique</span>
+                            </div>
+
+                            <div className="flex flex-wrap gap-1.5 pt-0.5">
+                              {(protoSession?.patientQuestionnaireIds || ['eva']).map((qid) => {
+                                const qCat = PRESET_QUESTIONNAIRES_CATALOG.find((c) => c.id === qid);
+                                return (
+                                  <span
+                                    key={qid}
+                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-200/80 text-emerald-900"
+                                  >
+                                    <span>{qCat?.icon || '📋'}</span>
+                                    <span>{qCat?.title || qid}</span>
+                                  </span>
+                                );
+                              })}
+                            </div>
+
+                            <p className="text-[11px] text-emerald-900 leading-relaxed">
+                              Envie o link do portal para o WhatsApp do paciente para que ele possa responder aos questionários vinculados a esta sessão.
+                            </p>
+
+                            <a
+                              href={getPatientDiaryWhatsAppUrl()}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="w-full py-2.5 bg-[#25D366] hover:bg-[#128C7E] text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center justify-center space-x-2 cursor-pointer"
+                            >
+                              <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+                              </svg>
+                              <span>Enviar Link dos Questionários no WhatsApp do Paciente</span>
+                            </a>
+                          </div>
+                        )
                       )}
                     </div>
                   )}

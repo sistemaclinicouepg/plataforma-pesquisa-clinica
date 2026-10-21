@@ -32,6 +32,8 @@ import {
   FolderKanban,
   FileText,
   ChevronRight,
+  Stethoscope,
+  MessageSquare,
 } from 'lucide-react';
 
 import {
@@ -42,6 +44,9 @@ import {
   FormTargetProtocol,
   RESEARCH_SPECIALTIES,
   ResearchSpecialty,
+  getSpecialtyDefaultSessions,
+  PRESET_QUESTIONNAIRES_CATALOG,
+  SessionClinicalModules,
 } from '@/lib/studyProtocol';
 
 type Project = {
@@ -144,6 +149,7 @@ export default function HomePage() {
   // Manipulação dinâmica de sessões
   const handleAddSession = (isEdit: boolean) => {
     const list = isEdit ? editStudySessions : studySessions;
+    const currentSpec = isEdit ? editProjectSpecialty : newProjectSpecialty;
     const nextNum = list.length + 1;
     const newSession: StudySessionProtocol = {
       id: `sess_${Date.now()}`,
@@ -154,11 +160,34 @@ export default function HomePage() {
       durationMinutes: 30,
       toleranceDays: 2,
       description: `Consulta clínica de acompanhamento (${nextNum}ª sessão).`,
+      requiresPatientQuestionnaire: true,
+      patientQuestionnaireIds: ['eva'],
+      clinicalModules: {
+        toothMapping: true,
+        colorGuide: currentSpec === 'BLEACHING' || currentSpec === 'RESTORATIVE',
+        painVAS: true,
+        softTissueExam: true,
+        fdiCriteria: currentSpec === 'RESTORATIVE',
+        edemaTrismus: currentSpec === 'SURGERY',
+        percussionPalpation: currentSpec === 'ENDODONTICS',
+        periodontogram: currentSpec === 'PERIODONTICS',
+      },
     };
     if (isEdit) {
       setEditStudySessions([...list, newSession]);
     } else {
       setStudySessions([...list, newSession]);
+    }
+  };
+
+  const handleApplySpecialtyDefaults = (spec: ResearchSpecialty, isEdit: boolean) => {
+    const defaults = getSpecialtyDefaultSessions(spec);
+    if (isEdit) {
+      setEditProjectSpecialty(spec);
+      setEditStudySessions(defaults);
+    } else {
+      setNewProjectSpecialty(spec);
+      setStudySessions(defaults);
     }
   };
 
@@ -194,6 +223,261 @@ export default function HomePage() {
     } else {
       setStudySessions(updated);
     }
+  };
+
+  const handleToggleSessionQuestionnaire = (
+    index: number,
+    qId: string,
+    isEdit: boolean
+  ) => {
+    const list = isEdit ? editStudySessions : studySessions;
+    const current = list[index]?.patientQuestionnaireIds || ['eva'];
+    const exists = current.includes(qId);
+    const updatedIds = exists ? current.filter((id) => id !== qId) : [...current, qId];
+    handleUpdateSession(index, 'patientQuestionnaireIds', updatedIds, isEdit);
+  };
+
+  const handleToggleSessionClinicalModule = (
+    index: number,
+    moduleKey: keyof SessionClinicalModules,
+    isEdit: boolean
+  ) => {
+    const list = isEdit ? editStudySessions : studySessions;
+    const currentModules = list[index]?.clinicalModules || {};
+    const updatedModules: SessionClinicalModules = {
+      ...currentModules,
+      [moduleKey]: !currentModules[moduleKey],
+    };
+    handleUpdateSession(index, 'clinicalModules', updatedModules, isEdit);
+  };
+
+  const renderSessionCard = (s: StudySessionProtocol, idx: number, isEdit: boolean) => {
+    const list = isEdit ? editStudySessions : studySessions;
+    const currentSpec = isEdit ? editProjectSpecialty : newProjectSpecialty;
+    const requiresProms = s.requiresPatientQuestionnaire !== false;
+    const activeQIds = s.patientQuestionnaireIds || ['eva'];
+    const clinicalMods = s.clinicalModules || {
+      toothMapping: true,
+      colorGuide: currentSpec === 'BLEACHING' || currentSpec === 'RESTORATIVE',
+      painVAS: true,
+      softTissueExam: true,
+      fdiCriteria: currentSpec === 'RESTORATIVE',
+      edemaTrismus: currentSpec === 'SURGERY',
+      percussionPalpation: currentSpec === 'ENDODONTICS',
+      periodontogram: currentSpec === 'PERIODONTICS',
+    };
+
+    return (
+      <div key={s.id || idx} className="p-4 rounded-2xl border border-slate-200 bg-slate-50/80 space-y-3.5 shadow-2xs">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-blue-600 text-white shadow-2xs">
+              Sessão {s.sessionNumber}
+            </span>
+            <span className="text-xs font-bold text-slate-800">
+              {s.sessionNumber === 1
+                ? 'Linha de Base / 1º Atendimento'
+                : `Retorno (${s.daysFromPrevious} dias após a sessão anterior)`}
+            </span>
+          </div>
+          {list.length > 1 && (
+            <button
+              type="button"
+              onClick={() => handleRemoveSession(idx, isEdit)}
+              className="text-red-500 hover:text-red-700 p-1 hover:bg-red-50 rounded-lg transition cursor-pointer"
+              title="Remover esta sessão"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          <div>
+            <label className="block text-[11px] font-bold text-slate-600 mb-1">
+              Nome / Identificação da Sessão
+            </label>
+            <input
+              type="text"
+              value={s.name}
+              onChange={(e) => handleUpdateSession(idx, 'name', e.target.value, isEdit)}
+              className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs bg-white focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-bold text-slate-600 mb-1">
+              Tipo de Atendimento Clínico
+            </label>
+            <select
+              value={s.type}
+              onChange={(e) => handleUpdateSession(idx, 'type', e.target.value as any, isEdit)}
+              className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs bg-white font-medium focus:ring-1 focus:ring-blue-500"
+            >
+              <option value="CLINICAL">🩺 Intervenção Clínica / Procedimento</option>
+              <option value="EVALUATION">🔍 Avaliação Clínica / Exame</option>
+              <option value="FOLLOW_UP">🔄 Consulta de Retorno / Follow-up</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-0.5">
+          <div>
+            <label className="block text-[11px] font-bold text-slate-600 mb-1 flex items-center gap-1">
+              <Clock className="w-3 h-3 text-slate-400" />
+              <span>Tempo / Duração Estimada da Consulta</span>
+            </label>
+            <select
+              value={s.durationMinutes}
+              onChange={(e) => handleUpdateSession(idx, 'durationMinutes', Number(e.target.value), isEdit)}
+              className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs bg-white font-medium focus:ring-1 focus:ring-blue-500"
+            >
+              <option value={15}>15 minutos (Consulta Rápida)</option>
+              <option value={30}>30 minutos (Padrão)</option>
+              <option value={45}>45 minutos</option>
+              <option value={60}>60 minutos (1 hora)</option>
+              <option value={90}>90 minutos (1h 30min)</option>
+              <option value={120}>120 minutos (2 horas)</option>
+            </select>
+          </div>
+
+          {s.sessionNumber > 1 ? (
+            <div>
+              <label className="block text-[11px] font-bold text-slate-600 mb-1 flex items-center gap-1">
+                <Calendar className="w-3 h-3 text-slate-400" />
+                <span>Intervalo Após a Sessão Anterior</span>
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min={1}
+                  max={365}
+                  value={s.daysFromPrevious}
+                  onChange={(e) => handleUpdateSession(idx, 'daysFromPrevious', Math.max(1, Number(e.target.value)), isEdit)}
+                  className="w-20 px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs bg-white font-medium focus:ring-1 focus:ring-blue-500"
+                />
+                <span className="text-xs text-slate-600 font-medium">dias (tolerância: ±{s.toleranceDays || 2}d)</span>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-end text-xs text-slate-500 pb-1.5 font-medium">
+              <span>Início do estudo (Dia 0 / Linha de base)</span>
+            </div>
+          )}
+        </div>
+
+        {/* Seção Particularidades: Questionários do Paciente */}
+        <div className="bg-white p-3.5 rounded-xl border border-slate-200 space-y-2.5">
+          <div className="flex items-center justify-between">
+            <label className="flex items-center gap-2 cursor-pointer font-bold text-xs text-slate-800">
+              <input
+                type="checkbox"
+                checked={requiresProms}
+                onChange={(e) => handleUpdateSession(idx, 'requiresPatientQuestionnaire', e.target.checked, isEdit)}
+                className="w-4 h-4 text-blue-600 rounded cursor-pointer"
+              />
+              <span>📱 Paciente responde questionário / diário nesta sessão?</span>
+            </label>
+            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+              requiresProms ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'
+            }`}>
+              {requiresProms ? 'Questionários Ativos' : 'Apenas Clínico (Sem Questionário)'}
+            </span>
+          </div>
+
+          {requiresProms ? (
+            <div className="space-y-2.5 pt-1.5 border-t border-slate-100">
+              <div>
+                <span className="block text-[11px] font-bold text-slate-600 mb-1.5">
+                  Quais questionários o paciente deverá responder no celular:
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {PRESET_QUESTIONNAIRES_CATALOG.map((cat) => {
+                    const isChecked = activeQIds.includes(cat.id);
+                    return (
+                      <button
+                        key={cat.id}
+                        type="button"
+                        onClick={() => handleToggleSessionQuestionnaire(idx, cat.id, isEdit)}
+                        className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                          isChecked
+                            ? 'bg-blue-600 text-white shadow-2xs'
+                            : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                        }`}
+                        title={cat.description}
+                      >
+                        <span>{cat.icon}</span>
+                        <span>{cat.title}</span>
+                        {isChecked && <Check className="w-3 h-3 stroke-[3]" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-600 mb-1">
+                  Orientações / Lembretes específicos para o paciente nesta sessão (opcional):
+                </label>
+                <input
+                  type="text"
+                  value={s.patientInstructions || ''}
+                  onChange={(e) => handleUpdateSession(idx, 'patientInstructions', e.target.value, isEdit)}
+                  placeholder="Ex: Registrar a dor no diário às 24h e 48h; evitar alimentos pigmentados..."
+                  className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs bg-white focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+          ) : (
+            <p className="text-[11px] text-slate-500 italic pl-6">
+              O paciente não precisará preencher diários ou questionários no celular após esta consulta. O registro será concluído diretamente no mocho pela equipe.
+            </p>
+          )}
+        </div>
+
+        {/* Seção Particularidades: Módulos Clínicos do Pesquisador */}
+        <div className="bg-white p-3.5 rounded-xl border border-slate-200 space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
+              <Stethoscope className="w-3.5 h-3.5 text-blue-600" />
+              <span>Módulos Clínicos Ativos no Consultório (Preenchidos pelo Pesquisador):</span>
+            </span>
+            <span className="text-[10px] text-slate-400 font-medium">Clique para ativar/desativar</span>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 pt-1">
+            {[
+              { key: 'toothMapping' as const, label: 'Dentes Envolvidos', icon: '🦷' },
+              { key: 'colorGuide' as const, label: 'Tomada de Cor (VITA)', icon: '🎨' },
+              { key: 'painVAS' as const, label: 'Dor Imediata EVA (0h)', icon: '⚡' },
+              { key: 'softTissueExam' as const, label: 'Tecidos Moles & Mucosa', icon: '🔬' },
+              { key: 'edemaTrismus' as const, label: 'Edema & Abertura Bucal', icon: '📏' },
+              { key: 'fdiCriteria' as const, label: 'Critérios Clínicos FDI', icon: '💎' },
+              { key: 'percussionPalpation' as const, label: 'Percussão / Palpação', icon: '🔨' },
+              { key: 'periodontogram' as const, label: 'Periograma / Sondagem', icon: '📊' },
+            ].map((mod) => {
+              const isModActive = clinicalMods[mod.key] ?? false;
+              return (
+                <button
+                  key={mod.key}
+                  type="button"
+                  onClick={() => handleToggleSessionClinicalModule(idx, mod.key, isEdit)}
+                  className={`p-2 rounded-lg border text-left transition text-[11px] flex items-center gap-1.5 cursor-pointer ${
+                    isModActive
+                      ? 'bg-blue-50 border-blue-400 text-blue-900 font-bold shadow-2xs'
+                      : 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100'
+                  }`}
+                >
+                  <span>{mod.icon}</span>
+                  <span className="truncate">{mod.label}</span>
+                  {isModActive && <Check className="w-3 h-3 ml-auto text-blue-600 stroke-[3]" />}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    );
   };
 
   const handleUpdateFormTarget = (
@@ -1403,7 +1687,10 @@ export default function HomePage() {
                           <button
                             key={spec.id}
                             type="button"
-                            onClick={() => setNewProjectSpecialty(spec.id)}
+                            onClick={() => {
+                              setNewProjectSpecialty(spec.id);
+                              handleApplySpecialtyDefaults(spec.id, false);
+                            }}
                             className={`p-2.5 rounded-xl border text-left transition cursor-pointer flex flex-col justify-between ${
                               isSelected
                                 ? 'bg-blue-50 border-blue-500 shadow-xs ring-2 ring-blue-500/20'
@@ -1493,7 +1780,7 @@ export default function HomePage() {
                         <span>Cronograma de Consultas e Avaliações Clínicas</span>
                       </h4>
                       <p className="text-[11px] text-blue-800 mt-0.5">
-                        Defina quantas consultas serão realizadas, o intervalo de dias entre elas e a duração estimada.
+                        Defina quantas consultas serão realizadas, os questionários do paciente e os módulos clínicos do pesquisador.
                       </p>
                     </div>
                     <button
@@ -1506,6 +1793,27 @@ export default function HomePage() {
                     </button>
                   </div>
 
+                  {/* Banner de Protocolo Recomendado da Especialidade */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3.5 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl text-xs">
+                    <div>
+                      <span className="font-bold text-blue-950 flex items-center gap-1.5">
+                        <Sparkles className="w-4 h-4 text-blue-600" />
+                        <span>Protocolo Clínico Padrão ({RESEARCH_SPECIALTIES.find((sp) => sp.id === newProjectSpecialty)?.name})</span>
+                      </span>
+                      <p className="text-[11px] text-blue-800 mt-0.5">
+                        Carregue o cronograma clínico e questionários recomendados para <strong>{RESEARCH_SPECIALTIES.find((sp) => sp.id === newProjectSpecialty)?.name}</strong> com 1 clique.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleApplySpecialtyDefaults(newProjectSpecialty, false)}
+                      className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-xs shadow-xs transition flex items-center gap-1.5 shrink-0 cursor-pointer self-start sm:self-auto"
+                    >
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>⚡ Carregar Protocolo Recomendado</span>
+                    </button>
+                  </div>
+
                   {/* Seleção rápida de quantidade */}
                   <div className="flex flex-wrap items-center gap-2 text-xs">
                     <span className="text-slate-500 font-bold text-[11px]">Quantidade rápida:</span>
@@ -1514,7 +1822,7 @@ export default function HomePage() {
                         key={count}
                         type="button"
                         onClick={() => {
-                          const presets = DEFAULT_STUDY_SESSIONS.slice(0, count);
+                          const presets = getSpecialtyDefaultSessions(newProjectSpecialty).slice(0, count);
                           while (presets.length < count) {
                             const num = presets.length + 1;
                             presets.push({
@@ -1525,6 +1833,18 @@ export default function HomePage() {
                               daysFromPrevious: 7,
                               durationMinutes: 30,
                               toleranceDays: 2,
+                              requiresPatientQuestionnaire: true,
+                              patientQuestionnaireIds: ['eva'],
+                              clinicalModules: {
+                                toothMapping: true,
+                                colorGuide: newProjectSpecialty === 'BLEACHING' || newProjectSpecialty === 'RESTORATIVE',
+                                painVAS: true,
+                                softTissueExam: true,
+                                fdiCriteria: newProjectSpecialty === 'RESTORATIVE',
+                                edemaTrismus: newProjectSpecialty === 'SURGERY',
+                                percussionPalpation: newProjectSpecialty === 'ENDODONTICS',
+                                periodontogram: newProjectSpecialty === 'PERIODONTICS',
+                              },
                             });
                           }
                           setStudySessions(presets);
@@ -1542,106 +1862,7 @@ export default function HomePage() {
 
                   {/* Lista de cards de cada sessão */}
                   <div className="space-y-3">
-                    {studySessions.map((s, idx) => (
-                      <div key={s.id || idx} className="p-3.5 rounded-xl border border-slate-200 bg-slate-50/70 space-y-3">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-blue-600 text-white">
-                              Sessão {s.sessionNumber}
-                            </span>
-                            <span className="text-xs font-bold text-slate-800">
-                              {s.sessionNumber === 1
-                                ? 'Linha de Base / 1º Atendimento'
-                                : `Retorno (${s.daysFromPrevious} dias após a sessão anterior)`}
-                            </span>
-                          </div>
-                          {studySessions.length > 1 && (
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveSession(idx, false)}
-                              className="text-red-500 hover:text-red-700 p-1 hover:bg-red-50 rounded transition cursor-pointer"
-                              title="Remover esta sessão"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          )}
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                          <div>
-                            <label className="block text-[11px] font-bold text-slate-600 mb-1">
-                              Nome / Identificação da Sessão
-                            </label>
-                            <input
-                              type="text"
-                              value={s.name}
-                              onChange={(e) => handleUpdateSession(idx, 'name', e.target.value, false)}
-                              className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs bg-white focus:ring-1 focus:ring-blue-500"
-                            />
-                          </div>
-
-                          <div>
-                            <label className="block text-[11px] font-bold text-slate-600 mb-1">
-                              Tipo de Atendimento Clínico
-                            </label>
-                            <select
-                              value={s.type}
-                              onChange={(e) => handleUpdateSession(idx, 'type', e.target.value as any, false)}
-                              className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs bg-white font-medium focus:ring-1 focus:ring-blue-500"
-                            >
-                              <option value="CLINICAL">🩺 Intervenção Clínica / Aplicação</option>
-                              <option value="EVALUATION">🔍 Avaliação Clínica / Exame</option>
-                              <option value="FOLLOW_UP">🔄 Consulta de Retorno / Follow-up</option>
-                            </select>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
-                          <div>
-                            <label className="block text-[11px] font-bold text-slate-600 mb-1 flex items-center gap-1">
-                              <Clock className="w-3 h-3 text-slate-400" />
-                              <span>Tempo / Duração Estimada da Consulta</span>
-                            </label>
-                            <select
-                              value={s.durationMinutes}
-                              onChange={(e) => handleUpdateSession(idx, 'durationMinutes', Number(e.target.value), false)}
-                              className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs bg-white font-medium focus:ring-1 focus:ring-blue-500"
-                            >
-                              <option value={15}>15 minutos (Consulta Rápida)</option>
-                              <option value={30}>30 minutos (Padrão)</option>
-                              <option value={45}>45 minutos</option>
-                              <option value={60}>60 minutos (1 hora)</option>
-                              <option value={90}>90 minutos (1h 30min)</option>
-                              <option value={120}>120 minutos (2 horas)</option>
-                            </select>
-                          </div>
-
-                          {s.sessionNumber > 1 ? (
-                            <div>
-                              <label className="block text-[11px] font-bold text-slate-600 mb-1 flex items-center gap-1">
-                                <Calendar className="w-3 h-3 text-slate-400" />
-                                <span>Intervalo Após a Sessão Anterior</span>
-                              </label>
-                              <div className="flex items-center gap-2">
-                                <input
-                                  type="number"
-                                  min={1}
-                                  max={365}
-                                  value={s.daysFromPrevious}
-                                  onChange={(e) => handleUpdateSession(idx, 'daysFromPrevious', Math.max(1, Number(e.target.value)), false)}
-                                  className="w-20 px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs bg-white font-medium focus:ring-1 focus:ring-blue-500"
-                                />
-                                <span className="text-xs text-slate-600 font-medium">dias (tolerância: ±{s.toleranceDays || 2}d)</span>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="flex items-end text-xs text-slate-500 pb-1.5 font-medium">
-                              <span>Início do estudo (Dia 0 / Linha de base)</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ))}
+                    {studySessions.map((s, idx) => renderSessionCard(s, idx, false))}
                   </div>
                 </div>
               )}
@@ -2126,7 +2347,7 @@ export default function HomePage() {
                         <span>Cronograma de Consultas e Avaliações Clínicas</span>
                       </h4>
                       <p className="text-[11px] text-blue-800 mt-0.5">
-                        Defina quantas consultas serão realizadas, o intervalo de dias entre elas e a duração estimada.
+                        Defina quantas consultas serão realizadas, os questionários do paciente e os módulos clínicos do pesquisador.
                       </p>
                     </div>
                     <button
@@ -2139,6 +2360,27 @@ export default function HomePage() {
                     </button>
                   </div>
 
+                  {/* Banner de Protocolo Recomendado da Especialidade */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3.5 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl text-xs">
+                    <div>
+                      <span className="font-bold text-blue-950 flex items-center gap-1.5">
+                        <Sparkles className="w-4 h-4 text-blue-600" />
+                        <span>Protocolo Clínico Padrão ({RESEARCH_SPECIALTIES.find((sp) => sp.id === editProjectSpecialty)?.name})</span>
+                      </span>
+                      <p className="text-[11px] text-blue-800 mt-0.5">
+                        Carregue o cronograma clínico e questionários recomendados para <strong>{RESEARCH_SPECIALTIES.find((sp) => sp.id === editProjectSpecialty)?.name}</strong> com 1 clique.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleApplySpecialtyDefaults(editProjectSpecialty, true)}
+                      className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-xs shadow-xs transition flex items-center gap-1.5 shrink-0 cursor-pointer self-start sm:self-auto"
+                    >
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>⚡ Carregar Protocolo Recomendado</span>
+                    </button>
+                  </div>
+
                   {/* Seleção rápida de quantidade */}
                   <div className="flex flex-wrap items-center gap-2 text-xs">
                     <span className="text-slate-500 font-bold text-[11px]">Quantidade rápida:</span>
@@ -2147,17 +2389,29 @@ export default function HomePage() {
                         key={count}
                         type="button"
                         onClick={() => {
-                          const presets = DEFAULT_STUDY_SESSIONS.slice(0, count);
+                          const presets = getSpecialtyDefaultSessions(editProjectSpecialty).slice(0, count);
                           while (presets.length < count) {
                             const num = presets.length + 1;
                             presets.push({
                               id: `sess_${Date.now()}_${num}`,
                               sessionNumber: num,
-                              name: `Sessão ${num}: Avaliação Clínica / Retorno`,
+                              name: `Sessão ${num}: Avaliação Clínic / Retorno`,
                               type: 'EVALUATION',
                               daysFromPrevious: 7,
                               durationMinutes: 30,
                               toleranceDays: 2,
+                              requiresPatientQuestionnaire: true,
+                              patientQuestionnaireIds: ['eva'],
+                              clinicalModules: {
+                                toothMapping: true,
+                                colorGuide: editProjectSpecialty === 'BLEACHING' || editProjectSpecialty === 'RESTORATIVE',
+                                painVAS: true,
+                                softTissueExam: true,
+                                fdiCriteria: editProjectSpecialty === 'RESTORATIVE',
+                                edemaTrismus: editProjectSpecialty === 'SURGERY',
+                                percussionPalpation: editProjectSpecialty === 'ENDODONTICS',
+                                periodontogram: editProjectSpecialty === 'PERIODONTICS',
+                              },
                             });
                           }
                           setEditStudySessions(presets);
@@ -2175,106 +2429,7 @@ export default function HomePage() {
 
                   {/* Lista de cards de cada sessão */}
                   <div className="space-y-3">
-                    {editStudySessions.map((s, idx) => (
-                      <div key={s.id || idx} className="p-3.5 rounded-xl border border-slate-200 bg-slate-50/70 space-y-3">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-blue-600 text-white">
-                              Sessão {s.sessionNumber}
-                            </span>
-                            <span className="text-xs font-bold text-slate-800">
-                              {s.sessionNumber === 1
-                                ? 'Linha de Base / 1º Atendimento'
-                                : `Retorno (${s.daysFromPrevious} dias após a sessão anterior)`}
-                            </span>
-                          </div>
-                          {editStudySessions.length > 1 && (
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveSession(idx, true)}
-                              className="text-red-500 hover:text-red-700 p-1 hover:bg-red-50 rounded transition cursor-pointer"
-                              title="Remover esta sessão"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          )}
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                          <div>
-                            <label className="block text-[11px] font-bold text-slate-600 mb-1">
-                              Nome / Identificação da Sessão
-                            </label>
-                            <input
-                              type="text"
-                              value={s.name}
-                              onChange={(e) => handleUpdateSession(idx, 'name', e.target.value, true)}
-                              className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs bg-white focus:ring-1 focus:ring-blue-500"
-                            />
-                          </div>
-
-                          <div>
-                            <label className="block text-[11px] font-bold text-slate-600 mb-1">
-                              Tipo de Atendimento Clínico
-                            </label>
-                            <select
-                              value={s.type}
-                              onChange={(e) => handleUpdateSession(idx, 'type', e.target.value as any, true)}
-                              className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs bg-white font-medium focus:ring-1 focus:ring-blue-500"
-                            >
-                              <option value="CLINICAL">🩺 Intervenção Clínica / Aplicação</option>
-                              <option value="EVALUATION">🔍 Avaliação Clínica / Exame</option>
-                              <option value="FOLLOW_UP">🔄 Consulta de Retorno / Follow-up</option>
-                            </select>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
-                          <div>
-                            <label className="block text-[11px] font-bold text-slate-600 mb-1 flex items-center gap-1">
-                              <Clock className="w-3 h-3 text-slate-400" />
-                              <span>Tempo / Duração Estimada da Consulta</span>
-                            </label>
-                            <select
-                              value={s.durationMinutes}
-                              onChange={(e) => handleUpdateSession(idx, 'durationMinutes', Number(e.target.value), true)}
-                              className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs bg-white font-medium focus:ring-1 focus:ring-blue-500"
-                            >
-                              <option value={15}>15 minutos (Consulta Rápida)</option>
-                              <option value={30}>30 minutos (Padrão)</option>
-                              <option value={45}>45 minutos</option>
-                              <option value={60}>60 minutos (1 hora)</option>
-                              <option value={90}>90 minutos (1h 30min)</option>
-                              <option value={120}>120 minutos (2 horas)</option>
-                            </select>
-                          </div>
-
-                          {s.sessionNumber > 1 ? (
-                            <div>
-                              <label className="block text-[11px] font-bold text-slate-600 mb-1 flex items-center gap-1">
-                                <Calendar className="w-3 h-3 text-slate-400" />
-                                <span>Intervalo Após a Sessão Anterior</span>
-                              </label>
-                              <div className="flex items-center gap-2">
-                                <input
-                                  type="number"
-                                  min={1}
-                                  max={365}
-                                  value={s.daysFromPrevious}
-                                  onChange={(e) => handleUpdateSession(idx, 'daysFromPrevious', Math.max(1, Number(e.target.value)), true)}
-                                  className="w-20 px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs bg-white font-medium focus:ring-1 focus:ring-blue-500"
-                                />
-                                <span className="text-xs text-slate-600 font-medium">dias (tolerância: ±{s.toleranceDays || 2}d)</span>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="flex items-end text-xs text-slate-500 pb-1.5 font-medium">
-                              <span>Início do estudo (Dia 0 / Linha de base)</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ))}
+                    {editStudySessions.map((s, idx) => renderSessionCard(s, idx, true))}
                   </div>
                 </div>
               )}
