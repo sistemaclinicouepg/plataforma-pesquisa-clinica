@@ -9,6 +9,9 @@ export async function GET(req: Request) {
     const forms = await prisma.form.findMany({
       where: projectId ? { projectId } : {},
       include: {
+        project: {
+          select: { id: true, name: true },
+        },
         _count: {
           select: { responses: true },
         },

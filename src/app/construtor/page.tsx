@@ -31,7 +31,14 @@ import {
   Sliders,
   Check,
   Table,
-  Info
+  Info,
+  BookmarkPlus,
+  Bookmark,
+  Sparkles,
+  Trash2,
+  Plus,
+  FolderKanban,
+  Search,
 } from 'lucide-react';
 
 type QuestionType =
@@ -148,6 +155,143 @@ const AESTHETICS_QUESTIONS: FormQuestion[] = [
   { id: 'aes_4', type: 'boolean', title: '4. Você recomendaria este protocolo de clareamento a familiares ou amigos?', required: true },
 ];
 
+const PAIN_SENSITIVITY_QUESTIONS: FormQuestion[] = [
+  {
+    id: 'pain_1',
+    type: 'vas',
+    title: '1. Nível de Sensibilidade / Dor Dental Imediata no Consultório (0h)',
+    required: true,
+    minLabel: 'Nenhuma dor',
+    maxLabel: 'Pior dor possível',
+    observation: 'Aferida imediatamente após o término do procedimento clínico.',
+  },
+  {
+    id: 'pain_2',
+    type: 'vas',
+    title: '2. Nível de Sensibilidade Espontânea após 24 Horas',
+    required: true,
+    minLabel: 'Nenhuma dor',
+    maxLabel: 'Pior dor possível',
+    observation: 'Sensibilidade percebida no repouso ou nas primeiras 24 horas.',
+  },
+  {
+    id: 'pain_3',
+    type: 'choice',
+    title: '3. Qual estímulo provocou ou intensificou a sensibilidade?',
+    required: true,
+    options: [
+      { label: 'Nenhum estímulo (ausência total de dor)', value: 'nenhum' },
+      { label: 'Líquidos ou alimentos frios / gelados', value: 'frio' },
+      { label: 'Líquidos ou alimentos quentes', value: 'quente' },
+      { label: 'Escovação dental / toque', value: 'escovacao' },
+      { label: 'Espontânea constante', value: 'espontanea' },
+    ],
+  },
+  {
+    id: 'pain_4',
+    type: 'likert',
+    title: '4. Como você classifica o impacto dessa sensibilidade no seu dia a dia?',
+    required: true,
+    options: [
+      { label: 'Ausente', value: '0' },
+      { label: 'Leve (não atrapalhou)', value: '1' },
+      { label: 'Moderada (incomodou mas tolerável)', value: '2' },
+      { label: 'Intensa (dificultou atividades)', value: '3' },
+      { label: 'Severa (muito desconfortável)', value: '4' },
+    ],
+  },
+  {
+    id: 'pain_5',
+    type: 'choice',
+    title: '5. Foi necessário utilizar algum analgésico para alívio?',
+    required: true,
+    options: [
+      { label: 'Não utilizei medicamentos', value: 'nao' },
+      { label: 'Sim, Dipirona ou Paracetamol (1 dose)', value: 'analgesico_1' },
+      { label: 'Sim, Dipirona ou Paracetamol (2 ou mais doses)', value: 'analgesico_multi' },
+      { label: 'Sim, Anti-inflamatório (Ibuprofeno, Cetoprofeno, etc.)', value: 'antiinflamatorio' },
+    ],
+  },
+];
+
+const FDI_RESTORATION_QUESTIONS: FormQuestion[] = [
+  {
+    id: 'fdi_1',
+    type: 'choice',
+    title: '1. Fratura do Material Restaurador e Retenção',
+    required: true,
+    options: [
+      { label: 'Restauração totalmente íntegra e retida', value: 'integra' },
+      { label: 'Pequena lasca marginal sem perda da função', value: 'lasca_pequena' },
+      { label: 'Fratura parcial com necessidade de reparo', value: 'fratura_parcial' },
+      { label: 'Perda total da restauração', value: 'perda_total' },
+    ],
+  },
+  {
+    id: 'fdi_2',
+    type: 'choice',
+    title: '2. Adaptação Marginal na Interface Dente-Restauração',
+    required: true,
+    options: [
+      { label: 'Margem contínua, imperceptível e sem fenda', value: 'excelente' },
+      { label: 'Pequeno degrau explorável sem pigmentação', value: 'degrau_leve' },
+      { label: 'Degrau com acúmulo de biofilme / pigmentação', value: 'degrau_pigmentado' },
+      { label: 'Infiltração ou desadaptação evidente', value: 'desadaptada' },
+    ],
+  },
+  {
+    id: 'fdi_3',
+    type: 'choice',
+    title: '3. Descoloração Marginal',
+    required: true,
+    options: [
+      { label: 'Ausente (cor homogênea)', value: 'ausente' },
+      { label: 'Pigmentação superficial polível', value: 'superficial' },
+      { label: 'Pigmentação profunda que penetra a interface', value: 'profunda' },
+    ],
+  },
+  {
+    id: 'fdi_4',
+    type: 'choice',
+    title: '4. Sensibilidade Pós-Operatória do Dente Restaurado',
+    required: true,
+    options: [
+      { label: 'Nenhuma sensibilidade', value: 'ausente' },
+      { label: 'Leve e transitória aos estímulos', value: 'leve' },
+      { label: 'Moderada à mastigação', value: 'moderada' },
+      { label: 'Dor aguda espontânea', value: 'aguda' },
+    ],
+  },
+  {
+    id: 'fdi_5',
+    type: 'boolean',
+    title: '5. Evidência clínica ou radiográfica de Cárie Secundária adjacente?',
+    required: true,
+  },
+];
+
+type CustomTemplate = {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  questions: FormQuestion[];
+  createdAt: string;
+};
+
+type ExternalProjectForm = {
+  id: string;
+  projectId: string;
+  title: string;
+  description?: string | null;
+  questionsJson: string;
+  createdAt: string;
+  project?: {
+    id: string;
+    name: string;
+  };
+};
+
 function FormBuilderContent() {
   const searchParams = useSearchParams();
   const projectIdParam = searchParams.get('projectId');
@@ -168,7 +312,21 @@ function FormBuilderContent() {
   // Estados de teste interativo na prévia
   const [previewAnswers, setPreviewAnswers] = useState<Record<string, any>>({});
 
+  // Estados da Biblioteca e Modelos Reutilizáveis
   const [showLibraryModal, setShowLibraryModal] = useState(false);
+  const [activeLibraryTab, setActiveLibraryTab] = useState<'validated' | 'custom' | 'external'>('validated');
+  const [customTemplates, setCustomTemplates] = useState<CustomTemplate[]>([]);
+  const [showSaveTemplateModal, setShowSaveTemplateModal] = useState(false);
+  const [saveTemplateForm, setSaveTemplateForm] = useState({
+    name: '',
+    description: '',
+    category: 'Clareamento & Estética',
+  });
+  const [templateToast, setTemplateToast] = useState<string | null>(null);
+  const [externalForms, setExternalForms] = useState<ExternalProjectForm[]>([]);
+  const [loadingExternalForms, setLoadingExternalForms] = useState(false);
+  const [externalSearchQuery, setExternalSearchQuery] = useState('');
+
   const [saving, setSaving] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -185,6 +343,15 @@ function FormBuilderContent() {
         }
       })
       .catch((e) => console.error('Erro ao carregar projetos:', e));
+
+    try {
+      const saved = localStorage.getItem('uepg_custom_questionnaire_templates');
+      if (saved) {
+        setCustomTemplates(JSON.parse(saved));
+      }
+    } catch (e) {
+      console.warn('Erro ao carregar modelos salvos locais:', e);
+    }
   }, []);
 
   const addCustomQuestion = (type: QuestionType) => {
@@ -378,21 +545,101 @@ function FormBuilderContent() {
     setQuestions(clone);
   };
 
-  const loadTemplate = (name: 'ohip' | 'cromo' | 'aes') => {
-    if (name === 'ohip') {
-      setFormTitle('Questionário de Qualidade de Vida Bucal (OHIP-14)');
-      setFormDescription('Instrumento padronizado para avaliação das 7 dimensões do impacto da saúde bucal no bem-estar diário.');
-      setQuestions(OHIP_14_QUESTIONS);
-    } else if (name === 'cromo') {
-      setFormTitle('Questionário de Hábitos Cromogênicos e Dieta');
-      setFormDescription('Levantamento sistemático do consumo de pigmentos orais (café, chimarrão, vinho) e tabaco durante o clareamento.');
-      setQuestions(CROMOGENIC_HABITS_QUESTIONS);
-    } else if (name === 'aes') {
-      setFormTitle('Escala de Satisfação Estética Orofacial');
-      setFormDescription('Avaliação subjetiva do voluntário sobre percepção de cor, ganho estético e recomendação do tratamento clareador.');
-      setQuestions(AESTHETICS_QUESTIONS);
+  const handleApplyTemplate = (
+    name: string,
+    description: string,
+    templateQuestions: FormQuestion[],
+    mode: 'replace' | 'append' = 'replace'
+  ) => {
+    if (mode === 'replace') {
+      if (
+        questions.length > 0 &&
+        !confirm('Deseja substituir todas as perguntas atuais pelas deste modelo?')
+      ) {
+        return;
+      }
+      setFormTitle(name);
+      setFormDescription(description);
+      setQuestions(JSON.parse(JSON.stringify(templateQuestions)));
+    } else {
+      // Modo Append: Adiciona ao final com novos IDs
+      const newItems = templateQuestions.map((q, idx) => ({
+        ...q,
+        id: `q_${Date.now()}_${idx}`,
+        options: q.options ? q.options.map((o) => ({ ...o })) : undefined,
+      }));
+      setQuestions((prev) => [...prev, ...newItems]);
     }
     setShowLibraryModal(false);
+    setTemplateToast(`Modelo "${name}" ${mode === 'replace' ? 'carregado' : 'acrescentado'} com sucesso!`);
+    setTimeout(() => setTemplateToast(null), 4000);
+  };
+
+  const handleOpenSaveTemplateModal = () => {
+    if (questions.length === 0) {
+      alert('Adicione pelo menos uma pergunta ao questionário antes de salvá-lo como modelo.');
+      return;
+    }
+    setSaveTemplateForm({
+      name: formTitle,
+      description: formDescription,
+      category: 'Clareamento & Estética',
+    });
+    setShowSaveTemplateModal(true);
+  };
+
+  const handleConfirmSaveTemplate = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!saveTemplateForm.name.trim()) {
+      alert('Por favor, informe o nome do modelo.');
+      return;
+    }
+    const newTemplate: CustomTemplate = {
+      id: `tpl_${Date.now()}`,
+      name: saveTemplateForm.name.trim(),
+      description: saveTemplateForm.description.trim(),
+      category: saveTemplateForm.category || 'Geral',
+      questions: JSON.parse(JSON.stringify(questions)),
+      createdAt: new Date().toISOString(),
+    };
+    const updated = [newTemplate, ...customTemplates];
+    setCustomTemplates(updated);
+    try {
+      localStorage.setItem('uepg_custom_questionnaire_templates', JSON.stringify(updated));
+    } catch (err) {
+      console.error('Erro ao salvar modelo:', err);
+    }
+    setShowSaveTemplateModal(false);
+    setTemplateToast(`Modelo "${newTemplate.name}" salvo com sucesso! Você pode reutilizá-lo em qualquer pesquisa.`);
+    setTimeout(() => setTemplateToast(null), 5000);
+  };
+
+  const handleDeleteCustomTemplate = (templateId: string) => {
+    if (!confirm('Deseja excluir este modelo personalizado?')) return;
+    const updated = customTemplates.filter((t) => t.id !== templateId);
+    setCustomTemplates(updated);
+    try {
+      localStorage.setItem('uepg_custom_questionnaire_templates', JSON.stringify(updated));
+    } catch (err) {
+      console.error('Erro ao excluir modelo:', err);
+    }
+  };
+
+  const fetchExternalForms = async () => {
+    try {
+      setLoadingExternalForms(true);
+      const res = await fetch('/api/forms');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.forms) {
+          setExternalForms(data.forms);
+        }
+      }
+    } catch (err) {
+      console.error('Erro ao carregar formulários de outras pesquisas:', err);
+    } finally {
+      setLoadingExternalForms(false);
+    }
   };
 
   const handleClearForm = () => {
@@ -519,22 +766,37 @@ function FormBuilderContent() {
               </button>
             </div>
 
-            {/* Modelos Validados */}
+            {/* Modelos Validados & Salvos com MAIOR DESTAQUE */}
             <button
               type="button"
-              onClick={() => setShowLibraryModal(true)}
-              className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-bold rounded-xl transition flex items-center space-x-1.5"
-              title="Carregar questionários validados da literatura (OHIP-14, Hábitos Cromogênicos...)"
+              onClick={() => {
+                setActiveLibraryTab('validated');
+                setShowLibraryModal(true);
+              }}
+              className="px-3.5 py-1.5 bg-gradient-to-r from-indigo-600 via-indigo-700 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center space-x-1.5 cursor-pointer ring-2 ring-indigo-200"
+              title="Abrir biblioteca de modelos validados da odontologia e modelos salvos"
             >
               <BookOpen className="w-3.5 h-3.5" />
-              <span className="hidden md:inline">Modelos Validados</span>
+              <span>Modelos Validados</span>
+            </button>
+
+            {/* Salvar como Modelo Reutilizável */}
+            <button
+              type="button"
+              onClick={handleOpenSaveTemplateModal}
+              disabled={questions.length === 0}
+              className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-bold rounded-xl transition flex items-center space-x-1.5 disabled:opacity-40 cursor-pointer"
+              title="Salvar este questionário como um modelo reutilizável em outras pesquisas"
+            >
+              <BookmarkPlus className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Salvar como Modelo</span>
             </button>
 
             {/* Iniciar em Branco */}
             <button
               type="button"
               onClick={handleClearForm}
-              className="px-2.5 py-1.5 text-slate-500 hover:text-slate-700 hover:bg-slate-100 border border-slate-200 text-xs font-semibold rounded-xl transition flex items-center space-x-1.5"
+              className="px-2.5 py-1.5 text-slate-500 hover:text-slate-700 hover:bg-slate-100 border border-slate-200 text-xs font-semibold rounded-xl transition flex items-center space-x-1.5 cursor-pointer"
               title="Limpar e criar ficha em branco"
             >
               <FilePlus className="w-3.5 h-3.5" />
@@ -545,7 +807,7 @@ function FormBuilderContent() {
             <button
               onClick={() => handleSaveForm()}
               disabled={saving}
-              className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-xs transition disabled:opacity-50 flex items-center space-x-1.5"
+              className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-xs transition disabled:opacity-50 flex items-center space-x-1.5 cursor-pointer"
             >
               {saving ? <Clock className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
               <span>{saving ? 'Salvando...' : 'Salvar Ficha'}</span>
@@ -593,6 +855,16 @@ function FormBuilderContent() {
         </div>
       )}
 
+      {/* Toast Informativo de Modelos */}
+      {templateToast && (
+        <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-10 mt-6 animate-fadeIn">
+          <div className="p-4 bg-indigo-50 border border-indigo-300 rounded-2xl text-indigo-950 text-xs font-bold flex items-center space-x-2 shadow-sm">
+            <CheckCircle2 className="w-5 h-5 text-indigo-600 shrink-0" />
+            <span>{templateToast}</span>
+          </div>
+        </div>
+      )}
+
       {/* ============================================================== */}
       {/* ÁREA CENTRAL: A PRANCHETA CLÍNICA DIGITAL (Clinical Canvas)     */}
       {/* ============================================================== */}
@@ -602,6 +874,60 @@ function FormBuilderContent() {
           /* MODO EDIÇÃO: Prancheta Clínica Digital */
           <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm p-6 sm:p-10 space-y-8">
             
+            {/* ============================================================== */}
+            {/* BANNER DE DESTAQUE NO TOPO: MODELOS VALIDADOS & SALVOS         */}
+            {/* ============================================================== */}
+            <div className="bg-gradient-to-r from-indigo-50/90 via-blue-50/70 to-purple-50/90 border border-indigo-200/90 rounded-2xl p-4 sm:p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-2xs">
+              <div className="flex items-start sm:items-center space-x-3.5">
+                <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-indigo-600 to-blue-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                  <BookOpen className="w-6 h-6" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-bold text-slate-900 text-sm sm:text-base">
+                      Modelos de Questionários da Odontologia
+                    </span>
+                    <span className="px-2 py-0.5 bg-indigo-100 text-indigo-800 text-[10px] font-extrabold rounded-full uppercase tracking-wider">
+                      Validados & Prontos
+                    </span>
+                    {customTemplates.length > 0 && (
+                      <span className="px-2 py-0.5 bg-purple-100 text-purple-800 text-[10px] font-extrabold rounded-full">
+                        {customTemplates.length} {customTemplates.length === 1 ? 'modelo salvo' : 'modelos salvos'}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-600 mt-1 max-w-2xl leading-relaxed">
+                    Carregue instrumentos científicos da literatura (OHIP-14, Hábitos Cromogênicos, Satisfação Estética, Sensibilidade) ou reutilize questionários salvos de outras pesquisas com 1 clique.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0 w-full md:w-auto">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveLibraryTab('validated');
+                    setShowLibraryModal(true);
+                  }}
+                  className="w-full md:w-auto px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center justify-center space-x-2 cursor-pointer"
+                >
+                  <BookOpen className="w-4 h-4" />
+                  <span>Ver Modelos Validados da Odontologia</span>
+                </button>
+                {questions.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleOpenSaveTemplateModal}
+                    className="w-full md:w-auto px-3.5 py-2.5 bg-white hover:bg-slate-50 text-indigo-700 border border-indigo-200 text-xs font-bold rounded-xl shadow-2xs transition flex items-center justify-center space-x-1.5 cursor-pointer"
+                    title="Salvar questionário atual como um modelo reutilizável"
+                  >
+                    <BookmarkPlus className="w-4 h-4 text-indigo-600" />
+                    <span>Salvar como Modelo</span>
+                  </button>
+                )}
+              </div>
+            </div>
+
             {/* Cabeçalho da Ficha / Prontuário */}
             <div className="border-b border-slate-200/80 pb-6 space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono uppercase tracking-wider text-slate-400">
@@ -1179,22 +1505,38 @@ function FormBuilderContent() {
                 </button>
               </div>
 
-              {/* Botão de Rodapé para Salvar */}
-              <div className="pt-6 flex justify-between items-center">
-                <button
-                  type="button"
-                  onClick={() => setShowLibraryModal(true)}
-                  className="text-xs font-bold text-indigo-700 hover:text-indigo-900 flex items-center space-x-1.5"
-                >
-                  <BookOpen className="w-3.5 h-3.5" />
-                  <span>Ver Modelos Validados da Odontologia</span>
-                </button>
+              {/* Botões de Rodapé para Salvar e Modelos */}
+              <div className="pt-6 flex flex-wrap justify-between items-center gap-3">
+                <div className="flex items-center gap-3 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveLibraryTab('validated');
+                      setShowLibraryModal(true);
+                    }}
+                    className="text-xs font-bold text-indigo-700 hover:text-indigo-900 flex items-center space-x-1.5 cursor-pointer"
+                  >
+                    <BookOpen className="w-3.5 h-3.5" />
+                    <span>Ver Modelos Validados da Odontologia</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleOpenSaveTemplateModal}
+                    disabled={questions.length === 0}
+                    className="text-xs font-bold text-slate-600 hover:text-indigo-700 flex items-center space-x-1.5 cursor-pointer disabled:opacity-40"
+                    title="Salvar questionário atual como um modelo reutilizável"
+                  >
+                    <BookmarkPlus className="w-3.5 h-3.5 text-indigo-600" />
+                    <span>Salvar como Modelo</span>
+                  </button>
+                </div>
 
                 <button
                   type="button"
                   onClick={() => handleSaveForm()}
                   disabled={saving}
-                  className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-sm transition disabled:opacity-50 flex items-center space-x-2"
+                  className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-sm transition disabled:opacity-50 flex items-center space-x-2 cursor-pointer"
                 >
                   {saving ? <Clock className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
                   <span>{saving ? 'Publicando...' : 'Salvar Ficha Clínica'}</span>
@@ -1453,117 +1795,466 @@ function FormBuilderContent() {
       </main>
 
       {/* ============================================================== */}
-      {/* MODAL: MODELOS VALIDADOS DA ODONTOLOGIA                         */}
+      {/* MODAL: BIBLIOTECA DE MODELOS (VALIDADOS & MEUS MODELOS)        */}
       {/* ============================================================== */}
       {showLibraryModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto">
-          <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full p-6 sm:p-8 border border-slate-200 my-8 max-h-[90vh] overflow-y-auto animate-fadeIn">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto animate-fadeIn">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-3xl w-full p-6 sm:p-8 border border-slate-200 my-8 max-h-[90vh] flex flex-col">
             
-            <div className="border-b border-slate-100 pb-4 mb-6 flex justify-between items-start">
+            {/* Header do Modal */}
+            <div className="border-b border-slate-100 pb-4 mb-4 flex justify-between items-start shrink-0">
               <div>
                 <span className="px-2.5 py-0.5 bg-indigo-100 text-indigo-800 rounded-md text-[10px] font-bold uppercase tracking-wider font-mono">
-                  Biblioteca Científica
+                  Biblioteca de Questionários
                 </span>
                 <h3 className="text-lg font-bold text-slate-900 mt-1">
-                  Modelos de Fichas e Questionários Validados
+                  Modelos de Fichas e Instrumentos Odontológicos
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Carregue um instrumento padronizado da literatura odontológica com 1 clique.
+                  Carregue questionários consagrados da literatura ou reutilize modelos salvos de suas pesquisas.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setShowLibraryModal(false)}
-                className="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-700 transition"
+                className="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-700 transition cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="space-y-4">
-              {/* Modelo 1: OHIP-14 */}
-              <div className="p-5 border border-slate-200 hover:border-indigo-400 rounded-2xl transition bg-slate-50/60 space-y-2">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <span className="px-2.5 py-0.5 bg-indigo-100 text-indigo-800 rounded-full text-[10px] font-bold uppercase tracking-wider">
-                      PROMs Odontológico (Padrão Ouro)
-                    </span>
-                    <h4 className="text-base font-bold text-slate-900 mt-1">
-                      OHIP-14 (Oral Health Impact Profile)
-                    </h4>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => loadTemplate('ohip')}
-                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl transition shadow-xs"
-                  >
-                    Carregar OHIP-14
-                  </button>
-                </div>
-                <p className="text-xs text-slate-600 leading-relaxed">
-                  Avalia as 7 dimensões do impacto da saúde bucal (dor física, limitação funcional, desconforto e incapacidade psicológica/social).
-                </p>
-              </div>
+            {/* Abas da Biblioteca */}
+            <div className="flex items-center space-x-2 border-b border-slate-200 pb-3 mb-4 shrink-0 overflow-x-auto text-xs font-bold">
+              <button
+                type="button"
+                onClick={() => setActiveLibraryTab('validated')}
+                className={`px-3.5 py-2 rounded-xl transition flex items-center space-x-1.5 cursor-pointer whitespace-nowrap ${
+                  activeLibraryTab === 'validated'
+                    ? 'bg-indigo-600 text-white shadow-xs'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                <BookOpen className="w-3.5 h-3.5" />
+                <span>Modelos Validados (Odontologia)</span>
+                <span className="px-1.5 py-0.2 bg-white/20 rounded-full text-[10px]">5</span>
+              </button>
 
-              {/* Modelo 2: Hábitos Cromogênicos */}
-              <div className="p-5 border border-slate-200 hover:border-amber-400 rounded-2xl transition bg-slate-50/60 space-y-2">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <span className="px-2.5 py-0.5 bg-amber-100 text-amber-800 rounded-full text-[10px] font-bold uppercase tracking-wider">
-                      Protocolo de Clareamento
-                    </span>
-                    <h4 className="text-base font-bold text-slate-900 mt-1">
-                      Hábitos Cromogênicos e Dieta Pigmentante
-                    </h4>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => loadTemplate('cromo')}
-                    className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-xl transition shadow-xs"
-                  >
-                    Carregar Hábitos
-                  </button>
-                </div>
-                <p className="text-xs text-slate-600 leading-relaxed">
-                  Mapeia café, chimarrão, vinho tinto, chá preto e tabagismo/vape para controle de variáveis intervenientes no clareamento dental.
-                </p>
-              </div>
+              <button
+                type="button"
+                onClick={() => setActiveLibraryTab('custom')}
+                className={`px-3.5 py-2 rounded-xl transition flex items-center space-x-1.5 cursor-pointer whitespace-nowrap ${
+                  activeLibraryTab === 'custom'
+                    ? 'bg-indigo-600 text-white shadow-xs'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                <Bookmark className="w-3.5 h-3.5" />
+                <span>Meus Modelos Salvos</span>
+                {customTemplates.length > 0 && (
+                  <span className="px-1.5 py-0.2 bg-indigo-200 text-indigo-900 rounded-full text-[10px]">
+                    {customTemplates.length}
+                  </span>
+                )}
+              </button>
 
-              {/* Modelo 3: Satisfação Estética */}
-              <div className="p-5 border border-slate-200 hover:border-emerald-400 rounded-2xl transition bg-slate-50/60 space-y-2">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <span className="px-2.5 py-0.5 bg-emerald-100 text-emerald-800 rounded-full text-[10px] font-bold uppercase tracking-wider">
-                      Desfecho Subjetivo
-                    </span>
-                    <h4 className="text-base font-bold text-slate-900 mt-1">
-                      Satisfação Estética Orofacial
-                    </h4>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => loadTemplate('aes')}
-                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl transition shadow-xs"
-                  >
-                    Carregar Satisfação
-                  </button>
-                </div>
-                <p className="text-xs text-slate-600 leading-relaxed">
-                  Avalia a percepção de melhora do sorriso através de escalas contínuas EVA e índice de recomendação pós-clareamento.
-                </p>
-              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveLibraryTab('external');
+                  if (externalForms.length === 0) fetchExternalForms();
+                }}
+                className={`px-3.5 py-2 rounded-xl transition flex items-center space-x-1.5 cursor-pointer whitespace-nowrap ${
+                  activeLibraryTab === 'external'
+                    ? 'bg-indigo-600 text-white shadow-xs'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                <FolderKanban className="w-3.5 h-3.5" />
+                <span>Importar de Outras Pesquisas</span>
+              </button>
             </div>
 
-            <div className="mt-6 flex justify-end pt-4 border-t border-slate-100">
+            {/* Conteúdo das Abas */}
+            <div className="overflow-y-auto space-y-4 pr-1 flex-1">
+              {/* ABA 1: MODELOS VALIDADOS DA ODONTOLOGIA */}
+              {activeLibraryTab === 'validated' && (
+                <div className="space-y-3.5">
+                  {[
+                    {
+                      id: 'ohip',
+                      badge: 'PROMs Odontológico (Padrão Ouro)',
+                      badgeColor: 'bg-indigo-100 text-indigo-800',
+                      title: 'OHIP-14 (Oral Health Impact Profile)',
+                      description: 'Avalia as 7 dimensões do impacto da saúde bucal (dor física, limitação funcional, desconforto e incapacidade psicológica/social). Escala Likert 5 pontos.',
+                      questions: OHIP_14_QUESTIONS,
+                    },
+                    {
+                      id: 'cromo',
+                      badge: 'Protocolo de Clareamento Dental',
+                      badgeColor: 'bg-amber-100 text-amber-800',
+                      title: 'Hábitos Cromogênicos e Dieta Pigmentante',
+                      description: 'Mapeia café, chimarrão, vinho tinto, chá preto e tabagismo/vape para controle de variáveis intervenientes durante o tratamento clareador.',
+                      questions: CROMOGENIC_HABITS_QUESTIONS,
+                    },
+                    {
+                      id: 'aes',
+                      badge: 'Desfecho Subjetivo / Estética',
+                      badgeColor: 'bg-emerald-100 text-emerald-800',
+                      title: 'Satisfação Estética Orofacial',
+                      description: 'Avalia a percepção de melhora do sorriso através de escalas analógicas visuais EVA, superação de expectativas e recomendação do tratamento.',
+                      questions: AESTHETICS_QUESTIONS,
+                    },
+                    {
+                      id: 'pain',
+                      badge: 'Sensibilidade & Dor Clínica',
+                      badgeColor: 'bg-red-100 text-red-800',
+                      title: 'Escala de Sensibilidade e Dor Dental (EVA 0h e 24h)',
+                      description: 'Mapeia dor imediata na cadeira (EVA 0h), dor tardia 24h, estímulos provocadores (frio/quente/toque) e necessidade de analgésicos.',
+                      questions: PAIN_SENSITIVITY_QUESTIONS,
+                    },
+                    {
+                      id: 'fdi',
+                      badge: 'Dentística Restauradora (FDI)',
+                      badgeColor: 'bg-purple-100 text-purple-800',
+                      title: 'Critérios FDI de Avaliação de Restaurações',
+                      description: 'Avaliação clínica padronizada de fratura/retenção, adaptação marginal, mancha marginal, sensibilidade e cárie secundária.',
+                      questions: FDI_RESTORATION_QUESTIONS,
+                    },
+                  ].map((tpl) => (
+                    <div
+                      key={tpl.id}
+                      className="p-4 sm:p-5 border border-slate-200 hover:border-indigo-400 rounded-2xl transition bg-slate-50/70 hover:bg-slate-50 space-y-3"
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${tpl.badgeColor}`}>
+                              {tpl.badge}
+                            </span>
+                            <span className="text-[11px] text-slate-400 font-semibold">
+                              {tpl.questions.length} perguntas
+                            </span>
+                          </div>
+                          <h4 className="text-sm font-bold text-slate-900 mt-1">
+                            {tpl.title}
+                          </h4>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => handleApplyTemplate(tpl.title, tpl.description, tpl.questions, 'replace')}
+                            className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl transition shadow-xs cursor-pointer"
+                          >
+                            Carregar (Substituir)
+                          </button>
+                          {questions.length > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => handleApplyTemplate(tpl.title, tpl.description, tpl.questions, 'append')}
+                              className="px-3 py-1.5 bg-white hover:bg-slate-100 text-indigo-700 border border-indigo-200 font-bold text-xs rounded-xl transition cursor-pointer"
+                              title="Adiciona as perguntas deste modelo no final do formulário atual"
+                            >
+                              + Acrescentar
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      <p className="text-xs text-slate-600 leading-relaxed">
+                        {tpl.description}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* ABA 2: MEUS MODELOS SALVOS */}
+              {activeLibraryTab === 'custom' && (
+                <div className="space-y-3.5">
+                  {customTemplates.length === 0 ? (
+                    <div className="text-center py-12 px-4 bg-slate-50 rounded-2xl border border-dashed border-slate-300">
+                      <Bookmark className="w-10 h-10 mx-auto text-slate-400 mb-2" />
+                      <h4 className="text-sm font-bold text-slate-800">Nenhum modelo personalizado salvo</h4>
+                      <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto leading-relaxed">
+                        Ao montar ou editar qualquer formulário na prancheta, clique em <strong>"Salvar como Modelo"</strong> no topo da página. O questionário ficará disponível aqui para ser adicionado em qualquer pesquisa!
+                      </p>
+                      {questions.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowLibraryModal(false);
+                            handleOpenSaveTemplateModal();
+                          }}
+                          className="mt-4 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-xs transition inline-flex items-center space-x-1.5 cursor-pointer"
+                        >
+                          <BookmarkPlus className="w-4 h-4" />
+                          <span>Salvar Questionário Atual como Modelo</span>
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    customTemplates.map((tpl) => (
+                      <div
+                        key={tpl.id}
+                        className="p-4 sm:p-5 border border-slate-200 hover:border-indigo-400 rounded-2xl transition bg-slate-50/70 hover:bg-slate-50 space-y-3"
+                      >
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                          <div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="px-2.5 py-0.5 bg-purple-100 text-purple-800 rounded-full text-[10px] font-bold uppercase tracking-wider">
+                                {tpl.category || 'Personalizado'}
+                              </span>
+                              <span className="text-[11px] text-slate-400 font-semibold">
+                                {tpl.questions.length} perguntas
+                              </span>
+                              <span className="text-[10px] text-slate-400">
+                                Salvo em {new Date(tpl.createdAt).toLocaleDateString('pt-BR')}
+                              </span>
+                            </div>
+                            <h4 className="text-sm font-bold text-slate-900 mt-1">
+                              {tpl.name}
+                            </h4>
+                          </div>
+
+                          <div className="flex items-center gap-2 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => handleApplyTemplate(tpl.name, tpl.description, tpl.questions, 'replace')}
+                              className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl transition shadow-xs cursor-pointer"
+                            >
+                              Carregar (Substituir)
+                            </button>
+                            {questions.length > 0 && (
+                              <button
+                                type="button"
+                                onClick={() => handleApplyTemplate(tpl.name, tpl.description, tpl.questions, 'append')}
+                                className="px-3 py-1.5 bg-white hover:bg-slate-100 text-indigo-700 border border-indigo-200 font-bold text-xs rounded-xl transition cursor-pointer"
+                                title="Adiciona as perguntas deste modelo ao final do questionário atual"
+                              >
+                                + Acrescentar
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteCustomTemplate(tpl.id)}
+                              className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition cursor-pointer"
+                              title="Excluir este modelo salvo"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                        {tpl.description && (
+                          <p className="text-xs text-slate-600 leading-relaxed">
+                            {tpl.description}
+                          </p>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+
+              {/* ABA 3: IMPORTAR DE OUTRAS PESQUISAS */}
+              {activeLibraryTab === 'external' && (
+                <div className="space-y-3.5">
+                  <div className="relative">
+                    <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      placeholder="Buscar questionários de outros projetos..."
+                      value={externalSearchQuery}
+                      onChange={(e) => setExternalSearchQuery(e.target.value)}
+                      className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                    />
+                  </div>
+
+                  {loadingExternalForms ? (
+                    <div className="py-12 text-center text-slate-400 text-xs">
+                      <Clock className="w-6 h-6 animate-spin mx-auto text-indigo-600 mb-2" />
+                      <span>Consultando formulários cadastrados em outras pesquisas...</span>
+                    </div>
+                  ) : externalForms.length === 0 ? (
+                    <div className="text-center py-10 text-slate-400 text-xs">
+                      Nenhum formulário encontrado em outras pesquisas.
+                    </div>
+                  ) : (
+                    externalForms
+                      .filter(
+                        (f) =>
+                          !externalSearchQuery ||
+                          f.title.toLowerCase().includes(externalSearchQuery.toLowerCase()) ||
+                          (f.project?.name && f.project.name.toLowerCase().includes(externalSearchQuery.toLowerCase()))
+                      )
+                      .map((form) => {
+                        let parsedQuestions: FormQuestion[] = [];
+                        try {
+                          parsedQuestions = JSON.parse(form.questionsJson);
+                        } catch {}
+
+                        return (
+                          <div
+                            key={form.id}
+                            className="p-4 sm:p-5 border border-slate-200 hover:border-indigo-400 rounded-2xl transition bg-slate-50/70 hover:bg-slate-50 space-y-3"
+                          >
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                              <div>
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="px-2.5 py-0.5 bg-blue-100 text-blue-800 rounded-full text-[10px] font-bold">
+                                    📁 {form.project?.name || 'Pesquisa UEPG'}
+                                  </span>
+                                  <span className="text-[11px] text-slate-400 font-semibold">
+                                    {parsedQuestions.length} perguntas
+                                  </span>
+                                </div>
+                                <h4 className="text-sm font-bold text-slate-900 mt-1">
+                                  {form.title}
+                                </h4>
+                              </div>
+
+                              <div className="flex items-center gap-2 shrink-0">
+                                <button
+                                  type="button"
+                                  onClick={() => handleApplyTemplate(form.title, form.description || '', parsedQuestions, 'replace')}
+                                  className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl transition shadow-xs cursor-pointer"
+                                >
+                                  Importar (Substituir)
+                                </button>
+                                {questions.length > 0 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleApplyTemplate(form.title, form.description || '', parsedQuestions, 'append')}
+                                    className="px-3 py-1.5 bg-white hover:bg-slate-100 text-indigo-700 border border-indigo-200 font-bold text-xs rounded-xl transition cursor-pointer"
+                                  >
+                                    + Acrescentar
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                            {form.description && (
+                              <p className="text-xs text-slate-600 leading-relaxed">
+                                {form.description}
+                              </p>
+                            )}
+                          </div>
+                        );
+                      })
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Rodapé do Modal */}
+            <div className="mt-5 flex justify-end pt-3 border-t border-slate-100 shrink-0">
               <button
                 type="button"
                 onClick={() => setShowLibraryModal(false)}
-                className="px-5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition"
+                className="px-5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition cursor-pointer"
               >
                 Fechar
               </button>
             </div>
 
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================== */}
+      {/* MODAL: SALVAR QUESTIONÁRIO COMO MODELO REUTILIZÁVEL            */}
+      {/* ============================================================== */}
+      {showSaveTemplateModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto animate-fadeIn">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full p-6 sm:p-7 border border-slate-200 my-8">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+              <div className="flex items-center space-x-2.5">
+                <div className="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-700 flex items-center justify-center">
+                  <BookmarkPlus className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">Salvar como Modelo</h3>
+                  <p className="text-xs text-slate-500">Reutilize este questionário em outras pesquisas com 1 clique</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowSaveTemplateModal(false)}
+                className="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-600 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleConfirmSaveTemplate} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Nome do Modelo <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={saveTemplateForm.name}
+                  onChange={(e) => setSaveTemplateForm({ ...saveTemplateForm, name: e.target.value })}
+                  placeholder="Ex: Questionário de Sensibilidade Pós-Clareamento..."
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 font-semibold"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Categoria Clínica
+                </label>
+                <select
+                  value={saveTemplateForm.category}
+                  onChange={(e) => setSaveTemplateForm({ ...saveTemplateForm, category: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs bg-white text-slate-800 font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+                >
+                  <option value="Clareamento & Estética">Clareamento & Estética</option>
+                  <option value="Sensibilidade & Dor">Sensibilidade & Dor</option>
+                  <option value="Dentística Restauradora">Dentística Restauradora</option>
+                  <option value="Periodontia & Tecidos">Periodontia & Tecidos</option>
+                  <option value="Ortodontia & Oclusão">Ortodontia & Oclusão</option>
+                  <option value="Qualidade de Vida (PROMs)">Qualidade de Vida (PROMs)</option>
+                  <option value="Anamnese Geral">Anamnese Geral</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Descrição e Orientações (opcional)
+                </label>
+                <textarea
+                  rows={2}
+                  value={saveTemplateForm.description}
+                  onChange={(e) => setSaveTemplateForm({ ...saveTemplateForm, description: e.target.value })}
+                  placeholder="Finalidade do instrumento, momento de aplicação (ex: pós-operatório 24h)..."
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+
+              <div className="p-3 bg-indigo-50/70 border border-indigo-200 rounded-2xl flex items-center justify-between text-xs text-indigo-900">
+                <span className="font-semibold">Perguntas a serem salvas no modelo:</span>
+                <span className="font-bold px-2 py-0.5 bg-white rounded-lg border border-indigo-200">
+                  {questions.length} {questions.length === 1 ? 'pergunta' : 'perguntas'}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-end space-x-2 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setShowSaveTemplateModal(false)}
+                  className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl text-xs font-bold transition cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-xs cursor-pointer"
+                >
+                  <BookmarkPlus className="w-4 h-4" />
+                  <span>Salvar Modelo Reutilizável</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
