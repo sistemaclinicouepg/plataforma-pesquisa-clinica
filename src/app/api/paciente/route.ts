@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { parseStudyProtocol } from '@/lib/studyProtocol';
+import { parseUnlockMeta } from '@/lib/unlockProtocol';
 
 function matchesBirthDate(dobRaw: Date | string | null | undefined, inputRaw: string): boolean {
   if (!dobRaw || !inputRaw) return false;
@@ -350,10 +351,18 @@ export async function GET(req: Request) {
     const completedSessionNumbers = participant.sessions.map((s) => s.sessionNumber);
     const maxCompletedSession = completedSessionNumbers.length > 0 ? Math.max(...completedSessionNumbers) : 0;
 
+    // Metadados de liberação manual configurados pelos pesquisadores
+    const allUnlockedForms = participant.sessions.flatMap((s) => parseUnlockMeta(s.notes).unlockedForms);
+
     // Processar formulários do projeto destinados ao paciente (PROMs)
-    // Regra GCP: Mostrar apenas os questionários cujas sessões já aconteceram no consultório
+    // Regra GCP: Mostrar apenas os questionários cujas sessões já aconteceram no consultório OU liberados manualmente
     const patientForms = participant.project.forms.filter(
-      (f: { title: string; description: string | null }) => {
+      (f: { id: string; title: string; description: string | null }) => {
+        // Se foi liberado expressamente pelo pesquisador, torna visível imediatamente
+        if (allUnlockedForms.includes(f.id)) {
+          return true;
+        }
+
         // 1. Desconsiderar formulários de preenchimento exclusivo pelo pesquisador
         if (f.description?.includes('Preenchido por: Pesquisador')) return false;
 
@@ -455,6 +464,15 @@ export async function GET(req: Request) {
       projectName: op.project.name,
     }));
 
+    const sessionsWithMeta = participant.sessions.map((s) => {
+      const meta = parseUnlockMeta(s.notes);
+      return {
+        ...s,
+        unlockedMoments: meta.unlockedMoments,
+        releaseMode: meta.releaseMode,
+      };
+    });
+
     return NextResponse.json({
       success: true,
       participant: {
@@ -467,7 +485,7 @@ export async function GET(req: Request) {
         ethicsNumber: participant.project.consentForm?.ethicsNumber || 'Em conformidade com o CEP/CONEP',
         ethicsContacts: participant.project.consentForm?.ethicsContacts || 'cep@uepg.br',
         researcherPhone: null,
-        sessions: participant.sessions,
+        sessions: sessionsWithMeta,
         latestSession,
         totalSessions,
         maxCompletedSession,

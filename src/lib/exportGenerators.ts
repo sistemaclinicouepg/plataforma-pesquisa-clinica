@@ -21,6 +21,12 @@ export interface ExportDatasetParticipant {
     adverseEvents?: string | null;
     notes?: string | null;
   }>;
+  responses?: Array<{
+    id?: string;
+    formId: string;
+    answersJson: string;
+    submittedAt?: string;
+  }>;
 }
 
 const VITA_CLASSICAL_SHADES = [
@@ -35,6 +41,13 @@ export const getVitaSGU = (shade: string | null | undefined): number => {
 };
 
 export function buildNumericCSVContent(projectName: string, participants: ExportDatasetParticipant[]): string {
+  // Coletar todas as sessões extras (> 2) presentes nos dados
+  const extraSessionNumbers = Array.from(
+    new Set(
+      participants.flatMap((p) => (p.sessions || []).map((s) => s.sessionNumber)).filter((n) => n > 2)
+    )
+  ).sort((a, b) => a - b);
+
   const headers = [
     'ID_PARTICIPANTE',
     'SEXO',
@@ -48,6 +61,12 @@ export function buildNumericCSVContent(projectName: string, participants: Export
     'S2_EVA_1H',
     'S2_EVA_24H',
     'S2_EVA_48H',
+    ...extraSessionNumbers.flatMap((n) => [
+      `S${n}_EVA_0H`,
+      `S${n}_EVA_1H`,
+      `S${n}_EVA_24H`,
+      `S${n}_EVA_48H`,
+    ]),
     'S1_SGU_DIR',
     'S1_SGU_ESQ',
     'S2_SGU_DIR',
@@ -110,6 +129,16 @@ export function buildNumericCSVContent(projectName: string, participants: Export
 
     const retencao = p.status === 'EXCLUDED' ? 3 : (r30 || r14) ? 1 : 2;
 
+    const extraValues = extraSessionNumbers.flatMap((n) => {
+      const sn = p.sessions?.find((s) => s.sessionNumber === n);
+      return [
+        sn?.painScore0h ?? 'NA',
+        sn?.painScore1h ?? 'NA',
+        sn?.painScore24h ?? 'NA',
+        sn?.painScore48h ?? 'NA',
+      ];
+    });
+
     return [
       p.researchCode,
       sexCode,
@@ -123,6 +152,7 @@ export function buildNumericCSVContent(projectName: string, participants: Export
       s2?.painScore1h ?? 'NA',
       s2?.painScore24h ?? 'NA',
       s2?.painScore48h ?? 'NA',
+      ...extraValues,
       s1SguR,
       s1SguL,
       s2SguR,
@@ -440,7 +470,7 @@ export function generateGraphPadPrismFormat(projectName: string, participants: E
   let out = `## DADOS FORMATADOS PARA GRAPHPAD PRISM\n`;
   out += `## Projeto: ${projectName} - UEPG Odontologia\n\n`;
 
-  out += `### TABELA 1: CINÉTICA DE DOR LONGITUDINAL (TABELA XY / GROUPED)\n`;
+  out += `### TABELA 1: CINÉTICA DE DOR LONGITUDINAL - SESSÃO 1 (TABELA XY / GROUPED)\n`;
   out += `### X = Tempo em Horas | Linhas = Participantes | Valores = Escore EVA (0-10)\n`;
   out += `ParticipantID\tTime_0h\tTime_1h\tTime_24h\tTime_48h\n`;
 
@@ -448,6 +478,16 @@ export function generateGraphPadPrismFormat(projectName: string, participants: E
     const s1 = p.sessions?.find((s) => s.sessionNumber === 1);
     out += `${p.researchCode}\t${s1?.painScore0h ?? ''}\t${s1?.painScore1h ?? ''}\t${s1?.painScore24h ?? ''}\t${s1?.painScore48h ?? ''}\n`;
   });
+
+  const hasS2 = participants.some((p) => p.sessions?.some((s) => s.sessionNumber === 2));
+  if (hasS2) {
+    out += `\n### TABELA 1B: CINÉTICA DE DOR LONGITUDINAL - SESSÃO 2 (TABELA XY / GROUPED)\n`;
+    out += `ParticipantID\tTime_0h\tTime_1h\tTime_24h\tTime_48h\n`;
+    participants.forEach((p) => {
+      const s2 = p.sessions?.find((s) => s.sessionNumber === 2);
+      out += `${p.researchCode}\t${s2?.painScore0h ?? ''}\t${s2?.painScore1h ?? ''}\t${s2?.painScore24h ?? ''}\t${s2?.painScore48h ?? ''}\n`;
+    });
+  }
 
   out += `\n### TABELA 2: EFICÁCIA CLAREADORA BOCA DIVIDIDA (COLUMN / PAIRED T-TEST)\n`;
   out += `### Coluna A = Hemi-arco Direito (ΔSGU) | Coluna B = Hemi-arco Esquerdo (ΔSGU)\n`;

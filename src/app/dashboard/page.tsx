@@ -25,11 +25,17 @@ import {
   PRESET_QUESTIONNAIRES_CATALOG,
 } from '@/lib/studyProtocol';
 import {
+  parseUnlockMeta,
+  extractDiaryMomentDetails,
+  generateParticipantTabularExport,
+} from '@/lib/unlockProtocol';
+import {
   Stethoscope,
   ClipboardList,
   BarChart3,
   Users,
   Download,
+  Copy,
   Lock,
   Unlock,
   CheckCircle2,
@@ -735,6 +741,9 @@ function DashboardContent() {
   const [showResponsesModal, setShowResponsesModal] = useState(false);
   const [responsesParticipant, setResponsesParticipant] = useState<Participant | null>(null);
   const [overrideBlindedView, setOverrideBlindedView] = useState<boolean | null>(null);
+  const [responsesModalTab, setResponsesModalTab] = useState<'scales' | 'forms' | 'export'>('scales');
+  const [unlockingAction, setUnlockingAction] = useState<string | null>(null);
+  const [copiedTSV, setCopiedTSV] = useState(false);
 
   // Modal de Prontuário Clínico & Dossiê Completo do Paciente (Anamnese, Odontograma, Histórico)
   const [showDossierModal, setShowDossierModal] = useState(false);
@@ -749,6 +758,11 @@ function DashboardContent() {
     if (!dossierParticipant || !project?.participants) return dossierParticipant;
     return (project.participants as Participant[]).find((p) => p.id === dossierParticipant.id) || dossierParticipant;
   }, [dossierParticipant, project?.participants]);
+
+  const currentResponsesParticipant = useMemo(() => {
+    if (!responsesParticipant || !project?.participants) return responsesParticipant;
+    return (project.participants as Participant[]).find((p) => p.id === responsesParticipant.id) || responsesParticipant;
+  }, [responsesParticipant, project?.participants]);
 
   // Menu dropdown de mais ações da linha do participante
   const [activeRowMenu, setActiveRowMenu] = useState<string | null>(null);
@@ -769,6 +783,7 @@ function DashboardContent() {
   const handleOpenResponses = async (part: Participant) => {
     setResponsesParticipant(part);
     setShowResponsesModal(true);
+    setCopiedTSV(false);
     try {
       const res = await fetch(`/api/responses?participantId=${part.id}`);
       if (res.ok) {
@@ -787,6 +802,104 @@ function DashboardContent() {
         }
       }
     } catch {}
+  };
+
+  const handleToggleUnlock = async (
+    participantId: string,
+    sessionNumber: number,
+    action: 'UNLOCK_MOMENT' | 'LOCK_MOMENT' | 'UNLOCK_ALL' | 'SET_MODE',
+    moment?: '0h' | '1h' | '24h' | '48h',
+    mode?: 'AUTO' | 'MANUAL'
+  ) => {
+    try {
+      setUnlockingAction(`${sessionNumber}-${moment || action}`);
+      const res = await fetch(`/api/participants/${participantId}/unlock`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionNumber, action, moment, mode }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.session) {
+          setProject((prev) => {
+            if (!prev) return prev;
+            return {
+              ...prev,
+              participants: (prev.participants || []).map((p) => {
+                if (p.id !== participantId) return p;
+                return {
+                  ...p,
+                  sessions: (p.sessions || []).map((s) =>
+                    s.id === data.session.id ? { ...s, ...data.session } : s
+                  ),
+                };
+              }),
+            };
+          });
+          setResponsesParticipant((prev) => {
+            if (!prev || prev.id !== participantId) return prev;
+            return {
+              ...prev,
+              sessions: (prev.sessions || []).map((s) =>
+                s.id === data.session.id ? { ...s, ...data.session } : s
+              ),
+            };
+          });
+        }
+      }
+    } catch (err) {
+      console.error('Erro ao atualizar liberação da sessão:', err);
+    } finally {
+      setUnlockingAction(null);
+    }
+  };
+
+  const handleToggleUnlockForm = async (
+    participantId: string,
+    formId: string,
+    action: 'UNLOCK_FORM' | 'LOCK_FORM'
+  ) => {
+    try {
+      setUnlockingAction(`form-${formId}`);
+      const res = await fetch(`/api/participants/${participantId}/unlock`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, formId }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.session) {
+          setProject((prev) => {
+            if (!prev) return prev;
+            return {
+              ...prev,
+              participants: (prev.participants || []).map((p) => {
+                if (p.id !== participantId) return p;
+                return {
+                  ...p,
+                  sessions: (p.sessions || []).map((s) =>
+                    s.id === data.session.id ? { ...s, ...data.session } : s
+                  ),
+                };
+              }),
+            };
+          });
+          setResponsesParticipant((prev) => {
+            if (!prev || prev.id !== participantId) return prev;
+            return {
+              ...prev,
+              sessions: (prev.sessions || []).map((s) =>
+                s.id === data.session.id ? { ...s, ...data.session } : s
+              ),
+            };
+          });
+        }
+      }
+    } catch (err) {
+      console.error('Erro ao alternar liberação de questionário:', err);
+    } finally {
+      setUnlockingAction(null);
+    }
   };
 
   // Modal de Registro/Edição de Sessão Clínica (Trilha de Atendimento)
@@ -3060,6 +3173,17 @@ function DashboardContent() {
                                   >
                                     <FileSpreadsheet className="w-3.5 h-3.5 text-blue-600" />
                                     <span>Ficha</span>
+                                  </button>
+
+                                  {/* Respostas das Escalas & Questionários */}
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenResponses(part)}
+                                    className="h-8 px-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg text-xs font-bold transition inline-flex items-center justify-center gap-1 shadow-2xs shrink-0 cursor-pointer"
+                                    title="Visualizar todas as respostas de escalas de dor (EVA), diários, questionários e exportar para bioestatística"
+                                  >
+                                    <BarChart3 className="w-3.5 h-3.5 text-indigo-600" />
+                                    <span>Respostas</span>
                                   </button>
 
                                   {/* WhatsApp / Agendamento */}
@@ -6873,337 +6997,905 @@ function DashboardContent() {
         );
       })()}
 
-      {/* Modal de Questionários & eCRF do Paciente */}
-      {showResponsesModal && responsesParticipant && (() => {
-        const part = responsesParticipant;
+      {/* Modal de Questionários, Escalas Clínicas (EVA) & Exportação de Respostas */}
+      {showResponsesModal && currentResponsesParticipant && (() => {
+        const part = currentResponsesParticipant;
         const projectForms = project?.forms || [];
         const responses = part.responses || [];
+        const sessions = part.sessions || [];
         const isCurrentBlinded = overrideBlindedView !== null ? overrideBlindedView : (project?.isBlinded ?? false);
 
-        return (
-          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] flex flex-col shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150">
-              {/* Cabeçalho */}
-              <div className="p-6 border-b border-slate-100 flex items-start justify-between bg-slate-50/50 rounded-t-2xl">
-                <div>
-                  <div className="flex items-center space-x-2">
-                    <span className="px-2.5 py-1 bg-blue-100 text-blue-800 text-xs font-bold rounded-lg uppercase tracking-wide">
-                      {part.researchCode}
-                    </span>
-                    <h2 className="text-xl font-bold text-slate-900">
-                      Questionários & eCRF do Participante
-                    </h2>
-                  </div>
-                  <p className="text-sm text-slate-500 mt-1">
-                    Paciente: <span className="font-semibold text-slate-700">{part.patient.fullName}</span> • {part.patient.phoneWhatsApp}
-                  </p>
+        // Gera a exportação tabular individual
+        const exportData = generateParticipantTabularExport(part, projectForms);
 
-                  {/* Simulador Interativo de Cegamento */}
-                  <div className="flex flex-wrap items-center gap-2 mt-3 pt-2.5 border-t border-slate-200/70">
-                    <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                      Simular Papel:
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setOverrideBlindedView(false)}
-                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center space-x-1.5 ${
-                        !isCurrentBlinded
-                          ? 'bg-blue-600 text-white shadow-xs ring-2 ring-blue-300'
-                          : 'bg-white hover:bg-slate-100 text-slate-600 border border-slate-200'
-                      }`}
-                      title="Simular Pesquisador Não-Cego ou Coordenador (visualiza todas as respostas)"
-                    >
-                      <Eye className="w-3.5 h-3.5" />
-                      <span>Pesquisador Não-Cego (Ver Respostas)</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setOverrideBlindedView(true)}
-                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center space-x-1.5 ${
-                        isCurrentBlinded
-                          ? 'bg-amber-600 text-white shadow-xs ring-2 ring-amber-300'
-                          : 'bg-white hover:bg-slate-100 text-slate-600 border border-slate-200'
-                      }`}
-                      title="Simular Avaliador Cego (respostas mascaradas conforme protocolo)"
-                    >
-                      <Lock className="w-3.5 h-3.5" />
-                      <span>Avaliador Cego (Mascarado)</span>
-                    </button>
-                    {overrideBlindedView !== null && (
-                      <button
-                        type="button"
-                        onClick={() => setOverrideBlindedView(null)}
-                        className="text-[11px] text-slate-400 hover:text-slate-600 underline ml-1"
-                        title="Restaurar regra original do usuário logado"
-                      >
-                        Resetar ({project?.isBlinded ? 'Cego' : 'Não-Cego'})
-                      </button>
-                    )}
+        // Obter meta de liberação da 1ª sessão (ou da sessão ativa) para formulários
+        const firstSessionNotes = sessions[0]?.notes || null;
+        const globalUnlockMeta = parseUnlockMeta(firstSessionNotes);
+
+        return (
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 z-50">
+            <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[92vh] flex flex-col shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150 overflow-hidden">
+              {/* Cabeçalho */}
+              <div className="p-5 sm:p-6 border-b border-slate-100 bg-slate-50/70">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <div className="flex items-center space-x-2.5">
+                      <span className="px-2.5 py-1 bg-slate-900 text-white font-mono text-xs font-bold rounded-lg uppercase tracking-wide shadow-2xs">
+                        {part.researchCode}
+                      </span>
+                      <h2 className="text-lg sm:text-xl font-bold text-slate-900">
+                        Respostas do Paciente & Painel Bioestatístico
+                      </h2>
+                    </div>
+                    <p className="text-xs sm:text-sm text-slate-600 mt-1">
+                      Paciente: <strong className="text-slate-800">{part.patient.fullName}</strong> • Grupo: <span className="font-semibold text-blue-700">{part.group || 'G1'}</span> • Contato: {part.patient.phoneWhatsApp || 'Sem telefone'}
+                    </p>
                   </div>
+                  <button
+                    onClick={() => setShowResponsesModal(false)}
+                    className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-200/60 transition cursor-pointer"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
                 </div>
-                <button
-                  onClick={() => setShowResponsesModal(false)}
-                  className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 transition"
-                >
-                  <X className="w-5 h-5" />
-                </button>
+
+                {/* Simulador Interativo de Cegamento */}
+                <div className="flex flex-wrap items-center gap-2 mt-3 pt-2.5 border-t border-slate-200/70">
+                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                    Simular Papel:
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setOverrideBlindedView(false)}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer ${
+                      !isCurrentBlinded
+                        ? 'bg-blue-600 text-white shadow-xs ring-2 ring-blue-300'
+                        : 'bg-white hover:bg-slate-100 text-slate-600 border border-slate-200'
+                    }`}
+                    title="Simular Pesquisador Não-Cego ou Coordenador (visualiza todas as respostas)"
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                    <span>Pesquisador Não-Cego (Ver Respostas)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setOverrideBlindedView(true)}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer ${
+                      isCurrentBlinded
+                        ? 'bg-amber-600 text-white shadow-xs ring-2 ring-amber-300'
+                        : 'bg-white hover:bg-slate-100 text-slate-600 border border-slate-200'
+                    }`}
+                    title="Simular Avaliador Cego (respostas mascaradas conforme protocolo)"
+                  >
+                    <Lock className="w-3.5 h-3.5" />
+                    <span>Avaliador Cego (Mascarado)</span>
+                  </button>
+                  {overrideBlindedView !== null && (
+                    <button
+                      type="button"
+                      onClick={() => setOverrideBlindedView(null)}
+                      className="text-[11px] text-slate-400 hover:text-slate-600 underline ml-1 cursor-pointer"
+                      title="Restaurar regra original do usuário logado"
+                    >
+                      Resetar ({project?.isBlinded ? 'Cego' : 'Não-Cego'})
+                    </button>
+                  )}
+                </div>
+
+                {/* Abas de Navegação Interna */}
+                <div className="flex border-b border-slate-200 mt-4 -mb-5 sm:-mb-6 overflow-x-auto">
+                  <button
+                    type="button"
+                    onClick={() => setResponsesModalTab('scales')}
+                    className={`px-4 py-2.5 text-xs font-bold border-b-2 transition flex items-center space-x-2 whitespace-nowrap cursor-pointer ${
+                      responsesModalTab === 'scales'
+                        ? 'border-indigo-600 text-indigo-700 bg-white'
+                        : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                    }`}
+                  >
+                    <BarChart3 className="w-4 h-4" />
+                    <span>Escalas Clínicas & Diários (EVA)</span>
+                    <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-indigo-100 text-indigo-800 font-bold">
+                      {sessions.length} {sessions.length === 1 ? 'sessão' : 'sessões'}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setResponsesModalTab('forms')}
+                    className={`px-4 py-2.5 text-xs font-bold border-b-2 transition flex items-center space-x-2 whitespace-nowrap cursor-pointer ${
+                      responsesModalTab === 'forms'
+                        ? 'border-blue-600 text-blue-700 bg-white'
+                        : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                    }`}
+                  >
+                    <ClipboardList className="w-4 h-4" />
+                    <span>Questionários & eCRF</span>
+                    <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-blue-100 text-blue-800 font-bold">
+                      {responses.length}/{projectForms.length}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setResponsesModalTab('export')}
+                    className={`px-4 py-2.5 text-xs font-bold border-b-2 transition flex items-center space-x-2 whitespace-nowrap cursor-pointer ${
+                      responsesModalTab === 'export'
+                        ? 'border-emerald-600 text-emerald-700 bg-white'
+                        : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                    }`}
+                  >
+                    <Download className="w-4 h-4" />
+                    <span>Exportar Respostas (Estatística)</span>
+                  </button>
+                </div>
               </div>
 
               {/* Conteúdo com Scroll */}
-              <div className="p-6 overflow-y-auto space-y-6 flex-1">
-                {projectForms.length === 0 ? (
-                  <div className="text-center py-10 text-slate-400">
-                    <ClipboardList className="w-10 h-10 text-slate-300 mx-auto mb-2" />
-                    <p className="text-sm font-medium">Nenhum questionário cadastrado para este projeto.</p>
-                    <Link
-                      href="/construtor"
-                      className="inline-block mt-3 text-xs font-bold text-blue-600 hover:underline"
-                    >
-                      + Criar questionários no Construtor de Fichas
-                    </Link>
-                  </div>
-                ) : (
-                  projectForms.map((form) => {
-                    const resp = responses.find((r) => r.formId === form.id);
-                    let parsedQuestions: any[] = [];
-                    try {
-                      if (form.questionsJson) {
-                        parsedQuestions = JSON.parse(form.questionsJson);
-                      } else if (resp?.form?.questionsJson) {
-                        parsedQuestions = JSON.parse(resp.form.questionsJson);
-                      }
-                    } catch (e) {
-                      parsedQuestions = [];
-                    }
+              <div className="p-5 sm:p-6 overflow-y-auto space-y-6 flex-1 bg-slate-50/30">
+                {/* ABA 1: ESCALAS CLÍNICAS & DIÁRIOS DE DOR (EVA) */}
+                {responsesModalTab === 'scales' && (
+                  <div className="space-y-6">
+                    {sessions.length === 0 ? (
+                      <div className="text-center py-12 bg-white rounded-2xl border border-dashed border-slate-300 p-8">
+                        <Activity className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                        <h3 className="text-base font-bold text-slate-700">Nenhuma sessão clínica registrada ainda</h3>
+                        <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
+                          Inicie o primeiro atendimento deste participante para registrar a Sessão 1 e liberar os diários de sensibilidade (0h, 1h, 24h, 48h).
+                        </p>
+                      </div>
+                    ) : (
+                      sessions.map((sess) => {
+                        const unlockMeta = parseUnlockMeta(sess.notes);
+                        const isManualMode = unlockMeta.releaseMode === 'MANUAL';
+                        const moments: Array<'0h' | '1h' | '24h' | '48h'> = ['0h', '1h', '24h', '48h'];
 
-                    let answers: Record<string, any> = {};
-                    if (resp) {
-                      try {
-                        answers = JSON.parse(resp.answersJson || '{}');
-                      } catch (e) {
-                        answers = {};
-                      }
-                    }
+                        return (
+                          <div
+                            key={sess.id}
+                            className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden"
+                          >
+                            {/* Barra da Sessão */}
+                            <div className="p-4 bg-slate-50 border-b border-slate-200/80 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                              <div>
+                                <div className="flex items-center space-x-2">
+                                  <span className="px-2.5 py-0.5 bg-indigo-600 text-white rounded text-xs font-mono font-bold">
+                                    Sessão {sess.sessionNumber}
+                                  </span>
+                                  <h3 className="font-bold text-slate-800 text-sm">
+                                    {sess.sessionType || `Atendimento Clínico ${sess.sessionNumber}`}
+                                  </h3>
+                                </div>
+                                <p className="text-xs text-slate-500 mt-0.5">
+                                  Realizada em: <strong className="text-slate-700">{new Date(sess.sessionDate).toLocaleDateString('pt-BR')}</strong>
+                                  {sess.operatorName && ` • Operador: ${sess.operatorName}`}
+                                </p>
+                              </div>
 
-                    return (
-                      <div
-                        key={form.id}
-                        className={`rounded-xl border transition p-5 ${
-                          resp
-                            ? 'border-blue-200 bg-white shadow-xs'
-                            : 'border-slate-200 bg-slate-50/50'
-                        }`}
-                      >
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100 mb-4">
-                          <div>
-                            <h3 className="font-bold text-slate-800 text-base flex items-center space-x-2">
-                              <span>{form.title}</span>
-                            </h3>
-                            {form.description && (
-                              <p className="text-xs text-slate-500 mt-0.5">{form.description}</p>
-                            )}
-                          </div>
+                              {/* Controles de Liberação da Sessão */}
+                              <div className="flex flex-wrap items-center gap-2">
+                                {/* Modo de Liberação */}
+                                <div className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-lg text-xs font-bold border bg-white border-slate-200 text-slate-700">
+                                  {isManualMode ? (
+                                    <>
+                                      <Lock className="w-3.5 h-3.5 text-amber-600" />
+                                      <span>Modo Manual</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Clock className="w-3.5 h-3.5 text-emerald-600" />
+                                      <span>Liberação Automática (GCP)</span>
+                                    </>
+                                  )}
+                                </div>
 
-                          <div>
-                            {resp ? (
-                              <span className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
-                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700" />
-                                <span>
-                                  Respondido em{' '}
-                                  {new Date(resp.submittedAt).toLocaleDateString('pt-BR', {
-                                    day: '2-digit',
-                                    month: '2-digit',
-                                    year: 'numeric',
-                                    hour: '2-digit',
-                                    minute: '2-digit',
-                                  })}
-                                </span>
-                              </span>
-                            ) : (
-                              <div className="flex items-center space-x-2">
-                                <span className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300">
-                                  <Clock className="w-3.5 h-3.5 text-amber-700" />
-                                  <span>Pendente</span>
-                                </span>
                                 <button
                                   type="button"
+                                  disabled={unlockingAction === `${sess.sessionNumber}-SET_MODE`}
                                   onClick={() =>
-                                    openWhatsAppReminder(
-                                      part.patient.phoneWhatsApp,
-                                      part.researchCode,
-                                      form.title,
-                                      part.patient.fullName
+                                    handleToggleUnlock(
+                                      part.id,
+                                      sess.sessionNumber,
+                                      'SET_MODE',
+                                      undefined,
+                                      isManualMode ? 'AUTO' : 'MANUAL'
                                     )
                                   }
-                                  className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-lg text-xs font-bold bg-[#25D366] hover:bg-[#128C7E] text-white shadow-xs transition"
-                                  title="Enviar cobrança ou lembrete via WhatsApp"
+                                  className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold border border-slate-200 transition cursor-pointer"
+                                  title="Alternar entre Liberação Automática por Tempo e Liberação Manual"
                                 >
-                                  <MessageSquare className="w-3.5 h-3.5" />
-                                  <span>Lembrar no WhatsApp</span>
+                                  {isManualMode ? 'Mudar p/ Automático' : 'Mudar p/ Manual'}
                                 </button>
+
+                                <button
+                                  type="button"
+                                  disabled={unlockingAction === `${sess.sessionNumber}-UNLOCK_ALL`}
+                                  onClick={() =>
+                                    handleToggleUnlock(part.id, sess.sessionNumber, 'UNLOCK_ALL')
+                                  }
+                                  className="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-xs font-bold border border-indigo-200 transition cursor-pointer flex items-center space-x-1"
+                                  title="Liberar imediatamente todos os 4 momentos de dor para o paciente responder agora"
+                                >
+                                  <Unlock className="w-3.5 h-3.5 text-indigo-600" />
+                                  <span>Liberar Todos</span>
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Grid dos 4 Momentos de Avaliação */}
+                            <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+                              {moments.map((m) => {
+                                const details = extractDiaryMomentDetails(sess, m);
+                                const hasScore = details.score !== null && details.score !== undefined;
+                                const isUnlocked = unlockMeta.unlockedMoments.includes(m);
+                                const isActionLoading = unlockingAction === `${sess.sessionNumber}-${m}`;
+
+                                const momentLabels: Record<string, { title: string; subtitle: string }> = {
+                                  '0h': { title: 'Imediato (0h)', subtitle: 'Durante a sessão clínica' },
+                                  '1h': { title: '1 Hora Pós', subtitle: '45min a 1h pós-atendimento' },
+                                  '24h': { title: '24 Horas Pós', subtitle: 'No dia seguinte' },
+                                  '48h': { title: '48 Horas Pós', subtitle: 'Dois dias pós-atendimento' },
+                                };
+
+                                return (
+                                  <div
+                                    key={m}
+                                    className={`rounded-xl border p-3.5 flex flex-col justify-between transition ${
+                                      hasScore
+                                        ? 'bg-slate-50/70 border-slate-200'
+                                        : isUnlocked
+                                        ? 'bg-emerald-50/50 border-emerald-200'
+                                        : 'bg-white border-slate-200'
+                                    }`}
+                                  >
+                                    <div>
+                                      <div className="flex items-center justify-between">
+                                        <span className="text-xs font-bold text-slate-800">
+                                          {momentLabels[m].title}
+                                        </span>
+                                        {hasScore ? (
+                                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                            Respondido
+                                          </span>
+                                        ) : isUnlocked ? (
+                                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                            Liberado
+                                          </span>
+                                        ) : isManualMode ? (
+                                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300">
+                                            Aguardando Manual
+                                          </span>
+                                        ) : (
+                                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
+                                            Por Tempo (GCP)
+                                          </span>
+                                        )}
+                                      </div>
+                                      <p className="text-[10px] text-slate-400 mt-0.5">
+                                        {momentLabels[m].subtitle}
+                                      </p>
+
+                                      {/* Escore e Detalhes da Dor */}
+                                      <div className="mt-3">
+                                        {hasScore ? (
+                                          isCurrentBlinded ? (
+                                            <div className="bg-amber-50 border border-amber-200 rounded-lg p-2.5 text-center">
+                                              <Lock className="w-4 h-4 text-amber-700 mx-auto mb-1" />
+                                              <span className="text-[11px] font-bold text-amber-900 block">
+                                                EVA Mascarada
+                                              </span>
+                                              <span className="text-[10px] text-amber-700">Avaliador Cego</span>
+                                            </div>
+                                          ) : (
+                                            <div className="space-y-1.5">
+                                              <div className="flex items-baseline justify-between">
+                                                <span className="text-xs text-slate-500 font-medium">EVA:</span>
+                                                <span className="text-lg font-black font-mono text-indigo-700">
+                                                  {Number(details.score).toFixed(1)}
+                                                  <span className="text-xs text-slate-400 font-normal"> / 10.0</span>
+                                                </span>
+                                              </div>
+
+                                              {/* Barra de Intensidade */}
+                                              <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                                                <div
+                                                  className={`h-full rounded-full transition-all ${
+                                                    (details.score || 0) <= 2
+                                                      ? 'bg-emerald-500'
+                                                      : (details.score || 0) <= 5
+                                                      ? 'bg-amber-500'
+                                                      : 'bg-red-500'
+                                                  }`}
+                                                  style={{ width: `${Math.min(Math.max(((details.score || 0) / 10) * 100, 0), 100)}%` }}
+                                                />
+                                              </div>
+
+                                              {/* Detalhes Clínicos do Relato */}
+                                              <div className="pt-2 border-t border-slate-200/60 text-[11px] text-slate-600 space-y-0.5">
+                                                {details.painType && (
+                                                  <p>
+                                                    <strong className="text-slate-700">Tipo:</strong> {details.painType}
+                                                  </p>
+                                                )}
+                                                {details.usedAnalgesic && (
+                                                  <p>
+                                                    <strong className="text-slate-700">Analgésico:</strong>{' '}
+                                                    <span
+                                                      className={
+                                                        details.usedAnalgesic === 'Sim'
+                                                          ? 'text-red-600 font-bold'
+                                                          : 'text-slate-600'
+                                                      }
+                                                    >
+                                                      {details.usedAnalgesic}
+                                                    </span>{' '}
+                                                    {details.analgesicDetails ? `(${details.analgesicDetails})` : ''}
+                                                  </p>
+                                                )}
+                                                {details.gingivalSensation && (
+                                                  <p>
+                                                    <strong className="text-slate-700">Gengiva:</strong> {details.gingivalSensation}
+                                                  </p>
+                                                )}
+                                                {details.otherSymptoms && (
+                                                  <p>
+                                                    <strong className="text-slate-700">Obs:</strong> {details.otherSymptoms}
+                                                  </p>
+                                                )}
+                                                {details.submittedAt && (
+                                                  <p className="text-[10px] text-slate-400 pt-1">
+                                                    Envio: {details.submittedAt}
+                                                  </p>
+                                                )}
+                                              </div>
+                                            </div>
+                                          )
+                                        ) : (
+                                          <div className="text-center py-3 text-slate-400 text-xs">
+                                            <span>Ainda não respondido pelo paciente.</span>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+
+                                    {/* Botões de Ação para o Momento (Se ainda pendente) */}
+                                    {!hasScore && (
+                                      <div className="mt-3 pt-2 border-t border-slate-100 flex flex-col gap-1.5">
+                                        {isUnlocked ? (
+                                          <button
+                                            type="button"
+                                            disabled={isActionLoading}
+                                            onClick={() =>
+                                              handleToggleUnlock(
+                                                part.id,
+                                                sess.sessionNumber,
+                                                'LOCK_MOMENT',
+                                                m
+                                              )
+                                            }
+                                            className="w-full py-1.5 px-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-[11px] font-bold transition flex items-center justify-center space-x-1 cursor-pointer"
+                                            title="Bloquear novamente este momento no portal do paciente"
+                                          >
+                                            <Lock className="w-3 h-3 text-slate-500" />
+                                            <span>{isActionLoading ? 'Processando...' : 'Bloquear Acesso'}</span>
+                                          </button>
+                                        ) : (
+                                          <button
+                                            type="button"
+                                            disabled={isActionLoading}
+                                            onClick={() =>
+                                              handleToggleUnlock(
+                                                part.id,
+                                                sess.sessionNumber,
+                                                'UNLOCK_MOMENT',
+                                                m
+                                              )
+                                            }
+                                            className="w-full py-1.5 px-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[11px] font-bold shadow-2xs transition flex items-center justify-center space-x-1 cursor-pointer"
+                                            title="Liberar imediatamente este momento no celular do paciente agora"
+                                          >
+                                            <Unlock className="w-3 h-3 text-white" />
+                                            <span>{isActionLoading ? 'Liberando...' : 'Liberar Agora'}</span>
+                                          </button>
+                                        )}
+
+                                        {part.patient.phoneWhatsApp && (
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              const cleanPhone = part.patient.phoneWhatsApp.replace(/\D/g, '');
+                                              const fullPhone = cleanPhone.startsWith('55') ? cleanPhone : `55${cleanPhone}`;
+                                              const origin = typeof window !== 'undefined' ? window.location.origin : '';
+                                              const link = `${origin}/paciente?code=${part.researchCode}&tab=diary`;
+                                              const text = encodeURIComponent(
+                                                `Olá ${part.patient.fullName}! Seu diário de sensibilidade (${momentLabels[m].title}) da Sessão ${sess.sessionNumber} está disponível para preenchimento. Acesse pelo link: ${link}`
+                                              );
+                                              window.open(`https://wa.me/${fullPhone}?text=${text}`, '_blank');
+                                            }}
+                                            className="w-full py-1 px-2 bg-[#25D366]/10 hover:bg-[#25D366]/20 text-[#128C7E] rounded-lg text-[10px] font-bold transition flex items-center justify-center space-x-1 cursor-pointer"
+                                          >
+                                            <MessageSquare className="w-3.5 h-3.5" />
+                                            <span>Lembrar no WhatsApp</span>
+                                          </button>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                )}
+
+                {/* ABA 2: QUESTIONÁRIOS DE PESQUISA & eCRF */}
+                {responsesModalTab === 'forms' && (
+                  <div className="space-y-4">
+                    {projectForms.length === 0 ? (
+                      <div className="text-center py-10 text-slate-400 bg-white rounded-2xl border border-slate-200">
+                        <ClipboardList className="w-10 h-10 text-slate-300 mx-auto mb-2" />
+                        <p className="text-sm font-medium">Nenhum questionário cadastrado para este projeto.</p>
+                        <Link
+                          href="/construtor"
+                          className="inline-block mt-3 text-xs font-bold text-blue-600 hover:underline"
+                        >
+                          + Criar questionários no Construtor de Fichas
+                        </Link>
+                      </div>
+                    ) : (
+                      projectForms.map((form) => {
+                        const resp = responses.find((r) => r.formId === form.id);
+                        const isUnlocked = globalUnlockMeta.unlockedForms.includes(form.id);
+                        const isActionLoading = unlockingAction === `form-${form.id}`;
+
+                        let parsedQuestions: any[] = [];
+                        try {
+                          if (form.questionsJson) {
+                            parsedQuestions = JSON.parse(form.questionsJson);
+                          } else if (resp?.form?.questionsJson) {
+                            parsedQuestions = JSON.parse(resp.form.questionsJson);
+                          }
+                        } catch (e) {
+                          parsedQuestions = [];
+                        }
+
+                        let answers: Record<string, any> = {};
+                        if (resp) {
+                          try {
+                            answers = JSON.parse(resp.answersJson || '{}');
+                          } catch (e) {
+                            answers = {};
+                          }
+                        }
+
+                        return (
+                          <div
+                            key={form.id}
+                            className={`rounded-xl border transition p-5 ${
+                              resp
+                                ? 'border-blue-200 bg-white shadow-xs'
+                                : 'border-slate-200 bg-slate-50/50'
+                            }`}
+                          >
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100 mb-4">
+                              <div>
+                                <h3 className="font-bold text-slate-800 text-base flex items-center space-x-2">
+                                  <span>{form.title}</span>
+                                </h3>
+                                {form.description && (
+                                  <p className="text-xs text-slate-500 mt-0.5">{form.description}</p>
+                                )}
+                              </div>
+
+                              <div className="flex flex-wrap items-center gap-2">
+                                {resp ? (
+                                  <span className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700" />
+                                    <span>
+                                      Respondido em{' '}
+                                      {new Date(resp.submittedAt).toLocaleDateString('pt-BR', {
+                                        day: '2-digit',
+                                        month: '2-digit',
+                                        year: 'numeric',
+                                        hour: '2-digit',
+                                        minute: '2-digit',
+                                      })}
+                                    </span>
+                                  </span>
+                                ) : (
+                                  <>
+                                    <span className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300">
+                                      <Clock className="w-3.5 h-3.5 text-amber-700" />
+                                      <span>Pendente</span>
+                                    </span>
+
+                                    {/* Controle de Liberação do Questionário */}
+                                    {isUnlocked ? (
+                                      <button
+                                        type="button"
+                                        disabled={isActionLoading}
+                                        onClick={() => handleToggleUnlockForm(part.id, form.id, 'LOCK_FORM')}
+                                        className="px-2.5 py-1 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs font-bold transition flex items-center space-x-1 cursor-pointer"
+                                        title="Bloquear questionário no portal do paciente"
+                                      >
+                                        <Lock className="w-3 h-3 text-slate-500" />
+                                        <span>{isActionLoading ? '...' : 'Bloquear'}</span>
+                                      </button>
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        disabled={isActionLoading}
+                                        onClick={() => handleToggleUnlockForm(part.id, form.id, 'UNLOCK_FORM')}
+                                        className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow-2xs transition flex items-center space-x-1 cursor-pointer"
+                                        title="Liberar este questionário para resposta imediata no portal do paciente"
+                                      >
+                                        <Unlock className="w-3 h-3 text-white" />
+                                        <span>{isActionLoading ? '...' : 'Liberar Questionário Agora'}</span>
+                                      </button>
+                                    )}
+
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        openWhatsAppReminder(
+                                          part.patient.phoneWhatsApp,
+                                          part.researchCode,
+                                          form.title,
+                                          part.patient.fullName
+                                        )
+                                      }
+                                      className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-lg text-xs font-bold bg-[#25D366] hover:bg-[#128C7E] text-white shadow-xs transition cursor-pointer"
+                                      title="Enviar cobrança ou lembrete via WhatsApp"
+                                    >
+                                      <MessageSquare className="w-3.5 h-3.5" />
+                                      <span>Lembrar no WhatsApp</span>
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Perguntas e Respostas */}
+                            {resp ? (
+                              isCurrentBlinded ? (
+                                <div className="bg-amber-50/80 border border-amber-200 rounded-xl p-4 text-left">
+                                  <div className="flex items-start space-x-3">
+                                    <Lock className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
+                                    <div>
+                                      <h4 className="text-sm font-bold text-amber-900">
+                                        Conteúdo Mascarado — Avaliador Cego
+                                      </h4>
+                                      <p className="text-xs text-amber-800 mt-1 leading-relaxed">
+                                        Conforme as normas de ensaio clínico duplo-cego (GCP / ICH E6), avaliadores cegos não têm acesso aos escores ou respostas relatadas pelo paciente para evitar quebra de imparcialidade na avaliação clínica.
+                                      </p>
+                                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                                        <span className="text-[11px] font-semibold text-emerald-800 bg-emerald-100/80 px-2.5 py-1 rounded-md border border-emerald-300 inline-flex items-center gap-1">
+                                          <CheckCircle2 className="w-3 h-3 text-emerald-700" /> Status confirmado: Respondido ({new Date(resp.submittedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })})
+                                        </span>
+                                        <button
+                                          type="button"
+                                          onClick={() => setOverrideBlindedView(false)}
+                                          className="text-xs font-bold text-blue-700 hover:text-blue-900 underline inline-flex items-center gap-1 cursor-pointer"
+                                        >
+                                          <Eye className="w-3.5 h-3.5" />
+                                          <span>Alternar para visão Não-Cego e ver respostas</span>
+                                        </button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="space-y-4">
+                                  <div className="flex items-center justify-between bg-blue-50/60 border border-blue-200 rounded-lg px-3 py-1.5 text-xs text-blue-800">
+                                    <span className="font-semibold flex items-center space-x-1.5">
+                                      <Eye className="w-3.5 h-3.5 text-blue-700" />
+                                      <span>Acesso Não-Cego / Coordenação: Visualização integral das respostas</span>
+                                    </span>
+                                    <span className="font-mono text-[11px] text-blue-600">ID: {resp.id.slice(0, 8)}</span>
+                                  </div>
+
+                                  {parsedQuestions.length === 0 ? (
+                                    <div className="bg-slate-50 p-3 rounded-lg text-xs font-mono text-slate-600">
+                                      <pre>{JSON.stringify(answers, null, 2)}</pre>
+                                    </div>
+                                  ) : (
+                                    parsedQuestions.map((q: any, idx: number) => {
+                                      const val = answers[q.id];
+                                      const hasAnswer = val !== undefined && val !== null && val !== '';
+
+                                      return (
+                                        <div
+                                          key={q.id || idx}
+                                          className="p-3.5 bg-slate-50 rounded-xl border border-slate-100 space-y-1.5"
+                                        >
+                                          <div className="flex justify-between items-start gap-4">
+                                            <div>
+                                              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">
+                                                Questão {idx + 1}
+                                              </span>
+                                              <p className="text-sm font-medium text-slate-800">
+                                                {q.label || q.title || `Item ${idx + 1}`}
+                                              </p>
+                                              {q.observation && (
+                                                <p className="text-xs text-slate-500 italic mt-0.5">
+                                                  Obs: {q.observation}
+                                                </p>
+                                              )}
+                                            </div>
+
+                                            <div className="shrink-0 text-right">
+                                              {q.type === 'instruction' ? (
+                                                <span className="px-2.5 py-1 bg-slate-100 text-slate-500 rounded text-xs font-medium">
+                                                  Texto Informativo
+                                                </span>
+                                              ) : q.type === 'vas' ? (
+                                                <div className="inline-flex flex-col items-end">
+                                                  <span className="px-2.5 py-1 bg-indigo-50 border border-indigo-200 text-indigo-800 rounded-lg text-sm font-bold font-mono">
+                                                    {hasAnswer ? `${Number(val).toFixed(1)} / 10.0` : '—'}
+                                                  </span>
+                                                  <span className="text-[10px] text-slate-400 mt-0.5">
+                                                    Escala Visual Analógica (EVA)
+                                                  </span>
+                                                </div>
+                                              ) : q.type === 'matrix' ? (
+                                                <span className="px-3 py-1 bg-purple-100 text-purple-800 rounded-lg text-xs font-bold border border-purple-200">
+                                                  {hasAnswer ? (val === 'NA' ? 'NA (Não se aplica)' : `Nota ${val}`) : 'Não respondido'}
+                                                </span>
+                                              ) : q.type === 'boolean' ? (
+                                                <span
+                                                  className={`px-3 py-1 rounded-full text-xs font-bold ${
+                                                    val === 'Sim' || val === true
+                                                      ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                                                      : 'bg-slate-200 text-slate-700'
+                                                  }`}
+                                                >
+                                                  {hasAnswer ? String(val) : 'Não respondido'}
+                                                </span>
+                                              ) : q.type === 'choice' || q.type === 'likert' ? (
+                                                <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-lg text-xs font-bold border border-blue-200">
+                                                  {hasAnswer ? String(val) : 'Não respondido'}
+                                                </span>
+                                              ) : (
+                                                <span className="text-sm font-semibold text-slate-800">
+                                                  {hasAnswer ? String(val) : '—'}
+                                                </span>
+                                              )}
+                                            </div>
+                                          </div>
+
+                                          {/* Barra de visualização para EVA */}
+                                          {q.type === 'vas' && hasAnswer && (
+                                            <div className="pt-2">
+                                              <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden relative">
+                                                <div
+                                                  className="h-full bg-indigo-600 rounded-full transition-all"
+                                                  style={{ width: `${Math.min(Math.max((Number(val) / 10) * 100, 0), 100)}%` }}
+                                                />
+                                              </div>
+                                              <div className="flex justify-between text-[10px] text-slate-400 mt-1 font-medium">
+                                                <span>{q.leftAnchor || '0.0 (Mínimo)'}</span>
+                                                <span>{q.rightAnchor || '10.0 (Máximo)'}</span>
+                                              </div>
+                                            </div>
+                                          )}
+                                        </div>
+                                      );
+                                    })
+                                  )}
+                                </div>
+                              )
+                            ) : (
+                              <div className="text-xs text-slate-400 italic py-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                <span>Envie o link seguro via WhatsApp para o participante responder diretamente pelo celular.</span>
+                                <a
+                                  href={`/paciente?code=${part.researchCode}&tab=forms&formId=${form.id}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center space-x-1.5 text-emerald-600 hover:text-emerald-800 font-bold underline"
+                                >
+                                  <ExternalLink className="w-3.5 h-3.5" />
+                                  <span>Testar resposta no portal</span>
+                                </a>
                               </div>
                             )}
                           </div>
-                        </div>
+                        );
+                      })
+                    )}
+                  </div>
+                )}
 
-                        {/* Perguntas e Respostas */}
-                        {resp ? (
-                          isCurrentBlinded ? (
-                            <div className="bg-amber-50/80 border border-amber-200 rounded-xl p-4 text-left">
-                              <div className="flex items-start space-x-3">
-                                <Lock className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
-                                <div>
-                                  <h4 className="text-sm font-bold text-amber-900">
-                                    Conteúdo Mascarado — Avaliador Cego
-                                  </h4>
-                                  <p className="text-xs text-amber-800 mt-1 leading-relaxed">
-                                    Conforme as normas de ensaio clínico duplo-cego (GCP / ICH E6), avaliadores cegos não têm acesso aos escores de dor (EVA contínua) ou respostas relatadas pelo paciente para evitar quebra de imparcialidade na avaliação clínica.
-                                  </p>
-                                  <div className="mt-3 flex flex-wrap items-center gap-2">
-                                    <span className="text-[11px] font-semibold text-emerald-800 bg-emerald-100/80 px-2.5 py-1 rounded-md border border-emerald-300 inline-flex items-center gap-1">
-                                      <CheckCircle2 className="w-3 h-3 text-emerald-700" /> Status confirmado: Respondido ({new Date(resp.submittedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })})
-                                    </span>
-                                    <button
-                                      type="button"
-                                      onClick={() => setOverrideBlindedView(false)}
-                                      className="text-xs font-bold text-blue-700 hover:text-blue-900 underline inline-flex items-center gap-1"
-                                    >
-                                      <Eye className="w-3.5 h-3.5" />
-                                      <span>Alternar para visão Não-Cego e ver respostas</span>
-                                    </button>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="space-y-4">
-                              <div className="flex items-center justify-between bg-blue-50/60 border border-blue-200 rounded-lg px-3 py-1.5 text-xs text-blue-800">
-                                <span className="font-semibold flex items-center space-x-1.5">
-                                  <Eye className="w-3.5 h-3.5 text-blue-700" />
-                                  <span>Acesso Não-Cego / Coordenação: Visualização integral das respostas</span>
-                                </span>
-                                <span className="font-mono text-[11px] text-blue-600">ID: {resp.id.slice(0, 8)}</span>
-                              </div>
-
-                              {parsedQuestions.length === 0 ? (
-                                <div className="bg-slate-50 p-3 rounded-lg text-xs font-mono text-slate-600">
-                                  <pre>{JSON.stringify(answers, null, 2)}</pre>
-                                </div>
-                              ) : (
-                                parsedQuestions.map((q: any, idx: number) => {
-                                  const val = answers[q.id];
-                                  const hasAnswer = val !== undefined && val !== null && val !== '';
-
-                                  return (
-                                    <div
-                                      key={q.id || idx}
-                                      className="p-3.5 bg-slate-50 rounded-xl border border-slate-100 space-y-1.5"
-                                    >
-                                      <div className="flex justify-between items-start gap-4">
-                                        <div>
-                                          <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">
-                                            Questão {idx + 1}
-                                          </span>
-                                          <p className="text-sm font-medium text-slate-800">
-                                            {q.label || q.title || `Item ${idx + 1}`}
-                                          </p>
-                                          {q.observation && (
-                                            <p className="text-xs text-slate-500 italic mt-0.5">
-                                              Obs: {q.observation}
-                                            </p>
-                                          )}
-                                        </div>
-
-                                        <div className="shrink-0 text-right">
-                                          {q.type === 'instruction' ? (
-                                            <span className="px-2.5 py-1 bg-slate-100 text-slate-500 rounded text-xs font-medium">
-                                              Texto Informativo
-                                            </span>
-                                          ) : q.type === 'vas' ? (
-                                            <div className="inline-flex flex-col items-end">
-                                              <span className="px-2.5 py-1 bg-indigo-50 border border-indigo-200 text-indigo-800 rounded-lg text-sm font-bold font-mono">
-                                                {hasAnswer ? `${Number(val).toFixed(1)} / 10.0` : '—'}
-                                              </span>
-                                              <span className="text-[10px] text-slate-400 mt-0.5">
-                                                Escala Visual Analógica (EVA)
-                                              </span>
-                                            </div>
-                                          ) : q.type === 'matrix' ? (
-                                            <span className="px-3 py-1 bg-purple-100 text-purple-800 rounded-lg text-xs font-bold border border-purple-200">
-                                              {hasAnswer ? (val === 'NA' ? 'NA (Não se aplica)' : `Nota ${val}`) : 'Não respondido'}
-                                            </span>
-                                          ) : q.type === 'boolean' ? (
-                                            <span
-                                              className={`px-3 py-1 rounded-full text-xs font-bold ${
-                                                val === 'Sim' || val === true
-                                                  ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
-                                                  : 'bg-slate-200 text-slate-700'
-                                              }`}
-                                            >
-                                              {hasAnswer ? String(val) : 'Não respondido'}
-                                            </span>
-                                          ) : q.type === 'choice' || q.type === 'likert' ? (
-                                            <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-lg text-xs font-bold border border-blue-200">
-                                              {hasAnswer ? String(val) : 'Não respondido'}
-                                            </span>
-                                          ) : (
-                                            <span className="text-sm font-semibold text-slate-800">
-                                              {hasAnswer ? String(val) : '—'}
-                                            </span>
-                                          )}
-                                        </div>
-                                      </div>
-
-                                      {/* Barra de visualização para EVA na visão do pesquisador */}
-                                      {q.type === 'vas' && hasAnswer && (
-                                        <div className="pt-2">
-                                          <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden relative">
-                                            <div
-                                              className="h-full bg-indigo-600 rounded-full transition-all"
-                                              style={{ width: `${Math.min(Math.max((Number(val) / 10) * 100, 0), 100)}%` }}
-                                            />
-                                          </div>
-                                          <div className="flex justify-between text-[10px] text-slate-400 mt-1 font-medium">
-                                            <span>{q.leftAnchor || '0.0 (Mínimo)'}</span>
-                                            <span>{q.rightAnchor || '10.0 (Máximo)'}</span>
-                                          </div>
-                                        </div>
-                                      )}
-                                    </div>
-                                  );
-                                })
-                              )}
-                            </div>
-                          )
-                        ) : (
-                          <div className="text-xs text-slate-400 italic py-2 flex items-center justify-between">
-                            <span>Envie o link seguro via WhatsApp para o participante responder diretamente pelo celular.</span>
-                            <a
-                              href={`/paciente?code=${part.researchCode}&tab=forms&formId=${form.id}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center space-x-1.5 text-emerald-600 hover:text-emerald-800 font-bold underline ml-2"
-                            >
-                              <ExternalLink className="w-3.5 h-3.5" />
-                              <span>Testar resposta agora</span>
-                            </a>
-                          </div>
-                        )}
+                {/* ABA 3: EXPORTAR RESPOSTAS DO PACIENTE (BIOESTATÍSTICA) */}
+                {responsesModalTab === 'export' && (
+                  <div className="space-y-5">
+                    {/* Banner Informativo */}
+                    <div className="p-4 bg-emerald-50/70 border border-emerald-200 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+                      <div>
+                        <h3 className="text-sm font-bold text-emerald-900 flex items-center space-x-1.5">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-700" />
+                          <span>Base de Respostas Estruturada para Bioestatística</span>
+                        </h3>
+                        <p className="text-xs text-emerald-800 mt-0.5">
+                          Dados desidentificados de todas as sessões e questionários deste voluntário. Copie para colar diretamente no <strong>Excel, SPSS, GraphPad Prism, Jamovi ou R</strong>.
+                        </p>
                       </div>
-                    );
-                  })
+
+                      {/* Botões de Ação de 1 Clique */}
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (typeof navigator !== 'undefined' && navigator.clipboard) {
+                              navigator.clipboard.writeText(exportData.tsv);
+                              setCopiedTSV(true);
+                              setTimeout(() => setCopiedTSV(false), 3000);
+                            }
+                          }}
+                          className={`px-3 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer shadow-xs ${
+                            copiedTSV
+                              ? 'bg-emerald-600 text-white'
+                              : 'bg-white hover:bg-slate-100 text-slate-800 border border-slate-300'
+                          }`}
+                        >
+                          <Copy className="w-3.5 h-3.5" />
+                          <span>{copiedTSV ? 'Copiado para Área de Transferência!' : 'Copiar TSV / Excel'}</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const blob = new Blob([exportData.tsv], { type: 'text/tab-separated-values;charset=utf-8;' });
+                            const url = URL.createObjectURL(blob);
+                            const link = document.createElement('a');
+                            link.setAttribute('href', url);
+                            link.setAttribute('download', `respostas_${part.researchCode}.tsv`);
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                            URL.revokeObjectURL(url);
+                          }}
+                          className="px-3 py-2 bg-slate-900 hover:bg-black text-white rounded-xl text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer shadow-xs"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                          <span>Baixar TSV</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const blob = new Blob([exportData.json], { type: 'application/json;charset=utf-8;' });
+                            const url = URL.createObjectURL(blob);
+                            const link = document.createElement('a');
+                            link.setAttribute('href', url);
+                            link.setAttribute('download', `respostas_${part.researchCode}.json`);
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                            URL.revokeObjectURL(url);
+                          }}
+                          className="px-3 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer"
+                        >
+                          <Download className="w-3.5 h-3.5 text-slate-500" />
+                          <span>Baixar JSON</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Tabela de Pré-visualização dos Dados Tabulados */}
+                    <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
+                      <div className="p-3.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+                        <span className="text-xs font-bold text-slate-700 uppercase tracking-wide">
+                          Pré-visualização Tabular (Matriz Longitudinal por Sessão)
+                        </span>
+                        <span className="text-[11px] text-slate-500">
+                          {exportData.summaryRows.length} {exportData.summaryRows.length === 1 ? 'linha gerada' : 'linhas geradas'}
+                        </span>
+                      </div>
+
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-xs text-left">
+                          <thead className="bg-slate-100/70 text-slate-600 font-bold border-b border-slate-200">
+                            <tr>
+                              <th className="py-2 px-3">ID</th>
+                              <th className="py-2 px-3">Grupo</th>
+                              <th className="py-2 px-3">Sessão</th>
+                              <th className="py-2 px-3">Data</th>
+                              <th className="py-2 px-3">EVA 0h</th>
+                              <th className="py-2 px-3">EVA 1h</th>
+                              <th className="py-2 px-3">EVA 24h</th>
+                              <th className="py-2 px-3">EVA 48h</th>
+                              <th className="py-2 px-3">Analgésico</th>
+                              <th className="py-2 px-3">Tipo de Dor</th>
+                              <th className="py-2 px-3">Gengiva</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100 font-mono">
+                            {exportData.summaryRows.map((row, idx) => (
+                              <tr key={idx} className="hover:bg-slate-50">
+                                <td className="py-2 px-3 font-bold text-slate-800">{String(row.ID)}</td>
+                                <td className="py-2 px-3">{String(row.GRUPO)}</td>
+                                <td className="py-2 px-3">{String(row.SESSAO)}</td>
+                                <td className="py-2 px-3">{String(row.DATA)}</td>
+                                <td className="py-2 px-3 font-bold text-indigo-700">{String(row.EVA_0H)}</td>
+                                <td className="py-2 px-3 font-bold text-indigo-700">{String(row.EVA_1H)}</td>
+                                <td className="py-2 px-3 font-bold text-indigo-700">{String(row.EVA_24H)}</td>
+                                <td className="py-2 px-3 font-bold text-indigo-700">{String(row.EVA_48H)}</td>
+                                <td className="py-2 px-3">
+                                  <span
+                                    className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                                      row.ANALGESICO === 'Sim'
+                                        ? 'bg-red-100 text-red-800'
+                                        : 'bg-slate-100 text-slate-600'
+                                    }`}
+                                  >
+                                    {String(row.ANALGESICO)}
+                                  </span>
+                                </td>
+                                <td className="py-2 px-3 text-slate-600">{String(row.TIPO_DOR || '—')}</td>
+                                <td className="py-2 px-3 text-slate-600">{String(row.GENGIVA || 'Normal')}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    {/* Resumo dos Questionários Preenchidos */}
+                    <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs">
+                      <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide mb-3">
+                        Questionários Preenchidos pelo Voluntário ({responses.length} de {projectForms.length})
+                      </h4>
+                      {responses.length === 0 ? (
+                        <p className="text-xs text-slate-400 italic">Nenhum questionário preenchido ainda.</p>
+                      ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                          {responses.map((resp) => {
+                            const form = projectForms.find((f) => f.id === resp.formId);
+                            let parsedCount = 0;
+                            try {
+                              const ans = JSON.parse(resp.answersJson || '{}');
+                              parsedCount = Object.keys(ans).length;
+                            } catch {}
+
+                            return (
+                              <div
+                                key={resp.id}
+                                className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between"
+                              >
+                                <div>
+                                  <span className="text-xs font-bold text-slate-800 block">
+                                    {form?.title || 'Formulário'}
+                                  </span>
+                                  <span className="text-[10px] text-slate-400">
+                                    Enviado em {new Date(resp.submittedAt).toLocaleDateString('pt-BR')} às{' '}
+                                    {new Date(resp.submittedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                  </span>
+                                </div>
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800">
+                                  {parsedCount} itens
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 )}
               </div>
 
               {/* Rodapé */}
-              <div className="p-4 border-t border-slate-100 flex items-center justify-between bg-slate-50/50 rounded-b-2xl">
+              <div className="p-4 border-t border-slate-100 flex items-center justify-between bg-slate-50/70">
                 <div className="text-xs text-slate-500">
-                  Total de formulários: <strong className="text-slate-700">{projectForms.length}</strong> | Respondidos: <strong className="text-emerald-600">{responses.length}</strong>
+                  Sessões: <strong className="text-slate-700">{sessions.length}</strong> | Formulários Respondidos: <strong className="text-emerald-600">{responses.length}</strong> de <strong className="text-slate-700">{projectForms.length}</strong>
                 </div>
                 <button
                   type="button"
                   onClick={() => setShowResponsesModal(false)}
-                  className="px-5 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-bold transition shadow-xs"
+                  className="px-5 py-2 bg-slate-900 hover:bg-black text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer"
                 >
                   Fechar
                 </button>

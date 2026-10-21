@@ -35,6 +35,9 @@ type ParticipantSession = {
   painScore24h: number | null;
   painScore48h: number | null;
   gingivalIrritation: string | null;
+  notes?: string | null;
+  unlockedMoments?: string[];
+  releaseMode?: 'AUTO' | 'MANUAL';
 };
 
 type FormQuestionItem = {
@@ -1176,12 +1179,21 @@ function PacienteContent() {
                   : activeSession.painScore48h;
 
               const isRecorded = score !== null && score !== undefined;
+              const isManuallyUnlocked = (activeSession.unlockedMoments || []).includes(k);
+              const isManualMode = activeSession.releaseMode === 'MANUAL';
 
               let available = false;
               let unlockMessage = '';
 
               if (k === '0h') {
                 available = true;
+              } else if (isManuallyUnlocked) {
+                available = true;
+              } else if (isManualMode) {
+                available = isRecorded;
+                if (!available) {
+                  unlockMessage = 'aguardando liberação pela equipe';
+                }
               } else if (k === '1h') {
                 available = diffDays >= 1 || elapsedHours >= 0.75 || isRecorded;
                 if (!available) {
@@ -1200,7 +1212,7 @@ function PacienteContent() {
                 }
               }
 
-              return { available, recorded: isRecorded, unlockMessage };
+              return { available, recorded: isRecorded, unlockMessage, isManuallyUnlocked };
             };
 
             const availableMoments = ALL_MOMENTS.filter((m) => getMomentState(m.key).available);

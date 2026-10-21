@@ -1,5 +1,9 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import {
+  parseUnlockMeta,
+  encodeDetailedDiaryReport,
+} from '@/lib/unlockProtocol';
 
 export async function POST(req: Request) {
   try {
@@ -58,27 +62,40 @@ export async function POST(req: Request) {
       );
     }
 
-    // Validação temporal GCP: Bloquear envio prematuro de relatos futuros (ex: diário do dia seguinte ou 48h)
-    const sessionCreatedAt = targetSession.createdAt ? new Date(targetSession.createdAt) : new Date(targetSession.sessionDate);
-    const now = new Date();
-    const elapsedHours = (now.getTime() - sessionCreatedAt.getTime()) / (1000 * 60 * 60);
+    // Verificação de Liberação Manual ou Automática (GCP / ICH E6)
+    const unlockMeta = parseUnlockMeta(targetSession.notes);
+    const isManuallyUnlocked = unlockMeta.unlockedMoments.includes(String(timePoint));
 
-    const sessionDay = new Date(sessionCreatedAt.getFullYear(), sessionCreatedAt.getMonth(), sessionCreatedAt.getDate()).getTime();
-    const todayDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-    const diffDays = Math.floor((todayDay - sessionDay) / (1000 * 60 * 60 * 24));
+    if (!isManuallyUnlocked) {
+      if (unlockMeta.releaseMode === 'MANUAL' && timePoint !== '0h') {
+        return NextResponse.json(
+          { error: 'Este relato do diário de sensibilidade ainda não foi liberado pelo pesquisador responsável.' },
+          { status: 400 }
+        );
+      }
 
-    if (timePoint === '24h' && diffDays < 1 && elapsedHours < 18) {
-      return NextResponse.json(
-        { error: 'O diário de 24 horas (dia seguinte) ainda não está disponível. Ele será liberado para preenchimento a partir de amanhã.' },
-        { status: 400 }
-      );
-    }
+      // Validação temporal GCP padrão quando em modo automático:
+      const sessionCreatedAt = targetSession.createdAt ? new Date(targetSession.createdAt) : new Date(targetSession.sessionDate);
+      const now = new Date();
+      const elapsedHours = (now.getTime() - sessionCreatedAt.getTime()) / (1000 * 60 * 60);
 
-    if (timePoint === '48h' && diffDays < 2 && elapsedHours < 40) {
-      return NextResponse.json(
-        { error: 'O diário de 48 horas (2 dias após) ainda não está disponível para envio.' },
-        { status: 400 }
-      );
+      const sessionDay = new Date(sessionCreatedAt.getFullYear(), sessionCreatedAt.getMonth(), sessionCreatedAt.getDate()).getTime();
+      const todayDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+      const diffDays = Math.floor((todayDay - sessionDay) / (1000 * 60 * 60 * 24));
+
+      if (timePoint === '24h' && diffDays < 1 && elapsedHours < 18) {
+        return NextResponse.json(
+          { error: 'O diário de 24 horas (dia seguinte) ainda não está disponível. Ele será liberado para preenchimento a partir de amanhã ou quando liberado pela equipe.' },
+          { status: 400 }
+        );
+      }
+
+      if (timePoint === '48h' && diffDays < 2 && elapsedHours < 40) {
+        return NextResponse.json(
+          { error: 'O diário de 48 horas (2 dias após) ainda não está disponível para envio.' },
+          { status: 400 }
+        );
+      }
     }
 
     // Montar objeto de atualização do score de dor
@@ -94,9 +111,22 @@ export async function POST(req: Request) {
     }
 
     // Atualizar registro de eventos adversos e medicação
-    const reportNote = `[Diário ${timePoint} - ${new Date().toLocaleDateString('pt-BR')} ${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}] EVA: ${painScore}/10 | Tipo: ${painType || 'Não especificado'} | Analgésico: ${usedAnalgesic || 'Não'} ${analgesicDetails ? `(${analgesicDetails})` : ''} | Gengiva: ${gingivalSensation || 'Normal'} ${otherSymptoms ? `| Obs: ${otherSymptoms}` : ''}`;
+    const reportNote = `[Diário ${timePoint} - ${new Date().toLocaleDateString('pt-BR')} ${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}] EVA: ${painScore}/10 | Tipo: ${painType || 'Não especificado'} | Analgésico: ${usedAnalgesic || 'Não'} ${analgesicDetails ? `(${analgesicDetails})` : ''} | Gengiva: ${gingivalSensation || 'Normal'} ${otherSymptoms ? `| Obs: ${otherSymptoms}` : ''}${isManuallyUnlocked ? ' | [Liberado por Pesquisador]' : ''}`;
 
-    const currentNotes = targetSession.notes ? `${targetSession.notes}\n${reportNote}` : reportNote;
+    let currentNotes = targetSession.notes ? `${targetSession.notes}\n${reportNote}` : reportNote;
+
+    // Codifica estruturadamente o relato para visualização e estatísticas
+    currentNotes = encodeDetailedDiaryReport(currentNotes, {
+      timePoint: String(timePoint),
+      painScore: Number(painScore),
+      painType: painType || undefined,
+      usedAnalgesic: usedAnalgesic || undefined,
+      analgesicDetails: analgesicDetails || undefined,
+      gingivalSensation: gingivalSensation || undefined,
+      otherSymptoms: otherSymptoms || undefined,
+      submittedAt: new Date().toISOString(),
+    });
+
     updateData.notes = currentNotes;
 
     if (usedAnalgesic === 'Sim' || painScore >= 7) {
