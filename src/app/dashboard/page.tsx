@@ -669,22 +669,6 @@ function DashboardContent() {
   // Menu Dropdown de Exportação Bioestatística
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [showSettingsMenu, setShowSettingsMenu] = useState(false);
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (!target.closest('.settings-dropdown-container')) {
-        setShowSettingsMenu(false);
-      }
-    };
-    if (showSettingsMenu) {
-      document.addEventListener('click', handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener('click', handleClickOutside);
-    };
-  }, [showSettingsMenu]);
 
   // Proteção: Apenas o Administrador pode visualizar a aba de auditoria
   useEffect(() => {
@@ -700,8 +684,7 @@ function DashboardContent() {
   const [showNewPatientModal, setShowNewPatientModal] = useState(false);
   const [openAnamnesisAfterCreate, setOpenAnamnesisAfterCreate] = useState(true);
 
-  // Modal de Edição de Dados do Estudo Clínico
-  const [showEditProjectModal, setShowEditProjectModal] = useState(false);
+  // Edição de Dados do Estudo Clínico (Aba Configurações)
   const [editProjectName, setEditProjectName] = useState('');
   const [editProjectDesc, setEditProjectDesc] = useState('');
   const [editProjectStatus, setEditProjectStatus] = useState<'ACTIVE' | 'COMPLETED' | 'CANCELLED'>('ACTIVE');
@@ -1388,7 +1371,6 @@ function DashboardContent() {
         };
         setProject(updated);
         projectRef.current = updated;
-        setShowEditProjectModal(false);
         setProjectEditSuccess(true);
         setTimeout(() => setProjectEditSuccess(false), 4000);
 
@@ -5021,11 +5003,11 @@ function DashboardContent() {
               </div>
 
               {/* Seção 2: Criar Mais Grupos & Salvar no Estudo */}
-              <div className="p-3.5 bg-indigo-50/60 border border-indigo-200 rounded-xl space-y-2">
-                <label className="block font-bold text-indigo-950 text-xs flex items-center justify-between">
-                  <span>+ Criar Mais Grupos e Salvar no Estudo</span>
-                  {savingStudyGroups && <span className="text-[10px] text-indigo-600 animate-pulse font-normal">Salvando no estudo...</span>}
-                </label>
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-slate-700 text-xs">+ Criar Mais Grupos no Estudo</span>
+                  {savingStudyGroups && <span className="text-[10px] text-blue-600 animate-pulse font-medium">Salvando no estudo...</span>}
+                </div>
                 <div className="flex gap-2">
                   <input
                     type="text"
@@ -5037,64 +5019,62 @@ function DashboardContent() {
                         handleAddNewStudyGroup(newGroupInputInModal);
                       }
                     }}
-                    placeholder="Ex: Grupo C: Laserterapia ou Dose Alta 20mg"
-                    className="flex-1 px-3 py-2 border border-slate-300 rounded-xl text-xs bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                    placeholder="Ex: Grupo C: Dose Alta ou Laser"
+                    className="flex-1 px-3 py-1.5 border border-slate-300 rounded-lg text-xs bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
                   />
                   <button
                     type="button"
                     onClick={() => handleAddNewStudyGroup(newGroupInputInModal)}
                     disabled={!newGroupInputInModal.trim() || savingStudyGroups}
-                    className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-2xs transition cursor-pointer flex items-center gap-1 shrink-0"
+                    className="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white font-bold text-xs rounded-lg shadow-2xs transition cursor-pointer flex items-center gap-1 shrink-0"
                   >
                     <Plus className="w-3.5 h-3.5" />
-                    <span>Salvar no Estudo</span>
+                    <span>Adicionar</span>
                   </button>
                 </div>
-                <p className="text-[10px] text-indigo-700 leading-tight">
-                  💡 <strong>Fica salvo automaticamente:</strong> o novo grupo é persistido no projeto e aparecerá pronto para seleção rápida em todos os outros pacientes.
-                </p>
               </div>
 
-              {/* Seção 3: Grupo Selecionado para este Paciente */}
-              <div>
-                <label className="block font-bold text-slate-700 uppercase tracking-wider text-[11px] mb-1">
-                  Grupo Selecionado para este Voluntário:
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={allocatedGroupInput}
-                  onChange={(e) => setAllocatedGroupInput(e.target.value)}
-                  placeholder="Selecione um grupo acima ou digite aqui..."
-                  className="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm font-semibold text-slate-900 bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                />
-              </div>
-
-              <div className="flex justify-end space-x-3 pt-3 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setShowAllocationModal(false)}
-                  className="px-4 py-2 border border-slate-300 rounded-xl font-bold text-slate-600 hover:bg-slate-50 cursor-pointer"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={savingAllocation || !allocatedGroupInput.trim()}
-                  className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-sm transition disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
-                >
-                  {savingAllocation ? (
-                    <>
-                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                      <span>Salvando...</span>
-                    </>
+              {/* Rodapé com Resumo Direto do Grupo e Botões de Ação */}
+              <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+                <div className="text-xs">
+                  {allocatedGroupInput ? (
+                    <span className="text-slate-600 flex items-center gap-1.5">
+                      <span className="text-slate-500">Grupo selecionado:</span>
+                      <strong className="px-2.5 py-0.5 rounded-lg bg-blue-100 text-blue-800 font-bold border border-blue-200">
+                        {allocatedGroupInput}
+                      </strong>
+                    </span>
                   ) : (
-                    <>
-                      <Check className="w-4 h-4" />
-                      <span>Salvar Alocação</span>
-                    </>
+                    <span className="text-amber-600 italic text-[11px]">Selecione um grupo acima</span>
                   )}
-                </button>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowAllocationModal(false)}
+                    className="px-3.5 py-1.5 border border-slate-300 rounded-xl font-bold text-slate-600 hover:bg-slate-50 cursor-pointer text-xs transition"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={savingAllocation || !allocatedGroupInput.trim()}
+                    className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs shadow-2xs transition disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
+                  >
+                    {savingAllocation ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        <span>Salvando...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Check className="w-4 h-4" />
+                        <span>Salvar Alocação</span>
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
             </form>
           </div>
@@ -7671,7 +7651,7 @@ function DashboardContent() {
                       </h2>
                     </div>
                     <p className="text-xs sm:text-sm text-slate-600 mt-1">
-                      Paciente: <strong className="text-slate-800">{part.patient.fullName}</strong> • Grupo: <span className="font-semibold text-blue-700">{part.group || 'G1'}</span> • Contato: {part.patient.phoneWhatsApp || 'Sem telefone'}
+                      Paciente: <strong className="text-slate-800">{part.patient.fullName}</strong> • Grupo: <span className="font-semibold text-blue-700">{part.group || 'Pendente'}</span> • Contato: {part.patient.phoneWhatsApp || 'Sem telefone'}
                     </p>
                   </div>
                   <button
