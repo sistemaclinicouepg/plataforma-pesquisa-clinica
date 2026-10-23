@@ -19,6 +19,7 @@ import {
   X,
   ExternalLink,
   ChevronRight,
+  ChevronDown,
   UserCheck,
   Plus,
   Pencil,
@@ -111,9 +112,20 @@ export default function EquipePage() {
   // Excluir Membro
   const [deletingUser, setDeletingUser] = useState<UserData | null>(null);
 
-  // Modal de visualização dos Estudos Atribuídos
-  const [selectedUserForStudies, setSelectedUserForStudies] = useState<UserData | null>(null);
-  const [studiesSearchQuery, setStudiesSearchQuery] = useState('');
+  // Linhas expandidas na tabela (padrão compacto unificado)
+  const [expandedUserIds, setExpandedUserIds] = useState<Set<string>>(new Set());
+
+  const toggleExpandUser = (userId: string) => {
+    setExpandedUserIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(userId)) {
+        next.delete(userId);
+      } else {
+        next.add(userId);
+      }
+      return next;
+    });
+  };
 
   const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.email === 'admin@uepg.br';
 
@@ -614,155 +626,306 @@ export default function EquipePage() {
                       user.projects.some((p) => p.isBlinded) || user.email === 'carlos@uepg.br';
                     const isSelf = currentUser?.id === user.id;
                     const isRootAdmin = user.email === 'admin@uepg.br';
+                    const isExpanded = expandedUserIds.has(user.id);
 
                     return (
-                      <tr key={user.id} className="hover:bg-slate-50/80 transition-colors">
-                        {/* Pesquisador: Avatar + Nome + E-mail */}
-                        <td className="py-3.5 px-5 align-middle">
-                          <div className="flex items-center space-x-3">
-                            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-slate-800 text-white font-black text-xs flex items-center justify-center shrink-0 shadow-2xs">
-                              {getInitials(user.name)}
-                            </div>
-                            <div className="min-w-0">
-                              <p className="font-bold text-slate-900 text-sm truncate flex items-center space-x-1.5">
-                                <span>{user.name}</span>
-                                {isSelf && (
-                                  <span className="px-1.5 py-0.2 rounded text-[10px] bg-blue-100 text-blue-800 font-bold">
-                                    Você
-                                  </span>
-                                )}
-                              </p>
-                              <p className="text-slate-500 text-[11px] truncate">{user.email}</p>
-                            </div>
-                          </div>
-                        </td>
-
-                        {/* Papel Institucional */}
-                        <td className="py-3.5 px-4 align-middle whitespace-nowrap">
-                          {isCoordinator ? (
-                            <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-purple-50 text-purple-800 border border-purple-200 flex items-center space-x-1.5 w-fit">
-                              <ShieldCheck className="w-3.5 h-3.5 text-purple-600" />
-                              <span>Coordenação Geral</span>
-                            </span>
-                          ) : isBlindEvaluator ? (
-                            <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-amber-50 text-amber-900 border border-amber-200 flex items-center space-x-1.5 w-fit">
-                              <EyeOff className="w-3.5 h-3.5 text-amber-600" />
-                              <span>Avaliador Cego</span>
-                            </span>
-                          ) : (
-                            <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-blue-50 text-blue-800 border border-blue-200 flex items-center space-x-1.5 w-fit">
-                              <Stethoscope className="w-3.5 h-3.5 text-blue-600" />
-                              <span>{roleLabels[user.role] || 'Pesquisador Clínico'}</span>
-                            </span>
-                          )}
-                        </td>
-
-                        {/* Estudos Atribuídos */}
-                        <td className="py-3.5 px-4 align-middle">
-                          {user.projects.length === 0 ? (
-                            <span className="text-[11px] text-slate-400 italic">Nenhum estudo associado</span>
-                          ) : (
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              {user.projects.slice(0, 2).map((membership) => (
-                                <Link
-                                  key={membership.id}
-                                  href={`/dashboard?projectId=${membership.project.id}`}
-                                  className="px-2 py-0.5 bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-slate-700 rounded-lg text-[11px] font-semibold border border-slate-200 transition flex items-center space-x-1 shrink-0"
-                                  title={`Ver estudo: ${membership.project.name} (${membership.role})`}
-                                >
-                                  <FolderKanban className="w-3 h-3 text-slate-400" />
-                                  <span className="truncate max-w-[130px]">{membership.project.name}</span>
-                                  {membership.isBlinded && (
-                                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500" title="Avaliador Mascarado" />
+                      <React.Fragment key={user.id}>
+                        <tr className={`hover:bg-slate-50/80 transition-colors ${isExpanded ? 'bg-blue-50/20' : ''}`}>
+                          {/* Pesquisador: Avatar + Nome + E-mail */}
+                          <td className="py-3.5 px-5 align-middle">
+                            <div className="flex items-center space-x-3">
+                              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-slate-800 text-white font-black text-xs flex items-center justify-center shrink-0 shadow-2xs">
+                                {getInitials(user.name)}
+                              </div>
+                              <div className="min-w-0">
+                                <div className="flex items-start space-x-1.5">
+                                  <button
+                                    type="button"
+                                    onClick={() => toggleExpandUser(user.id)}
+                                    className="font-bold text-slate-900 hover:text-blue-600 text-sm transition text-left flex items-center gap-1.5 group cursor-pointer"
+                                    title="Clique para ver os estudos deste pesquisador"
+                                  >
+                                    <span>{user.name}</span>
+                                    {isSelf && (
+                                      <span className="px-1.5 py-0.2 rounded text-[10px] bg-blue-100 text-blue-800 font-bold">
+                                        Você
+                                      </span>
+                                    )}
+                                    <ChevronDown
+                                      className={`w-3.5 h-3.5 text-slate-400 group-hover:text-blue-600 transition-transform ${
+                                        isExpanded ? 'rotate-180 text-blue-600' : ''
+                                      }`}
+                                    />
+                                  </button>
+                                </div>
+                                <div className="text-[11px] text-slate-500 mt-0.5 flex items-center space-x-2">
+                                  <span className="truncate">{user.email}</span>
+                                  {user.projects.length > 0 && (
+                                    <>
+                                      <span>•</span>
+                                      <button
+                                        type="button"
+                                        onClick={() => toggleExpandUser(user.id)}
+                                        className="text-[10px] text-blue-600 hover:text-blue-800 font-semibold cursor-pointer hover:underline"
+                                      >
+                                        {isExpanded ? 'Ocultar estudos' : 'Ver estudos'}
+                                      </button>
+                                    </>
                                   )}
-                                </Link>
-                              ))}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
 
-                              {user.projects.length > 2 && (
+                          {/* Papel Institucional */}
+                          <td className="py-3.5 px-4 align-middle whitespace-nowrap">
+                            {isCoordinator ? (
+                              <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-purple-50 text-purple-800 border border-purple-200 flex items-center space-x-1.5 w-fit">
+                                <ShieldCheck className="w-3.5 h-3.5 text-purple-600" />
+                                <span>Coordenação Geral</span>
+                              </span>
+                            ) : isBlindEvaluator ? (
+                              <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-amber-50 text-amber-900 border border-amber-200 flex items-center space-x-1.5 w-fit">
+                                <EyeOff className="w-3.5 h-3.5 text-amber-600" />
+                                <span>Avaliador Cego</span>
+                              </span>
+                            ) : (
+                              <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-blue-50 text-blue-800 border border-blue-200 flex items-center space-x-1.5 w-fit">
+                                <Stethoscope className="w-3.5 h-3.5 text-blue-600" />
+                                <span>{roleLabels[user.role] || 'Pesquisador Clínico'}</span>
+                              </span>
+                            )}
+                          </td>
+
+                          {/* Estudos Atribuídos - Padrão Unificado */}
+                          <td className="py-3.5 px-4 align-middle">
+                            {user.projects.length === 0 ? (
+                              <span className="px-2.5 py-1 rounded-xl text-[11px] font-medium text-slate-400 bg-slate-50 border border-slate-200/80 inline-flex items-center gap-1.5">
+                                <FolderKanban className="w-3.5 h-3.5 text-slate-300" />
+                                <span>0 estudos vinculados</span>
+                              </span>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => toggleExpandUser(user.id)}
+                                className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition flex items-center space-x-2 cursor-pointer shadow-2xs ${
+                                  isExpanded
+                                    ? 'bg-blue-600 text-white border-blue-600'
+                                    : 'bg-slate-50 hover:bg-blue-50 text-slate-800 hover:text-blue-700 border-slate-200 hover:border-blue-300'
+                                }`}
+                                title="Clique para ver todos os estudos deste pesquisador"
+                              >
+                                <FolderKanban className={`w-3.5 h-3.5 ${isExpanded ? 'text-white' : 'text-blue-600'} shrink-0`} />
+                                <span>
+                                  <strong>{user.projects.length}</strong> {user.projects.length === 1 ? 'estudo vinculado' : 'estudos vinculados'}
+                                </span>
+                                <ChevronDown
+                                  className={`w-3.5 h-3.5 transition-transform ${
+                                    isExpanded ? 'rotate-180 text-white' : 'text-slate-400'
+                                  }`}
+                                />
+                              </button>
+                            )}
+                          </td>
+
+                          {/* Status de Cadastro */}
+                          <td className="py-3.5 px-4 align-middle whitespace-nowrap">
+                            {user.isApproved ? (
+                              <span className="inline-flex items-center space-x-1 text-emerald-700 font-semibold text-xs">
+                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                                <span>Credenciado</span>
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center space-x-1 text-amber-700 font-semibold text-xs">
+                                <Clock className="w-3.5 h-3.5 text-amber-600" />
+                                <span>Pendente</span>
+                              </span>
+                            )}
+                          </td>
+
+                          {/* Ações / Contato */}
+                          <td className="py-3.5 px-5 align-middle text-right whitespace-nowrap">
+                            <div className="inline-flex items-center justify-end space-x-1.5">
+                              {/* E-mail */}
+                              <a
+                                href={`mailto:${user.email}`}
+                                className="px-2.5 py-1.5 bg-slate-100 hover:bg-blue-50 text-slate-700 hover:text-blue-700 rounded-xl text-xs font-bold transition inline-flex items-center space-x-1.5 border border-slate-200"
+                                title={`Enviar e-mail para ${user.name}`}
+                              >
+                                <Mail className="w-3.5 h-3.5 text-slate-500" />
+                                <span>E-mail</span>
+                              </a>
+
+                              {/* Estudos - Padrão Unificado */}
+                              {user.projects.length > 0 ? (
                                 <button
                                   type="button"
-                                  onClick={() => {
-                                    setSelectedUserForStudies(user);
-                                    setStudiesSearchQuery('');
-                                  }}
-                                  className="px-2 py-0.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-[11px] font-bold border border-blue-200 transition flex items-center space-x-1 cursor-pointer shrink-0"
-                                  title={`Ver todos os ${user.projects.length} estudos de ${user.name}`}
+                                  onClick={() => toggleExpandUser(user.id)}
+                                  className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center space-x-1 shadow-2xs cursor-pointer border ${
+                                    isExpanded
+                                      ? 'bg-blue-600 text-white border-blue-600'
+                                      : 'bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200'
+                                  }`}
+                                  title={isExpanded ? 'Ocultar estudos' : 'Visualizar estudos atribuídos'}
                                 >
-                                  <span>+{user.projects.length - 2} mais</span>
-                                  <ChevronRight className="w-3 h-3 text-blue-500" />
+                                  <FolderKanban className="w-3.5 h-3.5" />
+                                  <span>Estudos</span>
+                                  <ChevronDown
+                                    className={`w-3.5 h-3.5 transition-transform ${
+                                      isExpanded ? 'rotate-180 text-white' : 'text-blue-600'
+                                    }`}
+                                  />
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  disabled
+                                  className="px-2.5 py-1.5 bg-slate-50 text-slate-400 border border-slate-200 rounded-lg text-xs font-bold transition flex items-center space-x-1 cursor-not-allowed opacity-60"
+                                  title="Sem estudos vinculados"
+                                >
+                                  <FolderKanban className="w-3.5 h-3.5 text-slate-400" />
+                                  <span>Estudos</span>
                                 </button>
                               )}
+
+                              {/* Controles de Administração */}
+                              {isAdmin && (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenEdit(user)}
+                                    className="p-1.5 text-slate-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg border border-slate-200 hover:border-blue-300 transition cursor-pointer"
+                                    title="Editar perfil e atribuições deste pesquisador"
+                                  >
+                                    <Pencil className="w-3.5 h-3.5" />
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    disabled={isSelf || isRootAdmin}
+                                    onClick={() => {
+                                      setDeletingUser(user);
+                                      setModalFeedback(null);
+                                      setShowDeleteModal(true);
+                                    }}
+                                    className={`p-1.5 rounded-lg border transition ${
+                                      isSelf || isRootAdmin
+                                        ? 'text-slate-300 border-slate-100 cursor-not-allowed'
+                                        : 'text-slate-400 hover:text-red-600 hover:bg-red-50 border-slate-200 hover:border-red-300 cursor-pointer'
+                                    }`}
+                                    title={
+                                      isSelf
+                                        ? 'Você não pode excluir sua própria conta'
+                                        : isRootAdmin
+                                        ? 'A conta raiz de administração não pode ser excluída'
+                                        : 'Excluir pesquisador da equipe'
+                                    }
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </>
+                              )}
                             </div>
-                          )}
-                        </td>
+                          </td>
+                        </tr>
 
-                        {/* Status de Cadastro */}
-                        <td className="py-3.5 px-4 align-middle whitespace-nowrap">
-                          {user.isApproved ? (
-                            <span className="inline-flex items-center space-x-1 text-emerald-700 font-semibold text-xs">
-                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                              <span>Credenciado</span>
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center space-x-1 text-amber-700 font-semibold text-xs">
-                              <Clock className="w-3.5 h-3.5 text-amber-600" />
-                              <span>Pendente</span>
-                            </span>
-                          )}
-                        </td>
+                        {/* LINHA EXPANDIDA: Estudos Atribuídos ao Pesquisador - Menos exagerado, compacto e limpo */}
+                        {isExpanded && (
+                          <tr className="bg-slate-50/60 border-b border-slate-200">
+                            <td colSpan={5} className="px-5 py-3">
+                              <div className="space-y-2">
+                                {/* Header do Detalhamento - Compacto e direto */}
+                                <div className="flex items-center justify-between text-xs pb-0.5">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-bold text-slate-700 flex items-center gap-1.5 text-xs">
+                                      <FolderKanban className="w-3.5 h-3.5 text-blue-600" />
+                                      <span>Estudos vinculados a {user.name}</span>
+                                    </span>
+                                    <span className="text-[11px] text-slate-400 font-medium">
+                                      ({user.projects.length} {user.projects.length === 1 ? 'pesquisa' : 'pesquisas'})
+                                    </span>
+                                  </div>
 
-                        {/* Ações / Contato */}
-                        <td className="py-3.5 px-5 align-middle text-right whitespace-nowrap">
-                          <div className="inline-flex items-center justify-end space-x-1.5">
-                            <a
-                              href={`mailto:${user.email}`}
-                              className="px-2.5 py-1.5 bg-slate-100 hover:bg-blue-50 text-slate-700 hover:text-blue-700 rounded-xl text-xs font-bold transition inline-flex items-center space-x-1.5 border border-slate-200"
-                              title={`Enviar e-mail para ${user.name}`}
-                            >
-                              <Mail className="w-3.5 h-3.5 text-slate-500" />
-                              <span>E-mail</span>
-                            </a>
+                                  <div className="text-[11px] text-slate-400 flex items-center gap-2">
+                                    <span>Cadastrado em {new Date(user.createdAt).toLocaleDateString('pt-BR')}</span>
+                                  </div>
+                                </div>
 
-                            {/* Controles de Administração */}
-                            {isAdmin && (
-                              <>
-                                <button
-                                  type="button"
-                                  onClick={() => handleOpenEdit(user)}
-                                  className="p-1.5 text-slate-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg border border-slate-200 hover:border-blue-300 transition cursor-pointer"
-                                  title="Editar perfil e atribuições deste pesquisador"
-                                >
-                                  <Pencil className="w-3.5 h-3.5" />
-                                </button>
+                                {/* Lista Limpa e Compacta de Estudos */}
+                                {user.projects.length === 0 ? (
+                                  <div className="p-3 bg-white rounded-xl border border-slate-200 text-center text-xs text-slate-400">
+                                    Este pesquisador ainda não está associado a nenhum estudo clínico.
+                                  </div>
+                                ) : (
+                                  <div className="space-y-1.5">
+                                    {user.projects.map((membership) => {
+                                      const roleLabel =
+                                        membership.role === 'COORDINATOR'
+                                          ? 'Coordenador(a)'
+                                          : membership.role === 'OPERATOR'
+                                          ? 'Operador(a) Clínico'
+                                          : membership.role === 'EVALUATOR'
+                                          ? 'Avaliador(a)'
+                                          : membership.role;
 
-                                <button
-                                  type="button"
-                                  disabled={isSelf || isRootAdmin}
-                                  onClick={() => {
-                                    setDeletingUser(user);
-                                    setModalFeedback(null);
-                                    setShowDeleteModal(true);
-                                  }}
-                                  className={`p-1.5 rounded-lg border transition ${
-                                    isSelf || isRootAdmin
-                                      ? 'text-slate-300 border-slate-100 cursor-not-allowed'
-                                      : 'text-slate-400 hover:text-red-600 hover:bg-red-50 border-slate-200 hover:border-red-300 cursor-pointer'
-                                  }`}
-                                  title={
-                                    isSelf
-                                      ? 'Você não pode excluir sua própria conta'
-                                      : isRootAdmin
-                                      ? 'A conta raiz de administração não pode ser excluída'
-                                      : 'Excluir pesquisador da equipe'
-                                  }
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
-                              </>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
+                                      const isProjectActive = membership.project.status === 'ACTIVE';
+
+                                      return (
+                                        <div
+                                          key={membership.id}
+                                          className="px-3.5 py-2.5 bg-white rounded-xl border border-slate-200 hover:border-blue-300 transition flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 shadow-2xs"
+                                        >
+                                          {/* Esquerda: Papel no estudo, Mascaramento, Status e Nome do Projeto */}
+                                          <div className="flex items-center gap-2 min-w-0 flex-wrap">
+                                            <span className="px-2 py-0.5 rounded-md font-mono text-[10px] font-bold bg-slate-900 text-white shrink-0">
+                                              {roleLabel}
+                                            </span>
+
+                                            {membership.isBlinded && (
+                                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200 flex items-center gap-1 shrink-0">
+                                                <EyeOff className="w-3 h-3 text-amber-600" />
+                                                <span>Avaliador Cego</span>
+                                              </span>
+                                            )}
+
+                                            <span
+                                              className={`px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0 ${
+                                                isProjectActive
+                                                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                                  : 'bg-slate-100 text-slate-600 border border-slate-200'
+                                              }`}
+                                            >
+                                              {isProjectActive ? 'Estudo Ativo' : 'Concluído'}
+                                            </span>
+
+                                            <span
+                                              className="font-semibold text-slate-800 text-xs truncate max-w-sm sm:max-w-md"
+                                              title={membership.project.name}
+                                            >
+                                              {membership.project.name}
+                                            </span>
+                                          </div>
+
+                                          {/* Direita: Botão Acessar Estudo */}
+                                          <div className="flex items-center gap-2 shrink-0 ml-auto sm:ml-0">
+                                            <Link
+                                              href={`/dashboard?projectId=${membership.project.id}`}
+                                              className="px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow-2xs transition flex items-center gap-1 shrink-0 cursor-pointer"
+                                            >
+                                              <span>Acessar Estudo</span>
+                                              <ChevronRight className="w-3 h-3" />
+                                            </Link>
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
                     );
                   })}
                 </tbody>
@@ -1215,116 +1378,6 @@ export default function EquipePage() {
               >
                 {submitting && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
                 <span>Confirmar Exclusão</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* MODAL: ESTUDOS ATRIBUÍDOS AO PESQUISADOR */}
-      {/* ========================================================================= */}
-      {selectedUserForStudies && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-xl w-full p-6 shadow-2xl border border-slate-200 max-h-[85vh] flex flex-col animate-in fade-in zoom-in-95 duration-150">
-            {/* Header */}
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100 shrink-0">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-black text-sm flex items-center justify-center shrink-0 shadow-2xs">
-                  {getInitials(selectedUserForStudies.name)}
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                    <span>Estudos Atribuídos</span>
-                    <span className="px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full text-xs font-bold">
-                      {selectedUserForStudies.projects.length}
-                    </span>
-                  </h3>
-                  <p className="text-xs text-slate-500">{selectedUserForStudies.name} • {selectedUserForStudies.email}</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSelectedUserForStudies(null)}
-                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 transition cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Busca de estudos quando há muitos */}
-            {selectedUserForStudies.projects.length > 4 && (
-              <div className="pt-3 pb-1 shrink-0">
-                <div className="relative">
-                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="text"
-                    placeholder="Filtrar estudos por nome..."
-                    value={studiesSearchQuery}
-                    onChange={(e) => setStudiesSearchQuery(e.target.value)}
-                    className="w-full pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Lista dos estudos */}
-            <div className="overflow-y-auto divide-y divide-slate-100 my-2 pr-1 flex-1">
-              {selectedUserForStudies.projects
-                .filter((p) =>
-                  !studiesSearchQuery ||
-                  p.project.name.toLowerCase().includes(studiesSearchQuery.toLowerCase())
-                )
-                .map((membership) => (
-                  <div
-                    key={membership.id}
-                    className="py-3 flex items-center justify-between gap-3 hover:bg-slate-50/80 px-2 rounded-xl transition"
-                  >
-                    <div className="min-w-0 space-y-1">
-                      <p className="text-xs font-bold text-slate-900 truncate" title={membership.project.name}>
-                        {membership.project.name}
-                      </p>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[11px] text-slate-500 font-medium">
-                          Papel:{' '}
-                          <strong className="text-slate-700">
-                            {membership.role === 'COORDINATOR'
-                              ? 'Coordenador(a)'
-                              : membership.role === 'OPERATOR'
-                              ? 'Operador(a)'
-                              : membership.role === 'EVALUATOR'
-                              ? 'Avaliador(a)'
-                              : membership.role}
-                          </strong>
-                        </span>
-                        {membership.isBlinded && (
-                          <span className="px-1.5 py-0.2 bg-amber-50 text-amber-800 border border-amber-200 rounded text-[10px] font-bold flex items-center gap-1">
-                            <EyeOff className="w-3 h-3 text-amber-600" />
-                            <span>Avaliador Cego</span>
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    <Link
-                      href={`/dashboard?projectId=${membership.project.id}`}
-                      className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs rounded-xl border border-blue-200 transition flex items-center space-x-1 shrink-0 shadow-2xs"
-                    >
-                      <span>Acessar</span>
-                      <ChevronRight className="w-3.5 h-3.5" />
-                    </Link>
-                  </div>
-                ))}
-            </div>
-
-            {/* Footer */}
-            <div className="pt-3 border-t border-slate-100 flex justify-end shrink-0">
-              <button
-                type="button"
-                onClick={() => setSelectedUserForStudies(null)}
-                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition cursor-pointer"
-              >
-                Fechar
               </button>
             </div>
           </div>
