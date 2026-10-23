@@ -662,6 +662,8 @@ function PacienteContent() {
 
                     const cleanDesc = (f.description || '')
                       .replace(/^modalidade:\s*[^|]+\|\s*/i, '')
+                      .replace(/^frequência:\s*[^|]+\|\s*/i, '')
+                      .replace(/^frequencia:\s*[^|]+\|\s*/i, '')
                       .replace(/^preenchido por:\s*[^|]+\|\s*/i, '')
                       .replace(/^ocorrência:\s*[^|]+\|\s*/i, '')
                       .trim();
@@ -798,6 +800,8 @@ function PacienteContent() {
                   <p className="text-xs text-slate-500 mt-1 leading-relaxed">
                     {selectedForm.description
                       .replace(/^modalidade:\s*[^|]+\|\s*/i, '')
+                      .replace(/^frequência:\s*[^|]+\|\s*/i, '')
+                      .replace(/^frequencia:\s*[^|]+\|\s*/i, '')
                       .replace(/^preenchido por:\s*[^|]+\|\s*/i, '')
                       .replace(/^ocorrência:\s*[^|]+\|\s*/i, '')
                       .trim()}

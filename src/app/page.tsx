@@ -1775,19 +1775,39 @@ export default function HomePage() {
                       <div className="space-y-3 pt-1 max-h-[300px] overflow-y-auto">
                         <div className="space-y-2">
                           {formTargets.map((f) => (
-                            <div key={f.id} className="p-2.5 bg-white border border-slate-200 rounded-lg flex items-center justify-between">
-                              <label className="flex items-center gap-2 cursor-pointer font-bold text-slate-800">
-                                <input
-                                  type="checkbox"
-                                  checked={f.enabled}
-                                  onChange={(e) => handleUpdateFormTarget(f.id, 'enabled', e.target.checked, false)}
-                                  className="w-4 h-4 text-blue-600 rounded"
-                                />
-                                <span>{f.title}</span>
-                              </label>
-                              <span className="text-[10px] text-slate-500">
-                                {f.respondent === 'PATIENT' ? '👤 Paciente' : '🩺 Pesquisador'}
-                              </span>
+                            <div key={f.id} className="p-2.5 bg-white border border-slate-200 rounded-xl space-y-2">
+                              <div className="flex items-center justify-between">
+                                <label className="flex items-center gap-2 cursor-pointer font-bold text-slate-800 text-xs">
+                                  <input
+                                    type="checkbox"
+                                    checked={f.enabled}
+                                    onChange={(e) => handleUpdateFormTarget(f.id, 'enabled', e.target.checked, false)}
+                                    className="w-4 h-4 text-blue-600 rounded"
+                                  />
+                                  <span>{f.title}</span>
+                                </label>
+                                <span className="text-[10px] text-slate-500 font-semibold">
+                                  {f.respondent === 'PATIENT' ? '👤 Paciente (Celular)' : '🩺 Pesquisador'}
+                                </span>
+                              </div>
+                              {f.enabled && f.respondent === 'PATIENT' && (
+                                <div className="pt-1.5 border-t border-slate-100 flex flex-col gap-1 text-[11px]">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-slate-600 font-bold">Frequência / Períodos em casa:</span>
+                                    <span className="text-[10px] text-blue-600 font-medium">Personalizável</span>
+                                  </div>
+                                  <input
+                                    type="text"
+                                    value={f.frequencyDescription || ''}
+                                    onChange={(e) => {
+                                      handleUpdateFormTarget(f.id, 'frequency', 'CUSTOM', false);
+                                      handleUpdateFormTarget(f.id, 'frequencyDescription', e.target.value, false);
+                                    }}
+                                    placeholder="Ex: 24h, 48h, 7d, 14d e 21d (Clareamento Caseiro)"
+                                    className="w-full px-2 py-1 border border-slate-300 rounded-lg text-xs bg-slate-50 text-slate-800 placeholder-slate-400 focus:bg-white focus:ring-1 focus:ring-blue-500"
+                                  />
+                                </div>
+                              )}
                             </div>
                           ))}
                         </div>
@@ -2240,6 +2260,7 @@ export default function HomePage() {
                                 >
                                   {f.respondent === 'PATIENT' ? (
                                     <>
+                                      <option value="CUSTOM">⏱️ Personalizado (Definir cronograma em casa)</option>
                                       <option value="DAILY">🟢 Todos os dias (Diário — ex: dor/sensibilidade)</option>
                                       <option value="WEEKLY">🔵 1 vez por semana</option>
                                       <option value="BIWEEKLY">🟡 A cada 15 dias</option>
@@ -2256,6 +2277,58 @@ export default function HomePage() {
                                   )}
                                 </select>
                               </div>
+
+                              {/* Cronograma Domiciliar Personalizado para o Paciente */}
+                              {f.respondent === 'PATIENT' && (
+                                <div className="sm:col-span-2 pt-2 border-t border-slate-100">
+                                  <div className="p-3 bg-amber-50/70 border border-amber-200/80 rounded-xl space-y-2 text-xs">
+                                    <div className="flex items-center justify-between">
+                                      <label className="font-bold text-amber-950 flex items-center gap-1.5 text-[11px]">
+                                        <Clock className="w-3.5 h-3.5 text-amber-600" />
+                                        <span>Personalizar Períodos / Cronograma de Resposta em Casa:</span>
+                                      </label>
+                                      <span className="text-[10px] text-amber-800 font-semibold bg-amber-100 px-2 py-0.2 rounded-full">
+                                        Acompanhamento Domiciliar
+                                      </span>
+                                    </div>
+
+                                    <input
+                                      type="text"
+                                      value={f.frequencyDescription || ''}
+                                      onChange={(e) => {
+                                        handleUpdateFormTarget(f.id, 'frequency', 'CUSTOM', true);
+                                        handleUpdateFormTarget(f.id, 'frequencyDescription', e.target.value, true);
+                                      }}
+                                      placeholder="Ex: 24h, 48h, 7d, 14d e 21d (clareamento caseiro) / A cada 3 dias / Diário por 14 dias..."
+                                      className="w-full px-2.5 py-1.5 border border-amber-300 rounded-lg text-xs bg-white text-slate-800 placeholder-slate-400 focus:ring-1 focus:ring-amber-500 font-medium"
+                                    />
+
+                                    <div className="flex flex-wrap items-center gap-1">
+                                      <span className="text-[10px] text-amber-900 font-bold">Modelos mais usados:</span>
+                                      {[
+                                        '24h, 48h, 7d, 14d e 21d (Clareamento Caseiro)',
+                                        'Diariamente durante 14 dias',
+                                        'Diariamente durante 21 dias',
+                                        '24h, 48h e 7 dias (Pós-Op)',
+                                        'A cada 48 horas durante 14 dias',
+                                        'Semanal por 4 semanas (7d, 14d, 21d e 28d)',
+                                      ].map((preset) => (
+                                        <button
+                                          key={preset}
+                                          type="button"
+                                          onClick={() => {
+                                            handleUpdateFormTarget(f.id, 'frequency', 'CUSTOM', true);
+                                            handleUpdateFormTarget(f.id, 'frequencyDescription', preset, true);
+                                          }}
+                                          className="text-[9px] px-2 py-0.5 bg-white hover:bg-amber-100 text-amber-950 rounded-md border border-amber-200 transition font-medium cursor-pointer"
+                                        >
+                                          {preset}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>

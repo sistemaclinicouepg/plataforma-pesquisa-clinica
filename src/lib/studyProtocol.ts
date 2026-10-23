@@ -154,7 +154,8 @@ export type FormFrequencyType =
   | 'WEEKLY' // 1 vez por semana
   | 'BIWEEKLY' // A cada 15 dias
   | 'PER_SESSION' // A cada sessão clínica
-  | 'ONCE'; // Única vez / Pontual
+  | 'ONCE' // Única vez / Pontual
+  | 'CUSTOM'; // Cronograma Domiciliar Personalizado (ex: clareamento caseiro, dias pré-definidos)
 
 export type FormTargetProtocol = {
   id: string; // 'anamnesis' | 'odontogram' | 'periodontogram' | 'eva' | 'ohip' | 'satisfaction' | custom
@@ -1134,6 +1135,8 @@ export function getFrequencyLabel(freq: FormFrequencyType): string {
       return 'A cada sessão clínica';
     case 'ONCE':
       return 'Única vez (Pontual)';
+    case 'CUSTOM':
+      return 'Cronograma Domiciliar Personalizado';
     default:
       return 'Personalizada';
   }

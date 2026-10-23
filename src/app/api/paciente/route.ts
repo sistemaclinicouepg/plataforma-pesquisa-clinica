@@ -372,11 +372,13 @@ export async function GET(req: Request) {
         if (questions && questions.length > 0) {
           try {
             const freqDesc = pf.frequencyDescription || getFrequencyLabel(pf.frequency);
+            const isHomeFreq = pf.frequency === 'CUSTOM' || Boolean(pf.frequencyDescription) || pf.frequency === 'DAILY' || pf.frequency === 'WEEKLY' || pf.frequency === 'BIWEEKLY';
+            const modalityStr = isHomeFreq ? 'Modalidade: TEMPO' : 'Modalidade: SESSAO';
             const created = await prisma.form.create({
               data: {
                 projectId: participant.project.id,
                 title: pf.title,
-                description: `Preenchido por: Paciente | Ocorrência: ${freqDesc}`,
+                description: `${modalityStr} | Frequência: ${freqDesc} | Ocorrência: ${freqDesc} | Preenchido por: Paciente`,
                 questionsJson: JSON.stringify(questions),
                 expirationHours: pf.frequency === 'DAILY' ? 24 : 168,
                 allowLate: false,
@@ -508,8 +510,11 @@ export async function GET(req: Request) {
         return pf.title.toLowerCase() === lowerTitle;
       });
 
-      const occMatch = desc.match(/Ocorrência:\s*([^|]+)/i) || desc.match(/Frequência:\s*([^|]+)/i);
-      if (occMatch) {
+      const freqMatch = desc.match(/Frequência:\s*([^|]+)/i);
+      const occMatch = desc.match(/Ocorrência:\s*([^|]+)/i);
+      if (freqMatch) {
+        occurrence = freqMatch[1].trim();
+      } else if (occMatch) {
         occurrence = occMatch[1].trim();
       } else if (matchingProto?.frequencyDescription) {
         occurrence = matchingProto.frequencyDescription;

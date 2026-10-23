@@ -302,6 +302,8 @@ function FormBuilderContent() {
   const [formTitle, setFormTitle] = useState('Questionário de Impacto na Qualidade de Vida (OHIP-14)');
   const [formDescription, setFormDescription] = useState('Instrumento padronizado de desfechos relatados pelo paciente (PROMs) para acompanhamento no ensaio clínico.');
   const [occurrence, setOccurrence] = useState<string>('Linha de Base / Admissão');
+  const [isCustomFrequency, setIsCustomFrequency] = useState(false);
+  const [customFrequencyText, setCustomFrequencyText] = useState('24h, 48h, 7d, 14d e 21d (Clareamento Caseiro)');
   const [expirationHours, setExpirationHours] = useState('48');
   const [allowLate, setAllowLate] = useState(false);
   const [questions, setQuestions] = useState<FormQuestion[]>(OHIP_14_QUESTIONS);
@@ -662,10 +664,20 @@ function FormBuilderContent() {
       setSavedSuccess(false);
       setErrorMessage(null);
 
-      const isTimeBased = occurrence.toLowerCase().includes('tempo') || occurrence.toLowerCase().includes('domiciliar');
+      const effectiveOccurrence = (isCustomFrequency || occurrence === 'CUSTOM_HOME') && customFrequencyText.trim()
+        ? customFrequencyText.trim()
+        : occurrence;
+
+      const isTimeBased =
+        isCustomFrequency ||
+        occurrence === 'CUSTOM_HOME' ||
+        effectiveOccurrence.toLowerCase().includes('tempo') ||
+        effectiveOccurrence.toLowerCase().includes('domiciliar') ||
+        effectiveOccurrence.toLowerCase().includes('caseiro');
+
       const modalityTag = isTimeBased ? 'Modalidade: TEMPO' : 'Modalidade: SESSAO';
-      const formattedDesc = occurrence
-        ? `${modalityTag} | Ocorrência: ${occurrence} | ${formDescription.trim()}`
+      const formattedDesc = effectiveOccurrence
+        ? `${modalityTag} | Frequência: ${effectiveOccurrence} | Ocorrência: ${effectiveOccurrence} | ${formDescription.trim()}`
         : formDescription.trim();
 
       const res = await fetch('/api/forms', {
@@ -999,7 +1011,12 @@ function FormBuilderContent() {
                     <span className="text-blue-600 font-bold">Ocorrência:</span>
                     <select
                       value={occurrence}
-                      onChange={(e) => setOccurrence(e.target.value)}
+                      onChange={(e) => {
+                        setOccurrence(e.target.value);
+                        if (e.target.value === 'CUSTOM_HOME') {
+                          setIsCustomFrequency(true);
+                        }
+                      }}
                       className="bg-transparent font-semibold text-blue-950 focus:outline-none text-xs cursor-pointer max-w-[210px] truncate"
                     >
                       <optgroup label="🩺 Vinculado à Consulta Clínica (Presencial)">
@@ -1009,6 +1026,8 @@ function FormBuilderContent() {
                         <option value="Retorno Final / Conclusão">Retorno Final / Conclusão Presencial</option>
                       </optgroup>
                       <optgroup label="⏱️ Domiciliar por Tempo (Sem Consulta - Clareamento/Remoto)">
+                        <option value="CUSTOM_HOME">✏️ Personalizar Frequência / Cronograma...</option>
+                        <option value="Tempo: 24h, 48h, 7d, 14d e 21d (Clareamento Caseiro)">Clareamento Caseiro (24h, 48h, 7d, 14d, 21d)</option>
                         <option value="Tempo: 24 Horas (Domiciliar)">Tempo: 24 Horas (Domiciliar)</option>
                         <option value="Tempo: 48 Horas (Domiciliar)">Tempo: 48 Horas (Domiciliar)</option>
                         <option value="Tempo: 7 Dias (Domiciliar)">Tempo: 7 Dias / 1ª Sem (Domiciliar)</option>
@@ -1019,6 +1038,24 @@ function FormBuilderContent() {
                       </optgroup>
                     </select>
                   </div>
+
+                  {/* Botão de Personalizar Frequência Domiciliar */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsCustomFrequency(!isCustomFrequency);
+                      if (!isCustomFrequency) setOccurrence('CUSTOM_HOME');
+                    }}
+                    className={`px-3 py-1.5 rounded-xl border text-xs font-bold transition flex items-center space-x-1 cursor-pointer ${
+                      isCustomFrequency || occurrence === 'CUSTOM_HOME'
+                        ? 'bg-amber-100 text-amber-900 border-amber-300 ring-2 ring-amber-400/20 shadow-2xs'
+                        : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                    }`}
+                    title="Definir dias e horários exatos para o paciente responder em casa"
+                  >
+                    <Clock className="w-3.5 h-3.5 text-amber-600" />
+                    <span>{isCustomFrequency || occurrence === 'CUSTOM_HOME' ? 'Frequência Personalizada' : 'Personalizar Frequência'}</span>
+                  </button>
 
                   {/* Validade */}
                   <div className="flex items-center space-x-1.5 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5">
@@ -1054,6 +1091,64 @@ function FormBuilderContent() {
                   {questions.length} questões cadastradas
                 </div>
               </div>
+
+              {/* Bloco de Frequência e Períodos Domiciliares Personalizados */}
+              {(isCustomFrequency || occurrence === 'CUSTOM_HOME') && (
+                <div className="mt-3 p-3.5 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl space-y-2.5 shadow-2xs animate-fadeIn">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-amber-950 text-xs flex items-center gap-1.5">
+                      <Clock className="w-4 h-4 text-amber-600" />
+                      <span>Cronograma & Frequência de Resposta Domiciliar (em Casa):</span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setIsCustomFrequency(false)}
+                      className="text-[10px] text-amber-700 hover:text-amber-900 font-bold hover:underline cursor-pointer"
+                    >
+                      Fechar
+                    </button>
+                  </div>
+
+                  <p className="text-[11px] text-amber-900/80 leading-relaxed">
+                    Personalize os períodos exatos em que o paciente responderá a este questionário no celular sem precisar de consulta presencial.
+                  </p>
+
+                  <div className="flex flex-col sm:flex-row items-center gap-2">
+                    <input
+                      type="text"
+                      value={customFrequencyText}
+                      onChange={(e) => setCustomFrequencyText(e.target.value)}
+                      placeholder="Ex: 24h, 48h, 7d, 14d e 21d (Clareamento Caseiro) / A cada 3 dias / Diário por 14 dias..."
+                      className="flex-1 w-full px-3 py-2 bg-white border border-amber-300 rounded-xl text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-amber-500 focus:outline-none shadow-2xs"
+                    />
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                    <span className="text-[10px] text-amber-900 font-bold">Modelos mais usados:</span>
+                    {[
+                      '24h, 48h, 7d, 14d e 21d (Clareamento Caseiro)',
+                      'Diariamente durante 14 dias',
+                      'Diariamente durante 21 dias',
+                      '24h, 48h e 7 dias (Pós-Operatório)',
+                      'A cada 48 horas durante 14 dias',
+                      'Semanal por 4 semanas (7d, 14d, 21d e 28d)',
+                      'A cada 3 dias nos primeiros 15 dias',
+                    ].map((sug) => (
+                      <button
+                        key={sug}
+                        type="button"
+                        onClick={() => {
+                          setCustomFrequencyText(sug);
+                          setIsCustomFrequency(true);
+                        }}
+                        className="px-2 py-0.5 bg-white hover:bg-amber-100 border border-amber-200 rounded-lg text-[10px] font-medium text-amber-950 transition cursor-pointer"
+                      >
+                        {sug}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* LISTA DE ITENS CLÍNICOS DA PRANCHETA */}
