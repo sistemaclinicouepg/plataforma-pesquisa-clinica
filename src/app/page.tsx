@@ -32,6 +32,8 @@ import {
   FolderKanban,
   FileText,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
   Stethoscope,
   MessageSquare,
 } from 'lucide-react';
@@ -116,6 +118,7 @@ export default function HomePage() {
 
   // Modal de criação de projeto
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [showCreateAdvancedConfig, setShowCreateAdvancedConfig] = useState(false);
   const [createTab, setCreateTab] = useState<'GENERAL' | 'SESSIONS' | 'FORMS'>('GENERAL');
   const [newProjectName, setNewProjectName] = useState('');
   const [newProjectDesc, setNewProjectDesc] = useState('');
@@ -841,7 +844,7 @@ export default function HomePage() {
 
   const handleCreateProject = async (
     e: React.FormEvent,
-    targetDestination: 'anamnese' | 'dashboard' = 'anamnese'
+    targetDestination: 'anamnese' | 'dashboard' = 'dashboard'
   ) => {
     if (e && e.preventDefault) e.preventDefault();
     if (!newProjectName.trim()) return;
@@ -888,6 +891,7 @@ export default function HomePage() {
       if (res.ok) {
         const data = await res.json();
         setIsCreateModalOpen(false);
+        setShowCreateAdvancedConfig(false);
         setNewProjectName('');
         setNewProjectDesc('');
         setNewProjectPrefix('');
@@ -897,17 +901,21 @@ export default function HomePage() {
           if (typeof window !== 'undefined') {
             localStorage.setItem('app_active_project_id', data.project.id);
           }
-          if (targetDestination === 'dashboard') {
-            router.push(`/dashboard?projectId=${data.project.id}`);
-          } else {
+          if (targetDestination === 'anamnese') {
             router.push(`/anamnese?projectId=${data.project.id}&new=true`);
+          } else {
+            router.push(`/dashboard?projectId=${data.project.id}`);
           }
         } else {
           loadData();
         }
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        alert(errData.error || 'Erro ao criar projeto.');
       }
     } catch (err) {
       console.error('Erro ao criar projeto:', err);
+      alert('Erro de comunicação ao criar projeto.');
     } finally {
       setCreating(false);
     }
@@ -1601,223 +1609,106 @@ export default function HomePage() {
         )}
       </main>
 
-      {/* Modal de Criação de Projeto */}
+      {/* Modal de Criação de Projeto Simplificado & Fluido */}
       {isCreateModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6 border border-slate-200 max-h-[92vh] overflow-y-auto">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
-              <div>
-                <h2 className="text-xl font-bold text-slate-900">Cadastrar Novo Estudo Clínico</h2>
-                <p className="text-xs text-slate-500">
-                  Configure os dados gerais, o cronograma de sessões/avaliações e os formulários do protocolo.
-                </p>
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-150">
+          <div
+            className={`bg-white rounded-2xl shadow-2xl w-full border border-slate-200 max-h-[92vh] overflow-y-auto transition-all ${
+              showCreateAdvancedConfig ? 'max-w-2xl' : 'max-w-lg'
+            }`}
+          >
+            {/* Header */}
+            <div className="p-5 pb-4 border-b border-slate-100 flex items-start justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 border border-blue-100">
+                  <FolderPlus className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-slate-900 leading-snug">Novo Estudo Clínico</h2>
+                  <p className="text-xs text-slate-500">
+                    Preencha os dados básicos para iniciar. Protocolos e formulários já vêm configurados.
+                  </p>
+                </div>
               </div>
               <button
                 type="button"
-                onClick={() => setIsCreateModalOpen(false)}
+                onClick={() => {
+                  setIsCreateModalOpen(false);
+                  setShowCreateAdvancedConfig(false);
+                }}
                 className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* Navegação entre Abas do Modal */}
-            <div className="flex border-b border-slate-200 mb-5 gap-1">
-              <button
-                type="button"
-                onClick={() => setCreateTab('GENERAL')}
-                className={`py-2 px-3 text-xs font-bold border-b-2 transition flex items-center gap-1.5 cursor-pointer ${
-                  createTab === 'GENERAL'
-                    ? 'border-blue-600 text-blue-700 bg-blue-50/50 rounded-t-lg'
-                    : 'border-transparent text-slate-500 hover:text-slate-800'
-                }`}
-              >
-                <span>📋 1. Dados do Estudo</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setCreateTab('SESSIONS')}
-                className={`py-2 px-3 text-xs font-bold border-b-2 transition flex items-center gap-1.5 cursor-pointer ${
-                  createTab === 'SESSIONS'
-                    ? 'border-blue-600 text-blue-700 bg-blue-50/50 rounded-t-lg'
-                    : 'border-transparent text-slate-500 hover:text-slate-800'
-                }`}
-              >
-                <span>⏱️ 2. Sessões & Consultas ({studySessions.length})</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setCreateTab('FORMS')}
-                className={`py-2 px-3 text-xs font-bold border-b-2 transition flex items-center gap-1.5 cursor-pointer ${
-                  createTab === 'FORMS'
-                    ? 'border-blue-600 text-blue-700 bg-blue-50/50 rounded-t-lg'
-                    : 'border-transparent text-slate-500 hover:text-slate-800'
-                }`}
-              >
-                <span>📝 3. Formulários & Quem Preenche</span>
-              </button>
-            </div>
+            <form onSubmit={(e) => handleCreateProject(e, 'dashboard')} className="p-5 space-y-4">
+              {/* 1. Nome do Projeto */}
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                  Nome do Estudo / Ensaio Clínico *
+                </label>
+                <input
+                  type="text"
+                  required
+                  autoFocus
+                  value={newProjectName}
+                  onChange={(e) => setNewProjectName(e.target.value)}
+                  placeholder="Ex: Longevidade Clínica de Restaurações em Resina Bulk-Fill"
+                  className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none transition shadow-2xs"
+                />
+              </div>
 
-            <form onSubmit={handleCreateProject} className="space-y-4">
-              {/* ABA 1: DADOS GERAIS */}
-              {createTab === 'GENERAL' && (
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
-                      Nome do Projeto / Ensaio Clínico *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={newProjectName}
-                      onChange={(e) => setNewProjectName(e.target.value)}
-                      placeholder="Ex: Longevidade Clínica de Restaurações em Resina Bulk-Fill"
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
-                      Especialidade / Linha de Pesquisa Clínica *
-                    </label>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                      {RESEARCH_SPECIALTIES.map((spec) => {
-                        const isSelected = newProjectSpecialty === spec.id;
-                        return (
-                          <button
-                            key={spec.id}
-                            type="button"
-                            onClick={() => {
-                              setNewProjectSpecialty(spec.id);
-                              handleApplySpecialtyDefaults(spec.id, false);
-                            }}
-                            className={`p-2.5 rounded-xl border text-left transition cursor-pointer flex flex-col justify-between ${
-                              isSelected
-                                ? 'bg-blue-50 border-blue-500 shadow-xs ring-2 ring-blue-500/20'
-                                : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-700'
-                            }`}
-                          >
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-base">{spec.icon}</span>
-                              <span className={`text-xs font-bold leading-tight ${isSelected ? 'text-blue-900' : 'text-slate-800'}`}>
-                                {spec.badge}
-                              </span>
-                            </div>
-                            <p className="text-[10px] text-slate-500 line-clamp-2 mt-1 leading-snug">
-                              {spec.description}
-                            </p>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
-                      Descrição / Hipótese do Estudo (Opcional)
-                    </label>
-                    <textarea
-                      rows={3}
-                      value={newProjectDesc}
-                      onChange={(e) => setNewProjectDesc(e.target.value)}
-                      placeholder="Breve resumo da metodologia, grupos experimentais, critérios e intervenções clínicas..."
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
-                      Status Inicial do Estudo
-                    </label>
-                    <select
-                      value={newProjectStatus}
-                      onChange={(e) => setNewProjectStatus(e.target.value as any)}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white font-medium"
-                    >
-                      <option value="ACTIVE">🟢 Em Andamento / Ativo</option>
-                      <option value="COMPLETED">🔵 Finalizado / Concluído</option>
-                      <option value="CANCELLED">⚪ Cancelado / Interrompido</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
-                      Prefixo do Código dos Voluntários (Opcional)
-                    </label>
-                    <input
-                      type="text"
-                      value={newProjectPrefix}
-                      onChange={(e) => setNewProjectPrefix(e.target.value.toUpperCase())}
-                      placeholder="Ex: P01, EXP, CLAR (Padrão automático: P01, P02...)"
-                      maxLength={8}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm font-mono uppercase focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                    />
-                    <p className="text-[10px] text-slate-400 mt-1">
-                      Garante códigos únicos para cada paciente (Ex: P01-001, P07-001), eliminando qualquer conflito com outros projetos.
-                    </p>
-                  </div>
-
-                  <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 text-xs space-y-1.5 text-slate-600">
-                    <div className="font-bold text-slate-800 flex items-center gap-1.5">
-                      <Sparkles className="w-4 h-4 text-blue-600" />
-                      <span>Estrutura do Protocolo Personalizado:</span>
-                    </div>
-                    <p className="text-[11px] leading-relaxed">
-                      Este estudo está pré-configurado com <strong>{studySessions.length} sessões/consultas clínicas</strong> e{' '}
-                      <strong>{formTargets.filter((f) => f.enabled).length} formulários ativos</strong>. Você pode personalizar o número de consultas, o tempo de atendimento e quem responde cada questionário nas abas acima.
-                    </p>
-                  </div>
+              {/* 2. Área / Especialidade Clínica (Chips Rápidos e Visuais) */}
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5 flex items-center justify-between">
+                  <span>Especialidade da Pesquisa</span>
+                  <span className="text-[10px] text-blue-600 font-medium">
+                    {RESEARCH_SPECIALTIES.find((s) => s.id === newProjectSpecialty)?.badge}
+                  </span>
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {RESEARCH_SPECIALTIES.map((spec) => {
+                    const isSelected = newProjectSpecialty === spec.id;
+                    return (
+                      <button
+                        key={spec.id}
+                        type="button"
+                        onClick={() => {
+                          setNewProjectSpecialty(spec.id);
+                          handleApplySpecialtyDefaults(spec.id, false);
+                        }}
+                        className={`p-2.5 rounded-xl border text-left transition cursor-pointer flex items-center gap-2 ${
+                          isSelected
+                            ? 'bg-blue-50 border-blue-500 text-blue-900 shadow-2xs ring-2 ring-blue-500/20 font-bold'
+                            : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-700 font-medium'
+                        }`}
+                      >
+                        <span className="text-lg shrink-0">{spec.icon}</span>
+                        <span className="text-xs leading-tight truncate">
+                          {spec.badge}
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
-              )}
+                <div className="mt-2 p-2 bg-slate-50 border border-slate-200/80 rounded-lg text-[11px] text-slate-600 flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                  <span>
+                    Protocolo recomendado: <strong>{studySessions.length} consultas</strong> pré-configuradas para {RESEARCH_SPECIALTIES.find((s) => s.id === newProjectSpecialty)?.name}.
+                  </span>
+                </div>
+              </div>
 
-              {/* ABA 2: SESSÕES & AVALIAÇÕES CLÍNICAS */}
-              {createTab === 'SESSIONS' && (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between bg-blue-50/70 p-3 rounded-xl border border-blue-200">
-                    <div>
-                      <h4 className="text-xs font-bold text-blue-950 flex items-center gap-1.5">
-                        <Clock className="w-3.5 h-3.5 text-blue-600" />
-                        <span>Cronograma de Consultas e Avaliações Clínicas</span>
-                      </h4>
-                      <p className="text-[11px] text-blue-800 mt-0.5">
-                        Defina quantas consultas serão realizadas, os questionários do paciente e os módulos clínicos do pesquisador.
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleAddSession(false)}
-                      className="px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold flex items-center gap-1 transition shadow-xs cursor-pointer shrink-0"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      <span>Nova Sessão</span>
-                    </button>
-                  </div>
-
-                  {/* Banner de Protocolo Recomendado da Especialidade */}
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3.5 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl text-xs">
-                    <div>
-                      <span className="font-bold text-blue-950 flex items-center gap-1.5">
-                        <Sparkles className="w-4 h-4 text-blue-600" />
-                        <span>Protocolo Clínico Padrão ({RESEARCH_SPECIALTIES.find((sp) => sp.id === newProjectSpecialty)?.name})</span>
-                      </span>
-                      <p className="text-[11px] text-blue-800 mt-0.5">
-                        Carregue o cronograma clínico e questionários recomendados para <strong>{RESEARCH_SPECIALTIES.find((sp) => sp.id === newProjectSpecialty)?.name}</strong> com 1 clique.
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleApplySpecialtyDefaults(newProjectSpecialty, false)}
-                      className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-xs shadow-xs transition flex items-center gap-1.5 shrink-0 cursor-pointer self-start sm:self-auto"
-                    >
-                      <Sparkles className="w-3.5 h-3.5" />
-                      <span>⚡ Carregar Protocolo Recomendado</span>
-                    </button>
-                  </div>
-
-                  {/* Seleção rápida de quantidade */}
-                  <div className="flex flex-wrap items-center gap-2 text-xs">
-                    <span className="text-slate-500 font-bold text-[11px]">Quantidade rápida:</span>
-                    {[1, 2, 3, 4, 5].map((count) => (
+              {/* 3. Quantidade de Consultas Clínicas (Seleção Rápida de Sessões) */}
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                  Número de Consultas / Sessões de Retorno
+                </label>
+                <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5">
+                  {[1, 2, 3, 4, 5].map((count) => {
+                    const isSelected = studySessions.length === count;
+                    return (
                       <button
                         key={count}
                         type="button"
@@ -1849,293 +1740,166 @@ export default function HomePage() {
                           }
                           setStudySessions(presets);
                         }}
-                        className={`px-2.5 py-1 rounded-md font-bold text-xs transition cursor-pointer ${
-                          studySessions.length === count
-                            ? 'bg-blue-600 text-white shadow-2xs'
-                            : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                        className={`py-2 px-1 rounded-xl text-xs font-bold text-center border transition cursor-pointer ${
+                          isSelected
+                            ? 'bg-blue-600 text-white border-blue-600 shadow-2xs'
+                            : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
                         }`}
                       >
-                        {count} {count === 1 ? 'Sessão' : 'Sessões'}
+                        {count} {count === 1 ? 'Consulta' : 'Consultas'}
                       </button>
-                    ))}
-                  </div>
-
-                  {/* Lista de cards de cada sessão */}
-                  <div className="space-y-3">
-                    {studySessions.map((s, idx) => renderSessionCard(s, idx, false))}
-                  </div>
+                    );
+                  })}
                 </div>
-              )}
+              </div>
 
-              {/* ABA 3: FORMULÁRIOS & QUEM PREENCHE */}
-              {createTab === 'FORMS' && (
-                <div className="space-y-4">
-                  <div className="bg-emerald-50/70 p-3 rounded-xl border border-emerald-200 text-xs text-emerald-950">
-                    <h4 className="font-bold flex items-center gap-1.5">
-                      <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
-                      <span>Formulários: Quem Preenche e Frequência</span>
-                    </h4>
-                    <p className="text-[11px] text-emerald-800 mt-0.5">
-                      Escolha se cada instrumento será preenchido pelo <strong>Pesquisador</strong> (eCRF) ou pelo <strong>Paciente</strong> (PROMs no celular), e com qual periodicidade.
-                    </p>
-                  </div>
+              {/* 4. Descrição / Objetivo do Estudo (Opcional) */}
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                  Descrição / Objetivo da Pesquisa (Opcional)
+                </label>
+                <textarea
+                  rows={2}
+                  value={newProjectDesc}
+                  onChange={(e) => setNewProjectDesc(e.target.value)}
+                  placeholder="Breve resumo da metodologia, hipótese ou grupos experimentais..."
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none transition resize-none"
+                />
+              </div>
 
-                  {/* Instrumentos Clínicos do Pesquisador */}
-                  <div className="space-y-2.5">
-                    <h5 className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                      Instrumentos Clínicos da Equipe de Pesquisa
-                    </h5>
-
-                    {/* Odontograma */}
-                    <div className="p-3 rounded-xl border border-slate-200 bg-slate-50/60 space-y-2 text-xs">
-                      <div className="flex items-center justify-between">
-                        <label className="flex items-center gap-2 cursor-pointer font-bold text-slate-800">
-                          <input
-                            type="checkbox"
-                            checked={enableOdontogram}
-                            onChange={(e) => setEnableOdontogram(e.target.checked)}
-                            className="w-4 h-4 text-blue-600 rounded"
-                          />
-                          <span>Odontograma Clínico Anatômico</span>
-                        </label>
-                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-200 text-slate-700">
-                          🩺 Preenchido pelo Pesquisador
-                        </span>
-                      </div>
-                      {enableOdontogram && (
-                        <div className="pl-6 flex items-center gap-4 text-[11px] text-slate-600">
-                          <label className="flex items-center gap-1 cursor-pointer">
-                            <input
-                              type="radio"
-                              name="odontogramScopeModal"
-                              value="anterior"
-                              checked={odontogramScope === 'anterior'}
-                              onChange={() => setOdontogramScope('anterior')}
-                            />
-                            <span>Dentes Anteriores (13 a 23 e 33 a 43)</span>
-                          </label>
-                          <label className="flex items-center gap-1 cursor-pointer">
-                            <input
-                              type="radio"
-                              name="odontogramScopeModal"
-                              value="full"
-                              checked={odontogramScope === 'full'}
-                              onChange={() => setOdontogramScope('full')}
-                            />
-                            <span>Arcada Completa</span>
-                          </label>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Periograma */}
-                    <div className="p-3 rounded-xl border border-slate-200 bg-slate-50/60 flex items-center justify-between text-xs">
-                      <label className="flex items-center gap-2 cursor-pointer font-bold text-slate-800">
-                        <input
-                          type="checkbox"
-                          checked={enablePeriodontogram}
-                          onChange={(e) => setEnablePeriodontogram(e.target.checked)}
-                          className="w-4 h-4 text-blue-600 rounded"
-                        />
-                        <span>Exame Periodontal (Periograma - SS / IPV)</span>
-                      </label>
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-200 text-slate-700">
-                        🩺 Preenchido pelo Pesquisador
-                      </span>
-                    </div>
-
-                    {/* Anamnese */}
-                    <div className="p-3 rounded-xl border border-slate-200 bg-slate-50/60 flex items-center justify-between text-xs">
-                      <label className="flex items-center gap-2 cursor-pointer font-bold text-slate-800">
-                        <input
-                          type="checkbox"
-                          checked={enableAnamnesis}
-                          onChange={(e) => setEnableAnamnesis(e.target.checked)}
-                          className="w-4 h-4 text-blue-600 rounded"
-                        />
-                        <span>Ficha Clínica & Critérios de Inclusão/Exclusão</span>
-                      </label>
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-200 text-slate-700">
-                        🩺 Preenchido pelo Pesquisador
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Questionários Validados e Avaliações de Pacientes (PROMs) */}
-                  <div className="pt-2 space-y-2.5">
-                    <h5 className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                      Questionários de Desfecho & Avaliação do Paciente (PROMs)
-                    </h5>
-
-                    <div className="space-y-3">
-                      {formTargets.map((f) => (
-                        <div
-                          key={f.id}
-                          className={`p-3 rounded-xl border transition ${
-                            f.enabled
-                              ? 'border-blue-300 bg-blue-50/30'
-                              : 'border-slate-200 bg-slate-50/40 opacity-70'
-                          }`}
-                        >
-                          <div className="flex items-start justify-between gap-3">
-                            <label className="flex items-start gap-2.5 cursor-pointer">
-                              <input
-                                type="checkbox"
-                                checked={f.enabled}
-                                onChange={(e) => handleUpdateFormTarget(f.id, 'enabled', e.target.checked, false)}
-                                className="w-4 h-4 text-blue-600 rounded mt-0.5 shrink-0"
-                              />
-                              <div>
-                                <span className="text-xs font-bold text-slate-800 block">{f.title}</span>
-                                <span className="text-[11px] text-slate-500 block leading-tight">{f.description}</span>
-                              </div>
-                            </label>
-                          </div>
-
-                          {f.enabled && (
-                            <div className="mt-3 pt-2.5 border-t border-slate-200/70 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                              {/* Quem Preenche */}
-                              <div>
-                                <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                                  Quem responde este questionário?
-                                </label>
-                                <div className="flex items-center gap-1.5">
-                                  <button
-                                    type="button"
-                                    onClick={() => handleUpdateFormTarget(f.id, 'respondent', 'PATIENT', false)}
-                                    className={`flex-1 py-1.5 px-2 rounded-lg font-bold text-[11px] border transition cursor-pointer flex items-center justify-center gap-1 ${
-                                      f.respondent === 'PATIENT'
-                                        ? 'bg-blue-600 text-white border-blue-600 shadow-2xs'
-                                        : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'
-                                    }`}
-                                  >
-                                    <span>👤 Paciente (Celular)</span>
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleUpdateFormTarget(f.id, 'respondent', 'RESEARCHER', false)}
-                                    className={`flex-1 py-1.5 px-2 rounded-lg font-bold text-[11px] border transition cursor-pointer flex items-center justify-center gap-1 ${
-                                      f.respondent === 'RESEARCHER'
-                                        ? 'bg-indigo-600 text-white border-indigo-600 shadow-2xs'
-                                        : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'
-                                    }`}
-                                  >
-                                    <span>🩺 Pesquisador</span>
-                                  </button>
-                                </div>
-                              </div>
-
-                              {/* Frequência de Preenchimento */}
-                              <div>
-                                <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                                  Frequência de preenchimento
-                                </label>
-                                <select
-                                  value={f.frequency}
-                                  onChange={(e) => handleUpdateFormTarget(f.id, 'frequency', e.target.value as any, false)}
-                                  className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs bg-white font-medium focus:ring-1 focus:ring-blue-500"
-                                >
-                                  {f.respondent === 'PATIENT' ? (
-                                    <>
-                                      <option value="DAILY">🟢 Todos os dias (Diário — ex: dor/sensibilidade)</option>
-                                      <option value="WEEKLY">🔵 1 vez por semana</option>
-                                      <option value="BIWEEKLY">🟡 A cada 15 dias</option>
-                                      <option value="PER_SESSION">🟣 A cada sessão clínica (no retorno)</option>
-                                      <option value="ONCE">⚪ Única vez (Pontual / Admissão / Final)</option>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <option value="PER_SESSION">🏥 A cada sessão clínica</option>
-                                      <option value="ONCE">🏥 Na 1ª sessão (Linha de base)</option>
-                                      <option value="WEEKLY">🏥 1 vez por semana</option>
-                                      <option value="DAILY">🏥 Diariamente</option>
-                                    </>
-                                  )}
-                                </select>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* RODAPÉ DO MODAL */}
-              <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+              {/* 5. Accordion Retrátil para Configurações Avançadas (Opcional) */}
+              <div className="pt-1">
                 <button
                   type="button"
-                  onClick={() => setIsCreateModalOpen(false)}
-                  className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition cursor-pointer"
+                  onClick={() => setShowCreateAdvancedConfig(!showCreateAdvancedConfig)}
+                  className="w-full py-2 px-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 transition flex items-center justify-between cursor-pointer"
                 >
-                  Cancelar
+                  <span className="flex items-center gap-1.5">
+                    <Sliders className="w-3.5 h-3.5 text-slate-500" />
+                    <span>Personalizar protocolo em detalhes (Prefixo, sessões e formulários)</span>
+                  </span>
+                  {showCreateAdvancedConfig ? (
+                    <ChevronUp className="w-4 h-4 text-slate-500" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4 text-slate-500" />
+                  )}
                 </button>
 
-                <div className="flex items-center gap-2">
-                  {createTab === 'GENERAL' && (
-                    <button
-                      type="button"
-                      onClick={() => setCreateTab('SESSIONS')}
-                      className="px-4 py-2 text-sm font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition cursor-pointer flex items-center gap-1"
-                    >
-                      <span>Avançar: Sessões Clínicas</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </button>
-                  )}
+                {showCreateAdvancedConfig && (
+                  <div className="mt-3 p-4 bg-slate-50/70 border border-slate-200 rounded-xl space-y-4 animate-in fade-in duration-150 text-xs">
+                    {/* Prefixo do Código do Participante */}
+                    <div>
+                      <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1">
+                        Prefixo dos Códigos dos Participantes (Opcional)
+                      </label>
+                      <input
+                        type="text"
+                        value={newProjectPrefix}
+                        onChange={(e) => setNewProjectPrefix(e.target.value.toUpperCase())}
+                        placeholder="Ex: P01, EXP, CLAR (Se vazio, gera automático: P01, P02...)"
+                        maxLength={8}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs font-mono uppercase bg-white focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
 
-                  {createTab === 'SESSIONS' && (
-                    <>
+                    {/* Abas Avançadas de Sessões e Formulários */}
+                    <div className="flex border-b border-slate-200 gap-1 pt-1">
                       <button
                         type="button"
-                        onClick={() => setCreateTab('GENERAL')}
-                        className="px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition cursor-pointer"
+                        onClick={() => setCreateTab('SESSIONS')}
+                        className={`py-1.5 px-2.5 text-xs font-bold border-b-2 transition cursor-pointer ${
+                          createTab === 'SESSIONS'
+                            ? 'border-blue-600 text-blue-700 bg-white rounded-t-lg'
+                            : 'border-transparent text-slate-500'
+                        }`}
                       >
-                        ← Voltar
+                        ⏱️ Cronograma de Sessões ({studySessions.length})
                       </button>
                       <button
                         type="button"
                         onClick={() => setCreateTab('FORMS')}
-                        className="px-4 py-2 text-sm font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition cursor-pointer flex items-center gap-1"
+                        className={`py-1.5 px-2.5 text-xs font-bold border-b-2 transition cursor-pointer ${
+                          createTab === 'FORMS'
+                            ? 'border-blue-600 text-blue-700 bg-white rounded-t-lg'
+                            : 'border-transparent text-slate-500'
+                        }`}
                       >
-                        <span>Avançar: Formulários</span>
-                        <ArrowRight className="w-4 h-4" />
+                        📝 Formulários e Quem Responde
                       </button>
+                    </div>
+
+                    {createTab === 'SESSIONS' && (
+                      <div className="space-y-3 pt-1 max-h-[300px] overflow-y-auto">
+                        <div className="flex justify-between items-center">
+                          <span className="text-[11px] text-slate-500">Ajuste os intervalos e módulos de cada consulta:</span>
+                          <button
+                            type="button"
+                            onClick={() => handleAddSession(false)}
+                            className="px-2 py-1 bg-blue-600 text-white rounded text-[11px] font-bold cursor-pointer"
+                          >
+                            + Adicionar Sessão
+                          </button>
+                        </div>
+                        {studySessions.map((s, idx) => renderSessionCard(s, idx, false))}
+                      </div>
+                    )}
+
+                    {createTab === 'FORMS' && (
+                      <div className="space-y-3 pt-1 max-h-[300px] overflow-y-auto">
+                        <div className="space-y-2">
+                          {formTargets.map((f) => (
+                            <div key={f.id} className="p-2.5 bg-white border border-slate-200 rounded-lg flex items-center justify-between">
+                              <label className="flex items-center gap-2 cursor-pointer font-bold text-slate-800">
+                                <input
+                                  type="checkbox"
+                                  checked={f.enabled}
+                                  onChange={(e) => handleUpdateFormTarget(f.id, 'enabled', e.target.checked, false)}
+                                  className="w-4 h-4 text-blue-600 rounded"
+                                />
+                                <span>{f.title}</span>
+                              </label>
+                              <span className="text-[10px] text-slate-500">
+                                {f.respondent === 'PATIENT' ? '👤 Paciente' : '🩺 Pesquisador'}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Rodapé Simples & Decisivo */}
+              <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsCreateModalOpen(false);
+                    setShowCreateAdvancedConfig(false);
+                  }}
+                  className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition cursor-pointer"
+                >
+                  Cancelar
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={creating || !newProjectName.trim()}
+                  className="px-5 py-2.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-xs hover:shadow transition disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
+                >
+                  {creating ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Criando Estudo...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-4 h-4" />
+                      <span>Criar Estudo Clínico</span>
                     </>
                   )}
-
-                  {createTab === 'FORMS' && (
-                    <button
-                      type="button"
-                      onClick={() => setCreateTab('SESSIONS')}
-                      className="px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition cursor-pointer"
-                    >
-                      ← Voltar
-                    </button>
-                  )}
-
-                  <button
-                    type="button"
-                    disabled={creating}
-                    onClick={(e) => handleCreateProject(e, 'dashboard')}
-                    className="px-3.5 py-2 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
-                    title="Criar o projeto e abrir diretamente o Prontuário & Atendimento"
-                  >
-                    <Activity className="w-3.5 h-3.5 text-blue-600" />
-                    <span>Criar e Ir ao Prontuário</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    disabled={creating}
-                    onClick={(e) => handleCreateProject(e, 'anamnese')}
-                    className="px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
-                    title="Criar o projeto e avançar para a personalização de critérios e odontograma"
-                  >
-                    <span>{creating ? 'Criando Projeto...' : 'Criar e Configurar Ficha'}</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
-                </div>
+                </button>
               </div>
             </form>
           </div>
