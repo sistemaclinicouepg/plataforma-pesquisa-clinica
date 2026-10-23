@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { parseStudyProtocol, PRESET_FORM_QUESTIONS, getFrequencyLabel } from '@/lib/studyProtocol';
+import { parseStudyProtocol, getFrequencyLabel } from '@/lib/studyProtocol';
 import { parseUnlockMeta } from '@/lib/unlockProtocol';
 
 function matchesBirthDate(dobRaw: Date | string | null | undefined, inputRaw: string): boolean {
@@ -351,61 +351,11 @@ export async function GET(req: Request) {
     const completedSessionNumbers = participant.sessions.map((s) => s.sessionNumber);
     const maxCompletedSession = completedSessionNumbers.length > 0 ? Math.max(...completedSessionNumbers) : 0;
 
-    // Sincronizar questionários habilitados no protocolo para o paciente (ex: OHIP-14, Satisfação, Hábitos, EVA)
-    // garantindo que existam no banco com suas respectivas perguntas e vinculados exclusivamente a este projeto
-    const enabledPatientProtoForms = (protocol.forms || []).filter(
-      (pf) => pf.enabled && pf.respondent === 'PATIENT'
-    );
-
-    for (const pf of enabledPatientProtoForms) {
-      const alreadyExists = participant.project.forms.some((f) => {
-        const lower = f.title.toLowerCase();
-        if (pf.id === 'ohip' && lower.includes('ohip')) return true;
-        if (pf.id === 'satisfaction' && (lower.includes('satisfação') || lower.includes('satisfacao'))) return true;
-        if (pf.id === 'habits' && (lower.includes('hábito') || lower.includes('habito'))) return true;
-        if (pf.id === 'eva' && (lower.includes('escala visual analógica') || lower.includes('sensibilidade'))) return true;
-        return lower === pf.title.toLowerCase();
-      });
-
-      if (!alreadyExists) {
-        const questions = PRESET_FORM_QUESTIONS[pf.id as keyof typeof PRESET_FORM_QUESTIONS];
-        if (questions && questions.length > 0) {
-          try {
-            const freqDesc = pf.frequencyDescription || getFrequencyLabel(pf.frequency);
-            const isHomeFreq = pf.frequency === 'CUSTOM' || Boolean(pf.frequencyDescription) || pf.frequency === 'DAILY' || pf.frequency === 'WEEKLY' || pf.frequency === 'BIWEEKLY';
-            const modalityStr = isHomeFreq ? 'Modalidade: TEMPO' : 'Modalidade: SESSAO';
-            const created = await prisma.form.create({
-              data: {
-                projectId: participant.project.id,
-                title: pf.title,
-                description: `${modalityStr} | Frequência: ${freqDesc} | Ocorrência: ${freqDesc} | Preenchido por: Paciente`,
-                questionsJson: JSON.stringify(questions),
-                expirationHours: pf.frequency === 'DAILY' ? 24 : 168,
-                allowLate: false,
-              },
-              select: {
-                id: true,
-                title: true,
-                description: true,
-                questionsJson: true,
-                expirationHours: true,
-                allowLate: true,
-                createdAt: true,
-              },
-            });
-            participant.project.forms.push(created);
-          } catch (e) {
-            console.error('Erro ao sincronizar formulário do protocolo:', e);
-          }
-        }
-      }
-    }
-
     // Metadados de liberação manual configurados pelos pesquisadores
     const allUnlockedForms = participant.sessions.flatMap((s) => parseUnlockMeta(s.notes).unlockedForms);
 
     // Processar formulários do projeto destinados ao paciente (PROMs)
-    // Regra GCP: Mostrar apenas os questionários e perguntas selecionadas para aquele estudo
+    // Regra GCP: Exibir exclusivamente os questionários e perguntas criadas no eCRF deste projeto de pesquisa
     const patientForms = participant.project.forms.filter(
       (f: { id: string; title: string; description: string | null }) => {
         // Se foi liberado expressamente pelo pesquisador, torna visível imediatamente
@@ -420,21 +370,7 @@ export async function GET(req: Request) {
         const lowerDesc = (f.description || '').toLowerCase();
         const combined = `${lowerTitle} ${lowerDesc}`;
 
-        // 2. Verificar se o formulário foi explicitamente desativado no protocolo do estudo
-        const matchingProto = protocol.forms?.find((pf) => {
-          if (pf.id === 'ohip' && lowerTitle.includes('ohip')) return true;
-          if (pf.id === 'satisfaction' && (lowerTitle.includes('satisfação') || lowerTitle.includes('satisfacao'))) return true;
-          if (pf.id === 'habits' && (lowerTitle.includes('hábito') || lowerTitle.includes('habito'))) return true;
-          if (pf.id === 'eva' && (lowerTitle.includes('escala visual analógica') || lowerTitle.includes('sensibilidade'))) return true;
-          return pf.title.toLowerCase() === lowerTitle;
-        });
-
-        // Se o formulário correspondente foi desmarcado na configuração do estudo, não exibir ao participante
-        if (matchingProto && (!matchingProto.enabled || matchingProto.respondent !== 'PATIENT')) {
-          return false;
-        }
-
-        // 3. Questionários vinculados à consulta vs. Acompanhamento Domiciliar por tempo pré-definido:
+        // 2. Questionários vinculados à consulta vs. Acompanhamento Domiciliar por tempo pré-definido:
         // Questionários domiciliares por tempo pré-definido (ex: Clareamento Caseiro: 24h, 48h, 7 dias, etc.)
         // NUNCA devem ser bloqueados por falta de sessões clínicas presenciais registradas!
         const isTimeBased =

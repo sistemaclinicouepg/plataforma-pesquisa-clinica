@@ -859,7 +859,7 @@ export const DEFAULT_FORM_TARGETS: FormTargetProtocol[] = [
     id: 'eva',
     title: 'Escala Visual Analógica de Sensibilidade (EVA)',
     description: 'Monitoramento diário de sensibilidade dentinária pelo participante.',
-    enabled: true,
+    enabled: false,
     respondent: 'PATIENT',
     frequency: 'DAILY',
     frequencyDescription: 'Todos os dias (Diário)',

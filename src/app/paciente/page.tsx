@@ -214,9 +214,6 @@ function PacienteContent() {
         if (found) {
           activateForm(found);
         }
-      } else if (formsList.length === 1 && !formsList[0].isCompleted) {
-        // Se houver apenas 1 questionário selecionado pendente, abre diretamente para o participante responder
-        activateForm(formsList[0]);
       } else if (formsList.length > 0) {
         setSelectedForm((prev) => {
           if (!prev) return null;

@@ -55,6 +55,44 @@ export async function POST(req: Request) {
       );
     }
 
+    // Se id foi fornecido, atualiza o formulário existente
+    if (body.id) {
+      const updated = await prisma.form.update({
+        where: { id: body.id },
+        data: {
+          title: title.trim(),
+          description: description?.trim() || null,
+          questionsJson: JSON.stringify(questions || []),
+          expirationHours: Number(expirationHours) || 24,
+          allowLate: Boolean(allowLate),
+        },
+      });
+      return NextResponse.json({ success: true, form: updated });
+    }
+
+    // Se já existe um formulário idêntico sem respostas neste projeto, atualiza-o (evita duplicidade ao salvar)
+    const existingUnanswered = await prisma.form.findFirst({
+      where: {
+        projectId: targetProjectId,
+        title: title.trim(),
+        responses: { none: {} },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (existingUnanswered) {
+      const updated = await prisma.form.update({
+        where: { id: existingUnanswered.id },
+        data: {
+          description: description?.trim() || null,
+          questionsJson: JSON.stringify(questions || []),
+          expirationHours: Number(expirationHours) || 24,
+          allowLate: Boolean(allowLate),
+        },
+      });
+      return NextResponse.json({ success: true, form: updated });
+    }
+
     const newForm = await prisma.form.create({
       data: {
         projectId: targetProjectId,
