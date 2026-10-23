@@ -728,13 +728,14 @@ function FormBuilderContent() {
           />
 
           {/* Barra Superior de Comando Clínico */}
-          <header className="bg-white border-b border-slate-200/90 relative shadow-xs">
-        <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-10 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <header className="bg-white border-b border-slate-200/90 relative shadow-2xs">
+        <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-10 py-2.5 flex flex-col xl:flex-row xl:items-center xl:justify-between gap-3">
           
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-3 shrink-0">
             <Link
               href={selectedProjectId ? `/dashboard?projectId=${selectedProjectId}` : '/'}
-              className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition flex items-center space-x-1.5"
+              className="h-8.5 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition inline-flex items-center space-x-1.5 shrink-0"
+              title="Voltar ao Painel do Estudo"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
               <span>Painel</span>
@@ -756,16 +757,16 @@ function FormBuilderContent() {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            {/* Toggle de Modo: Edição vs Prévia do Paciente */}
-            <div className="bg-slate-100 p-0.5 rounded-xl flex items-center border border-slate-200 text-xs font-bold">
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 xl:pb-0 shrink-0">
+            {/* Toggle de Modo: Edição vs Prévia */}
+            <div className="h-8.5 p-0.5 bg-slate-100 rounded-lg flex items-center border border-slate-200 shrink-0">
               <button
                 type="button"
                 onClick={() => setViewMode('edit')}
-                className={`px-3 py-1.5 rounded-lg transition flex items-center space-x-1.5 ${
+                className={`h-full px-3 rounded-md transition inline-flex items-center space-x-1.5 text-xs ${
                   viewMode === 'edit'
-                    ? 'bg-white text-slate-900 shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900'
+                    ? 'bg-white text-slate-900 shadow-2xs font-bold'
+                    : 'text-slate-600 hover:text-slate-900 font-medium'
                 }`}
               >
                 <FileText className="w-3.5 h-3.5" />
@@ -774,29 +775,29 @@ function FormBuilderContent() {
               <button
                 type="button"
                 onClick={() => setViewMode('preview')}
-                className={`px-3 py-1.5 rounded-lg transition flex items-center space-x-1.5 ${
+                className={`h-full px-3 rounded-md transition inline-flex items-center space-x-1.5 text-xs ${
                   viewMode === 'preview'
-                    ? 'bg-blue-600 text-white shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900'
+                    ? 'bg-blue-600 text-white shadow-2xs font-bold'
+                    : 'text-slate-600 hover:text-slate-900 font-medium'
                 }`}
               >
                 <Eye className="w-3.5 h-3.5" />
-                <span>Prévia do Paciente</span>
+                <span>Prévia</span>
               </button>
             </div>
 
-            {/* Modelos Validados & Salvos com MAIOR DESTAQUE */}
+            {/* Modelos Validados & Salvos */}
             <button
               type="button"
               onClick={() => {
                 setActiveLibraryTab('validated');
                 setShowLibraryModal(true);
               }}
-              className="px-3.5 py-1.5 bg-gradient-to-r from-indigo-600 via-indigo-700 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center space-x-1.5 cursor-pointer ring-2 ring-indigo-200"
-              title="Abrir biblioteca de modelos validados da odontologia e modelos salvos"
+              className="h-8.5 px-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-semibold rounded-lg transition inline-flex items-center space-x-1.5 cursor-pointer shrink-0"
+              title="Abrir biblioteca de modelos da odontologia e modelos salvos"
             >
-              <BookOpen className="w-3.5 h-3.5" />
-              <span>Modelos Validados</span>
+              <BookOpen className="w-3.5 h-3.5 text-indigo-600" />
+              <span>Modelos</span>
             </button>
 
             {/* Salvar como Modelo Reutilizável */}
@@ -804,29 +805,30 @@ function FormBuilderContent() {
               type="button"
               onClick={handleOpenSaveTemplateModal}
               disabled={questions.length === 0}
-              className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-bold rounded-xl transition flex items-center space-x-1.5 disabled:opacity-40 cursor-pointer"
+              className="h-8.5 px-3 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-semibold rounded-lg transition inline-flex items-center space-x-1.5 disabled:opacity-40 cursor-pointer shrink-0"
               title="Salvar este questionário como um modelo reutilizável em outras pesquisas"
             >
-              <BookmarkPlus className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Salvar como Modelo</span>
+              <BookmarkPlus className="w-3.5 h-3.5 text-slate-500" />
+              <span>Salvar Modelo</span>
             </button>
 
             {/* Iniciar em Branco */}
             <button
               type="button"
               onClick={handleClearForm}
-              className="px-2.5 py-1.5 text-slate-500 hover:text-slate-700 hover:bg-slate-100 border border-slate-200 text-xs font-semibold rounded-xl transition flex items-center space-x-1.5 cursor-pointer"
+              className="h-8.5 px-2.5 bg-white hover:bg-slate-50 text-slate-600 border border-slate-200 text-xs font-semibold rounded-lg transition inline-flex items-center space-x-1.5 cursor-pointer shrink-0"
               title="Limpar e criar ficha em branco"
             >
-              <FilePlus className="w-3.5 h-3.5" />
+              <FilePlus className="w-3.5 h-3.5 text-slate-400" />
               <span>Em Branco</span>
             </button>
 
             {/* Salvar Ficha */}
             <button
+              type="button"
               onClick={() => handleSaveForm()}
               disabled={saving}
-              className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-xs transition disabled:opacity-50 flex items-center space-x-1.5 cursor-pointer"
+              className="h-8.5 px-3.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow-2xs transition disabled:opacity-50 inline-flex items-center space-x-1.5 cursor-pointer shrink-0"
             >
               {saving ? <Clock className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
               <span>{saving ? 'Salvando...' : 'Salvar Ficha'}</span>
@@ -897,9 +899,9 @@ function FormBuilderContent() {
             {/* BANNER DE DESTAQUE NO TOPO: MODELOS VALIDADOS & SALVOS         */}
             {/* ============================================================== */}
             <div className="bg-gradient-to-r from-indigo-50/90 via-blue-50/70 to-purple-50/90 border border-indigo-200/90 rounded-2xl p-4 sm:p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-2xs">
-              <div className="flex items-start sm:items-center space-x-3.5">
-                <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-indigo-600 to-blue-600 text-white flex items-center justify-center shrink-0 shadow-xs">
-                  <BookOpen className="w-6 h-6" />
+              <div className="flex items-center space-x-3.5">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-blue-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                  <BookOpen className="w-5 h-5" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2 flex-wrap">
@@ -915,9 +917,6 @@ function FormBuilderContent() {
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-slate-600 mt-1 max-w-2xl leading-relaxed">
-                    Carregue instrumentos científicos da literatura (OHIP-14, Hábitos Cromogênicos, Satisfação Estética, Sensibilidade) ou reutilize questionários salvos de outras pesquisas com 1 clique.
-                  </p>
                 </div>
               </div>
 
@@ -928,19 +927,19 @@ function FormBuilderContent() {
                     setActiveLibraryTab('validated');
                     setShowLibraryModal(true);
                   }}
-                  className="w-full md:w-auto px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center justify-center space-x-2 cursor-pointer"
+                  className="w-full md:w-auto h-9 px-4 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg shadow-2xs transition flex items-center justify-center space-x-2 cursor-pointer"
                 >
-                  <BookOpen className="w-4 h-4" />
-                  <span>Ver Modelos Validados da Odontologia</span>
+                  <BookOpen className="w-3.5 h-3.5" />
+                  <span>Ver Modelos Validados</span>
                 </button>
                 {questions.length > 0 && (
                   <button
                     type="button"
                     onClick={handleOpenSaveTemplateModal}
-                    className="w-full md:w-auto px-3.5 py-2.5 bg-white hover:bg-slate-50 text-indigo-700 border border-indigo-200 text-xs font-bold rounded-xl shadow-2xs transition flex items-center justify-center space-x-1.5 cursor-pointer"
+                    className="w-full md:w-auto h-9 px-3.5 bg-white hover:bg-slate-50 text-indigo-700 border border-indigo-200 text-xs font-semibold rounded-lg shadow-2xs transition flex items-center justify-center space-x-1.5 cursor-pointer"
                     title="Salvar questionário atual como um modelo reutilizável"
                   >
-                    <BookmarkPlus className="w-4 h-4 text-indigo-600" />
+                    <BookmarkPlus className="w-3.5 h-3.5 text-indigo-600" />
                     <span>Salvar como Modelo</span>
                   </button>
                 )}
