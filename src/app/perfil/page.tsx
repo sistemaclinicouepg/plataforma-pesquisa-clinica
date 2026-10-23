@@ -12,15 +12,12 @@ import {
   Lock,
   Mail,
   Calendar,
-  FolderKanban,
   CheckCircle2,
   AlertTriangle,
-  ArrowRight,
   Eye,
   RefreshCw,
   LogOut,
   ChevronLeft,
-  Activity,
   Sparkles,
   Award,
 } from 'lucide-react';
@@ -686,101 +683,6 @@ export default function ProfilePage() {
               </form>
             </div>
           </div>
-        </div>
-
-        {/* Seção de Projetos Vinculados ao Pesquisador */}
-        <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-xs">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 pb-4 border-b border-slate-100">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-                <FolderKanban className="w-5 h-5" />
-              </div>
-              <div>
-                <h2 className="text-lg font-bold text-slate-900">Meus Estudos & Projetos de Pesquisa</h2>
-                <p className="text-xs text-slate-500">
-                  Estudos clínicos onde você está cadastrado como Coordenador, Avaliador ou Operador.
-                </p>
-              </div>
-            </div>
-
-            <Link
-              href="/"
-              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition flex items-center gap-1.5 self-start sm:self-auto"
-            >
-              <span>Ver Todos os Projetos</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
-          </div>
-
-          {profile?.projects && profile.projects.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {profile.projects.map((pm) => {
-                const p = pm.project;
-                const roleLabels: Record<string, string> = {
-                  COORDINATOR: 'Coordenador',
-                  CO_ADVISOR: 'Co-orientador',
-                  OPERATOR: 'Operador',
-                  EVALUATOR: 'Avaliador',
-                };
-                const roleName = roleLabels[pm.role] || 'Pesquisador';
-
-                return (
-                  <div
-                    key={pm.memberId}
-                    className="p-5 rounded-2xl border border-slate-200 hover:border-blue-400 bg-slate-50/50 hover:bg-white transition shadow-2xs flex flex-col justify-between"
-                  >
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800">
-                          {roleName}
-                        </span>
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                          {p.status === 'COMPLETED' ? 'Finalizado' : 'Ativo'}
-                        </span>
-                      </div>
-
-                      <h3 className="font-bold text-slate-900 text-sm mb-1.5 line-clamp-2">
-                        {p.name}
-                      </h3>
-
-                      <p className="text-xs text-slate-500 line-clamp-2 mb-3">
-                        {p.description || 'Sem descrição cadastrada.'}
-                      </p>
-                    </div>
-
-                    <div className="pt-3 border-t border-slate-200/60 flex items-center justify-between">
-                      <span className="text-[11px] text-slate-600 font-semibold">
-                        {p._count?.participants || 0} voluntário(s)
-                      </span>
-
-                      <Link
-                        href={`/dashboard?projectId=${p.id}`}
-                        className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition flex items-center gap-1 shadow-2xs"
-                      >
-                        <Activity className="w-3.5 h-3.5" />
-                        <span>Prontuário</span>
-                      </Link>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="text-center py-10 text-slate-400">
-              <FolderKanban className="w-10 h-10 mx-auto text-slate-300 mb-2" />
-              <p className="text-sm font-semibold text-slate-600">Nenhum projeto vinculado diretamente ainda.</p>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Você pode criar um novo estudo clínico na tela principal de projetos.
-              </p>
-              <Link
-                href="/"
-                className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white text-xs font-bold rounded-xl hover:bg-blue-700 transition"
-              >
-                <span>Acessar Painel de Projetos</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
-            </div>
-          )}
         </div>
       </main>
     </div>
