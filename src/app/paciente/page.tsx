@@ -92,6 +92,7 @@ type ParticipantData = {
   otherStudies?: OtherStudyOption[];
   studyProtocol?: StudyProtocolConfig;
   specialty?: string;
+  hasEvaDiary?: boolean;
 };
 
 type CollisionOption = {
@@ -122,9 +123,9 @@ function PacienteContent() {
   const [disambigCpf, setDisambigCpf] = useState('');
   const [disambigBirth, setDisambigBirth] = useState('');
 
-  // Navegação entre Diário de Dor e Questionários eCRF
+  // Navegação entre Diário de Sensibilidade e Questionários do Estudo
   const [activeTab, setActiveTab] = useState<'diary' | 'forms'>(
-    tabParam === 'forms' || formIdParam ? 'forms' : 'diary'
+    tabParam === 'diary' ? 'diary' : 'forms'
   );
   const [selectedForm, setSelectedForm] = useState<FormItem | null>(null);
   const [formAnswers, setFormAnswers] = useState<Record<string, FormAnswerValue>>({});
@@ -157,6 +158,24 @@ function PacienteContent() {
     isRedAlert?: boolean;
     gingivalSensation?: string;
   } | null>(null);
+
+  const activateForm = (form: FormItem) => {
+    setSelectedForm(form);
+    const initialAnswers: Record<string, FormAnswerValue> = { ...(form.myAnswers || {}) };
+
+    // Inicializa perguntas VAS para 0.0 caso não haja resposta prévia, evitando bloqueio do voluntário por input range
+    (form.questions || []).forEach((q: FormQuestionItem) => {
+      const qKey = String(q.id);
+      if (q.type === 'vas' && initialAnswers[qKey] === undefined && initialAnswers[q.id] === undefined) {
+        initialAnswers[qKey] = 0;
+        initialAnswers[q.id] = 0;
+      }
+    });
+
+    setFormAnswers(initialAnswers);
+    setFormError(null);
+    setFormSuccessMessage(null);
+  };
 
   const getWhatsAppTarget = () => {
     if (participant?.researcherPhone) {
@@ -222,26 +241,42 @@ function PacienteContent() {
       if (data.participant.latestSession) {
         setSelectedSessionNumber(data.participant.latestSession.sessionNumber);
       }
-      if (formIdParam && data.participant.forms) {
-        const found = data.participant.forms.find((f: FormItem) => f.id === formIdParam);
+
+      const hasEva = Boolean(data.participant.hasEvaDiary);
+      const formsList: FormItem[] = data.participant.forms || [];
+      const hasPendingForms = formsList.some((f) => !f.isCompleted);
+      const hasAnySession = (data.participant.sessions || []).length > 0;
+
+      // Define aba inicial com base no protocolo do estudo
+      if (!hasEva) {
+        setActiveTab('forms');
+      } else if (tabParam === 'diary') {
+        setActiveTab('diary');
+      } else if (tabParam === 'forms' || formIdParam) {
+        setActiveTab('forms');
+      } else if (!hasAnySession && formsList.length > 0) {
+        // Se ainda não houve consulta presencial, prioriza questionários do estudo (ex: baseline / PROMs)
+        setActiveTab('forms');
+      } else if (hasPendingForms) {
+        setActiveTab('forms');
+      } else {
+        setActiveTab(hasEva ? 'diary' : 'forms');
+      }
+
+      if (formIdParam && formsList.length > 0) {
+        const found = formsList.find((f: FormItem) => f.id === formIdParam);
         if (found) {
-          setSelectedForm(found);
-          const initialAnswers: Record<string, FormAnswerValue> = { ...(found.myAnswers || {}) };
-          (found.questions || []).forEach((q: FormQuestionItem) => {
-            const qKey = String(q.id);
-            if (q.type === 'vas' && initialAnswers[qKey] === undefined && initialAnswers[q.id] === undefined) {
-              initialAnswers[qKey] = 0;
-              initialAnswers[q.id] = 0;
-            }
-          });
-          setFormAnswers(initialAnswers);
-          setFormError(null);
+          activateForm(found);
           setActiveTab('forms');
         }
-      } else if (data.participant.forms) {
+      } else if (formsList.length === 1 && !formsList[0].isCompleted && tabParam !== 'diary') {
+        // Se houver apenas 1 questionário selecionado pendente, abre diretamente para o participante responder
+        activateForm(formsList[0]);
+        setActiveTab('forms');
+      } else if (formsList.length > 0) {
         setSelectedForm((prev) => {
           if (!prev) return null;
-          const refreshed = data.participant.forms.find((f: FormItem) => f.id === prev.id);
+          const refreshed = formsList.find((f: FormItem) => f.id === prev.id);
           return refreshed || prev;
         });
       }
@@ -399,21 +434,7 @@ function PacienteContent() {
   };
 
   const handleSelectForm = (form: FormItem) => {
-    setSelectedForm(form);
-    const initialAnswers: Record<string, FormAnswerValue> = { ...(form.myAnswers || {}) };
-
-    // Inicializa perguntas VAS para 0.0 caso não haja resposta prévia, evitando bloqueio do voluntário por input range
-    (form.questions || []).forEach((q) => {
-      const qKey = String(q.id);
-      if (q.type === 'vas' && initialAnswers[qKey] === undefined && initialAnswers[q.id] === undefined) {
-        initialAnswers[qKey] = 0;
-        initialAnswers[q.id] = 0;
-      }
-    });
-
-    setFormAnswers(initialAnswers);
-    setFormError(null);
-    setFormSuccessMessage(null);
+    activateForm(form);
   };
 
   const handleFormAnswerChange = (questionId: string | number, value: FormAnswerValue) => {
@@ -880,7 +901,11 @@ function PacienteContent() {
                 <span>UEPG • Pesquisa Clínica</span>
               </div>
               <h1 className="text-lg font-extrabold mt-0.5 leading-snug tracking-tight">
-                {activeTab === 'diary' ? 'Diário de Sensibilidade' : selectedForm ? selectedForm.title : 'Questionários da Pesquisa'}
+                {selectedForm
+                  ? selectedForm.title
+                  : activeTab === 'diary' && participant.hasEvaDiary
+                  ? 'Diário de Sensibilidade'
+                  : 'Questionários do Estudo'}
               </h1>
             </div>
             <span className="px-3 py-1 bg-white/20 backdrop-blur-md border border-white/25 text-white rounded-full text-xs font-mono font-bold tracking-wider">
@@ -911,47 +936,59 @@ function PacienteContent() {
         </header>
 
         {/* Abas Superiores do Paciente */}
-        <div className="p-2 bg-slate-100 border-b border-slate-200 flex space-x-1.5 shrink-0">
-          <button
-            type="button"
-            onClick={() => {
-              setActiveTab('diary');
-              setSelectedForm(null);
-              setFormSuccessMessage(null);
-              setFormError(null);
-            }}
-            className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1.5 ${
-              activeTab === 'diary'
-                ? 'bg-blue-600 text-white shadow-xs'
-                : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-200'
-            }`}
-          >
-            <Activity className="w-3.5 h-3.5" />
-            <span>Diário de Dor</span>
-          </button>
+        {participant.hasEvaDiary ? (
+          <div className="p-2 bg-slate-100 border-b border-slate-200 flex space-x-1.5 shrink-0">
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('diary');
+                setSelectedForm(null);
+                setFormSuccessMessage(null);
+                setFormError(null);
+              }}
+              className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1.5 cursor-pointer ${
+                activeTab === 'diary'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-200'
+              }`}
+            >
+              <Activity className="w-3.5 h-3.5" />
+              <span>Diário de Sensibilidade</span>
+            </button>
 
-          <button
-            type="button"
-            onClick={() => {
-              setActiveTab('forms');
-              setFormSuccessMessage(null);
-              setFormError(null);
-            }}
-            className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1.5 relative ${
-              activeTab === 'forms'
-                ? 'bg-blue-600 text-white shadow-xs'
-                : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-200'
-            }`}
-          >
-            <ClipboardList className="w-3.5 h-3.5" />
-            <span>Questionários</span>
-            {pendingFormsCount > 0 && (
-              <span className="w-4 h-4 bg-amber-500 text-white rounded-full text-[9px] flex items-center justify-center font-black">
-                {pendingFormsCount}
-              </span>
-            )}
-          </button>
-        </div>
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('forms');
+                setFormSuccessMessage(null);
+                setFormError(null);
+              }}
+              className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1.5 relative cursor-pointer ${
+                activeTab === 'forms'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-200'
+              }`}
+            >
+              <ClipboardList className="w-3.5 h-3.5" />
+              <span>Questionários</span>
+              {pendingFormsCount > 0 && (
+                <span className="w-4 h-4 bg-amber-500 text-white rounded-full text-[9px] flex items-center justify-center font-black">
+                  {pendingFormsCount}
+                </span>
+              )}
+            </button>
+          </div>
+        ) : (
+          <div className="px-4 py-2.5 bg-slate-100/80 border-b border-slate-200 flex items-center justify-between text-xs shrink-0">
+            <div className="flex items-center gap-2 font-bold text-slate-700">
+              <ClipboardList className="w-4 h-4 text-blue-600" />
+              <span>Questionários do Estudo</span>
+            </div>
+            <span className="text-[11px] font-semibold text-slate-500 bg-white px-2.5 py-0.5 rounded-full border border-slate-200 shadow-2xs">
+              {participant.forms?.length || 0} {(participant.forms?.length === 1) ? 'questionário' : 'questionários'}
+            </span>
+          </div>
+        )}
 
         {/* Corpo do Conteúdo */}
         <main className="p-5 flex-1 space-y-5 overflow-y-auto">
@@ -963,17 +1000,17 @@ function PacienteContent() {
                 Olá, {participant.patientName.split(' ')[0]}!
               </p>
               <p className="text-[11px] text-slate-500 mt-0.5">
-                {activeTab === 'diary'
+                {activeTab === 'diary' && participant.hasEvaDiary
                   ? 'Acompanhe e registre sua sensibilidade pós-sessão.'
-                  : 'Responda aos questionários da pesquisa clínica com tranquilidade.'}
+                  : 'Responda aos questionários selecionados para o seu estudo com tranquilidade.'}
               </p>
             </div>
 
-            {pendingFormsCount > 0 && activeTab === 'diary' && (
+            {pendingFormsCount > 0 && activeTab === 'diary' && participant.hasEvaDiary && (
               <button
                 type="button"
                 onClick={() => setActiveTab('forms')}
-                className="px-2.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-[11px] font-bold shrink-0 transition shadow-xs flex items-center space-x-1.5"
+                className="px-2.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-[11px] font-bold shrink-0 transition shadow-xs flex items-center space-x-1.5 cursor-pointer"
                 title="Você tem questionários aguardando resposta"
               >
                 <ClipboardList className="w-3 h-3" />
@@ -990,7 +1027,7 @@ function PacienteContent() {
           )}
 
           {/* ABA 1: DIÁRIO DE SENSIBILIDADE (EVA) */}
-          {activeTab === 'diary' && (() => {
+          {activeTab === 'diary' && participant.hasEvaDiary && (() => {
             const hasAnySession = participant?.sessions && participant.sessions.length > 0;
             if (!hasAnySession) {
               return (
@@ -1612,18 +1649,22 @@ function PacienteContent() {
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="text-sm font-bold text-slate-900">Instrumentos Científicos</h3>
+                      <h3 className="text-sm font-bold text-slate-900">Questionários Selecionados</h3>
                       <p className="text-[11px] text-slate-500">
-                        Questionários de acompanhamento do ensaio clínico para este participante.
+                        Instrumentos científicos selecionados para o protocolo do estudo <strong>{participant.projectName}</strong>.
                       </p>
                     </div>
                   </div>
 
                   {(!participant.forms || participant.forms.length === 0) ? (
-                    <div className="p-8 bg-slate-50 border border-slate-200 rounded-2xl text-center text-xs text-slate-400 space-y-1">
-                      <ClipboardList className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-                      <p className="font-semibold text-slate-600">Nenhum questionário complementar ativo.</p>
-                      <p className="text-[11px] text-slate-400">Quando a equipe cadastrar novos formulários (OHIP-14, Hábitos, Estética), eles aparecerão aqui.</p>
+                    <div className="p-8 bg-slate-50 border border-slate-200 rounded-3xl text-center space-y-3 shadow-2xs">
+                      <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center mx-auto shadow-2xs">
+                        <CheckCircle2 className="w-6 h-6 text-emerald-600" />
+                      </div>
+                      <h3 className="font-bold text-slate-800 text-sm">Nenhum Questionário Pendente</h3>
+                      <p className="text-xs text-slate-500 max-w-sm mx-auto leading-relaxed">
+                        Você está cadastrado(a) no estudo <strong>{participant.projectName}</strong>. No momento, não há questionários pendentes de resposta para o seu perfil. Sua participação está regularizada!
+                      </p>
                     </div>
                   ) : (
                     <div className="space-y-3">

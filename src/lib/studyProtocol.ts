@@ -969,6 +969,72 @@ export const PRESET_FORM_QUESTIONS = {
       required: false,
     },
   ],
+  habits: [
+    {
+      id: 'q_coffee',
+      type: 'choice',
+      title: 'Com que frequência você consome café ou chás escuros?',
+      required: true,
+      options: [
+        { label: 'Não consumo', value: 'nenhum' },
+        { label: '1 a 2 xícaras ao dia', value: '1-2' },
+        { label: '3 a 4 xícaras ao dia', value: '3-4' },
+        { label: '5 ou mais xícaras ao dia', value: '5+' },
+      ],
+    },
+    {
+      id: 'q_colored_beverages',
+      type: 'choice',
+      title: 'Consumo de bebidas com corantes intensos (refrigerantes escuros, vinho tinto, suco de uva ou açaí):',
+      required: true,
+      options: [
+        { label: 'Raramente ou nunca', value: 'raro' },
+        { label: '1 a 2 vezes por semana', value: 'semanal' },
+        { label: 'Quase todos os dias', value: 'frequente' },
+        { label: 'Diariamente', value: 'diario' },
+      ],
+    },
+    {
+      id: 'q_chimarrao',
+      type: 'choice',
+      title: 'Hábito de tomar chimarrão ou tereré:',
+      required: true,
+      options: [
+        { label: 'Não consumo', value: 'nao' },
+        { label: 'Ocasionalmente (fins de semana)', value: 'ocasional' },
+        { label: 'Diariamente', value: 'diario' },
+      ],
+    },
+    {
+      id: 'q_smoking',
+      type: 'choice',
+      title: 'Hábito de tabagismo ou uso de dispositivos eletrônicos (vape / pod):',
+      required: true,
+      options: [
+        { label: 'Não fumante', value: 'nao' },
+        { label: 'Ex-fumante', value: 'ex' },
+        { label: 'Fumante de cigarros convencionais', value: 'cigarro' },
+        { label: 'Uso cigarro eletrônico / vape', value: 'vape' },
+      ],
+    },
+    {
+      id: 'q_brushing',
+      type: 'choice',
+      title: 'Quantas vezes ao dia você realiza a escovação dos seus dentes?',
+      required: true,
+      options: [
+        { label: '1 vez ao dia', value: '1' },
+        { label: '2 vezes ao dia', value: '2' },
+        { label: '3 ou mais vezes ao dia', value: '3+' },
+      ],
+    },
+    {
+      id: 'q_floss',
+      type: 'boolean',
+      title: 'Você utiliza fio dental diariamente?',
+      required: true,
+    },
+  ],
 };
 
 /**

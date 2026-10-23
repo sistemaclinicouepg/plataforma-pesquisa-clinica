@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { parseStudyProtocol } from '@/lib/studyProtocol';
+import { parseStudyProtocol, PRESET_FORM_QUESTIONS, getFrequencyLabel } from '@/lib/studyProtocol';
 import { parseUnlockMeta } from '@/lib/unlockProtocol';
 
 function matchesBirthDate(dobRaw: Date | string | null | undefined, inputRaw: string): boolean {
@@ -351,11 +351,66 @@ export async function GET(req: Request) {
     const completedSessionNumbers = participant.sessions.map((s) => s.sessionNumber);
     const maxCompletedSession = completedSessionNumbers.length > 0 ? Math.max(...completedSessionNumbers) : 0;
 
+    // Verificar se o estudo realmente prevê Diário de Sensibilidade / Dor (Escala EVA) respondido pelo paciente
+    const evaProto = protocol.forms?.find(
+      (f) =>
+        f.id === 'eva' ||
+        f.title.toLowerCase().includes('sensibilidade') ||
+        f.title.toLowerCase().includes('escala visual analógica')
+    );
+    const hasEvaDiary = Boolean(evaProto ? evaProto.enabled && evaProto.respondent === 'PATIENT' : false);
+
+    // Sincronizar questionários habilitados no protocolo para o paciente (ex: OHIP-14, Satisfação, Hábitos)
+    // garantindo que existam no banco com suas respectivas perguntas e vinculados a este projeto
+    const enabledPatientProtoForms = (protocol.forms || []).filter(
+      (pf) => pf.enabled && pf.respondent === 'PATIENT' && pf.id !== 'eva'
+    );
+
+    for (const pf of enabledPatientProtoForms) {
+      const alreadyExists = participant.project.forms.some((f) => {
+        const lower = f.title.toLowerCase();
+        if (pf.id === 'ohip' && lower.includes('ohip')) return true;
+        if (pf.id === 'satisfaction' && (lower.includes('satisfação') || lower.includes('satisfacao'))) return true;
+        if (pf.id === 'habits' && (lower.includes('hábito') || lower.includes('habito'))) return true;
+        return lower === pf.title.toLowerCase();
+      });
+
+      if (!alreadyExists) {
+        const questions = PRESET_FORM_QUESTIONS[pf.id as keyof typeof PRESET_FORM_QUESTIONS];
+        if (questions && questions.length > 0) {
+          try {
+            const created = await prisma.form.create({
+              data: {
+                projectId: participant.project.id,
+                title: pf.title,
+                description: `Preenchido por: Paciente | Frequência: ${getFrequencyLabel(pf.frequency)}`,
+                questionsJson: JSON.stringify(questions),
+                expirationHours: pf.frequency === 'DAILY' ? 24 : 168,
+                allowLate: false,
+              },
+              select: {
+                id: true,
+                title: true,
+                description: true,
+                questionsJson: true,
+                expirationHours: true,
+                allowLate: true,
+                createdAt: true,
+              },
+            });
+            participant.project.forms.push(created);
+          } catch (e) {
+            console.error('Erro ao sincronizar formulário do protocolo:', e);
+          }
+        }
+      }
+    }
+
     // Metadados de liberação manual configurados pelos pesquisadores
     const allUnlockedForms = participant.sessions.flatMap((s) => parseUnlockMeta(s.notes).unlockedForms);
 
     // Processar formulários do projeto destinados ao paciente (PROMs)
-    // Regra GCP: Mostrar apenas os questionários cujas sessões já aconteceram no consultório OU liberados manualmente
+    // Regra GCP: Mostrar apenas os questionários e perguntas selecionadas para aquele estudo
     const patientForms = participant.project.forms.filter(
       (f: { id: string; title: string; description: string | null }) => {
         // Se foi liberado expressamente pelo pesquisador, torna visível imediatamente
@@ -370,47 +425,48 @@ export async function GET(req: Request) {
         const lowerDesc = (f.description || '').toLowerCase();
         const combined = `${lowerTitle} ${lowerDesc}`;
 
-        // 2. Não duplicar o diário de sensibilidade EVA na aba de questionários complementares
-        // (a sensibilidade pós-operatória possui aba própria e fluxo contínuo de farmacovigilância)
+        // 2. Verificar se o formulário foi explicitamente desativado no protocolo do estudo
+        const matchingProto = protocol.forms?.find((pf) => {
+          if (pf.id === 'ohip' && lowerTitle.includes('ohip')) return true;
+          if (pf.id === 'satisfaction' && (lowerTitle.includes('satisfação') || lowerTitle.includes('satisfacao'))) return true;
+          if (pf.id === 'habits' && (lowerTitle.includes('hábito') || lowerTitle.includes('habito'))) return true;
+          if (pf.id === 'eva' && (lowerTitle.includes('escala visual analógica') || lowerTitle.includes('sensibilidade'))) return true;
+          return pf.title.toLowerCase() === lowerTitle;
+        });
+
+        // Se o formulário correspondente foi desmarcado na configuração do estudo, não exibir ao participante
+        if (matchingProto && (!matchingProto.enabled || matchingProto.respondent !== 'PATIENT')) {
+          return false;
+        }
+
+        // 3. Se o estudo utiliza o Diário de Sensibilidade dedicado, não duplicar a escala EVA como formulário avulso
         if (
-          lowerTitle.includes('escala visual analógica de sensibilidade') ||
-          lowerTitle.includes('diário de sensibilidade') ||
-          lowerTitle.includes('monitoramento longitudinal de sensibilidade')
+          hasEvaDiary &&
+          (lowerTitle.includes('escala visual analógica de sensibilidade') ||
+           lowerTitle.includes('diário de sensibilidade') ||
+           lowerTitle.includes('monitoramento longitudinal de sensibilidade'))
         ) {
           return false;
         }
 
-        // 3. Formulários que fazem menção expressa a uma sessão específica (ex: "Sessão 2", "2ª Sessão", "Sessão 3")
+        // Se o estudo NÃO utiliza Diário de Sensibilidade (hasEvaDiary === false), ocultar formulários de dor/sensibilidade clareamento
+        if (
+          !hasEvaDiary &&
+          (lowerTitle.includes('escala visual analógica de sensibilidade') ||
+           lowerTitle.includes('diário de sensibilidade') ||
+           lowerTitle.includes('monitoramento longitudinal de sensibilidade'))
+        ) {
+          return false;
+        }
+
+        // 4. Formulários que fazem menção expressa a uma sessão clínica futura específica (ex: "Sessão 2", "3ª Sessão")
+        // Não bloqueia formulários gerais de linha de base (Sessão 1) ou de retorno geral
         const sessMatch = combined.match(/sess[ãa]o\s*(\d+)/i) || combined.match(/(\d+)ª?\s*sess[ãa]o/i);
         if (sessMatch) {
           const requiredSession = parseInt(sessMatch[1], 10);
-          if (requiredSession > maxCompletedSession) {
-            return false; // Sessão ainda não realizada pelo pesquisador
+          if (requiredSession > 1 && requiredSession > maxCompletedSession) {
+            return false; // Sessão clínica posterior ainda não realizada
           }
-        }
-
-        // 4. Formulários de encerramento / sessão final de retorno (ex: Satisfação com o Sorriso)
-        const isFinalSession =
-          combined.includes('sessão final') ||
-          combined.includes('sessao final') ||
-          combined.includes('retorno final') ||
-          combined.includes('satisfação com o sorriso') ||
-          combined.includes('satisfacao com o sorriso') ||
-          combined.includes('satisfação estética');
-
-        if (isFinalSession && maxCompletedSession < totalSessions) {
-          return false; // A sessão de retorno final ainda não aconteceu
-        }
-
-        // 5. Formulários vinculados ao atendimento presencial ("A cada sessão clínica", "Pós-sessão")
-        const isPerSession =
-          combined.includes('a cada sessão clínica') ||
-          combined.includes('a cada sessao clinica') ||
-          combined.includes('pós-sessão') ||
-          combined.includes('pos-sessao');
-
-        if (isPerSession && maxCompletedSession === 0) {
-          return false; // Nenhuma sessão clínica aconteceu ainda
         }
 
         return true;
@@ -491,6 +547,7 @@ export async function GET(req: Request) {
         maxCompletedSession,
         studyProtocol: protocol,
         specialty: protocol.specialty,
+        hasEvaDiary,
         forms: formsWithStatus,
         otherStudies,
       },
