@@ -20,7 +20,7 @@ import {
   AlertTriangle,
   Menu,
 } from 'lucide-react';
-import { parseStudyProtocol, RESEARCH_SPECIALTIES } from '@/lib/studyProtocol';
+import { parseStudyProtocol } from '@/lib/studyProtocol';
 
 export interface StudySidebarProps {
   projectId?: string | null;
@@ -271,20 +271,6 @@ export function StudySidebar({
                 {project?.name || 'Estudo de Pesquisa'}
               </h2>
             )}
-
-            {(() => {
-              const proto = parseStudyProtocol(project?.anamnesisTemplate);
-              const specDef = RESEARCH_SPECIALTIES.find((s) => s.id === proto.specialty) || RESEARCH_SPECIALTIES.find((s) => s.id === 'GENERAL');
-              if (!specDef) return null;
-              return (
-                <div className="mt-1.5">
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border inline-flex items-center gap-1 ${specDef.color}`}>
-                    <span>{specDef.icon}</span>
-                    <span>{specDef.badge}</span>
-                  </span>
-                </div>
-              );
-            })()}
           </div>
 
           {/* CTA Primário de Cadastro de Paciente */}

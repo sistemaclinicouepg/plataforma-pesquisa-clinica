@@ -432,13 +432,33 @@ export async function GET(req: Request) {
           return false;
         }
 
-        // 3. Formulários que fazem menção expressa a uma sessão clínica futura específica (ex: "Sessão 2", "3ª Sessão")
-        // Não bloqueia formulários gerais de linha de base (Sessão 1) ou de acompanhamento geral
-        const sessMatch = combined.match(/sess[ãa]o\s*(\d+)/i) || combined.match(/(\d+)ª?\s*sess[ãa]o/i);
-        if (sessMatch) {
-          const requiredSession = parseInt(sessMatch[1], 10);
-          if (requiredSession > 1 && requiredSession > maxCompletedSession) {
-            return false; // Sessão clínica posterior ainda não realizada
+        // 3. Questionários vinculados à consulta vs. Acompanhamento Domiciliar por tempo pré-definido:
+        // Questionários domiciliares por tempo pré-definido (ex: Clareamento Caseiro: 24h, 48h, 7 dias, etc.)
+        // NUNCA devem ser bloqueados por falta de sessões clínicas presenciais registradas!
+        const isTimeBased =
+          combined.includes('modalidade: tempo') ||
+          combined.includes('domiciliar') ||
+          combined.includes('caseiro') ||
+          combined.includes('tempo:') ||
+          combined.includes('24h') ||
+          combined.includes('48h') ||
+          combined.includes('7 dia') ||
+          combined.includes('14 dia') ||
+          combined.includes('21 dia') ||
+          combined.includes('30 dia') ||
+          combined.includes('semanal') ||
+          combined.includes('diário') ||
+          combined.includes('diario');
+
+        if (!isTimeBased) {
+          // Formulários vinculados a uma sessão clínica futura específica (ex: "Sessão 2", "3ª Sessão")
+          // Exigem que a respectiva sessão clínica tenha sido realizada ou desbloqueada pelo pesquisador
+          const sessMatch = combined.match(/sess[ãa]o\s*(\d+)/i) || combined.match(/(\d+)ª?\s*sess[ãa]o/i);
+          if (sessMatch) {
+            const requiredSession = parseInt(sessMatch[1], 10);
+            if (requiredSession > 1 && requiredSession > maxCompletedSession) {
+              return false; // Sessão clínica presencial posterior ainda não realizada
+            }
           }
         }
 
@@ -455,12 +475,30 @@ export async function GET(req: Request) {
         parsedQuestions = [];
       }
 
-      // Identificar ocorrência formatada do formulário de acordo com cada estudo
-      let occurrence = 'Acompanhamento Clínico';
+      // Identificar ocorrência formatada e modalidade do formulário de acordo com cada estudo
       const desc = f.description || '';
       const lowerDesc = desc.toLowerCase();
       const lowerTitle = f.title.toLowerCase();
       const combined = `${lowerTitle} ${lowerDesc}`;
+
+      const isTimeBased =
+        combined.includes('modalidade: tempo') ||
+        combined.includes('domiciliar') ||
+        combined.includes('caseiro') ||
+        combined.includes('tempo:') ||
+        combined.includes('24h') ||
+        combined.includes('48h') ||
+        combined.includes('7 dia') ||
+        combined.includes('14 dia') ||
+        combined.includes('21 dia') ||
+        combined.includes('30 dia') ||
+        combined.includes('semanal') ||
+        combined.includes('diário') ||
+        combined.includes('diario');
+
+      const modality: 'SESSION' | 'TIME_BASED' = isTimeBased ? 'TIME_BASED' : 'SESSION';
+
+      let occurrence = isTimeBased ? 'Acompanhamento Domiciliar por Tempo' : 'Consulta Clínica Presencial';
 
       const matchingProto = protocol.forms?.find((pf) => {
         if (pf.id === 'ohip' && lowerTitle.includes('ohip')) return true;
@@ -479,6 +517,16 @@ export async function GET(req: Request) {
         occurrence = getFrequencyLabel(matchingProto.frequency);
       } else if (combined.includes('linha de base') || combined.includes('admissão') || combined.includes('triagem') || combined.includes('inicial')) {
         occurrence = 'Linha de Base / Admissão';
+      } else if (combined.includes('24h') || combined.includes('24 horas')) {
+        occurrence = 'Tempo: 24 Horas (Domiciliar)';
+      } else if (combined.includes('48h') || combined.includes('48 horas')) {
+        occurrence = 'Tempo: 48 Horas (Domiciliar)';
+      } else if (combined.includes('7 dias') || combined.includes('1ª semana')) {
+        occurrence = 'Tempo: 7 Dias (Domiciliar)';
+      } else if (combined.includes('14 dias') || combined.includes('2ª semana')) {
+        occurrence = 'Tempo: 14 Dias (Domiciliar)';
+      } else if (combined.includes('21 dias') || combined.includes('3ª semana')) {
+        occurrence = 'Tempo: 21 Dias (Domiciliar)';
       } else if (combined.includes('a cada sessão') || combined.includes('a cada consulta')) {
         occurrence = 'A cada Consulta Clínica';
       } else if (combined.includes('pós-operatório') || combined.includes('pos-operatorio')) {
@@ -492,6 +540,7 @@ export async function GET(req: Request) {
         title: f.title,
         description: f.description,
         occurrence,
+        modality,
         questions: parsedQuestions,
         expirationHours: f.expirationHours,
         allowLate: f.allowLate,

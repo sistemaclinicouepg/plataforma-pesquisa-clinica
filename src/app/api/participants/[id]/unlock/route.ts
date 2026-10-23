@@ -50,10 +50,16 @@ export async function POST(
       : participant.sessions[participant.sessions.length - 1];
 
     if (!targetSession) {
-      return NextResponse.json(
-        { error: 'Sessão clínica não encontrada para este participante.' },
-        { status: 404 }
-      );
+      // Cria sessão inicial de linha de base para armazenar os metadados de liberação (ex: estudos domiciliares / remotos)
+      targetSession = await prisma.clinicalSession.create({
+        data: {
+          participantId: participant.id,
+          sessionNumber: 1,
+          sessionType: 'BASELINE_INTERVENTION_1',
+          sessionDate: new Date(),
+          notes: '',
+        },
+      });
     }
 
     const currentMeta = parseUnlockMeta(targetSession.notes);

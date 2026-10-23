@@ -44,9 +44,7 @@ import {
   parseStudyProtocol,
   StudySessionProtocol,
   FormTargetProtocol,
-  RESEARCH_SPECIALTIES,
   ResearchSpecialty,
-  getSpecialtyDefaultSessions,
   PRESET_QUESTIONNAIRES_CATALOG,
   SessionClinicalModules,
 } from '@/lib/studyProtocol';
@@ -152,7 +150,6 @@ export default function HomePage() {
   // Manipulação dinâmica de sessões
   const handleAddSession = (isEdit: boolean) => {
     const list = isEdit ? editStudySessions : studySessions;
-    const currentSpec = isEdit ? editProjectSpecialty : newProjectSpecialty;
     const nextNum = list.length + 1;
     const newSession: StudySessionProtocol = {
       id: `sess_${Date.now()}`,
@@ -167,30 +164,19 @@ export default function HomePage() {
       patientQuestionnaireIds: ['eva'],
       clinicalModules: {
         toothMapping: true,
-        colorGuide: currentSpec === 'BLEACHING' || currentSpec === 'RESTORATIVE',
+        colorGuide: true,
         painVAS: true,
         softTissueExam: true,
-        fdiCriteria: currentSpec === 'RESTORATIVE',
-        edemaTrismus: currentSpec === 'SURGERY',
-        percussionPalpation: currentSpec === 'ENDODONTICS',
-        periodontogram: currentSpec === 'PERIODONTICS',
+        fdiCriteria: false,
+        edemaTrismus: false,
+        percussionPalpation: false,
+        periodontogram: false,
       },
     };
     if (isEdit) {
       setEditStudySessions([...list, newSession]);
     } else {
       setStudySessions([...list, newSession]);
-    }
-  };
-
-  const handleApplySpecialtyDefaults = (spec: ResearchSpecialty, isEdit: boolean) => {
-    const defaults = getSpecialtyDefaultSessions(spec);
-    if (isEdit) {
-      setEditProjectSpecialty(spec);
-      setEditStudySessions(defaults);
-    } else {
-      setNewProjectSpecialty(spec);
-      setStudySessions(defaults);
     }
   };
 
@@ -1294,7 +1280,6 @@ export default function HomePage() {
                   const pStatus = project.status || 'ACTIVE';
                   const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.email === 'admin@uepg.br';
                   const proto = parseStudyProtocol(project.anamnesisTemplate);
-                  const specDef = RESEARCH_SPECIALTIES.find((s) => s.id === proto.specialty) || RESEARCH_SPECIALTIES.find((s) => s.id === 'GENERAL');
 
                   return (
                     <div key={project.id} className="block group">
@@ -1309,15 +1294,9 @@ export default function HomePage() {
                         }`} />
 
                         <div>
-                          {/* Linha de Badges de Status, Especialidade e Papel */}
+                          {/* Linha de Badges de Status e Papel */}
                           <div className="flex justify-between items-center mb-3 gap-2 flex-wrap">
                             <div className="flex items-center gap-1.5 flex-wrap">
-                              {specDef && (
-                                <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold border inline-flex items-center gap-1 ${specDef.color}`}>
-                                  <span>{specDef.icon}</span>
-                                  <span>{specDef.badge}</span>
-                                </span>
-                              )}
                               {pStatus === 'ACTIVE' && (
                                 <span className="px-2.5 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200/80 text-[11px] font-bold rounded-full flex items-center gap-1.5">
                                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -1473,8 +1452,6 @@ export default function HomePage() {
                         const formsCount = (project.forms || []).length;
                         const pStatus = project.status || 'ACTIVE';
                         const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.email === 'admin@uepg.br';
-                        const listProto = parseStudyProtocol(project.anamnesisTemplate);
-                        const listSpecDef = RESEARCH_SPECIALTIES.find((s) => s.id === listProto.specialty) || RESEARCH_SPECIALTIES.find((s) => s.id === 'GENERAL');
 
                         return (
                           <tr key={project.id} className="hover:bg-slate-50/70 transition-colors group">
@@ -1483,19 +1460,11 @@ export default function HomePage() {
                                 <span className="font-bold text-slate-900 group-hover:text-blue-600 transition-colors text-sm">
                                   {project.name}
                                 </span>
-                                <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                                  {listSpecDef && (
-                                    <span className={`px-2 py-0.2 rounded-full text-[10px] font-bold border inline-flex items-center gap-1 ${listSpecDef.color}`}>
-                                      <span>{listSpecDef.icon}</span>
-                                      <span>{listSpecDef.badge}</span>
-                                    </span>
-                                  )}
-                                  {project.description && (
-                                    <p className="text-slate-400 text-xs truncate max-w-xs sm:max-w-md">
-                                      {project.description}
-                                    </p>
-                                  )}
-                                </div>
+                                {project.description && (
+                                  <p className="text-slate-400 text-xs truncate max-w-xs sm:max-w-md mt-1">
+                                    {project.description}
+                                  </p>
+                                )}
                               </Link>
                             </td>
                             <td className="px-4 py-3.5 hidden md:table-cell whitespace-nowrap">
@@ -1659,51 +1628,10 @@ export default function HomePage() {
                 />
               </div>
 
-              {/* 2. Área / Especialidade Clínica (Chips Rápidos e Visuais) */}
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5 flex items-center justify-between">
-                  <span>Especialidade da Pesquisa</span>
-                  <span className="text-[10px] text-blue-600 font-medium">
-                    {RESEARCH_SPECIALTIES.find((s) => s.id === newProjectSpecialty)?.badge}
-                  </span>
-                </label>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {RESEARCH_SPECIALTIES.map((spec) => {
-                    const isSelected = newProjectSpecialty === spec.id;
-                    return (
-                      <button
-                        key={spec.id}
-                        type="button"
-                        onClick={() => {
-                          setNewProjectSpecialty(spec.id);
-                          handleApplySpecialtyDefaults(spec.id, false);
-                        }}
-                        className={`p-2.5 rounded-xl border text-left transition cursor-pointer flex items-center gap-2 ${
-                          isSelected
-                            ? 'bg-blue-50 border-blue-500 text-blue-900 shadow-2xs ring-2 ring-blue-500/20 font-bold'
-                            : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-700 font-medium'
-                        }`}
-                      >
-                        <span className="text-lg shrink-0">{spec.icon}</span>
-                        <span className="text-xs leading-tight truncate">
-                          {spec.badge}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-                <div className="mt-2 p-2 bg-slate-50 border border-slate-200/80 rounded-lg text-[11px] text-slate-600 flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                  <span>
-                    Protocolo recomendado: <strong>{studySessions.length} consultas</strong> pré-configuradas para {RESEARCH_SPECIALTIES.find((s) => s.id === newProjectSpecialty)?.name}.
-                  </span>
-                </div>
-              </div>
-
-              {/* 3. Quantidade de Consultas Clínicas (Seleção Rápida de Sessões) */}
+              {/* 2. Quantidade de Consultas Clínicas (Seleção Rápida de Sessões) */}
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                  Número de Consultas / Sessões de Retorno
+                  Número de Consultas / Sessões Clínicas
                 </label>
                 <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5">
                   {[1, 2, 3, 4, 5].map((count) => {
@@ -1713,28 +1641,27 @@ export default function HomePage() {
                         key={count}
                         type="button"
                         onClick={() => {
-                          const presets = getSpecialtyDefaultSessions(newProjectSpecialty).slice(0, count);
-                          while (presets.length < count) {
-                            const num = presets.length + 1;
+                          const presets: StudySessionProtocol[] = [];
+                          for (let num = 1; num <= count; num++) {
                             presets.push({
                               id: `sess_${Date.now()}_${num}`,
                               sessionNumber: num,
-                              name: `Sessão ${num}: Avaliação Clínica / Retorno`,
-                              type: 'EVALUATION',
-                              daysFromPrevious: 7,
+                              name: num === 1 ? 'Sessão 1: Consulta Inicial' : `Sessão ${num}: Retorno / Acompanhamento`,
+                              type: num === 1 ? 'CLINICAL' : 'EVALUATION',
+                              daysFromPrevious: num === 1 ? 0 : 7,
                               durationMinutes: 30,
                               toleranceDays: 2,
                               requiresPatientQuestionnaire: true,
                               patientQuestionnaireIds: ['eva'],
                               clinicalModules: {
                                 toothMapping: true,
-                                colorGuide: newProjectSpecialty === 'BLEACHING' || newProjectSpecialty === 'RESTORATIVE',
+                                colorGuide: true,
                                 painVAS: true,
                                 softTissueExam: true,
-                                fdiCriteria: newProjectSpecialty === 'RESTORATIVE',
-                                edemaTrismus: newProjectSpecialty === 'SURGERY',
-                                percussionPalpation: newProjectSpecialty === 'ENDODONTICS',
-                                periodontogram: newProjectSpecialty === 'PERIODONTICS',
+                                fdiCriteria: false,
+                                edemaTrismus: false,
+                                percussionPalpation: false,
+                                periodontogram: false,
                               },
                             });
                           }
@@ -1981,39 +1908,6 @@ export default function HomePage() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
-                      Especialidade / Linha de Pesquisa Clínica *
-                    </label>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                      {RESEARCH_SPECIALTIES.map((spec) => {
-                        const isSelected = editProjectSpecialty === spec.id;
-                        return (
-                          <button
-                            key={spec.id}
-                            type="button"
-                            onClick={() => setEditProjectSpecialty(spec.id)}
-                            className={`p-2.5 rounded-xl border text-left transition cursor-pointer flex flex-col justify-between ${
-                              isSelected
-                                ? 'bg-blue-50 border-blue-500 shadow-xs ring-2 ring-blue-500/20'
-                                : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-700'
-                            }`}
-                          >
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-base">{spec.icon}</span>
-                              <span className={`text-xs font-bold leading-tight ${isSelected ? 'text-blue-900' : 'text-slate-800'}`}>
-                                {spec.badge}
-                              </span>
-                            </div>
-                            <p className="text-[10px] text-slate-500 line-clamp-2 mt-1 leading-snug">
-                              {spec.description}
-                            </p>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  <div>
                     <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
                       Descrição / Hipótese (Opcional)
                     </label>
@@ -2124,27 +2018,6 @@ export default function HomePage() {
                     </button>
                   </div>
 
-                  {/* Banner de Protocolo Recomendado da Especialidade */}
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3.5 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl text-xs">
-                    <div>
-                      <span className="font-bold text-blue-950 flex items-center gap-1.5">
-                        <Sparkles className="w-4 h-4 text-blue-600" />
-                        <span>Protocolo Clínico Padrão ({RESEARCH_SPECIALTIES.find((sp) => sp.id === editProjectSpecialty)?.name})</span>
-                      </span>
-                      <p className="text-[11px] text-blue-800 mt-0.5">
-                        Carregue o cronograma clínico e questionários recomendados para <strong>{RESEARCH_SPECIALTIES.find((sp) => sp.id === editProjectSpecialty)?.name}</strong> com 1 clique.
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleApplySpecialtyDefaults(editProjectSpecialty, true)}
-                      className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-xs shadow-xs transition flex items-center gap-1.5 shrink-0 cursor-pointer self-start sm:self-auto"
-                    >
-                      <Sparkles className="w-3.5 h-3.5" />
-                      <span>⚡ Carregar Protocolo Recomendado</span>
-                    </button>
-                  </div>
-
                   {/* Seleção rápida de quantidade */}
                   <div className="flex flex-wrap items-center gap-2 text-xs">
                     <span className="text-slate-500 font-bold text-[11px]">Quantidade rápida:</span>
@@ -2153,28 +2026,27 @@ export default function HomePage() {
                         key={count}
                         type="button"
                         onClick={() => {
-                          const presets = getSpecialtyDefaultSessions(editProjectSpecialty).slice(0, count);
-                          while (presets.length < count) {
-                            const num = presets.length + 1;
+                          const presets: StudySessionProtocol[] = [];
+                          for (let num = 1; num <= count; num++) {
                             presets.push({
                               id: `sess_${Date.now()}_${num}`,
                               sessionNumber: num,
-                              name: `Sessão ${num}: Avaliação Clínic / Retorno`,
-                              type: 'EVALUATION',
-                              daysFromPrevious: 7,
+                              name: num === 1 ? 'Sessão 1: Consulta Inicial' : `Sessão ${num}: Retorno / Acompanhamento`,
+                              type: num === 1 ? 'CLINICAL' : 'EVALUATION',
+                              daysFromPrevious: num === 1 ? 0 : 7,
                               durationMinutes: 30,
                               toleranceDays: 2,
                               requiresPatientQuestionnaire: true,
                               patientQuestionnaireIds: ['eva'],
                               clinicalModules: {
                                 toothMapping: true,
-                                colorGuide: editProjectSpecialty === 'BLEACHING' || editProjectSpecialty === 'RESTORATIVE',
+                                colorGuide: true,
                                 painVAS: true,
                                 softTissueExam: true,
-                                fdiCriteria: editProjectSpecialty === 'RESTORATIVE',
-                                edemaTrismus: editProjectSpecialty === 'SURGERY',
-                                percussionPalpation: editProjectSpecialty === 'ENDODONTICS',
-                                periodontogram: editProjectSpecialty === 'PERIODONTICS',
+                                fdiCriteria: false,
+                                edemaTrismus: false,
+                                percussionPalpation: false,
+                                periodontogram: false,
                               },
                             });
                           }

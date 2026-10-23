@@ -662,8 +662,10 @@ function FormBuilderContent() {
       setSavedSuccess(false);
       setErrorMessage(null);
 
+      const isTimeBased = occurrence.toLowerCase().includes('tempo') || occurrence.toLowerCase().includes('domiciliar');
+      const modalityTag = isTimeBased ? 'Modalidade: TEMPO' : 'Modalidade: SESSAO';
       const formattedDesc = occurrence
-        ? `Ocorrência: ${occurrence} | ${formDescription.trim()}`
+        ? `${modalityTag} | Ocorrência: ${occurrence} | ${formDescription.trim()}`
         : formDescription.trim();
 
       const res = await fetch('/api/forms', {
@@ -998,14 +1000,23 @@ function FormBuilderContent() {
                     <select
                       value={occurrence}
                       onChange={(e) => setOccurrence(e.target.value)}
-                      className="bg-transparent font-semibold text-blue-950 focus:outline-none text-xs cursor-pointer"
+                      className="bg-transparent font-semibold text-blue-950 focus:outline-none text-xs cursor-pointer max-w-[210px] truncate"
                     >
-                      <option value="Linha de Base / Admissão">Linha de Base / Admissão</option>
-                      <option value="A cada Consulta Clínica">A cada Consulta Clínica</option>
-                      <option value="Pós-Operatório">Pós-Operatório (24h/48h)</option>
-                      <option value="Acompanhamento Semanal">Acompanhamento Semanal</option>
-                      <option value="Retorno Final / Conclusão">Retorno Final / Conclusão</option>
-                      <option value="Pontual / Livre">Pontual / Livre</option>
+                      <optgroup label="🩺 Vinculado à Consulta Clínica (Presencial)">
+                        <option value="Sessão Clínica Presencial">Sessão Clínica (Liberado na Consulta)</option>
+                        <option value="Linha de Base / Admissão">Linha de Base / Admissão (Consulta Inicial)</option>
+                        <option value="A cada Consulta Clínica">A cada Consulta Clínica</option>
+                        <option value="Retorno Final / Conclusão">Retorno Final / Conclusão Presencial</option>
+                      </optgroup>
+                      <optgroup label="⏱️ Domiciliar por Tempo (Sem Consulta - Clareamento/Remoto)">
+                        <option value="Tempo: 24 Horas (Domiciliar)">Tempo: 24 Horas (Domiciliar)</option>
+                        <option value="Tempo: 48 Horas (Domiciliar)">Tempo: 48 Horas (Domiciliar)</option>
+                        <option value="Tempo: 7 Dias (Domiciliar)">Tempo: 7 Dias / 1ª Sem (Domiciliar)</option>
+                        <option value="Tempo: 14 Dias (Domiciliar)">Tempo: 14 Dias / 2ª Sem (Domiciliar)</option>
+                        <option value="Tempo: 21 Dias (Domiciliar)">Tempo: 21 Dias / 3ª Sem (Domiciliar)</option>
+                        <option value="Tempo: 30 Dias (Domiciliar)">Tempo: 30 Dias / 1 Mês (Domiciliar)</option>
+                        <option value="Tempo: Contínuo / Livre">Tempo: Contínuo / Livre (A qualquer momento)</option>
+                      </optgroup>
                     </select>
                   </div>
 

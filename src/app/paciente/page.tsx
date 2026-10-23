@@ -15,6 +15,7 @@ import {
   FileText,
   Phone,
   Sparkles,
+  Stethoscope,
 } from 'lucide-react';
 import {
   StudyProtocolConfig,
@@ -51,6 +52,7 @@ type FormItem = {
   title: string;
   description: string | null;
   occurrence?: string;
+  modality?: 'SESSION' | 'TIME_BASED';
   questions: FormQuestionItem[];
   expirationHours: number;
   allowLate: boolean;
@@ -84,7 +86,6 @@ type ParticipantData = {
   forms: FormItem[];
   otherStudies?: OtherStudyOption[];
   studyProtocol?: StudyProtocolConfig;
-  specialty?: string;
 };
 
 type CollisionOption = {
@@ -652,74 +653,99 @@ function PacienteContent() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {participant.forms.map((f) => (
-                    <div
-                      key={f.id}
-                      className={`p-4 rounded-2xl border transition space-y-3 ${
-                        f.isCompleted
-                          ? 'bg-emerald-50/40 border-emerald-200'
-                          : 'bg-white border-slate-200 hover:border-slate-300 shadow-xs'
-                      }`}
-                    >
-                      <div className="flex justify-between items-start gap-2">
-                        <div>
-                          <div className="flex flex-wrap items-center gap-1.5 mb-1">
-                            {f.occurrence && (
-                              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 inline-flex items-center gap-1 shadow-2xs">
-                                <Calendar className="w-3 h-3 text-blue-600" />
-                                <span>{f.occurrence}</span>
-                              </span>
+                  {participant.forms.map((f) => {
+                    const isHome =
+                      f.modality === 'TIME_BASED' ||
+                      (f.occurrence || '').toLowerCase().includes('tempo') ||
+                      (f.occurrence || '').toLowerCase().includes('domiciliar') ||
+                      (f.description || '').toLowerCase().includes('domiciliar');
+
+                    const cleanDesc = (f.description || '')
+                      .replace(/^modalidade:\s*[^|]+\|\s*/i, '')
+                      .replace(/^preenchido por:\s*[^|]+\|\s*/i, '')
+                      .replace(/^ocorrência:\s*[^|]+\|\s*/i, '')
+                      .trim();
+
+                    return (
+                      <div
+                        key={f.id}
+                        className={`p-4 rounded-2xl border transition space-y-3 ${
+                          f.isCompleted
+                            ? 'bg-emerald-50/40 border-emerald-200'
+                            : 'bg-white border-slate-200 hover:border-slate-300 shadow-xs'
+                        }`}
+                      >
+                        <div className="flex justify-between items-start gap-2">
+                          <div>
+                            <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
+                              {isHome ? (
+                                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200 inline-flex items-center gap-1 shadow-2xs">
+                                  <Clock className="w-3 h-3 text-amber-600" />
+                                  <span>⏱️ Acompanhamento Domiciliar por Tempo</span>
+                                </span>
+                              ) : (
+                                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-800 border border-blue-200 inline-flex items-center gap-1 shadow-2xs">
+                                  <Stethoscope className="w-3 h-3 text-blue-600" />
+                                  <span>🩺 Consulta Clínica Presencial</span>
+                                </span>
+                              )}
+                              {f.occurrence && (
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-700 border border-slate-200 inline-flex items-center gap-1">
+                                  <Calendar className="w-3 h-3 text-slate-500" />
+                                  <span>{f.occurrence}</span>
+                                </span>
+                              )}
+                            </div>
+                            <h4 className="font-bold text-slate-900 text-xs leading-snug">{f.title}</h4>
+                            {cleanDesc && (
+                              <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">
+                                {cleanDesc}
+                              </p>
                             )}
+                            <span className="inline-block mt-1 text-[10px] text-slate-400 font-mono">
+                              {f.questions.length} perguntas formatadas
+                            </span>
                           </div>
-                          <h4 className="font-bold text-slate-900 text-xs leading-snug">{f.title}</h4>
-                          {f.description && (
-                            <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">
-                              {f.description.replace(/^Preenchido por:\s*[^|]+\|\s*/i, '').replace(/^Ocorrência:\s*[^|]+\|\s*/i, '')}
-                            </p>
-                          )}
-                          <span className="inline-block mt-1 text-[10px] text-slate-400 font-mono">
-                            {f.questions.length} perguntas formatadas
+                          <span
+                            className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 flex items-center space-x-1 ${
+                              f.isCompleted
+                                ? 'bg-emerald-100 text-emerald-800'
+                                : 'bg-amber-100 text-amber-800'
+                            }`}
+                          >
+                            {f.isCompleted ? (
+                              <>
+                                <CheckCircle2 className="w-3 h-3 text-emerald-700" />
+                                <span>Concluído</span>
+                              </>
+                            ) : (
+                              <>
+                                <Clock className="w-3 h-3 text-amber-700" />
+                                <span>Pendente</span>
+                              </>
+                            )}
                           </span>
                         </div>
-                        <span
-                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 flex items-center space-x-1 ${
-                            f.isCompleted
-                              ? 'bg-emerald-100 text-emerald-800'
-                              : 'bg-amber-100 text-amber-800'
-                          }`}
-                        >
-                          {f.isCompleted ? (
-                            <>
-                              <CheckCircle2 className="w-3 h-3 text-emerald-700" />
-                              <span>Concluído</span>
-                            </>
-                          ) : (
-                            <>
-                              <Clock className="w-3 h-3 text-amber-700" />
-                              <span>Pendente</span>
-                            </>
-                          )}
-                        </span>
-                      </div>
 
-                      <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
-                        <span className="text-[10px] text-slate-400">
-                          {f.isCompleted && f.submittedAt ? `Enviado em ${f.submittedAt}` : 'Aguardando preenchimento'}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => handleSelectForm(f)}
-                          className={`px-3.5 py-1.5 rounded-xl font-bold text-xs transition cursor-pointer ${
-                            f.isCompleted
-                              ? 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-300'
-                              : 'bg-blue-600 hover:bg-blue-700 text-white shadow-xs'
-                          }`}
-                        >
-                          {f.isCompleted ? 'Revisar Respostas' : 'Responder Questionário →'}
-                        </button>
+                        <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+                          <span className="text-[10px] text-slate-400">
+                            {f.isCompleted && f.submittedAt ? `Enviado em ${f.submittedAt}` : 'Aguardando preenchimento'}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleSelectForm(f)}
+                            className={`px-3.5 py-1.5 rounded-xl font-bold text-xs transition cursor-pointer ${
+                              f.isCompleted
+                                ? 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-300'
+                                : 'bg-blue-600 hover:bg-blue-700 text-white shadow-xs'
+                            }`}
+                          >
+                            {f.isCompleted ? 'Revisar Respostas' : 'Responder Questionário →'}
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -745,10 +771,24 @@ function PacienteContent() {
               </div>
 
               <div>
-                <div className="flex items-center gap-1.5 mb-1.5">
+                <div className="flex flex-wrap items-center gap-1.5 mb-2">
+                  {selectedForm.modality === 'TIME_BASED' ||
+                  (selectedForm.occurrence || '').toLowerCase().includes('tempo') ||
+                  (selectedForm.occurrence || '').toLowerCase().includes('domiciliar') ||
+                  (selectedForm.description || '').toLowerCase().includes('domiciliar') ? (
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200 inline-flex items-center gap-1 shadow-2xs">
+                      <Clock className="w-3 h-3 text-amber-600" />
+                      <span>⏱️ Acompanhamento Domiciliar por Tempo</span>
+                    </span>
+                  ) : (
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-800 border border-blue-200 inline-flex items-center gap-1 shadow-2xs">
+                      <Stethoscope className="w-3 h-3 text-blue-600" />
+                      <span>🩺 Consulta Clínica Presencial</span>
+                    </span>
+                  )}
                   {selectedForm.occurrence && (
-                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 inline-flex items-center gap-1 shadow-2xs">
-                      <Calendar className="w-3 h-3 text-blue-600" />
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-700 border border-slate-200 inline-flex items-center gap-1">
+                      <Calendar className="w-3 h-3 text-slate-500" />
                       <span>{selectedForm.occurrence}</span>
                     </span>
                   )}
@@ -756,7 +796,11 @@ function PacienteContent() {
                 <h3 className="text-base font-bold text-slate-900 leading-snug">{selectedForm.title}</h3>
                 {selectedForm.description && (
                   <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                    {selectedForm.description.replace(/^Preenchido por:\s*[^|]+\|\s*/i, '').replace(/^Ocorrência:\s*[^|]+\|\s*/i, '')}
+                    {selectedForm.description
+                      .replace(/^modalidade:\s*[^|]+\|\s*/i, '')
+                      .replace(/^preenchido por:\s*[^|]+\|\s*/i, '')
+                      .replace(/^ocorrência:\s*[^|]+\|\s*/i, '')
+                      .trim()}
                   </p>
                 )}
               </div>
