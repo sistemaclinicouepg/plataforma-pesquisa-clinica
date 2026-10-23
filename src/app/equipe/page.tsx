@@ -700,7 +700,7 @@ export default function EquipePage() {
                           {/* Estudos Atribuídos - Padrão Unificado */}
                           <td className="py-3.5 px-4 align-middle">
                             {user.projects.length === 0 ? (
-                              <span className="px-2.5 py-1 rounded-xl text-[11px] font-medium text-slate-400 bg-slate-50 border border-slate-200/80 inline-flex items-center gap-1.5">
+                              <span className="h-8 px-3 rounded-xl text-[11px] font-medium text-slate-400 bg-slate-50 border border-slate-200/80 inline-flex items-center gap-1.5">
                                 <FolderKanban className="w-3.5 h-3.5 text-slate-300" />
                                 <span>0 estudos vinculados</span>
                               </span>
@@ -708,7 +708,7 @@ export default function EquipePage() {
                               <button
                                 type="button"
                                 onClick={() => toggleExpandUser(user.id)}
-                                className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition flex items-center space-x-2 cursor-pointer shadow-2xs ${
+                                className={`h-8 px-3 rounded-xl text-xs font-semibold border transition flex items-center space-x-2 cursor-pointer shadow-2xs ${
                                   isExpanded
                                     ? 'bg-blue-600 text-white border-blue-600'
                                     : 'bg-slate-50 hover:bg-blue-50 text-slate-800 hover:text-blue-700 border-slate-200 hover:border-blue-300'
@@ -749,29 +749,31 @@ export default function EquipePage() {
                               {/* E-mail */}
                               <a
                                 href={`mailto:${user.email}`}
-                                className="px-2.5 py-1.5 bg-slate-100 hover:bg-blue-50 text-slate-700 hover:text-blue-700 rounded-xl text-xs font-bold transition inline-flex items-center space-x-1.5 border border-slate-200"
+                                className="h-8 px-2.5 bg-slate-100 hover:bg-blue-50 text-slate-700 hover:text-blue-700 rounded-lg text-xs font-bold transition inline-flex items-center space-x-1.5 border border-slate-200"
                                 title={`Enviar e-mail para ${user.name}`}
                               >
                                 <Mail className="w-3.5 h-3.5 text-slate-500" />
                                 <span>E-mail</span>
                               </a>
 
-                              {/* Estudos - Padrão Unificado */}
+                              {/* Estudos - Padrão Unificado com Tamanho Fixo */}
                               {user.projects.length > 0 ? (
                                 <button
                                   type="button"
                                   onClick={() => toggleExpandUser(user.id)}
-                                  className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center space-x-1 shadow-2xs cursor-pointer border ${
+                                  className={`w-[100px] h-8 px-2.5 rounded-lg text-xs font-bold transition flex items-center justify-between shadow-2xs cursor-pointer border ${
                                     isExpanded
                                       ? 'bg-blue-600 text-white border-blue-600'
                                       : 'bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200'
                                   }`}
                                   title={isExpanded ? 'Ocultar estudos' : 'Visualizar estudos atribuídos'}
                                 >
-                                  <FolderKanban className="w-3.5 h-3.5" />
-                                  <span>Estudos</span>
+                                  <div className="flex items-center space-x-1.5">
+                                    <FolderKanban className="w-3.5 h-3.5 shrink-0" />
+                                    <span>Estudos</span>
+                                  </div>
                                   <ChevronDown
-                                    className={`w-3.5 h-3.5 transition-transform ${
+                                    className={`w-3.5 h-3.5 shrink-0 transition-transform ${
                                       isExpanded ? 'rotate-180 text-white' : 'text-blue-600'
                                     }`}
                                   />
@@ -780,11 +782,14 @@ export default function EquipePage() {
                                 <button
                                   type="button"
                                   disabled
-                                  className="px-2.5 py-1.5 bg-slate-50 text-slate-400 border border-slate-200 rounded-lg text-xs font-bold transition flex items-center space-x-1 cursor-not-allowed opacity-60"
+                                  className="w-[100px] h-8 px-2.5 bg-slate-50 text-slate-400 border border-slate-200 rounded-lg text-xs font-bold transition flex items-center justify-between cursor-not-allowed opacity-60"
                                   title="Sem estudos vinculados"
                                 >
-                                  <FolderKanban className="w-3.5 h-3.5 text-slate-400" />
-                                  <span>Estudos</span>
+                                  <div className="flex items-center space-x-1.5">
+                                    <FolderKanban className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                    <span>Estudos</span>
+                                  </div>
+                                  <div className="w-3.5 h-3.5 shrink-0" />
                                 </button>
                               )}
 
@@ -794,7 +799,7 @@ export default function EquipePage() {
                                   <button
                                     type="button"
                                     onClick={() => handleOpenEdit(user)}
-                                    className="p-1.5 text-slate-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg border border-slate-200 hover:border-blue-300 transition cursor-pointer"
+                                    className="w-8 h-8 flex items-center justify-center text-slate-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg border border-slate-200 hover:border-blue-300 transition cursor-pointer"
                                     title="Editar perfil e atribuições deste pesquisador"
                                   >
                                     <Pencil className="w-3.5 h-3.5" />
@@ -808,7 +813,7 @@ export default function EquipePage() {
                                       setModalFeedback(null);
                                       setShowDeleteModal(true);
                                     }}
-                                    className={`p-1.5 rounded-lg border transition ${
+                                    className={`w-8 h-8 flex items-center justify-center rounded-lg border transition ${
                                       isSelf || isRootAdmin
                                         ? 'text-slate-300 border-slate-100 cursor-not-allowed'
                                         : 'text-slate-400 hover:text-red-600 hover:bg-red-50 border-slate-200 hover:border-red-300 cursor-pointer'
