@@ -125,10 +125,10 @@ export default function HomePage() {
   const [newProjectDesc, setNewProjectDesc] = useState('');
   const [newProjectPrefix, setNewProjectPrefix] = useState('');
   const [newProjectStatus, setNewProjectStatus] = useState<'ACTIVE' | 'COMPLETED' | 'CANCELLED'>('ACTIVE');
-  const [newProjectSpecialty, setNewProjectSpecialty] = useState<ResearchSpecialty>('GENERAL');
+  const [newProjectSpecialty, setNewProjectSpecialty] = useState<ResearchSpecialty>('BLEACHING');
   const [newProjectGroups, setNewProjectGroups] = useState<string[]>([
-    'Grupo A: Controle',
-    'Grupo B: Teste',
+    'Grupo 1: Convencional (HP 35%)',
+    'Grupo 2: Experimental (HP 20%)',
   ]);
   const [newGroupInput, setNewGroupInput] = useState('');
   const [enableOdontogram, setEnableOdontogram] = useState(true);
@@ -146,7 +146,7 @@ export default function HomePage() {
   const [editProjectDesc, setEditProjectDesc] = useState('');
   const [editProjectPrefix, setEditProjectPrefix] = useState('');
   const [editProjectStatus, setEditProjectStatus] = useState<'ACTIVE' | 'COMPLETED' | 'CANCELLED'>('ACTIVE');
-  const [editProjectSpecialty, setEditProjectSpecialty] = useState<ResearchSpecialty>('GENERAL');
+  const [editProjectSpecialty, setEditProjectSpecialty] = useState<ResearchSpecialty>('BLEACHING');
   const [editProjectGroups, setEditProjectGroups] = useState<string[]>([]);
   const [editNewGroupInput, setEditNewGroupInput] = useState('');
   const [editEnableOdontogram, setEditEnableOdontogram] = useState(true);
@@ -250,210 +250,342 @@ export default function HomePage() {
     handleUpdateSession(index, 'clinicalModules', updatedModules, isEdit);
   };
 
+  const handleApplyBleachingPreset = (
+    presetType: 'office_standard' | 'office_intensive' | 'home_supervised' | 'office_single',
+    isEdit: boolean
+  ) => {
+    let sessions: StudySessionProtocol[] = [];
+    if (presetType === 'office_standard') {
+      sessions = [
+        {
+          id: `sess_${Date.now()}_1`,
+          sessionNumber: 1,
+          name: 'Sessão 1: Tomada de Cor Inicial & 1ª Aplicação do Gel',
+          type: 'CLINICAL',
+          daysFromPrevious: 0,
+          durationMinutes: 60,
+          toleranceDays: 0,
+          requiresPatientQuestionnaire: true,
+          patientQuestionnaireIds: ['eva', 'habits'],
+          clinicalModules: {
+            toothMapping: true,
+            colorGuide: true,
+            painVAS: true,
+            softTissueExam: true,
+          },
+        },
+        {
+          id: `sess_${Date.now()}_2`,
+          sessionNumber: 2,
+          name: 'Sessão 2: 2ª Aplicação Clínica do Gel',
+          type: 'CLINICAL',
+          daysFromPrevious: 7,
+          durationMinutes: 60,
+          toleranceDays: 2,
+          requiresPatientQuestionnaire: true,
+          patientQuestionnaireIds: ['eva'],
+          clinicalModules: {
+            toothMapping: true,
+            colorGuide: true,
+            painVAS: true,
+            softTissueExam: true,
+          },
+        },
+        {
+          id: `sess_${Date.now()}_3`,
+          sessionNumber: 3,
+          name: 'Sessão 3: Retorno Final (Estabilidade de Cor & Satisfação)',
+          type: 'EVALUATION',
+          daysFromPrevious: 7,
+          durationMinutes: 30,
+          toleranceDays: 3,
+          requiresPatientQuestionnaire: true,
+          patientQuestionnaireIds: ['satisfaction'],
+          clinicalModules: {
+            toothMapping: true,
+            colorGuide: true,
+            painVAS: true,
+            softTissueExam: true,
+          },
+        },
+      ];
+    } else if (presetType === 'home_supervised') {
+      sessions = [
+        {
+          id: `sess_${Date.now()}_1`,
+          sessionNumber: 1,
+          name: 'Sessão 1: Moldagem, Entrega de Moldeiras & Cor Inicial',
+          type: 'CLINICAL',
+          daysFromPrevious: 0,
+          durationMinutes: 45,
+          toleranceDays: 0,
+          requiresPatientQuestionnaire: true,
+          patientQuestionnaireIds: ['eva', 'habits'],
+          clinicalModules: {
+            toothMapping: true,
+            colorGuide: true,
+            painVAS: true,
+            softTissueExam: true,
+          },
+        },
+        {
+          id: `sess_${Date.now()}_2`,
+          sessionNumber: 2,
+          name: 'Sessão 2: Acompanhamento Clínico (7 Dias)',
+          type: 'EVALUATION',
+          daysFromPrevious: 7,
+          durationMinutes: 30,
+          toleranceDays: 2,
+          requiresPatientQuestionnaire: true,
+          patientQuestionnaireIds: ['eva'],
+          clinicalModules: {
+            toothMapping: true,
+            colorGuide: true,
+            painVAS: true,
+            softTissueExam: true,
+          },
+        },
+        {
+          id: `sess_${Date.now()}_3`,
+          sessionNumber: 3,
+          name: 'Sessão 3: Avaliação de Cor Final & Encerramento (21 Dias)',
+          type: 'EVALUATION',
+          daysFromPrevious: 14,
+          durationMinutes: 30,
+          toleranceDays: 3,
+          requiresPatientQuestionnaire: true,
+          patientQuestionnaireIds: ['satisfaction'],
+          clinicalModules: {
+            toothMapping: true,
+            colorGuide: true,
+            painVAS: true,
+            softTissueExam: true,
+          },
+        },
+      ];
+    } else if (presetType === 'office_single') {
+      sessions = [
+        {
+          id: `sess_${Date.now()}_1`,
+          sessionNumber: 1,
+          name: 'Sessão 1: Tomada de Cor Inicial & Aplicação Única',
+          type: 'CLINICAL',
+          daysFromPrevious: 0,
+          durationMinutes: 60,
+          toleranceDays: 0,
+          requiresPatientQuestionnaire: true,
+          patientQuestionnaireIds: ['eva', 'habits'],
+          clinicalModules: {
+            toothMapping: true,
+            colorGuide: true,
+            painVAS: true,
+            softTissueExam: true,
+          },
+        },
+        {
+          id: `sess_${Date.now()}_2`,
+          sessionNumber: 2,
+          name: 'Sessão 2: Retorno de Avaliação de Cor (7 Dias)',
+          type: 'EVALUATION',
+          daysFromPrevious: 7,
+          durationMinutes: 30,
+          toleranceDays: 2,
+          requiresPatientQuestionnaire: true,
+          patientQuestionnaireIds: ['satisfaction'],
+          clinicalModules: {
+            toothMapping: true,
+            colorGuide: true,
+            painVAS: true,
+            softTissueExam: true,
+          },
+        },
+      ];
+    } else if (presetType === 'office_intensive') {
+      sessions = [
+        {
+          id: `sess_${Date.now()}_1`,
+          sessionNumber: 1,
+          name: 'Sessão 1: Tomada de Cor Inicial & 1ª Aplicação',
+          type: 'CLINICAL',
+          daysFromPrevious: 0,
+          durationMinutes: 60,
+          toleranceDays: 0,
+          requiresPatientQuestionnaire: true,
+          patientQuestionnaireIds: ['eva', 'habits'],
+          clinicalModules: {
+            toothMapping: true,
+            colorGuide: true,
+            painVAS: true,
+            softTissueExam: true,
+          },
+        },
+        {
+          id: `sess_${Date.now()}_2`,
+          sessionNumber: 2,
+          name: 'Sessão 2: 2ª Aplicação Clínica',
+          type: 'CLINICAL',
+          daysFromPrevious: 7,
+          durationMinutes: 60,
+          toleranceDays: 2,
+          requiresPatientQuestionnaire: true,
+          patientQuestionnaireIds: ['eva'],
+          clinicalModules: {
+            toothMapping: true,
+            colorGuide: true,
+            painVAS: true,
+            softTissueExam: true,
+          },
+        },
+        {
+          id: `sess_${Date.now()}_3`,
+          sessionNumber: 3,
+          name: 'Sessão 3: 3ª Aplicação Clínica',
+          type: 'CLINICAL',
+          daysFromPrevious: 7,
+          durationMinutes: 60,
+          toleranceDays: 2,
+          requiresPatientQuestionnaire: true,
+          patientQuestionnaireIds: ['eva'],
+          clinicalModules: {
+            toothMapping: true,
+            colorGuide: true,
+            painVAS: true,
+            softTissueExam: true,
+          },
+        },
+        {
+          id: `sess_${Date.now()}_4`,
+          sessionNumber: 4,
+          name: 'Sessão 4: Retorno Final (Estabilidade de Cor & Satisfação)',
+          type: 'EVALUATION',
+          daysFromPrevious: 7,
+          durationMinutes: 30,
+          toleranceDays: 3,
+          requiresPatientQuestionnaire: true,
+          patientQuestionnaireIds: ['satisfaction'],
+          clinicalModules: {
+            toothMapping: true,
+            colorGuide: true,
+            painVAS: true,
+            softTissueExam: true,
+          },
+        },
+      ];
+    }
+    if (isEdit) {
+      setEditStudySessions(sessions);
+    } else {
+      setStudySessions(sessions);
+    }
+  };
+
   const renderSessionCard = (s: StudySessionProtocol, idx: number, isEdit: boolean) => {
     const list = isEdit ? editStudySessions : studySessions;
-    const currentSpec = isEdit ? editProjectSpecialty : newProjectSpecialty;
     const requiresProms = s.requiresPatientQuestionnaire !== false;
     const activeQIds = s.patientQuestionnaireIds || ['eva'];
     const clinicalMods = s.clinicalModules || {
       toothMapping: true,
-      colorGuide: currentSpec === 'BLEACHING' || currentSpec === 'RESTORATIVE',
+      colorGuide: true,
       painVAS: true,
       softTissueExam: true,
-      fdiCriteria: currentSpec === 'RESTORATIVE',
-      edemaTrismus: currentSpec === 'SURGERY',
-      percussionPalpation: currentSpec === 'ENDODONTICS',
-      periodontogram: currentSpec === 'PERIODONTICS',
     };
 
     return (
-      <div key={s.id || idx} className="p-4 rounded-2xl border border-slate-200 bg-slate-50/80 space-y-3.5 shadow-2xs">
+      <div
+        key={s.id || idx}
+        className="p-4 rounded-2xl border border-slate-200 bg-white space-y-3 shadow-2xs hover:border-slate-300 transition"
+      >
+        {/* Cabeçalho da Consulta */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-blue-600 text-white shadow-2xs">
-              Sessão {s.sessionNumber}
+            <span className="w-6 h-6 rounded-lg bg-blue-600 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-2xs">
+              {s.sessionNumber}
             </span>
-            <span className="text-xs font-bold text-slate-800">
+            <span className="text-xs font-bold text-slate-900">
               {s.sessionNumber === 1
-                ? 'Linha de Base / 1º Atendimento'
-                : `Retorno (${s.daysFromPrevious} dias após a sessão anterior)`}
+                ? 'Consulta 1: Linha de Base (Dia 0)'
+                : `Consulta ${s.sessionNumber}`}
             </span>
+            {s.sessionNumber > 1 ? (
+              <span className="text-[11px] font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200">
+                +{s.daysFromPrevious} dias
+              </span>
+            ) : (
+              <span className="text-[11px] font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                Início do Clareamento
+              </span>
+            )}
           </div>
           {list.length > 1 && (
             <button
               type="button"
               onClick={() => handleRemoveSession(idx, isEdit)}
-              className="text-red-500 hover:text-red-700 p-1 hover:bg-red-50 rounded-lg transition cursor-pointer"
-              title="Remover esta sessão"
+              className="text-slate-400 hover:text-red-600 p-1 hover:bg-slate-100 rounded-lg transition cursor-pointer"
+              title="Remover esta consulta do cronograma"
             >
               <Trash2 className="w-3.5 h-3.5" />
             </button>
           )}
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-          <div>
+        {/* Linha de Nome e Intervalo */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+          <div className="sm:col-span-2">
             <label className="block text-[11px] font-bold text-slate-600 mb-1">
-              Nome / Identificação da Sessão
+              Nome da Consulta / Procedimento
             </label>
             <input
               type="text"
               value={s.name}
               onChange={(e) => handleUpdateSession(idx, 'name', e.target.value, isEdit)}
-              className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs bg-white focus:ring-1 focus:ring-blue-500"
+              placeholder="Ex: Sessão 1: Tomada de Cor & 1ª Aplicação"
+              className="w-full px-3 py-1.5 border border-slate-300 rounded-xl text-xs bg-white font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none"
             />
-          </div>
-
-          <div>
-            <label className="block text-[11px] font-bold text-slate-600 mb-1">
-              Tipo de Atendimento Clínico
-            </label>
-            <select
-              value={s.type}
-              onChange={(e) => handleUpdateSession(idx, 'type', e.target.value as any, isEdit)}
-              className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs bg-white font-medium focus:ring-1 focus:ring-blue-500"
-            >
-              <option value="CLINICAL">🩺 Intervenção Clínica / Procedimento</option>
-              <option value="EVALUATION">🔍 Avaliação Clínica / Exame</option>
-              <option value="FOLLOW_UP">🔄 Consulta de Retorno / Follow-up</option>
-            </select>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-0.5">
-          <div>
-            <label className="block text-[11px] font-bold text-slate-600 mb-1 flex items-center gap-1">
-              <Clock className="w-3 h-3 text-slate-400" />
-              <span>Tempo / Duração Estimada da Consulta</span>
-            </label>
-            <select
-              value={s.durationMinutes}
-              onChange={(e) => handleUpdateSession(idx, 'durationMinutes', Number(e.target.value), isEdit)}
-              className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs bg-white font-medium focus:ring-1 focus:ring-blue-500"
-            >
-              <option value={15}>15 minutos (Consulta Rápida)</option>
-              <option value={30}>30 minutos (Padrão)</option>
-              <option value={45}>45 minutos</option>
-              <option value={60}>60 minutos (1 hora)</option>
-              <option value={90}>90 minutos (1h 30min)</option>
-              <option value={120}>120 minutos (2 horas)</option>
-            </select>
           </div>
 
           {s.sessionNumber > 1 ? (
             <div>
               <label className="block text-[11px] font-bold text-slate-600 mb-1 flex items-center gap-1">
                 <Calendar className="w-3 h-3 text-slate-400" />
-                <span>Intervalo Após a Sessão Anterior</span>
+                <span>Dias após consulta anterior</span>
               </label>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
                 <input
                   type="number"
                   min={1}
                   max={365}
                   value={s.daysFromPrevious}
                   onChange={(e) => handleUpdateSession(idx, 'daysFromPrevious', Math.max(1, Number(e.target.value)), isEdit)}
-                  className="w-20 px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs bg-white font-medium focus:ring-1 focus:ring-blue-500"
+                  className="w-20 px-2.5 py-1.5 border border-slate-300 rounded-xl text-xs bg-white font-bold text-center focus:ring-2 focus:ring-blue-500"
                 />
-                <span className="text-xs text-slate-600 font-medium">dias (tolerância: ±{s.toleranceDays || 2}d)</span>
+                <span className="text-[11px] text-slate-500 font-medium">dias</span>
               </div>
             </div>
           ) : (
-            <div className="flex items-end text-xs text-slate-500 pb-1.5 font-medium">
-              <span>Início do estudo (Dia 0 / Linha de base)</span>
+            <div className="flex items-end pb-1.5">
+              <span className="text-[11px] text-slate-500 font-medium">
+                Consulta inicial no mocho
+              </span>
             </div>
           )}
         </div>
 
-        {/* Seção Particularidades: Questionários do Paciente */}
-        <div className="bg-white p-3.5 rounded-xl border border-slate-200 space-y-2.5">
-          <div className="flex items-center justify-between">
-            <label className="flex items-center gap-2 cursor-pointer font-bold text-xs text-slate-800">
-              <input
-                type="checkbox"
-                checked={requiresProms}
-                onChange={(e) => handleUpdateSession(idx, 'requiresPatientQuestionnaire', e.target.checked, isEdit)}
-                className="w-4 h-4 text-blue-600 rounded cursor-pointer"
-              />
-              <span>📱 Paciente responde questionário / diário nesta sessão?</span>
-            </label>
-            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-              requiresProms ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'
-            }`}>
-              {requiresProms ? 'Questionários Ativos' : 'Apenas Clínico (Sem Questionário)'}
-            </span>
-          </div>
-
-          {requiresProms ? (
-            <div className="space-y-2.5 pt-1.5 border-t border-slate-100">
-              <div>
-                <span className="block text-[11px] font-bold text-slate-600 mb-1.5">
-                  Quais questionários o paciente deverá responder no celular:
-                </span>
-                <div className="flex flex-wrap gap-1.5">
-                  {PRESET_QUESTIONNAIRES_CATALOG.map((cat) => {
-                    const isChecked = activeQIds.includes(cat.id);
-                    return (
-                      <button
-                        key={cat.id}
-                        type="button"
-                        onClick={() => handleToggleSessionQuestionnaire(idx, cat.id, isEdit)}
-                        className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition flex items-center gap-1.5 cursor-pointer ${
-                          isChecked
-                            ? 'bg-blue-600 text-white shadow-2xs'
-                            : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                        }`}
-                        title={cat.description}
-                      >
-                        <span>{cat.icon}</span>
-                        <span>{cat.title}</span>
-                        {isChecked && <Check className="w-3 h-3 stroke-[3]" />}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold text-slate-600 mb-1">
-                  Orientações / Lembretes específicos para o paciente nesta sessão (opcional):
-                </label>
-                <input
-                  type="text"
-                  value={s.patientInstructions || ''}
-                  onChange={(e) => handleUpdateSession(idx, 'patientInstructions', e.target.value, isEdit)}
-                  placeholder="Ex: Registrar a dor no diário às 24h e 48h; evitar alimentos pigmentados..."
-                  className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs bg-white focus:ring-1 focus:ring-blue-500"
-                />
-              </div>
-            </div>
-          ) : (
-            <p className="text-[11px] text-slate-500 italic pl-6">
-              O paciente não precisará preencher diários ou questionários no celular após esta consulta. O registro será concluído diretamente no mocho pela equipe.
-            </p>
-          )}
-        </div>
-
-        {/* Seção Particularidades: Módulos Clínicos do Pesquisador */}
-        <div className="bg-white p-3.5 rounded-xl border border-slate-200 space-y-2">
+        {/* Avaliações Clínicas na Cadeira (Específico Clareamento) */}
+        <div className="p-3 bg-slate-50/80 rounded-xl border border-slate-200 space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
               <Stethoscope className="w-3.5 h-3.5 text-blue-600" />
-              <span>Módulos Clínicos Ativos no Consultório (Preenchidos pelo Pesquisador):</span>
+              <span>Exames Realizados na Cadeira pelo Pesquisador:</span>
             </span>
-            <span className="text-[10px] text-slate-400 font-medium">Clique para ativar/desativar</span>
+            <span className="text-[10px] text-slate-400">Clique para alternar</span>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 pt-1">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 pt-0.5">
             {[
-              { key: 'toothMapping' as const, label: 'Dentes Envolvidos', icon: '🦷' },
               { key: 'colorGuide' as const, label: 'Tomada de Cor (VITA)', icon: '🎨' },
-              { key: 'painVAS' as const, label: 'Dor Imediata EVA (0h)', icon: '⚡' },
-              { key: 'softTissueExam' as const, label: 'Tecidos Moles & Mucosa', icon: '🔬' },
-              { key: 'edemaTrismus' as const, label: 'Edema & Abertura Bucal', icon: '📏' },
-              { key: 'fdiCriteria' as const, label: 'Critérios Clínicos FDI', icon: '💎' },
-              { key: 'percussionPalpation' as const, label: 'Percussão / Palpação', icon: '🔨' },
-              { key: 'periodontogram' as const, label: 'Periograma / Sondagem', icon: '📊' },
+              { key: 'painVAS' as const, label: 'Sensibilidade na Cadeira (EVA)', icon: '⚡' },
+              { key: 'toothMapping' as const, label: 'Dentes Clareados', icon: '🦷' },
+              { key: 'softTissueExam' as const, label: 'Exame de Tecidos / Gengiva', icon: '🔬' },
             ].map((mod) => {
               const isModActive = clinicalMods[mod.key] ?? false;
               return (
@@ -464,7 +596,7 @@ export default function HomePage() {
                   className={`p-2 rounded-lg border text-left transition text-[11px] flex items-center gap-1.5 cursor-pointer ${
                     isModActive
                       ? 'bg-blue-50 border-blue-400 text-blue-900 font-bold shadow-2xs'
-                      : 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100'
+                      : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-100'
                   }`}
                 >
                   <span>{mod.icon}</span>
@@ -474,6 +606,54 @@ export default function HomePage() {
               );
             })}
           </div>
+        </div>
+
+        {/* Questionário / Diário do Paciente no Celular */}
+        <div className="p-3 bg-indigo-50/40 rounded-xl border border-indigo-100 space-y-2">
+          <div className="flex items-center justify-between">
+            <label className="flex items-center gap-2 cursor-pointer font-bold text-[11px] text-indigo-900">
+              <input
+                type="checkbox"
+                checked={requiresProms}
+                onChange={(e) => handleUpdateSession(idx, 'requiresPatientQuestionnaire', e.target.checked, isEdit)}
+                className="w-4 h-4 text-indigo-600 rounded cursor-pointer"
+              />
+              <span>📱 Paciente responde questionário / diário no celular após esta consulta?</span>
+            </label>
+            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+              requiresProms ? 'bg-indigo-100 text-indigo-800' : 'bg-slate-100 text-slate-500'
+            }`}>
+              {requiresProms ? 'Ativo' : 'Não'}
+            </span>
+          </div>
+
+          {requiresProms && (
+            <div className="flex flex-wrap gap-1.5 pt-1.5 border-t border-indigo-100">
+              {[
+                { id: 'eva', label: 'Diário de Sensibilidade (EVA)', icon: '⚡' },
+                { id: 'satisfaction', label: 'Satisfação com o Clareamento', icon: '⭐' },
+                { id: 'habits', label: 'Hábitos & Alimentos Corantes', icon: '☕' },
+              ].map((cat) => {
+                const isChecked = activeQIds.includes(cat.id);
+                return (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    onClick={() => handleToggleSessionQuestionnaire(idx, cat.id, isEdit)}
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                      isChecked
+                        ? 'bg-indigo-600 text-white shadow-2xs'
+                        : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'
+                    }`}
+                  >
+                    <span>{cat.icon}</span>
+                    <span>{cat.label}</span>
+                    {isChecked && <Check className="w-3 h-3 stroke-[3]" />}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
     );
@@ -527,7 +707,7 @@ export default function HomePage() {
     setEditStudySessions(protocol.sessions);
     setEditFormTargets(protocol.forms);
     setEditProjectPrefix(protocol.projectPrefix || '');
-    setEditProjectSpecialty(protocol.specialty || 'GENERAL');
+    setEditProjectSpecialty(protocol.specialty || 'BLEACHING');
     setEditProjectGroups(protocol.groups || []);
     setEditNewGroupInput('');
   };
@@ -858,17 +1038,17 @@ export default function HomePage() {
 
   const handleApplyNewProjectGroupPreset = (preset: 'parallel' | 'split' | 'three') => {
     if (preset === 'parallel') {
-      setNewProjectGroups(['Grupo A: Controle', 'Grupo B: Teste']);
+      setNewProjectGroups(['Grupo A: Controle (HP 35%)', 'Grupo B: Teste (Gel Experimental)']);
     } else if (preset === 'split') {
       setNewProjectGroups([
-        'Direita: HP 6% / Esquerda: CP 37%',
-        'Direita: CP 37% / Esquerda: HP 6%',
+        'Hemiarco Direito: HP 35% / Hemiarco Esquerdo: CP 16%',
+        'Hemiarco Direito: CP 16% / Hemiarco Esquerdo: HP 35%',
       ]);
     } else if (preset === 'three') {
       setNewProjectGroups([
-        'Grupo 1: Controle (Placebo)',
-        'Grupo 2: Intervenção A',
-        'Grupo 3: Intervenção B',
+        'Grupo 1: HP 35% Convencional',
+        'Grupo 2: HP 20% com Luz Violeta/LED',
+        'Grupo 3: CP 37% de Consultório',
       ]);
     }
   };
@@ -954,10 +1134,10 @@ export default function HomePage() {
         setNewProjectName('');
         setNewProjectDesc('');
         setNewProjectPrefix('');
-        setNewProjectGroups(['Grupo A: Controle', 'Grupo B: Teste']);
+        setNewProjectGroups(['Grupo 1: Convencional (HP 35%)', 'Grupo 2: Experimental (HP 20%)']);
         setNewGroupInput('');
         setNewProjectStatus('ACTIVE');
-        setNewProjectSpecialty('GENERAL');
+        setNewProjectSpecialty('BLEACHING');
         setStudySessions(DEFAULT_STUDY_SESSIONS);
         setFormTargets(DEFAULT_FORM_TARGETS);
         if (data.project?.id) {
@@ -1752,16 +1932,21 @@ export default function HomePage() {
                   <div className="p-3.5 bg-blue-50/70 border border-blue-200 rounded-xl text-xs text-blue-900 flex items-start gap-2.5">
                     <FileText className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
                     <div>
-                      <p className="font-bold">Etapa 1 de 4: Identificação e Dados Básicos</p>
+                      <p className="font-bold">Etapa 1 de 4: Identificação do Estudo de Clareamento</p>
                       <p className="text-blue-800 text-[11px] mt-0.5">
-                        Defina o título do projeto e as informações centrais. Todos os parâmetros serão validados passo a passo.
+                        Defina o título do ensaio clínico de clareamento dental e prefixo dos voluntários.
                       </p>
                     </div>
                   </div>
 
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-100/70 text-blue-800 text-xs font-bold border border-blue-200">
+                    <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+                    <span>Linha de Pesquisa: Clareamento Dental</span>
+                  </div>
+
                   <div>
                     <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                      Nome do Estudo / Ensaio Clínico *
+                      Nome do Estudo / Ensaio Clínico de Clareamento *
                     </label>
                     <input
                       type="text"
@@ -1772,7 +1957,7 @@ export default function HomePage() {
                         setNewProjectName(e.target.value);
                         if (createStepError) setCreateStepError(null);
                       }}
-                      placeholder="Ex: Longevidade Clínica de Restaurações em Resina Bulk-Fill: Ensaio Randomizado"
+                      placeholder="Ex: Eficácia e Sensibilidade Dental de Clareamento com HP 35% vs 20%: Ensaio Clínico Randomizado"
                       className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none transition shadow-2xs"
                     />
                   </div>
@@ -1785,7 +1970,7 @@ export default function HomePage() {
                       rows={3}
                       value={newProjectDesc}
                       onChange={(e) => setNewProjectDesc(e.target.value)}
-                      placeholder="Descreva brevemente os objetivos da pesquisa, critérios de inclusão, hipótese ou metodologia..."
+                      placeholder="Descreva brevemente o protocolo de clareamento, concentrações dos géis, critérios de inclusão/exclusão ou hipótese..."
                       className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none transition resize-none"
                     />
                   </div>
@@ -1798,7 +1983,7 @@ export default function HomePage() {
                       type="text"
                       value={newProjectPrefix}
                       onChange={(e) => setNewProjectPrefix(e.target.value.toUpperCase())}
-                      placeholder="Ex: P01, EXP, CLAR (Deixe em branco para numeração automática: P01, P02...)"
+                      placeholder="Ex: CLAR, EXP, HP35 (Deixe em branco para numeração automática: P01, P02...)"
                       maxLength={8}
                       className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs font-mono uppercase bg-white focus:ring-2 focus:ring-blue-500"
                     />
@@ -1956,81 +2141,81 @@ export default function HomePage() {
                   <div className="p-3.5 bg-blue-50/70 border border-blue-200 rounded-xl text-xs text-blue-900 flex items-start gap-2.5">
                     <Calendar className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
                     <div>
-                      <p className="font-bold">Etapa 3 de 4: Cronograma de Consultas Clínicas</p>
+                      <p className="font-bold">Etapa 3 de 4: Cronograma de Consultas de Clareamento</p>
                       <p className="text-blue-800 text-[11px] mt-0.5">
-                        Defina o número de sessões presenciais, os intervalos de dias e quais exames clínicos devem ser realizados em cada etapa.
+                        Defina as consultas presenciais de clareamento, os intervalos em dias e o que será avaliado no consultório e pelo paciente.
                       </p>
                     </div>
                   </div>
 
-                  {/* Seletor Rápido de Quantidade de Consultas */}
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                      Número de Consultas / Sessões Clínicas
-                    </label>
-                    <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5">
-                      {[1, 2, 3, 4, 5].map((count) => {
-                        const isSelected = studySessions.length === count;
-                        return (
-                          <button
-                            key={count}
-                            type="button"
-                            onClick={() => {
-                              const presets: StudySessionProtocol[] = [];
-                              for (let num = 1; num <= count; num++) {
-                                presets.push({
-                                  id: `sess_${Date.now()}_${num}`,
-                                  sessionNumber: num,
-                                  name: num === 1 ? 'Sessão 1: Consulta Inicial' : `Sessão ${num}: Retorno / Acompanhamento`,
-                                  type: num === 1 ? 'CLINICAL' : 'EVALUATION',
-                                  daysFromPrevious: num === 1 ? 0 : 7,
-                                  durationMinutes: 30,
-                                  toleranceDays: 2,
-                                  requiresPatientQuestionnaire: true,
-                                  patientQuestionnaireIds: ['eva'],
-                                  clinicalModules: {
-                                    toothMapping: true,
-                                    colorGuide: true,
-                                    painVAS: true,
-                                    softTissueExam: true,
-                                    fdiCriteria: false,
-                                    edemaTrismus: false,
-                                    percussionPalpation: false,
-                                    periodontogram: false,
-                                  },
-                                });
-                              }
-                              setStudySessions(presets);
-                            }}
-                            className={`py-2 px-1 rounded-xl text-xs font-bold text-center border transition cursor-pointer ${
-                              isSelected
-                                ? 'bg-blue-600 text-white border-blue-600 shadow-2xs'
-                                : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
-                            }`}
-                          >
-                            {count} {count === 1 ? 'Consulta' : 'Consultas'}
-                          </button>
-                        );
-                      })}
+                  {/* Modelos Rápidos de Protocolo de Clareamento */}
+                  <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+                        <span>Modelos Prontos de Clareamento (Clique para carregar):</span>
+                      </span>
+                      <span className="text-[10px] text-slate-400">Preenchimento com 1 toque</span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleApplyBleachingPreset('office_standard', false)}
+                        className="p-2.5 bg-white border border-slate-200 hover:border-blue-500 hover:bg-blue-50/50 rounded-xl text-left transition cursor-pointer shadow-2xs group"
+                      >
+                        <p className="font-bold text-slate-800 text-xs group-hover:text-blue-700 flex items-center gap-1">
+                          <span>🔵 Consultório Padrão</span>
+                        </p>
+                        <p className="text-[10px] text-slate-500 mt-0.5">
+                          3 consultas: 1ª Aplicação (Dia 0) → 2ª Aplicação (7d) → Retorno de Cor (14d)
+                        </p>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleApplyBleachingPreset('home_supervised', false)}
+                        className="p-2.5 bg-white border border-slate-200 hover:border-purple-500 hover:bg-purple-50/50 rounded-xl text-left transition cursor-pointer shadow-2xs group"
+                      >
+                        <p className="font-bold text-slate-800 text-xs group-hover:text-purple-700 flex items-center gap-1">
+                          <span>🟣 Caseiro Supervisionado</span>
+                        </p>
+                        <p className="text-[10px] text-slate-500 mt-0.5">
+                          3 consultas: Moldagem/Géis (Dia 0) → Acompanhamento (7d) → Retorno Final (21d)
+                        </p>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleApplyBleachingPreset('office_single', false)}
+                        className="p-2.5 bg-white border border-slate-200 hover:border-amber-500 hover:bg-amber-50/50 rounded-xl text-left transition cursor-pointer shadow-2xs group"
+                      >
+                        <p className="font-bold text-slate-800 text-xs group-hover:text-amber-700 flex items-center gap-1">
+                          <span>⚡ Consultório Sessão Única</span>
+                        </p>
+                        <p className="text-[10px] text-slate-500 mt-0.5">
+                          2 consultas: Aplicação Única (Dia 0) → Avaliação de Cor (7d)
+                        </p>
+                      </button>
                     </div>
                   </div>
 
-                  {/* Lista de Sessões Clínicas com Módulos */}
-                  <div className="space-y-3 pt-2">
+                  {/* Lista de Consultas Clínicas */}
+                  <div className="space-y-3 pt-1">
                     <div className="flex justify-between items-center">
                       <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                        Configuração das Sessões ({studySessions.length})
+                        Consultas Programadas ({studySessions.length})
                       </span>
                       <button
                         type="button"
                         onClick={() => handleAddSession(false)}
-                        className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold cursor-pointer transition shadow-2xs flex items-center gap-1"
+                        className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold cursor-pointer transition shadow-2xs flex items-center gap-1"
                       >
-                        <Plus className="w-3 h-3" />
-                        <span>Adicionar Sessão</span>
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Adicionar Consulta</span>
                       </button>
                     </div>
-                    <div className="space-y-3 max-h-[350px] overflow-y-auto p-1">
+                    <div className="space-y-3 max-h-[380px] overflow-y-auto p-1">
                       {studySessions.map((s, idx) => renderSessionCard(s, idx, false))}
                     </div>
                   </div>
@@ -2107,6 +2292,13 @@ export default function HomePage() {
                         <strong className="text-slate-900">{newProjectName || 'Não informado'}</strong>
                       </div>
                       <div>
+                        <span className="text-slate-500 text-[11px] block">Linha de Pesquisa:</span>
+                        <span className="inline-flex items-center gap-1 font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                          <Sparkles className="w-3 h-3 text-blue-600" />
+                          <span>Clareamento Dental</span>
+                        </span>
+                      </div>
+                      <div>
                         <span className="text-slate-500 text-[11px] block">Prefixo dos Códigos:</span>
                         <strong className="font-mono text-blue-700">{newProjectPrefix.trim() || 'Automático (P01, P02...)'}</strong>
                       </div>
@@ -2116,9 +2308,9 @@ export default function HomePage() {
                           {newProjectGroups.length > 0 ? `${newProjectGroups.length} grupos (${newProjectGroups.join(', ')})` : 'Nenhum grupo pré-configurado'}
                         </strong>
                       </div>
-                      <div>
-                        <span className="text-slate-500 text-[11px] block">Consultas Clínicas:</span>
-                        <strong className="text-slate-900">{studySessions.length} sessões programadas</strong>
+                      <div className="sm:col-span-2">
+                        <span className="text-slate-500 text-[11px] block">Cronograma Clínico:</span>
+                        <strong className="text-slate-900">{studySessions.length} consultas presenciais configuradas</strong>
                       </div>
                     </div>
                   </div>
@@ -2530,10 +2722,10 @@ export default function HomePage() {
                     <div>
                       <h4 className="text-xs font-bold text-blue-950 flex items-center gap-1.5">
                         <Clock className="w-3.5 h-3.5 text-blue-600" />
-                        <span>Cronograma de Consultas e Avaliações Clínicas</span>
+                        <span>Cronograma de Consultas de Clareamento</span>
                       </h4>
                       <p className="text-[11px] text-blue-800 mt-0.5">
-                        Defina quantas consultas serão realizadas, os questionários do paciente e os módulos clínicos do pesquisador.
+                        Defina as consultas presenciais de clareamento, os intervalos em dias e o que será avaliado no consultório e pelo paciente.
                       </p>
                     </div>
                     <button
@@ -2542,53 +2734,36 @@ export default function HomePage() {
                       className="px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold flex items-center gap-1 transition shadow-xs cursor-pointer shrink-0"
                     >
                       <Plus className="w-3.5 h-3.5" />
-                      <span>Nova Sessão</span>
+                      <span>Nova Consulta</span>
                     </button>
                   </div>
 
-                  {/* Seleção rápida de quantidade */}
-                  <div className="flex flex-wrap items-center gap-2 text-xs">
-                    <span className="text-slate-500 font-bold text-[11px]">Quantidade rápida:</span>
-                    {[1, 2, 3, 4, 5].map((count) => (
-                      <button
-                        key={count}
-                        type="button"
-                        onClick={() => {
-                          const presets: StudySessionProtocol[] = [];
-                          for (let num = 1; num <= count; num++) {
-                            presets.push({
-                              id: `sess_${Date.now()}_${num}`,
-                              sessionNumber: num,
-                              name: num === 1 ? 'Sessão 1: Consulta Inicial' : `Sessão ${num}: Retorno / Acompanhamento`,
-                              type: num === 1 ? 'CLINICAL' : 'EVALUATION',
-                              daysFromPrevious: num === 1 ? 0 : 7,
-                              durationMinutes: 30,
-                              toleranceDays: 2,
-                              requiresPatientQuestionnaire: true,
-                              patientQuestionnaireIds: ['eva'],
-                              clinicalModules: {
-                                toothMapping: true,
-                                colorGuide: true,
-                                painVAS: true,
-                                softTissueExam: true,
-                                fdiCriteria: false,
-                                edemaTrismus: false,
-                                percussionPalpation: false,
-                                periodontogram: false,
-                              },
-                            });
-                          }
-                          setEditStudySessions(presets);
-                        }}
-                        className={`px-2.5 py-1 rounded-md font-bold text-xs transition cursor-pointer ${
-                          editStudySessions.length === count
-                            ? 'bg-blue-600 text-white shadow-2xs'
-                            : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                        }`}
-                      >
-                        {count} {count === 1 ? 'Sessão' : 'Sessões'}
-                      </button>
-                    ))}
+                  {/* Modelos Rápidos de Clareamento */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleApplyBleachingPreset('office_standard', true)}
+                      className="p-2.5 border border-slate-200 rounded-xl text-left bg-white hover:bg-blue-50/60 transition text-xs cursor-pointer shadow-2xs"
+                    >
+                      <p className="font-bold text-slate-800 text-xs">🔵 Consultório Padrão</p>
+                      <p className="text-[10px] text-slate-500 mt-0.5">3 sessões (0d, 7d, 14d)</p>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleApplyBleachingPreset('home_supervised', true)}
+                      className="p-2.5 border border-slate-200 rounded-xl text-left bg-white hover:bg-purple-50/60 transition text-xs cursor-pointer shadow-2xs"
+                    >
+                      <p className="font-bold text-slate-800 text-xs">🟣 Caseiro Supervisionado</p>
+                      <p className="text-[10px] text-slate-500 mt-0.5">3 sessões (0d, 7d, 21d)</p>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleApplyBleachingPreset('office_single', true)}
+                      className="p-2.5 border border-slate-200 rounded-xl text-left bg-white hover:bg-amber-50/60 transition text-xs cursor-pointer shadow-2xs"
+                    >
+                      <p className="font-bold text-slate-800 text-xs">⚡ Consultório Única</p>
+                      <p className="text-[10px] text-slate-500 mt-0.5">2 sessões (0d, 7d)</p>
+                    </button>
                   </div>
 
                   {/* Lista de cards de cada sessão */}
@@ -2657,22 +2832,6 @@ export default function HomePage() {
                           </label>
                         </div>
                       )}
-                    </div>
-
-                    {/* Periograma */}
-                    <div className="p-3 rounded-xl border border-slate-200 bg-slate-50/60 flex items-center justify-between text-xs">
-                      <label className="flex items-center gap-2 cursor-pointer font-bold text-slate-800">
-                        <input
-                          type="checkbox"
-                          checked={editEnablePeriodontogram}
-                          onChange={(e) => setEditEnablePeriodontogram(e.target.checked)}
-                          className="w-4 h-4 text-blue-600 rounded"
-                        />
-                        <span>Exame Periodontal (Periograma - SS / IPV)</span>
-                      </label>
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-200 text-slate-700">
-                        🩺 Preenchido pelo Pesquisador
-                      </span>
                     </div>
 
                     {/* Anamnese */}
