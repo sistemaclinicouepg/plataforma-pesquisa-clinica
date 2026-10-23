@@ -301,6 +301,7 @@ function FormBuilderContent() {
   const [selectedProjectId, setSelectedProjectId] = useState<string>(projectIdParam || '');
   const [formTitle, setFormTitle] = useState('Questionário de Impacto na Qualidade de Vida (OHIP-14)');
   const [formDescription, setFormDescription] = useState('Instrumento padronizado de desfechos relatados pelo paciente (PROMs) para acompanhamento no ensaio clínico.');
+  const [occurrence, setOccurrence] = useState<string>('Linha de Base / Admissão');
   const [expirationHours, setExpirationHours] = useState('48');
   const [allowLate, setAllowLate] = useState(false);
   const [questions, setQuestions] = useState<FormQuestion[]>(OHIP_14_QUESTIONS);
@@ -661,13 +662,17 @@ function FormBuilderContent() {
       setSavedSuccess(false);
       setErrorMessage(null);
 
+      const formattedDesc = occurrence
+        ? `Ocorrência: ${occurrence} | ${formDescription.trim()}`
+        : formDescription.trim();
+
       const res = await fetch('/api/forms', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           projectId: selectedProjectId,
           title: formTitle.trim(),
-          description: formDescription.trim(),
+          description: formattedDesc,
           expirationHours: Number(expirationHours) || 48,
           allowLate,
           questions,
@@ -977,13 +982,30 @@ function FormBuilderContent() {
                     <select
                       value={selectedProjectId}
                       onChange={(e) => setSelectedProjectId(e.target.value)}
-                      className="bg-transparent font-semibold text-slate-800 focus:outline-none text-xs cursor-pointer"
+                      className="bg-transparent font-semibold text-slate-800 focus:outline-none text-xs cursor-pointer max-w-[180px] truncate"
                     >
                       {projects.map((p) => (
                         <option key={p.id} value={p.id}>
                           {p.name}
                         </option>
                       ))}
+                    </select>
+                  </div>
+
+                  {/* Ocorrência no Estudo */}
+                  <div className="flex items-center space-x-1.5 bg-blue-50/70 border border-blue-200 rounded-xl px-3 py-1.5 shadow-2xs">
+                    <span className="text-blue-600 font-bold">Ocorrência:</span>
+                    <select
+                      value={occurrence}
+                      onChange={(e) => setOccurrence(e.target.value)}
+                      className="bg-transparent font-semibold text-blue-950 focus:outline-none text-xs cursor-pointer"
+                    >
+                      <option value="Linha de Base / Admissão">Linha de Base / Admissão</option>
+                      <option value="A cada Consulta Clínica">A cada Consulta Clínica</option>
+                      <option value="Pós-Operatório">Pós-Operatório (24h/48h)</option>
+                      <option value="Acompanhamento Semanal">Acompanhamento Semanal</option>
+                      <option value="Retorno Final / Conclusão">Retorno Final / Conclusão</option>
+                      <option value="Pontual / Livre">Pontual / Livre</option>
                     </select>
                   </div>
 

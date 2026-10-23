@@ -351,19 +351,10 @@ export async function GET(req: Request) {
     const completedSessionNumbers = participant.sessions.map((s) => s.sessionNumber);
     const maxCompletedSession = completedSessionNumbers.length > 0 ? Math.max(...completedSessionNumbers) : 0;
 
-    // Verificar se o estudo realmente prevê Diário de Sensibilidade / Dor (Escala EVA) respondido pelo paciente
-    const evaProto = protocol.forms?.find(
-      (f) =>
-        f.id === 'eva' ||
-        f.title.toLowerCase().includes('sensibilidade') ||
-        f.title.toLowerCase().includes('escala visual analógica')
-    );
-    const hasEvaDiary = Boolean(evaProto ? evaProto.enabled && evaProto.respondent === 'PATIENT' : false);
-
-    // Sincronizar questionários habilitados no protocolo para o paciente (ex: OHIP-14, Satisfação, Hábitos)
-    // garantindo que existam no banco com suas respectivas perguntas e vinculados a este projeto
+    // Sincronizar questionários habilitados no protocolo para o paciente (ex: OHIP-14, Satisfação, Hábitos, EVA)
+    // garantindo que existam no banco com suas respectivas perguntas e vinculados exclusivamente a este projeto
     const enabledPatientProtoForms = (protocol.forms || []).filter(
-      (pf) => pf.enabled && pf.respondent === 'PATIENT' && pf.id !== 'eva'
+      (pf) => pf.enabled && pf.respondent === 'PATIENT'
     );
 
     for (const pf of enabledPatientProtoForms) {
@@ -372,6 +363,7 @@ export async function GET(req: Request) {
         if (pf.id === 'ohip' && lower.includes('ohip')) return true;
         if (pf.id === 'satisfaction' && (lower.includes('satisfação') || lower.includes('satisfacao'))) return true;
         if (pf.id === 'habits' && (lower.includes('hábito') || lower.includes('habito'))) return true;
+        if (pf.id === 'eva' && (lower.includes('escala visual analógica') || lower.includes('sensibilidade'))) return true;
         return lower === pf.title.toLowerCase();
       });
 
@@ -379,11 +371,12 @@ export async function GET(req: Request) {
         const questions = PRESET_FORM_QUESTIONS[pf.id as keyof typeof PRESET_FORM_QUESTIONS];
         if (questions && questions.length > 0) {
           try {
+            const freqDesc = pf.frequencyDescription || getFrequencyLabel(pf.frequency);
             const created = await prisma.form.create({
               data: {
                 projectId: participant.project.id,
                 title: pf.title,
-                description: `Preenchido por: Paciente | Frequência: ${getFrequencyLabel(pf.frequency)}`,
+                description: `Preenchido por: Paciente | Ocorrência: ${freqDesc}`,
                 questionsJson: JSON.stringify(questions),
                 expirationHours: pf.frequency === 'DAILY' ? 24 : 168,
                 allowLate: false,
@@ -439,28 +432,8 @@ export async function GET(req: Request) {
           return false;
         }
 
-        // 3. Se o estudo utiliza o Diário de Sensibilidade dedicado, não duplicar a escala EVA como formulário avulso
-        if (
-          hasEvaDiary &&
-          (lowerTitle.includes('escala visual analógica de sensibilidade') ||
-           lowerTitle.includes('diário de sensibilidade') ||
-           lowerTitle.includes('monitoramento longitudinal de sensibilidade'))
-        ) {
-          return false;
-        }
-
-        // Se o estudo NÃO utiliza Diário de Sensibilidade (hasEvaDiary === false), ocultar formulários de dor/sensibilidade clareamento
-        if (
-          !hasEvaDiary &&
-          (lowerTitle.includes('escala visual analógica de sensibilidade') ||
-           lowerTitle.includes('diário de sensibilidade') ||
-           lowerTitle.includes('monitoramento longitudinal de sensibilidade'))
-        ) {
-          return false;
-        }
-
-        // 4. Formulários que fazem menção expressa a uma sessão clínica futura específica (ex: "Sessão 2", "3ª Sessão")
-        // Não bloqueia formulários gerais de linha de base (Sessão 1) ou de retorno geral
+        // 3. Formulários que fazem menção expressa a uma sessão clínica futura específica (ex: "Sessão 2", "3ª Sessão")
+        // Não bloqueia formulários gerais de linha de base (Sessão 1) ou de acompanhamento geral
         const sessMatch = combined.match(/sess[ãa]o\s*(\d+)/i) || combined.match(/(\d+)ª?\s*sess[ãa]o/i);
         if (sessMatch) {
           const requiredSession = parseInt(sessMatch[1], 10);
@@ -481,10 +454,44 @@ export async function GET(req: Request) {
       } catch {
         parsedQuestions = [];
       }
+
+      // Identificar ocorrência formatada do formulário de acordo com cada estudo
+      let occurrence = 'Acompanhamento Clínico';
+      const desc = f.description || '';
+      const lowerDesc = desc.toLowerCase();
+      const lowerTitle = f.title.toLowerCase();
+      const combined = `${lowerTitle} ${lowerDesc}`;
+
+      const matchingProto = protocol.forms?.find((pf) => {
+        if (pf.id === 'ohip' && lowerTitle.includes('ohip')) return true;
+        if (pf.id === 'satisfaction' && (lowerTitle.includes('satisfação') || lowerTitle.includes('satisfacao'))) return true;
+        if (pf.id === 'habits' && (lowerTitle.includes('hábito') || lowerTitle.includes('habito'))) return true;
+        if (pf.id === 'eva' && (lowerTitle.includes('escala visual analógica') || lowerTitle.includes('sensibilidade'))) return true;
+        return pf.title.toLowerCase() === lowerTitle;
+      });
+
+      const occMatch = desc.match(/Ocorrência:\s*([^|]+)/i) || desc.match(/Frequência:\s*([^|]+)/i);
+      if (occMatch) {
+        occurrence = occMatch[1].trim();
+      } else if (matchingProto?.frequencyDescription) {
+        occurrence = matchingProto.frequencyDescription;
+      } else if (matchingProto?.frequency) {
+        occurrence = getFrequencyLabel(matchingProto.frequency);
+      } else if (combined.includes('linha de base') || combined.includes('admissão') || combined.includes('triagem') || combined.includes('inicial')) {
+        occurrence = 'Linha de Base / Admissão';
+      } else if (combined.includes('a cada sessão') || combined.includes('a cada consulta')) {
+        occurrence = 'A cada Consulta Clínica';
+      } else if (combined.includes('pós-operatório') || combined.includes('pos-operatorio')) {
+        occurrence = 'Pós-Operatório';
+      } else if (combined.includes('retorno final') || combined.includes('sessão final') || combined.includes('satisfação')) {
+        occurrence = 'Retorno Final / Conclusão';
+      }
+
       return {
         id: f.id,
         title: f.title,
         description: f.description,
+        occurrence,
         questions: parsedQuestions,
         expirationHours: f.expirationHours,
         allowLate: f.allowLate,
@@ -547,7 +554,6 @@ export async function GET(req: Request) {
         maxCompletedSession,
         studyProtocol: protocol,
         specialty: protocol.specialty,
-        hasEvaDiary,
         forms: formsWithStatus,
         otherStudies,
       },
