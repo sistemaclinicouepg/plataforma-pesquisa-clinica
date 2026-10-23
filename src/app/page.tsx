@@ -36,6 +36,9 @@ import {
   ChevronUp,
   Stethoscope,
   MessageSquare,
+  Shuffle,
+  ArrowLeft,
+  Layers,
 } from 'lucide-react';
 
 import {
@@ -114,15 +117,20 @@ export default function HomePage() {
     }
   };
 
-  // Modal de criação de projeto
+  // Modal de criação de projeto por etapas (Wizard)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [showCreateAdvancedConfig, setShowCreateAdvancedConfig] = useState(false);
-  const [createTab, setCreateTab] = useState<'GENERAL' | 'SESSIONS' | 'FORMS'>('GENERAL');
+  const [createStep, setCreateStep] = useState<number>(1);
+  const [createStepError, setCreateStepError] = useState<string | null>(null);
   const [newProjectName, setNewProjectName] = useState('');
   const [newProjectDesc, setNewProjectDesc] = useState('');
   const [newProjectPrefix, setNewProjectPrefix] = useState('');
   const [newProjectStatus, setNewProjectStatus] = useState<'ACTIVE' | 'COMPLETED' | 'CANCELLED'>('ACTIVE');
   const [newProjectSpecialty, setNewProjectSpecialty] = useState<ResearchSpecialty>('GENERAL');
+  const [newProjectGroups, setNewProjectGroups] = useState<string[]>([
+    'Grupo A: Controle',
+    'Grupo B: Teste',
+  ]);
+  const [newGroupInput, setNewGroupInput] = useState('');
   const [enableOdontogram, setEnableOdontogram] = useState(true);
   const [odontogramScope, setOdontogramScope] = useState<'anterior' | 'full'>('anterior');
   const [enablePeriodontogram, setEnablePeriodontogram] = useState(false);
@@ -133,12 +141,14 @@ export default function HomePage() {
 
   // Modal de edição / configuração do estudo
   const [editingProject, setEditingProject] = useState<Project | null>(null);
-  const [editTab, setEditTab] = useState<'GENERAL' | 'SESSIONS' | 'FORMS'>('GENERAL');
+  const [editTab, setEditTab] = useState<'GENERAL' | 'GROUPS' | 'SESSIONS' | 'FORMS'>('GENERAL');
   const [editProjectName, setEditProjectName] = useState('');
   const [editProjectDesc, setEditProjectDesc] = useState('');
   const [editProjectPrefix, setEditProjectPrefix] = useState('');
   const [editProjectStatus, setEditProjectStatus] = useState<'ACTIVE' | 'COMPLETED' | 'CANCELLED'>('ACTIVE');
   const [editProjectSpecialty, setEditProjectSpecialty] = useState<ResearchSpecialty>('GENERAL');
+  const [editProjectGroups, setEditProjectGroups] = useState<string[]>([]);
+  const [editNewGroupInput, setEditNewGroupInput] = useState('');
   const [editEnableOdontogram, setEditEnableOdontogram] = useState(true);
   const [editOdontogramScope, setEditOdontogramScope] = useState<'anterior' | 'full'>('anterior');
   const [editEnablePeriodontogram, setEditEnablePeriodontogram] = useState(false);
@@ -518,6 +528,8 @@ export default function HomePage() {
     setEditFormTargets(protocol.forms);
     setEditProjectPrefix(protocol.projectPrefix || '');
     setEditProjectSpecialty(protocol.specialty || 'GENERAL');
+    setEditProjectGroups(protocol.groups || []);
+    setEditNewGroupInput('');
   };
 
   const handleSaveProjectEdit = async (e: React.FormEvent) => {
@@ -549,6 +561,7 @@ export default function HomePage() {
         totalSessions: editStudySessions.length,
         sessions: editStudySessions,
         forms: editFormTargets,
+        groups: editProjectGroups.filter(Boolean),
       },
     };
 
@@ -828,12 +841,70 @@ export default function HomePage() {
     loadData();
   }, []);
 
+  const handleAddProjectGroup = (name?: string) => {
+    const groupName = (name || newGroupInput).trim();
+    if (!groupName) return;
+    if (newProjectGroups.includes(groupName)) {
+      setNewGroupInput('');
+      return;
+    }
+    setNewProjectGroups((prev) => [...prev, groupName]);
+    setNewGroupInput('');
+  };
+
+  const handleRemoveProjectGroup = (index: number) => {
+    setNewProjectGroups((prev) => prev.filter((_, idx) => idx !== index));
+  };
+
+  const handleApplyNewProjectGroupPreset = (preset: 'parallel' | 'split' | 'three') => {
+    if (preset === 'parallel') {
+      setNewProjectGroups(['Grupo A: Controle', 'Grupo B: Teste']);
+    } else if (preset === 'split') {
+      setNewProjectGroups([
+        'Direita: HP 6% / Esquerda: CP 37%',
+        'Direita: CP 37% / Esquerda: HP 6%',
+      ]);
+    } else if (preset === 'three') {
+      setNewProjectGroups([
+        'Grupo 1: Controle (Placebo)',
+        'Grupo 2: Intervenção A',
+        'Grupo 3: Intervenção B',
+      ]);
+    }
+  };
+
+  const handleNextCreateStep = () => {
+    setCreateStepError(null);
+    if (createStep === 1) {
+      if (!newProjectName.trim()) {
+        setCreateStepError('O Nome do Estudo / Ensaio Clínico é obrigatório para avançar.');
+        return;
+      }
+      setCreateStep(2);
+    } else if (createStep === 2) {
+      setCreateStep(3);
+    } else if (createStep === 3) {
+      setCreateStep(4);
+    }
+  };
+
+  const handlePrevCreateStep = () => {
+    setCreateStepError(null);
+    if (createStep > 1) {
+      setCreateStep((prev) => prev - 1);
+    }
+  };
+
   const handleCreateProject = async (
     e: React.FormEvent,
     targetDestination: 'anamnese' | 'dashboard' = 'dashboard'
   ) => {
     if (e && e.preventDefault) e.preventDefault();
-    if (!newProjectName.trim()) return;
+    if (!newProjectName.trim()) {
+      setCreateStep(1);
+      setCreateStepError('O Nome do Estudo / Ensaio Clínico é obrigatório.');
+      return;
+    }
 
     try {
       setCreating(true);
@@ -855,6 +926,7 @@ export default function HomePage() {
           totalSessions: studySessions.length,
           sessions: studySessions,
           forms: formTargets,
+          groups: newProjectGroups.map((g) => g.trim()).filter(Boolean),
         },
       };
 
@@ -877,12 +949,17 @@ export default function HomePage() {
       if (res.ok) {
         const data = await res.json();
         setIsCreateModalOpen(false);
-        setShowCreateAdvancedConfig(false);
+        setCreateStep(1);
+        setCreateStepError(null);
         setNewProjectName('');
         setNewProjectDesc('');
         setNewProjectPrefix('');
+        setNewProjectGroups(['Grupo A: Controle', 'Grupo B: Teste']);
+        setNewGroupInput('');
         setNewProjectStatus('ACTIVE');
         setNewProjectSpecialty('GENERAL');
+        setStudySessions(DEFAULT_STUDY_SESSIONS);
+        setFormTargets(DEFAULT_FORM_TARGETS);
         if (data.project?.id) {
           if (typeof window !== 'undefined') {
             localStorage.setItem('app_active_project_id', data.project.id);
@@ -1578,24 +1655,20 @@ export default function HomePage() {
         )}
       </main>
 
-      {/* Modal de Criação de Projeto Simplificado & Fluido */}
+      {/* Modal de Criação de Projeto por Etapas (Wizard) */}
       {isCreateModalOpen && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-150">
-          <div
-            className={`bg-white rounded-2xl shadow-2xl w-full border border-slate-200 max-h-[92vh] overflow-y-auto transition-all ${
-              showCreateAdvancedConfig ? 'max-w-2xl' : 'max-w-lg'
-            }`}
-          >
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl border border-slate-200 max-h-[92vh] flex flex-col overflow-hidden">
             {/* Header */}
-            <div className="p-5 pb-4 border-b border-slate-100 flex items-start justify-between">
+            <div className="p-5 pb-3 border-b border-slate-100 flex items-start justify-between bg-white shrink-0">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 border border-blue-100">
                   <FolderPlus className="w-5 h-5" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-bold text-slate-900 leading-snug">Novo Estudo Clínico</h2>
+                  <h2 className="text-lg font-bold text-slate-900 leading-snug">Novo Estudo Clínico por Etapas</h2>
                   <p className="text-xs text-slate-500">
-                    Preencha os dados básicos para iniciar. Protocolos e formulários já vêm configurados.
+                    Preenchimento guiado em 4 etapas para não esquecer nenhum parâmetro do protocolo.
                   </p>
                 </div>
               </div>
@@ -1603,7 +1676,8 @@ export default function HomePage() {
                 type="button"
                 onClick={() => {
                   setIsCreateModalOpen(false);
-                  setShowCreateAdvancedConfig(false);
+                  setCreateStep(1);
+                  setCreateStepError(null);
                 }}
                 className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition cursor-pointer"
               >
@@ -1611,244 +1685,510 @@ export default function HomePage() {
               </button>
             </div>
 
-            <form onSubmit={(e) => handleCreateProject(e, 'dashboard')} className="p-5 space-y-4">
-              {/* 1. Nome do Projeto */}
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                  Nome do Estudo / Ensaio Clínico *
-                </label>
-                <input
-                  type="text"
-                  required
-                  autoFocus
-                  value={newProjectName}
-                  onChange={(e) => setNewProjectName(e.target.value)}
-                  placeholder="Ex: Longevidade Clínica de Restaurações em Resina Bulk-Fill"
-                  className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none transition shadow-2xs"
-                />
+            {/* Stepper / Indicador das 4 Etapas */}
+            <div className="grid grid-cols-4 border-b border-slate-200 bg-slate-50/80 shrink-0 text-xs">
+              {[
+                { num: 1, title: '1. Identificação', sub: 'Nome e código' },
+                { num: 2, title: '2. Randomização', sub: 'Grupos do estudo' },
+                { num: 3, title: '3. Cronograma', sub: 'Consultas clínicas' },
+                { num: 4, title: '4. Formulários', sub: 'Instrumentos e revisão' },
+              ].map((step) => {
+                const isCurrent = createStep === step.num;
+                const isPast = createStep > step.num;
+                return (
+                  <button
+                    key={step.num}
+                    type="button"
+                    onClick={() => {
+                      if (step.num > 1 && !newProjectName.trim()) {
+                        setCreateStepError('Preencha o Nome do Estudo antes de avançar.');
+                        setCreateStep(1);
+                        return;
+                      }
+                      setCreateStepError(null);
+                      setCreateStep(step.num);
+                    }}
+                    className={`py-3 px-2 text-left border-b-2 transition flex items-center gap-2 cursor-pointer ${
+                      isCurrent
+                        ? 'border-blue-600 bg-white text-blue-700 shadow-2xs'
+                        : isPast
+                        ? 'border-emerald-500 text-emerald-800 hover:bg-slate-100'
+                        : 'border-transparent text-slate-500 hover:bg-slate-100'
+                    }`}
+                  >
+                    <div
+                      className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
+                        isCurrent
+                          ? 'bg-blue-600 text-white'
+                          : isPast
+                          ? 'bg-emerald-100 text-emerald-700'
+                          : 'bg-slate-200 text-slate-600'
+                      }`}
+                    >
+                      {isPast ? <Check className="w-3.5 h-3.5" /> : step.num}
+                    </div>
+                    <div className="hidden sm:block min-w-0">
+                      <p className="font-bold text-xs truncate leading-tight">{step.title}</p>
+                      <p className="text-[10px] text-slate-400 truncate">{step.sub}</p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Mensagem de Erro de Etapa */}
+            {createStepError && (
+              <div className="px-5 py-2.5 bg-red-50 border-b border-red-200 text-xs text-red-700 flex items-center gap-2 shrink-0">
+                <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
+                <span>{createStepError}</span>
               </div>
+            )}
 
-              {/* 2. Quantidade de Consultas Clínicas (Seleção Rápida de Sessões) */}
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                  Número de Consultas / Sessões Clínicas
-                </label>
-                <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5">
-                  {[1, 2, 3, 4, 5].map((count) => {
-                    const isSelected = studySessions.length === count;
-                    return (
-                      <button
-                        key={count}
-                        type="button"
-                        onClick={() => {
-                          const presets: StudySessionProtocol[] = [];
-                          for (let num = 1; num <= count; num++) {
-                            presets.push({
-                              id: `sess_${Date.now()}_${num}`,
-                              sessionNumber: num,
-                              name: num === 1 ? 'Sessão 1: Consulta Inicial' : `Sessão ${num}: Retorno / Acompanhamento`,
-                              type: num === 1 ? 'CLINICAL' : 'EVALUATION',
-                              daysFromPrevious: num === 1 ? 0 : 7,
-                              durationMinutes: 30,
-                              toleranceDays: 2,
-                              requiresPatientQuestionnaire: true,
-                              patientQuestionnaireIds: ['eva'],
-                              clinicalModules: {
-                                toothMapping: true,
-                                colorGuide: true,
-                                painVAS: true,
-                                softTissueExam: true,
-                                fdiCriteria: false,
-                                edemaTrismus: false,
-                                percussionPalpation: false,
-                                periodontogram: false,
-                              },
-                            });
-                          }
-                          setStudySessions(presets);
-                        }}
-                        className={`py-2 px-1 rounded-xl text-xs font-bold text-center border transition cursor-pointer ${
-                          isSelected
-                            ? 'bg-blue-600 text-white border-blue-600 shadow-2xs'
-                            : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
-                        }`}
-                      >
-                        {count} {count === 1 ? 'Consulta' : 'Consultas'}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* 4. Descrição / Objetivo do Estudo (Opcional) */}
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
-                  Descrição / Objetivo da Pesquisa (Opcional)
-                </label>
-                <textarea
-                  rows={2}
-                  value={newProjectDesc}
-                  onChange={(e) => setNewProjectDesc(e.target.value)}
-                  placeholder="Breve resumo da metodologia, hipótese ou grupos experimentais..."
-                  className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none transition resize-none"
-                />
-              </div>
-
-              {/* 5. Accordion Retrátil para Configurações Avançadas (Opcional) */}
-              <div className="pt-1">
-                <button
-                  type="button"
-                  onClick={() => setShowCreateAdvancedConfig(!showCreateAdvancedConfig)}
-                  className="w-full py-2 px-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 transition flex items-center justify-between cursor-pointer"
-                >
-                  <span className="flex items-center gap-1.5">
-                    <Sliders className="w-3.5 h-3.5 text-slate-500" />
-                    <span>Personalizar protocolo em detalhes (Prefixo, sessões e formulários)</span>
-                  </span>
-                  {showCreateAdvancedConfig ? (
-                    <ChevronUp className="w-4 h-4 text-slate-500" />
-                  ) : (
-                    <ChevronDown className="w-4 h-4 text-slate-500" />
-                  )}
-                </button>
-
-                {showCreateAdvancedConfig && (
-                  <div className="mt-3 p-4 bg-slate-50/70 border border-slate-200 rounded-xl space-y-4 animate-in fade-in duration-150 text-xs">
-                    {/* Prefixo do Código do Participante */}
+            {/* Conteúdo com Scroll da Etapa Atual */}
+            <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4">
+              {/* ETAPA 1: DADOS DO ESTUDO */}
+              {createStep === 1 && (
+                <div className="space-y-4 animate-in fade-in duration-150">
+                  <div className="p-3.5 bg-blue-50/70 border border-blue-200 rounded-xl text-xs text-blue-900 flex items-start gap-2.5">
+                    <FileText className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
                     <div>
-                      <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1">
-                        Prefixo dos Códigos dos Participantes (Opcional)
+                      <p className="font-bold">Etapa 1 de 4: Identificação e Dados Básicos</p>
+                      <p className="text-blue-800 text-[11px] mt-0.5">
+                        Defina o título do projeto e as informações centrais. Todos os parâmetros serão validados passo a passo.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                      Nome do Estudo / Ensaio Clínico *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      autoFocus
+                      value={newProjectName}
+                      onChange={(e) => {
+                        setNewProjectName(e.target.value);
+                        if (createStepError) setCreateStepError(null);
+                      }}
+                      placeholder="Ex: Longevidade Clínica de Restaurações em Resina Bulk-Fill: Ensaio Randomizado"
+                      className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none transition shadow-2xs"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                      Descrição / Hipótese / Metodologia (Opcional)
+                    </label>
+                    <textarea
+                      rows={3}
+                      value={newProjectDesc}
+                      onChange={(e) => setNewProjectDesc(e.target.value)}
+                      placeholder="Descreva brevemente os objetivos da pesquisa, critérios de inclusão, hipótese ou metodologia..."
+                      className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none transition resize-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                      Prefixo dos Códigos dos Participantes (Opcional)
+                    </label>
+                    <input
+                      type="text"
+                      value={newProjectPrefix}
+                      onChange={(e) => setNewProjectPrefix(e.target.value.toUpperCase())}
+                      placeholder="Ex: P01, EXP, CLAR (Deixe em branco para numeração automática: P01, P02...)"
+                      maxLength={8}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs font-mono uppercase bg-white focus:ring-2 focus:ring-blue-500"
+                    />
+                    <div className="mt-2 p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-[11px] text-slate-600 flex items-center justify-between">
+                      <span>Pré-visualização do código dos voluntários:</span>
+                      <span className="font-mono font-bold text-blue-700 bg-white px-2 py-0.5 rounded border border-slate-200 shadow-2xs">
+                        {newProjectPrefix.trim() ? `${newProjectPrefix.trim()}-001` : 'P01-001'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ETAPA 2: ALOCAÇÃO DE RANDOMIZAÇÃO & GRUPOS */}
+              {createStep === 2 && (
+                <div className="space-y-4 animate-in fade-in duration-150">
+                  <div className="p-3.5 bg-indigo-50/70 border border-indigo-200 rounded-xl text-xs text-indigo-900 flex items-start gap-2.5">
+                    <Shuffle className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-bold">Etapa 2 de 4: Grupos de Randomização & Alocação Experimental</p>
+                      <p className="text-indigo-800 text-[11px] mt-0.5">
+                        Defina os grupos ou braços de tratamento deste estudo. Eles ficarão salvos no protocolo e prontos para seleção rápida ao randomizar qualquer paciente.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Modelos Rápidos */}
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+                      Modelos Rápidos Pré-configurados (Clique para carregar):
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleApplyNewProjectGroupPreset('parallel')}
+                        className="p-2.5 border border-slate-200 rounded-xl text-left bg-white hover:bg-indigo-50/50 hover:border-indigo-300 transition text-xs cursor-pointer shadow-2xs"
+                      >
+                        <p className="font-bold text-slate-800 flex items-center gap-1.5">
+                          <Users className="w-3.5 h-3.5 text-indigo-600" />
+                          <span>2 Grupos Paralelos</span>
+                        </p>
+                        <p className="text-[10px] text-slate-500 mt-0.5">Grupo A: Controle / Grupo B: Teste</p>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleApplyNewProjectGroupPreset('split')}
+                        className="p-2.5 border border-slate-200 rounded-xl text-left bg-white hover:bg-indigo-50/50 hover:border-indigo-300 transition text-xs cursor-pointer shadow-2xs"
+                      >
+                        <p className="font-bold text-slate-800 flex items-center gap-1.5">
+                          <Layers className="w-3.5 h-3.5 text-indigo-600" />
+                          <span>Boca Dividida (Split)</span>
+                        </p>
+                        <p className="text-[10px] text-slate-500 mt-0.5">Direita vs Esquerda (HP vs CP)</p>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleApplyNewProjectGroupPreset('three')}
+                        className="p-2.5 border border-slate-200 rounded-xl text-left bg-white hover:bg-indigo-50/50 hover:border-indigo-300 transition text-xs cursor-pointer shadow-2xs"
+                      >
+                        <p className="font-bold text-slate-800 flex items-center gap-1.5">
+                          <Shuffle className="w-3.5 h-3.5 text-indigo-600" />
+                          <span>3 Grupos / Doses</span>
+                        </p>
+                        <p className="text-[10px] text-slate-500 mt-0.5">Controle + Interv. A + Interv. B</p>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Lista de Grupos Atualmente Configurados */}
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                        Grupos Salvos no Estudo ({newProjectGroups.length})
                       </label>
-                      <input
-                        type="text"
-                        value={newProjectPrefix}
-                        onChange={(e) => setNewProjectPrefix(e.target.value.toUpperCase())}
-                        placeholder="Ex: P01, EXP, CLAR (Se vazio, gera automático: P01, P02...)"
-                        maxLength={8}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs font-mono uppercase bg-white focus:ring-2 focus:ring-blue-500"
-                      />
+                      {newProjectGroups.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setNewProjectGroups([])}
+                          className="text-[11px] text-red-600 hover:text-red-800 font-semibold cursor-pointer"
+                        >
+                          Limpar todos
+                        </button>
+                      )}
                     </div>
 
-                    {/* Abas Avançadas de Sessões e Formulários */}
-                    <div className="flex border-b border-slate-200 gap-1 pt-1">
-                      <button
-                        type="button"
-                        onClick={() => setCreateTab('SESSIONS')}
-                        className={`py-1.5 px-2.5 text-xs font-bold border-b-2 transition cursor-pointer ${
-                          createTab === 'SESSIONS'
-                            ? 'border-blue-600 text-blue-700 bg-white rounded-t-lg'
-                            : 'border-transparent text-slate-500'
-                        }`}
-                      >
-                        ⏱️ Cronograma de Sessões ({studySessions.length})
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setCreateTab('FORMS')}
-                        className={`py-1.5 px-2.5 text-xs font-bold border-b-2 transition cursor-pointer ${
-                          createTab === 'FORMS'
-                            ? 'border-blue-600 text-blue-700 bg-white rounded-t-lg'
-                            : 'border-transparent text-slate-500'
-                        }`}
-                      >
-                        📝 Formulários e Quem Responde
-                      </button>
-                    </div>
-
-                    {createTab === 'SESSIONS' && (
-                      <div className="space-y-3 pt-1 max-h-[300px] overflow-y-auto">
-                        <div className="flex justify-between items-center">
-                          <span className="text-[11px] text-slate-500">Ajuste os intervalos e módulos de cada consulta:</span>
-                          <button
-                            type="button"
-                            onClick={() => handleAddSession(false)}
-                            className="px-2 py-1 bg-blue-600 text-white rounded text-[11px] font-bold cursor-pointer"
-                          >
-                            + Adicionar Sessão
-                          </button>
-                        </div>
-                        {studySessions.map((s, idx) => renderSessionCard(s, idx, false))}
+                    {newProjectGroups.length === 0 ? (
+                      <div className="p-4 bg-slate-50 border border-dashed border-slate-300 rounded-xl text-center text-xs text-slate-500">
+                        Nenhum grupo cadastrado ainda. Use os modelos acima ou digite abaixo para adicionar.
                       </div>
-                    )}
-
-                    {createTab === 'FORMS' && (
-                      <div className="space-y-3 pt-1 max-h-[300px] overflow-y-auto">
-                        <div className="space-y-2">
-                          {formTargets.map((f) => (
-                            <div key={f.id} className="p-2.5 bg-white border border-slate-200 rounded-xl space-y-2">
-                              <div className="flex items-center justify-between">
-                                <label className="flex items-center gap-2 cursor-pointer font-bold text-slate-800 text-xs">
-                                  <input
-                                    type="checkbox"
-                                    checked={f.enabled}
-                                    onChange={(e) => handleUpdateFormTarget(f.id, 'enabled', e.target.checked, false)}
-                                    className="w-4 h-4 text-blue-600 rounded"
-                                  />
-                                  <span>{f.title}</span>
-                                </label>
-                                <span className="text-[10px] text-slate-500 font-semibold">
-                                  {f.respondent === 'PATIENT' ? '👤 Paciente (Celular)' : '🩺 Pesquisador'}
-                                </span>
-                              </div>
-                              {f.enabled && f.respondent === 'PATIENT' && (
-                                <div className="pt-1.5 border-t border-slate-100 flex flex-col gap-1 text-[11px]">
-                                  <div className="flex items-center justify-between">
-                                    <span className="text-slate-600 font-bold">Frequência / Períodos em casa:</span>
-                                    <span className="text-[10px] text-blue-600 font-medium">Personalizável</span>
-                                  </div>
-                                  <input
-                                    type="text"
-                                    value={f.frequencyDescription || ''}
-                                    onChange={(e) => {
-                                      handleUpdateFormTarget(f.id, 'frequency', 'CUSTOM', false);
-                                      handleUpdateFormTarget(f.id, 'frequencyDescription', e.target.value, false);
-                                    }}
-                                    placeholder="Ex: 24h, 48h, 7d, 14d e 21d (Clareamento Caseiro)"
-                                    className="w-full px-2 py-1 border border-slate-300 rounded-lg text-xs bg-slate-50 text-slate-800 placeholder-slate-400 focus:bg-white focus:ring-1 focus:ring-blue-500"
-                                  />
-                                </div>
-                              )}
+                    ) : (
+                      <div className="space-y-2 max-h-[220px] overflow-y-auto p-1">
+                        {newProjectGroups.map((grp, idx) => (
+                          <div
+                            key={idx}
+                            className="p-2.5 bg-white border border-slate-200 rounded-xl flex items-center justify-between shadow-2xs hover:border-slate-300 transition text-xs"
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="w-6 h-6 rounded-lg bg-indigo-50 text-indigo-700 font-bold text-[11px] flex items-center justify-center shrink-0 border border-indigo-200">
+                                {idx + 1}
+                              </span>
+                              <span className="font-semibold text-slate-800 truncate">{grp}</span>
                             </div>
-                          ))}
-                        </div>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveProjectGroup(idx)}
+                              className="text-slate-400 hover:text-red-600 p-1 rounded-lg hover:bg-slate-100 transition cursor-pointer"
+                              title="Remover grupo"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ))}
                       </div>
                     )}
                   </div>
+
+                  {/* Campo para Criar Mais Grupos */}
+                  <div className="pt-2 border-t border-slate-100">
+                    <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                      + Criar Mais Grupos Personalizados
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={newGroupInput}
+                        onChange={(e) => setNewGroupInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleAddProjectGroup();
+                          }
+                        }}
+                        placeholder="Ex: Grupo C: Terapia Fotodinâmica aPDT"
+                        className="flex-1 px-3 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleAddProjectGroup()}
+                        disabled={!newGroupInput.trim()}
+                        className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-2xs transition cursor-pointer flex items-center gap-1 shrink-0"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Adicionar Grupo</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ETAPA 3: CRONOGRAMA DE CONSULTAS CLÍNICAS */}
+              {createStep === 3 && (
+                <div className="space-y-4 animate-in fade-in duration-150">
+                  <div className="p-3.5 bg-blue-50/70 border border-blue-200 rounded-xl text-xs text-blue-900 flex items-start gap-2.5">
+                    <Calendar className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-bold">Etapa 3 de 4: Cronograma de Consultas Clínicas</p>
+                      <p className="text-blue-800 text-[11px] mt-0.5">
+                        Defina o número de sessões presenciais, os intervalos de dias e quais exames clínicos devem ser realizados em cada etapa.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Seletor Rápido de Quantidade de Consultas */}
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                      Número de Consultas / Sessões Clínicas
+                    </label>
+                    <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5">
+                      {[1, 2, 3, 4, 5].map((count) => {
+                        const isSelected = studySessions.length === count;
+                        return (
+                          <button
+                            key={count}
+                            type="button"
+                            onClick={() => {
+                              const presets: StudySessionProtocol[] = [];
+                              for (let num = 1; num <= count; num++) {
+                                presets.push({
+                                  id: `sess_${Date.now()}_${num}`,
+                                  sessionNumber: num,
+                                  name: num === 1 ? 'Sessão 1: Consulta Inicial' : `Sessão ${num}: Retorno / Acompanhamento`,
+                                  type: num === 1 ? 'CLINICAL' : 'EVALUATION',
+                                  daysFromPrevious: num === 1 ? 0 : 7,
+                                  durationMinutes: 30,
+                                  toleranceDays: 2,
+                                  requiresPatientQuestionnaire: true,
+                                  patientQuestionnaireIds: ['eva'],
+                                  clinicalModules: {
+                                    toothMapping: true,
+                                    colorGuide: true,
+                                    painVAS: true,
+                                    softTissueExam: true,
+                                    fdiCriteria: false,
+                                    edemaTrismus: false,
+                                    percussionPalpation: false,
+                                    periodontogram: false,
+                                  },
+                                });
+                              }
+                              setStudySessions(presets);
+                            }}
+                            className={`py-2 px-1 rounded-xl text-xs font-bold text-center border transition cursor-pointer ${
+                              isSelected
+                                ? 'bg-blue-600 text-white border-blue-600 shadow-2xs'
+                                : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                            }`}
+                          >
+                            {count} {count === 1 ? 'Consulta' : 'Consultas'}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Lista de Sessões Clínicas com Módulos */}
+                  <div className="space-y-3 pt-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                        Configuração das Sessões ({studySessions.length})
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleAddSession(false)}
+                        className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold cursor-pointer transition shadow-2xs flex items-center gap-1"
+                      >
+                        <Plus className="w-3 h-3" />
+                        <span>Adicionar Sessão</span>
+                      </button>
+                    </div>
+                    <div className="space-y-3 max-h-[350px] overflow-y-auto p-1">
+                      {studySessions.map((s, idx) => renderSessionCard(s, idx, false))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ETAPA 4: FORMULÁRIOS & REVISÃO FINAL */}
+              {createStep === 4 && (
+                <div className="space-y-4 animate-in fade-in duration-150">
+                  <div className="p-3.5 bg-emerald-50/70 border border-emerald-200 rounded-xl text-xs text-emerald-900 flex items-start gap-2.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-bold">Etapa 4 de 4: Formulários do Estudo & Revisão Final</p>
+                      <p className="text-emerald-800 text-[11px] mt-0.5">
+                        Confira os instrumentos de coleta de dados e revise o resumo antes de criar o estudo clínico.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Formulários do Protocolo */}
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
+                      Instrumentos & Formulários Ativos
+                    </label>
+                    <div className="space-y-2 max-h-[220px] overflow-y-auto p-1">
+                      {formTargets.map((f) => (
+                        <div key={f.id} className="p-2.5 bg-white border border-slate-200 rounded-xl space-y-2 shadow-2xs">
+                          <div className="flex items-center justify-between">
+                            <label className="flex items-center gap-2 cursor-pointer font-bold text-slate-800 text-xs">
+                              <input
+                                type="checkbox"
+                                checked={f.enabled}
+                                onChange={(e) => handleUpdateFormTarget(f.id, 'enabled', e.target.checked, false)}
+                                className="w-4 h-4 text-blue-600 rounded"
+                              />
+                              <span>{f.title}</span>
+                            </label>
+                            <span className="text-[10px] text-slate-500 font-semibold px-2 py-0.5 rounded-full bg-slate-100">
+                              {f.respondent === 'PATIENT' ? '👤 Paciente (Celular)' : '🩺 Pesquisador'}
+                            </span>
+                          </div>
+                          {f.enabled && f.respondent === 'PATIENT' && (
+                            <div className="pt-1.5 border-t border-slate-100 flex flex-col gap-1 text-[11px]">
+                              <div className="flex items-center justify-between">
+                                <span className="text-slate-600 font-bold">Frequência / Períodos em casa:</span>
+                                <span className="text-[10px] text-blue-600 font-medium">Personalizável</span>
+                              </div>
+                              <input
+                                type="text"
+                                value={f.frequencyDescription || ''}
+                                onChange={(e) => {
+                                  handleUpdateFormTarget(f.id, 'frequency', 'CUSTOM', false);
+                                  handleUpdateFormTarget(f.id, 'frequencyDescription', e.target.value, false);
+                                }}
+                                placeholder="Ex: 24h, 48h, 7d, 14d e 21d (Clareamento Caseiro)"
+                                className="w-full px-2 py-1 border border-slate-300 rounded-lg text-xs bg-slate-50 text-slate-800 placeholder-slate-400 focus:bg-white focus:ring-1 focus:ring-blue-500"
+                              />
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Resumo Geral de Revisão */}
+                  <div className="p-4 bg-slate-50 border-2 border-blue-200 rounded-2xl space-y-2.5 text-xs text-slate-800 shadow-2xs">
+                    <h4 className="font-bold text-blue-900 text-sm flex items-center gap-2">
+                      <FolderKanban className="w-4 h-4 text-blue-600" />
+                      <span>Resumo da Configuração do Estudo</span>
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 border-t border-slate-200">
+                      <div>
+                        <span className="text-slate-500 text-[11px] block">Nome da Pesquisa:</span>
+                        <strong className="text-slate-900">{newProjectName || 'Não informado'}</strong>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 text-[11px] block">Prefixo dos Códigos:</span>
+                        <strong className="font-mono text-blue-700">{newProjectPrefix.trim() || 'Automático (P01, P02...)'}</strong>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 text-[11px] block">Grupos de Randomização:</span>
+                        <strong className="text-indigo-700">
+                          {newProjectGroups.length > 0 ? `${newProjectGroups.length} grupos (${newProjectGroups.join(', ')})` : 'Nenhum grupo pré-configurado'}
+                        </strong>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 text-[11px] block">Consultas Clínicas:</span>
+                        <strong className="text-slate-900">{studySessions.length} sessões programadas</strong>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Rodapé de Navegação com Botões de Etapas */}
+            <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between shrink-0">
+              <div>
+                {createStep === 1 ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsCreateModalOpen(false);
+                      setCreateStep(1);
+                      setCreateStepError(null);
+                    }}
+                    className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-200/60 rounded-xl transition cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handlePrevCreateStep}
+                    className="px-4 py-2 text-xs font-bold text-slate-700 bg-white border border-slate-300 hover:bg-slate-100 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-2xs"
+                  >
+                    <ArrowLeft className="w-3.5 h-3.5" />
+                    <span>Voltar</span>
+                  </button>
                 )}
               </div>
 
-              {/* Rodapé Simples & Decisivo */}
-              <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsCreateModalOpen(false);
-                    setShowCreateAdvancedConfig(false);
-                  }}
-                  className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition cursor-pointer"
-                >
-                  Cancelar
-                </button>
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] text-slate-400 font-semibold mr-1">
+                  Etapa {createStep} de 4
+                </span>
 
-                <button
-                  type="submit"
-                  disabled={creating || !newProjectName.trim()}
-                  className="px-5 py-2.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-xs hover:shadow transition disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
-                >
-                  {creating ? (
-                    <>
-                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                      <span>Criando Estudo...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Check className="w-4 h-4" />
-                      <span>Criar Estudo Clínico</span>
-                    </>
-                  )}
-                </button>
+                {createStep < 4 ? (
+                  <button
+                    type="button"
+                    onClick={handleNextCreateStep}
+                    className="px-5 py-2.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-xs hover:shadow transition cursor-pointer flex items-center gap-1.5"
+                  >
+                    <span>Avançar</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={(e) => handleCreateProject(e, 'dashboard')}
+                    disabled={creating || !newProjectName.trim()}
+                    className="px-6 py-2.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-xs hover:shadow transition disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
+                  >
+                    {creating ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        <span>Criando Estudo...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Check className="w-4 h-4" />
+                        <span>Concluir & Criar Estudo Clínico</span>
+                      </>
+                    )}
+                  </button>
+                )}
               </div>
-            </form>
+            </div>
           </div>
         </div>
       )}
@@ -1888,6 +2228,17 @@ export default function HomePage() {
               </button>
               <button
                 type="button"
+                onClick={() => setEditTab('GROUPS')}
+                className={`py-2 px-3 text-xs font-bold border-b-2 transition flex items-center gap-1.5 cursor-pointer ${
+                  editTab === 'GROUPS'
+                    ? 'border-blue-600 text-blue-700 bg-blue-50/50 rounded-t-lg'
+                    : 'border-transparent text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                <span>🔀 2. Grupos de Randomização ({editProjectGroups.length})</span>
+              </button>
+              <button
+                type="button"
                 onClick={() => setEditTab('SESSIONS')}
                 className={`py-2 px-3 text-xs font-bold border-b-2 transition flex items-center gap-1.5 cursor-pointer ${
                   editTab === 'SESSIONS'
@@ -1895,7 +2246,7 @@ export default function HomePage() {
                     : 'border-transparent text-slate-500 hover:text-slate-800'
                 }`}
               >
-                <span>⏱️ 2. Sessões & Consultas ({editStudySessions.length})</span>
+                <span>⏱️ 3. Sessões & Consultas ({editStudySessions.length})</span>
               </button>
               <button
                 type="button"
@@ -1906,7 +2257,7 @@ export default function HomePage() {
                     : 'border-transparent text-slate-500 hover:text-slate-800'
                 }`}
               >
-                <span>📝 3. Formulários & Quem Preenche</span>
+                <span>📝 4. Formulários & Quem Preenche</span>
               </button>
             </div>
 
@@ -2015,7 +2366,164 @@ export default function HomePage() {
                 </div>
               )}
 
-              {/* ABA 2: SESSÕES & AVALIAÇÕES CLÍNICAS */}
+              {/* ABA 2: GRUPOS DE RANDOMIZAÇÃO */}
+              {editTab === 'GROUPS' && (
+                <div className="space-y-4 animate-in fade-in duration-150">
+                  <div className="flex items-center justify-between bg-indigo-50/70 p-3 rounded-xl border border-indigo-200">
+                    <div>
+                      <h4 className="text-xs font-bold text-indigo-950 flex items-center gap-1.5">
+                        <Shuffle className="w-3.5 h-3.5 text-indigo-600" />
+                        <span>Grupos de Randomização & Alocação Experimental</span>
+                      </h4>
+                      <p className="text-[11px] text-indigo-800 mt-0.5">
+                        Gerencie os grupos cadastrados neste estudo. Eles ficam salvos e disponíveis para seleção em qualquer voluntário.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Modelos Rápidos */}
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+                      Modelos Rápidos (Clique para adicionar):
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const toAdd = ['Grupo A: Controle', 'Grupo B: Teste'];
+                          setEditProjectGroups((prev) => Array.from(new Set([...prev, ...toAdd])));
+                        }}
+                        className="p-2 border border-slate-200 rounded-lg text-left bg-white hover:bg-indigo-50 transition text-xs cursor-pointer shadow-2xs"
+                      >
+                        <p className="font-bold text-slate-800 text-xs">👥 2 Grupos Paralelos</p>
+                        <p className="text-[10px] text-slate-500">Controle vs Teste</p>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const toAdd = [
+                            'Direita: HP 6% / Esquerda: CP 37%',
+                            'Direita: CP 37% / Esquerda: HP 6%',
+                          ];
+                          setEditProjectGroups((prev) => Array.from(new Set([...prev, ...toAdd])));
+                        }}
+                        className="p-2 border border-slate-200 rounded-lg text-left bg-white hover:bg-indigo-50 transition text-xs cursor-pointer shadow-2xs"
+                      >
+                        <p className="font-bold text-slate-800 text-xs">👄 Boca Dividida</p>
+                        <p className="text-[10px] text-slate-500">Direita vs Esquerda</p>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const toAdd = [
+                            'Grupo 1: Controle (Placebo)',
+                            'Grupo 2: Intervenção A',
+                            'Grupo 3: Intervenção B',
+                          ];
+                          setEditProjectGroups((prev) => Array.from(new Set([...prev, ...toAdd])));
+                        }}
+                        className="p-2 border border-slate-200 rounded-lg text-left bg-white hover:bg-indigo-50 transition text-xs cursor-pointer shadow-2xs"
+                      >
+                        <p className="font-bold text-slate-800 text-xs">📊 3 Grupos</p>
+                        <p className="text-[10px] text-slate-500">Controle + A + B</p>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Lista de Grupos */}
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                        Grupos Cadastrados ({editProjectGroups.length})
+                      </label>
+                      {editProjectGroups.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setEditProjectGroups([])}
+                          className="text-[11px] text-red-600 hover:text-red-800 font-semibold cursor-pointer"
+                        >
+                          Limpar todos
+                        </button>
+                      )}
+                    </div>
+
+                    {editProjectGroups.length === 0 ? (
+                      <div className="p-4 bg-slate-50 border border-dashed border-slate-300 rounded-xl text-center text-xs text-slate-500">
+                        Nenhum grupo cadastrado ainda. Use os modelos acima ou adicione abaixo.
+                      </div>
+                    ) : (
+                      <div className="space-y-2 max-h-[220px] overflow-y-auto p-1">
+                        {editProjectGroups.map((grp, idx) => (
+                          <div
+                            key={idx}
+                            className="p-2.5 bg-white border border-slate-200 rounded-xl flex items-center justify-between shadow-2xs hover:border-slate-300 transition text-xs"
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="w-6 h-6 rounded-lg bg-indigo-50 text-indigo-700 font-bold text-[11px] flex items-center justify-center shrink-0 border border-indigo-200">
+                                {idx + 1}
+                              </span>
+                              <span className="font-semibold text-slate-800 truncate">{grp}</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setEditProjectGroups((prev) => prev.filter((_, i) => i !== idx))}
+                              className="text-slate-400 hover:text-red-600 p-1 rounded-lg hover:bg-slate-100 transition cursor-pointer"
+                              title="Remover grupo"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Adicionar Grupo */}
+                  <div className="pt-2 border-t border-slate-100">
+                    <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                      + Adicionar Mais Grupos
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={editNewGroupInput}
+                        onChange={(e) => setEditNewGroupInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            const clean = editNewGroupInput.trim();
+                            if (clean && !editProjectGroups.includes(clean)) {
+                              setEditProjectGroups((prev) => [...prev, clean]);
+                              setEditNewGroupInput('');
+                            }
+                          }
+                        }}
+                        placeholder="Ex: Grupo C: Terapia Fotodinâmica aPDT"
+                        className="flex-1 px-3 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const clean = editNewGroupInput.trim();
+                          if (clean && !editProjectGroups.includes(clean)) {
+                            setEditProjectGroups((prev) => [...prev, clean]);
+                            setEditNewGroupInput('');
+                          }
+                        }}
+                        disabled={!editNewGroupInput.trim()}
+                        className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-2xs transition cursor-pointer flex items-center gap-1 shrink-0"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Adicionar</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ABA 3: SESSÕES & AVALIAÇÕES CLÍNICAS */}
               {editTab === 'SESSIONS' && (
                 <div className="space-y-4">
                   <div className="flex items-center justify-between bg-blue-50/70 p-3 rounded-xl border border-blue-200">

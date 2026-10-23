@@ -241,6 +241,7 @@ export type StudyProtocolConfig = {
   totalSessions: number;
   sessions: StudySessionProtocol[];
   forms: FormTargetProtocol[];
+  groups?: string[]; // Grupos de randomização / alocação do estudo
 };
 
 export const DEFAULT_STUDY_SESSIONS: StudySessionProtocol[] = [
@@ -1110,12 +1111,20 @@ export function parseStudyProtocol(templateStringOrObj: any): StudyProtocolConfi
     ? studyProtocol.forms
     : DEFAULT_FORM_TARGETS;
 
+  const rawGroups = Array.isArray(studyProtocol.groups)
+    ? studyProtocol.groups
+    : [];
+  const groups: string[] = Array.from(
+    new Set(rawGroups.map((g: unknown) => String(g).trim()).filter(Boolean))
+  );
+
   return {
     specialty,
     projectPrefix: studyProtocol.projectPrefix ? String(studyProtocol.projectPrefix).trim().toUpperCase() : undefined,
     totalSessions: Number(studyProtocol.totalSessions) || sessions.length,
     sessions,
     forms,
+    groups,
   };
 }
 

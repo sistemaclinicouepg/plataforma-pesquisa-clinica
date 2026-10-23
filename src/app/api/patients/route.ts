@@ -72,6 +72,7 @@ export async function POST(req: Request) {
       medications,
       chiefComplaint,
       expectations,
+      group,
     } = data;
 
     let patient = null;
@@ -261,6 +262,7 @@ export async function POST(req: Request) {
         projectId: projectId,
         researchCode: researchCode,
         status: 'PENDING', // Inicia aguardando triagem
+        group: typeof group === 'string' && group.trim() ? group.trim() : null,
         anamnesisData: JSON.stringify(initialAnamnesis),
       },
     });

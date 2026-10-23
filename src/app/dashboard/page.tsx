@@ -79,6 +79,7 @@ import {
   Play,
   Pause,
   RotateCcw,
+  Trash2,
 } from 'lucide-react';
 
 type Patient = {
@@ -627,6 +628,13 @@ function DashboardContent() {
     () => parseStudyProtocol(project?.anamnesisTemplate),
     [project?.anamnesisTemplate]
   );
+  const availableStudyGroups = React.useMemo(() => {
+    const protoGroups = studyProtocol.groups || [];
+    const participantGroups = (project?.participants || [])
+      .map((p) => p.group)
+      .filter((g): g is string => Boolean(g && g !== 'OCULTO (Avaliador Cego)' && g !== 'Pendente'));
+    return Array.from(new Set([...protoGroups, ...participantGroups]));
+  }, [studyProtocol.groups, project?.participants]);
   const [allProjects, setAllProjects] = useState<Array<{ id: string; name: string }>>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -724,7 +732,10 @@ function DashboardContent() {
   const [showAllocationModal, setShowAllocationModal] = useState(false);
   const [allocatingParticipant, setAllocatingParticipant] = useState<Participant | null>(null);
   const [allocatedGroupInput, setAllocatedGroupInput] = useState('');
+  const [newGroupInputInModal, setNewGroupInputInModal] = useState('');
   const [savingAllocation, setSavingAllocation] = useState(false);
+  const [savingStudyGroups, setSavingStudyGroups] = useState(false);
+  const [selectedAdmissionGroup, setSelectedAdmissionGroup] = useState('');
 
   // Modal de Linha do Tempo & Sessões Longitudinais
   const [showTimelineModal, setShowTimelineModal] = useState(false);
@@ -1693,7 +1704,92 @@ function DashboardContent() {
   const handleOpenAllocation = (part: Participant) => {
     setAllocatingParticipant(part);
     setAllocatedGroupInput(part.group || '');
+    setNewGroupInputInModal('');
     setShowAllocationModal(true);
+  };
+
+  const handleSaveProjectGroups = async (updatedGroups: string[]) => {
+    if (!project) return;
+    try {
+      setSavingStudyGroups(true);
+      const currentProtocol = parseStudyProtocol(project.anamnesisTemplate);
+      const updatedProtocol = {
+        ...currentProtocol,
+        groups: Array.from(new Set(updatedGroups.map((g) => g.trim()).filter(Boolean))),
+      };
+
+      let baseTemplate: Record<string, unknown> = {};
+      try {
+        baseTemplate = project.anamnesisTemplate ? JSON.parse(project.anamnesisTemplate) : {};
+      } catch {
+        baseTemplate = {};
+      }
+
+      const newTemplateString = JSON.stringify({
+        ...baseTemplate,
+        studyProtocol: updatedProtocol,
+      });
+
+      // Atualiza estado local imediatamente
+      setProject((prev) => (prev ? { ...prev, anamnesisTemplate: newTemplateString } : prev));
+
+      const authToken = typeof window !== 'undefined' ? localStorage.getItem('uepg_auth_token') : null;
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
+
+      await fetch(`/api/projects/${project.id}`, {
+        method: 'PATCH',
+        headers,
+        credentials: 'include',
+        body: JSON.stringify({ anamnesisTemplate: newTemplateString }),
+      });
+    } catch (e) {
+      console.error('Erro ao salvar grupos do estudo:', e);
+    } finally {
+      setSavingStudyGroups(false);
+    }
+  };
+
+  const handleAddNewStudyGroup = async (groupName: string) => {
+    const clean = groupName.trim();
+    if (!clean) return;
+    setAllocatedGroupInput(clean);
+    setNewGroupInputInModal('');
+    if (!availableStudyGroups.includes(clean)) {
+      const updated = [...availableStudyGroups, clean];
+      await handleSaveProjectGroups(updated);
+    }
+  };
+
+  const handleRemoveStudyGroup = async (groupToRemove: string) => {
+    const updated = availableStudyGroups.filter((g) => g !== groupToRemove);
+    if (allocatedGroupInput === groupToRemove) {
+      setAllocatedGroupInput('');
+    }
+    await handleSaveProjectGroups(updated);
+  };
+
+  const handleApplyGroupPreset = async (presetType: 'parallel' | 'split' | 'three') => {
+    let presetGroups: string[] = [];
+    if (presetType === 'parallel') {
+      presetGroups = ['Grupo A: Controle', 'Grupo B: Teste'];
+    } else if (presetType === 'split') {
+      presetGroups = [
+        'Direita: HP 6% / Esquerda: CP 37%',
+        'Direita: CP 37% / Esquerda: HP 6%',
+      ];
+    } else if (presetType === 'three') {
+      presetGroups = [
+        'Grupo 1: Controle (Placebo)',
+        'Grupo 2: Intervenção A',
+        'Grupo 3: Intervenção B',
+      ];
+    }
+    const combined = Array.from(new Set([...availableStudyGroups, ...presetGroups]));
+    if (presetGroups.length > 0 && !allocatedGroupInput) {
+      setAllocatedGroupInput(presetGroups[0]);
+    }
+    await handleSaveProjectGroups(combined);
   };
 
   const handleSaveAllocation = async (e: React.FormEvent) => {
@@ -1716,6 +1812,11 @@ function DashboardContent() {
         ),
       };
     });
+
+    // Se o grupo informado for novo, persiste nos grupos do estudo para reutilização em outros pacientes
+    if (newGroup && !availableStudyGroups.includes(newGroup)) {
+      handleSaveProjectGroups([...availableStudyGroups, newGroup]);
+    }
 
     try {
       setSavingAllocation(true);
@@ -1769,10 +1870,12 @@ function DashboardContent() {
               projectId: project.id,
               chiefComplaint: selectedPatientAdmissionData.chiefComplaint,
               allergies: selectedPatientAdmissionData.allergies,
+              group: selectedAdmissionGroup || undefined,
             }
           : {
               ...newPatientData,
               projectId: project.id,
+              group: selectedAdmissionGroup || undefined,
             };
 
       const res = await fetch('/api/patients', {
@@ -1786,6 +1889,7 @@ function DashboardContent() {
         const result = await res.json();
         setShowNewPatientModal(false);
         setSelectedPatientId(null);
+        setSelectedAdmissionGroup('');
         setPatientSearchQuery('');
         setNewPatientData({
           fullName: '',
@@ -4791,66 +4895,205 @@ function DashboardContent() {
 
       {/* Modal de Alocação de Randomização / Grupos */}
       {showAllocationModal && allocatingParticipant && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-slate-200">
-            <div className="flex items-center space-x-2 mb-2">
-              <Shuffle className="w-5 h-5 text-indigo-600" />
-              <h3 className="text-lg font-bold text-slate-900">Alocação de Randomização</h3>
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full border border-slate-200 max-h-[92vh] flex flex-col overflow-hidden">
+            {/* Header */}
+            <div className="p-5 pb-3 border-b border-slate-100 flex items-start justify-between bg-white shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 border border-indigo-100">
+                  <Shuffle className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900 leading-snug">Alocação de Randomização</h3>
+                  <p className="text-xs text-slate-500">
+                    Defina o grupo do voluntário. Novos grupos criados ficam salvos no estudo para outros pacientes.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAllocationModal(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
-            <p className="text-xs text-slate-500 mb-5">
-              Participante: <strong>{allocatingParticipant.researchCode} - {allocatingParticipant.patient.fullName}</strong>.
-              Insira o grupo ou alocação de boca dividida conforme a lista de randomização externa.
-            </p>
 
-            <form onSubmit={handleSaveAllocation} className="space-y-4 text-xs">
+            <div className="p-4 bg-slate-50 border-b border-slate-100 flex items-center justify-between text-xs">
               <div>
-                <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">
-                  Atalhos Rápidos (Estudo Boca Dividida)
-                </label>
-                <div className="grid grid-cols-1 gap-2 mb-3">
-                  <button
-                    type="button"
-                    onClick={() => setAllocatedGroupInput('Direita: HP 6% / Esquerda: CP 37%')}
-                    className="p-2 border border-slate-200 rounded-lg text-left hover:bg-blue-50 hover:border-blue-300 transition text-[11px]"
-                  >
-                    <strong>Opção 1:</strong> Direita: HP 6% / Esquerda: CP 37%
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setAllocatedGroupInput('Direita: CP 37% / Esquerda: HP 6%')}
-                    className="p-2 border border-slate-200 rounded-lg text-left hover:bg-blue-50 hover:border-blue-300 transition text-[11px]"
-                  >
-                    <strong>Opção 2:</strong> Direita: CP 37% / Esquerda: HP 6%
-                  </button>
+                <span className="text-slate-500 text-[11px] block">Participante sendo alocado:</span>
+                <strong className="text-slate-900 font-bold">{allocatingParticipant.patient.fullName}</strong>
+              </div>
+              <span className="font-mono font-bold text-blue-700 bg-white px-2.5 py-1 rounded-lg border border-slate-200 shadow-2xs">
+                {allocatingParticipant.researchCode}
+              </span>
+            </div>
+
+            <form onSubmit={handleSaveAllocation} className="flex-1 overflow-y-auto p-5 space-y-4 text-xs">
+              {/* Seção 1: Grupos Salvos para este Estudo */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block font-bold text-slate-700 uppercase tracking-wider text-[11px]">
+                    Grupos Disponíveis no Estudo ({availableStudyGroups.length})
+                  </label>
+                  <span className="text-[10px] text-slate-400">Clique para selecionar</span>
                 </div>
 
-                <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">
-                  Ou digite a identificação do grupo:
+                {availableStudyGroups.length > 0 ? (
+                  <div className="space-y-2 max-h-[220px] overflow-y-auto p-0.5">
+                    {availableStudyGroups.map((grp) => {
+                      const isSelected = allocatedGroupInput === grp;
+                      const count = (project?.participants || []).filter((p) => p.group === grp).length;
+                      return (
+                        <div
+                          key={grp}
+                          onClick={() => setAllocatedGroupInput(grp)}
+                          className={`p-3 rounded-xl border transition flex items-center justify-between cursor-pointer ${
+                            isSelected
+                              ? 'bg-blue-50/70 border-blue-500 ring-2 ring-blue-200 shadow-xs'
+                              : 'bg-white border-slate-200 hover:border-slate-300 shadow-2xs'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div
+                              className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
+                                isSelected ? 'border-blue-600 bg-blue-600 text-white' : 'border-slate-300 bg-white'
+                              }`}
+                            >
+                              {isSelected && <Check className="w-2.5 h-2.5" />}
+                            </div>
+                            <span className={`font-bold truncate text-xs ${isSelected ? 'text-blue-900' : 'text-slate-800'}`}>
+                              {grp}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-600">
+                              {count} paciente{count === 1 ? '' : 's'}
+                            </span>
+                            {count === 0 && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRemoveStudyGroup(grp);
+                                }}
+                                className="text-slate-400 hover:text-red-600 p-1 rounded hover:bg-slate-100 transition cursor-pointer"
+                                title="Remover grupo não utilizado do estudo"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="p-4 bg-slate-50 border border-dashed border-slate-300 rounded-xl text-center space-y-2">
+                    <p className="text-slate-500 text-xs">Nenhum grupo cadastrado neste estudo ainda.</p>
+                    <p className="text-[11px] text-slate-400">Escolha um modelo rápido abaixo ou crie novos grupos:</p>
+                    <div className="flex flex-wrap justify-center gap-1.5 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => handleApplyGroupPreset('parallel')}
+                        className="px-2.5 py-1 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-700 hover:bg-slate-100 shadow-2xs cursor-pointer"
+                      >
+                        👥 Teste vs Controle
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleApplyGroupPreset('split')}
+                        className="px-2.5 py-1 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-700 hover:bg-slate-100 shadow-2xs cursor-pointer"
+                      >
+                        👄 Boca Dividida
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleApplyGroupPreset('three')}
+                        className="px-2.5 py-1 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-700 hover:bg-slate-100 shadow-2xs cursor-pointer"
+                      >
+                        📊 3 Grupos
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Seção 2: Criar Mais Grupos & Salvar no Estudo */}
+              <div className="p-3.5 bg-indigo-50/60 border border-indigo-200 rounded-xl space-y-2">
+                <label className="block font-bold text-indigo-950 text-xs flex items-center justify-between">
+                  <span>+ Criar Mais Grupos e Salvar no Estudo</span>
+                  {savingStudyGroups && <span className="text-[10px] text-indigo-600 animate-pulse font-normal">Salvando no estudo...</span>}
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newGroupInputInModal}
+                    onChange={(e) => setNewGroupInputInModal(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddNewStudyGroup(newGroupInputInModal);
+                      }
+                    }}
+                    placeholder="Ex: Grupo C: Laserterapia ou Dose Alta 20mg"
+                    className="flex-1 px-3 py-2 border border-slate-300 rounded-xl text-xs bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleAddNewStudyGroup(newGroupInputInModal)}
+                    disabled={!newGroupInputInModal.trim() || savingStudyGroups}
+                    className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-2xs transition cursor-pointer flex items-center gap-1 shrink-0"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Salvar no Estudo</span>
+                  </button>
+                </div>
+                <p className="text-[10px] text-indigo-700 leading-tight">
+                  💡 <strong>Fica salvo automaticamente:</strong> o novo grupo é persistido no projeto e aparecerá pronto para seleção rápida em todos os outros pacientes.
+                </p>
+              </div>
+
+              {/* Seção 3: Grupo Selecionado para este Paciente */}
+              <div>
+                <label className="block font-bold text-slate-700 uppercase tracking-wider text-[11px] mb-1">
+                  Grupo Selecionado para este Voluntário:
                 </label>
                 <input
                   type="text"
                   required
                   value={allocatedGroupInput}
                   onChange={(e) => setAllocatedGroupInput(e.target.value)}
-                  placeholder="Ex: Grupo A ou Direita: HP 6% / Esquerda: CP 37%"
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  placeholder="Selecione um grupo acima ou digite aqui..."
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm font-semibold text-slate-900 bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
                 />
               </div>
 
-              <div className="flex justify-end space-x-3 pt-4 border-t border-slate-100">
+              <div className="flex justify-end space-x-3 pt-3 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setShowAllocationModal(false)}
-                  className="px-4 py-2 border border-slate-300 rounded-lg font-bold text-slate-600 hover:bg-slate-50"
+                  className="px-4 py-2 border border-slate-300 rounded-xl font-bold text-slate-600 hover:bg-slate-50 cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  disabled={savingAllocation}
-                  className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow-sm transition disabled:opacity-50"
+                  disabled={savingAllocation || !allocatedGroupInput.trim()}
+                  className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-sm transition disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
                 >
-                  {savingAllocation ? 'Salvando...' : 'Salvar Alocação'}
+                  {savingAllocation ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Salvando...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-4 h-4" />
+                      <span>Salvar Alocação</span>
+                    </>
+                  )}
                 </button>
               </div>
             </form>
@@ -5982,6 +6225,31 @@ function DashboardContent() {
                   </div>
                 </div>
               )}
+
+              {/* Grupo de Randomização / Alocação Inicial */}
+              <div className="p-3 bg-indigo-50/60 border border-indigo-200 rounded-xl space-y-1.5">
+                <label className="block text-xs font-bold text-indigo-900 flex items-center gap-1.5">
+                  <Shuffle className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>Grupo de Randomização / Alocação Inicial (Opcional)</span>
+                </label>
+                <select
+                  value={selectedAdmissionGroup}
+                  onChange={(e) => setSelectedAdmissionGroup(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                >
+                  <option value="">Não alocar agora (Definir depois na lista de participantes)</option>
+                  {availableStudyGroups.map((grp) => (
+                    <option key={grp} value={grp}>
+                      {grp}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[10px] text-indigo-700">
+                  {availableStudyGroups.length > 0
+                    ? 'Você pode selecionar um grupo existente ou alocar o paciente a qualquer momento pela tabela.'
+                    : 'Nenhum grupo cadastrado no estudo ainda. Você poderá criar e salvar grupos na tabela de participantes.'}
+                </p>
+              </div>
 
               {/* Opção para abrir a Ficha Clínica imediatamente */}
               <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl flex items-center space-x-2">
