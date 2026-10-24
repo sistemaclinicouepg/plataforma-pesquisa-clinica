@@ -65,17 +65,38 @@ export async function PUT(
     const body = await req.json();
     const { anamnesisTemplate } = body;
 
+    // Preservar studyProtocol caso o formulário de anamnese não o envie explicitamente
+    let finalTemplate = anamnesisTemplate;
+    const existingProject = await prisma.project.findUnique({
+      where: { id },
+      select: { anamnesisTemplate: true },
+    });
+
+    if (existingProject?.anamnesisTemplate && finalTemplate) {
+      try {
+        const existingParsed = JSON.parse(existingProject.anamnesisTemplate);
+        if (existingParsed?.studyProtocol && !finalTemplate.studyProtocol) {
+          finalTemplate = {
+            ...finalTemplate,
+            studyProtocol: existingParsed.studyProtocol,
+          };
+        }
+      } catch (err) {
+        console.warn('Aviso ao mesclar studyProtocol existente:', err);
+      }
+    }
+
     const updated = await prisma.project.update({
       where: { id },
       data: {
-        anamnesisTemplate: anamnesisTemplate ? JSON.stringify(anamnesisTemplate) : null,
+        anamnesisTemplate: finalTemplate ? JSON.stringify(finalTemplate) : null,
       },
     });
 
     return NextResponse.json({
       success: true,
       projectId: updated.id,
-      anamnesisTemplate,
+      anamnesisTemplate: finalTemplate,
     });
   } catch (error) {
     console.error('Erro ao salvar template de anamnese:', error);

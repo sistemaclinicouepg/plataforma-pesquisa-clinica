@@ -946,6 +946,32 @@ function DashboardContent() {
     justification: '',
   });
   const [savingSession, setSavingSession] = useState(false);
+  const [sessionFormAnswers, setSessionFormAnswers] = useState<Record<string, Record<string, any>>>({});
+
+  const handleSetSessionFormAnswer = (formId: string, qId: string, value: any) => {
+    setSessionFormAnswers((prev) => ({
+      ...prev,
+      [formId]: {
+        ...(prev[formId] || {}),
+        [qId]: value,
+      },
+    }));
+  };
+
+  const handleDeleteForm = async (formId: string, title: string) => {
+    if (!confirm(`Tem certeza que deseja excluir o formulário "${title}" deste estudo? Esta ação removerá o questionário e quaisquer respostas associadas.`)) return;
+    try {
+      const res = await fetch(`/api/forms?id=${formId}`, { method: 'DELETE' });
+      if (res.ok) {
+        loadProject(true);
+      } else {
+        const err = await res.json().catch(() => ({}));
+        alert(err.error || 'Erro ao excluir formulário.');
+      }
+    } catch (e) {
+      alert('Erro de conexão ao excluir formulário.');
+    }
+  };
 
   // Form Novo / Seleção de Paciente
   const [patientModalMode, setPatientModalMode] = useState<'select' | 'new'>('select');
@@ -2120,6 +2146,22 @@ function DashboardContent() {
     setGelTimerRunning(false);
     setGelTimerSeconds(0);
 
+    // Carregar respostas existentes de formulários do projeto para este participante
+    const initialAnswers: Record<string, Record<string, any>> = {};
+    (project?.forms || []).forEach((f) => {
+      const resp = participant.responses?.find((r) => r.formId === f.id);
+      if (resp?.answersJson) {
+        try {
+          initialAnswers[f.id] = JSON.parse(resp.answersJson);
+        } catch {
+          initialAnswers[f.id] = {};
+        }
+      } else {
+        initialAnswers[f.id] = {};
+      }
+    });
+    setSessionFormAnswers(initialAnswers);
+
     setCurrentSessionForm({
       participantId: participant.id,
       sessionNumber,
@@ -2238,6 +2280,25 @@ function DashboardContent() {
       });
 
       if (res.ok) {
+        // Gravar respostas dos formulários eCRF preenchidos durante o atendimento
+        for (const [formId, answers] of Object.entries(sessionFormAnswers)) {
+          if (answers && Object.keys(answers).length > 0) {
+            try {
+              await fetch('/api/responses', {
+                method: 'POST',
+                headers,
+                credentials: 'include',
+                body: JSON.stringify({
+                  formId,
+                  participantId: formData.participantId,
+                  answers,
+                }),
+              });
+            } catch (e) {
+              console.warn('Erro ao salvar resposta de eCRF na sessão:', e);
+            }
+          }
+        }
         loadProject(true);
       } else {
         const errorData = await res.json().catch(() => ({}));
@@ -4500,18 +4561,30 @@ function DashboardContent() {
                               </div>
                             </div>
 
-                            {/* Botão de Exportação Especializada */}
-                            <button
-                              type="button"
-                              onClick={() => exportFormToCSV(form.id)}
-                              className="px-4 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-xs"
-                              title="Exportar planilha CSV com colunas de cada pergunta e escore total pronto para SPSS"
-                            >
-                              <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 20 20">
-                                <path d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" />
-                              </svg>
-                              <span>Exportar Matriz (.CSV)</span>
-                            </button>
+                            <div className="flex items-center gap-2">
+                              {/* Botão de Exportação Especializada */}
+                              <button
+                                type="button"
+                                onClick={() => exportFormToCSV(form.id)}
+                                className="h-8 px-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-lg text-xs font-semibold transition flex items-center space-x-1.5 shadow-2xs cursor-pointer"
+                                title="Exportar planilha CSV com colunas de cada pergunta e escore total pronto para SPSS"
+                              >
+                                <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 20 20">
+                                  <path d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" />
+                                </svg>
+                                <span>Exportar (.CSV)</span>
+                              </button>
+
+                              {/* Excluir Formulário */}
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteForm(form.id, form.title)}
+                                className="h-8 w-8 flex items-center justify-center text-slate-400 hover:text-red-600 hover:bg-red-50 border border-slate-200 hover:border-red-300 rounded-lg transition cursor-pointer shadow-2xs"
+                                title="Excluir este formulário e desvincular do estudo"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
                           </div>
                         </div>
                       );
@@ -6824,7 +6897,43 @@ function DashboardContent() {
         );
         const sessionInfo = SESSION_DEFINITIONS[currentSessionForm.sessionNumber];
         const displayTitle = protoSession?.name || sessionInfo?.title || `Registro Clínico: Sessão ${currentSessionForm.sessionNumber}`;
-        const displaySubtitle = sessionInfo?.subtitle || 'Preencha os desfechos aferidos durante a consulta.';
+        const displaySubtitle = protoSession?.description || sessionInfo?.subtitle || 'Preencha os desfechos aferidos durante a consulta.';
+
+        // Determinar módulos clínicos configurados para esta sessão específica no protocolo do estudo
+        const hasColorGuide = protoSession?.clinicalModules?.colorGuide !== undefined
+          ? protoSession.clinicalModules.colorGuide
+          : (studyProtocol.specialty === 'BLEACHING' || studyProtocol.specialty === 'RESTORATIVE');
+        const hasToothMapping = protoSession?.clinicalModules?.toothMapping !== undefined
+          ? protoSession.clinicalModules.toothMapping
+          : false;
+        const hasPainVAS = protoSession?.clinicalModules?.painVAS !== undefined
+          ? protoSession.clinicalModules.painVAS
+          : true;
+        const hasSoftTissueExam = protoSession?.clinicalModules?.softTissueExam !== undefined
+          ? protoSession.clinicalModules.softTissueExam
+          : true;
+        const isInterventionSession = protoSession?.type === 'CLINICAL' || currentSessionForm.sessionNumber === 1 || currentSessionForm.sessionNumber === 2;
+
+        // Formulários eCRF cadastrados para este projeto com questões avaliáveis
+        const projectFormsWithQuestions = (project?.forms || []).map((f) => {
+          let parsedQuestions: any[] = [];
+          try {
+            parsedQuestions = JSON.parse(f.questionsJson || '[]');
+          } catch {
+            parsedQuestions = [];
+          }
+          return {
+            ...f,
+            parsedQuestions: parsedQuestions.filter((q) => q.type !== 'instruction'),
+          };
+        }).filter((f) => f.parsedQuestions.length > 0);
+
+        const ribbonSteps = [
+          { step: 1, title: 'Parâmetros Iniciais', sub: 'Data & Checagem' },
+          { step: 2, title: isInterventionSession ? 'Intervenção' : 'Avaliação', sub: isInterventionSession ? 'Procedimento & Timer' : 'Protocolo & Exame' },
+          { step: 3, title: 'Desfechos & eCRF', sub: projectFormsWithQuestions.length > 0 ? `${projectFormsWithQuestions.length} Ficha(s) eCRF` : 'Sensibilidade & Tecidos' },
+          { step: 4, title: 'Conclusão', sub: 'Equipe & Portal' },
+        ];
 
         const formatTimer = (sec: number) => {
           const m = Math.floor(sec / 60);
@@ -6928,12 +7037,7 @@ function DashboardContent() {
               {/* Trilha Guiada de Atendimento (Stepper Ribbon) */}
               <div className="bg-slate-50/80 border-b border-slate-200 px-5 sm:px-6 py-3 shrink-0">
                 <div className="flex items-center justify-between">
-                  {[
-                    { step: 1, title: 'Linha de Base', sub: 'Exame & Elementos' },
-                    { step: 2, title: 'Intervenção', sub: 'Procedimento & Timer' },
-                    { step: 3, title: 'Desfechos', sub: 'EVA 0h & Tecidos' },
-                    { step: 4, title: 'Conclusão', sub: 'Equipe & Diário' },
-                  ].map((s, idx, arr) => {
+                  {ribbonSteps.map((s, idx, arr) => {
                     const isCurrent = sessionStep === s.step;
                     const isPast = sessionStep > s.step;
                     return (
@@ -6989,7 +7093,7 @@ function DashboardContent() {
                     <div className="space-y-4 animate-fadeIn">
                       <div className="flex items-center gap-2 text-slate-900 font-bold text-sm border-b border-slate-100 pb-2">
                         <Sparkles className="w-4 h-4 text-amber-500" />
-                        <span>Passo 1: Checagem Inicial e Linha de Base</span>
+                        <span>Passo 1: Checagem Inicial & Parâmetros</span>
                       </div>
 
                       {/* Data do Atendimento */}
@@ -7016,29 +7120,40 @@ function DashboardContent() {
                           <div className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 font-semibold flex items-center gap-1.5">
                             <Stethoscope className="w-3.5 h-3.5 text-blue-600" />
                             <span>
-                              {currentSessionForm.sessionNumber === 1
-                                ? 'Sessão 1: Atendimento Inicial / 1ª Intervenção'
-                                : currentSessionForm.sessionNumber === 2
-                                ? 'Sessão 2: 2ª Intervenção Clínica'
-                                : `Sessão ${currentSessionForm.sessionNumber}: Avaliação Clínica`}
+                              {protoSession?.name || (currentSessionForm.sessionNumber === 1
+                                ? 'Sessão 1: Atendimento Inicial'
+                                : `Sessão ${currentSessionForm.sessionNumber}: Atendimento Clínico`)}
                             </span>
                           </div>
                         </div>
                       </div>
 
-                      {/* Aferição de Cor Dental (Escala VITA Classical - Quando Aplicável) */}
-                      {((protoSession?.clinicalModules ? protoSession.clinicalModules.colorGuide : true) !== false) ? (
+                      {/* Mapeamento de Dentes / Elementos Tratados (se ativo no protocolo) */}
+                      {hasToothMapping && (
+                        <div className="p-3.5 bg-blue-50/50 border border-blue-200/80 rounded-2xl space-y-2 shadow-2xs">
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-blue-950 text-xs inline-flex items-center gap-1.5">
+                              <span>🦷</span>
+                              <span>Mapeamento de Dentes / Elementos Tratados</span>
+                            </span>
+                            <span className="text-[10px] text-blue-700 font-medium">Arcada Superior & Inferior</span>
+                          </div>
+                          <p className="text-[11px] text-blue-900/80">
+                            Elementos incluídos no protocolo clínico desta sessão: <strong>13 ao 23 (Arcada Superior)</strong> e <strong>33 ao 43 (Arcada Inferior)</strong>.
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Aferição de Cor Dental (Escala VITA Classical - Quando Ativo no Protocolo) */}
+                      {hasColorGuide && (
                         <div className="p-4 bg-amber-50/50 border border-amber-200/80 rounded-2xl space-y-3 shadow-2xs">
                           <div className="flex items-center justify-between">
                             <span className="font-bold text-amber-950 text-xs inline-flex items-center gap-1.5">
                               <Sparkles className="w-4 h-4 text-amber-600" />
-                              <span>Aferição de Cor Dental (VITA Classical - se aplicável ao estudo)</span>
+                              <span>Aferição de Cor Dental (Escala VITA Classical)</span>
                             </span>
                             <span className="text-[10px] text-amber-800 font-medium">Boca Dividida ou Dentes Teste</span>
                           </div>
-                          <p className="text-[11px] text-amber-900/80 leading-relaxed">
-                            Aferição sob luz padronizada antes da intervenção. Aplicável a clareamento dental, compósitos e cerâmicas. Em ensaios cirúrgicos ou endodônticos sem aferição de cor, pode-se manter o valor padrão.
-                          </p>
 
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                             <div className="bg-white p-3 rounded-xl border border-amber-200 shadow-2xs">
@@ -7080,13 +7195,6 @@ function DashboardContent() {
                             </div>
                           </div>
                         </div>
-                      ) : (
-                        <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-xs text-slate-600">
-                          <span className="flex items-center gap-1.5 font-bold text-slate-700">
-                            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                            <span>Tomada de cor VITA não necessária para esta consulta</span>
-                          </span>
-                        </div>
                       )}
 
                       {/* Checagem de Tecidos e Critérios de Manutenção */}
@@ -7108,7 +7216,7 @@ function DashboardContent() {
                     <div className="space-y-4 animate-fadeIn">
                       <div className="flex items-center gap-2 text-slate-900 font-bold text-sm border-b border-slate-100 pb-2">
                         <Clock className="w-4 h-4 text-blue-600" />
-                        <span>Passo 2: Execução do Procedimento Clínico</span>
+                        <span>Passo 2: {isInterventionSession ? 'Execução do Procedimento Clínico' : 'Avaliação Clínica e Protocolo'}</span>
                       </div>
 
                       {/* Checklist Clínico Dinâmico Adaptado à Sessão */}
@@ -7173,102 +7281,104 @@ function DashboardContent() {
                         </div>
                       )}
 
-                      {/* Cronômetro Clínico Integrado */}
-                      <div className="p-5 bg-gradient-to-br from-slate-900 to-indigo-950 rounded-2xl text-white space-y-3.5 shadow-md text-center">
-                        <div className="flex items-center justify-between text-xs text-slate-300">
-                          <span className="font-semibold flex items-center gap-1.5">
-                            <Clock className="w-3.5 h-3.5 text-blue-400" />
-                            <span>Cronômetro Clínico do Atendimento</span>
-                          </span>
-                          <span className="text-[10px] text-slate-400">
-                            {gelTimerRunning ? 'Cronometrando...' : 'Pausado'}
-                          </span>
-                        </div>
+                      {/* Cronômetro Clínico Integrado (Exibido para intervenções) */}
+                      {isInterventionSession && (
+                        <div className="p-5 bg-gradient-to-br from-slate-900 to-indigo-950 rounded-2xl text-white space-y-3.5 shadow-md text-center">
+                          <div className="flex items-center justify-between text-xs text-slate-300">
+                            <span className="font-semibold flex items-center gap-1.5">
+                              <Clock className="w-3.5 h-3.5 text-blue-400" />
+                              <span>Cronômetro Clínico do Atendimento</span>
+                            </span>
+                            <span className="text-[10px] text-slate-400">
+                              {gelTimerRunning ? 'Cronometrando...' : 'Pausado'}
+                            </span>
+                          </div>
 
-                        {/* Display Digital */}
-                        <div className="py-2">
-                          <span className="font-mono font-black text-4xl sm:text-5xl tracking-widest text-emerald-400">
-                            {formatTimer(gelTimerSeconds)}
-                          </span>
-                        </div>
+                          {/* Display Digital */}
+                          <div className="py-2">
+                            <span className="font-mono font-black text-4xl sm:text-5xl tracking-widest text-emerald-400">
+                              {formatTimer(gelTimerSeconds)}
+                            </span>
+                          </div>
 
-                        {/* Controles do Cronômetro */}
-                        <div className="flex items-center justify-center gap-2 pt-1">
-                          <button
-                            type="button"
-                            onClick={() => setGelTimerRunning(!gelTimerRunning)}
-                            className={`px-4 py-2 rounded-xl font-bold text-xs transition inline-flex items-center gap-1.5 cursor-pointer shadow-xs ${
-                              gelTimerRunning
-                                ? 'bg-amber-500 hover:bg-amber-600 text-white'
-                                : 'bg-emerald-600 hover:bg-emerald-700 text-white'
-                            }`}
-                          >
-                            {gelTimerRunning ? (
-                              <>
-                                <Pause className="w-3.5 h-3.5 fill-current" />
-                                <span>Pausar Tempo</span>
-                              </>
-                            ) : (
-                              <>
-                                <Play className="w-3.5 h-3.5 fill-current" />
-                                <span>Iniciar Tempo</span>
-                              </>
-                            )}
-                          </button>
+                          {/* Controles do Cronômetro */}
+                          <div className="flex items-center justify-center gap-2 pt-1">
+                            <button
+                              type="button"
+                              onClick={() => setGelTimerRunning(!gelTimerRunning)}
+                              className={`px-4 py-2 rounded-xl font-bold text-xs transition inline-flex items-center gap-1.5 cursor-pointer shadow-xs ${
+                                gelTimerRunning
+                                  ? 'bg-amber-500 hover:bg-amber-600 text-white'
+                                  : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                              }`}
+                            >
+                              {gelTimerRunning ? (
+                                <>
+                                  <Pause className="w-3.5 h-3.5 fill-current" />
+                                  <span>Pausar Tempo</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Play className="w-3.5 h-3.5 fill-current" />
+                                  <span>Iniciar Tempo</span>
+                                </>
+                              )}
+                            </button>
 
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setGelTimerRunning(false);
-                              setGelTimerSeconds(0);
-                            }}
-                            className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold transition inline-flex items-center gap-1 cursor-pointer"
-                            title="Zerar cronômetro"
-                          >
-                            <RotateCcw className="w-3 h-3" />
-                            <span>Zerar</span>
-                          </button>
-                        </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setGelTimerRunning(false);
+                                setGelTimerSeconds(0);
+                              }}
+                              className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold transition inline-flex items-center gap-1 cursor-pointer"
+                              title="Zerar cronômetro"
+                            >
+                              <RotateCcw className="w-3 h-3" />
+                              <span>Zerar</span>
+                            </button>
+                          </div>
 
-                        {/* Atalhos de Minutos */}
-                        <div className="flex justify-center gap-2 pt-1 text-[10px] flex-wrap">
-                          <button
-                            type="button"
-                            onClick={() => setGelTimerSeconds(10 * 60)}
-                            className="px-2.5 py-1 bg-white/10 hover:bg-white/20 rounded-lg text-slate-200 transition"
-                          >
-                            +10 min
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setGelTimerSeconds(15 * 60)}
-                            className="px-2.5 py-1 bg-white/10 hover:bg-white/20 rounded-lg text-slate-200 transition"
-                          >
-                            +15 min
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setGelTimerSeconds(30 * 60)}
-                            className="px-2.5 py-1 bg-white/10 hover:bg-white/20 rounded-lg text-slate-200 transition"
-                          >
-                            +30 min
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setGelTimerSeconds(45 * 60)}
-                            className="px-2.5 py-1 bg-white/10 hover:bg-white/20 rounded-lg text-slate-200 transition"
-                          >
-                            +45 min
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setGelTimerSeconds(60 * 60)}
-                            className="px-2.5 py-1 bg-white/10 hover:bg-white/20 rounded-lg text-slate-200 transition"
-                          >
-                            +60 min
-                          </button>
+                          {/* Atalhos de Minutos */}
+                          <div className="flex justify-center gap-2 pt-1 text-[10px] flex-wrap">
+                            <button
+                              type="button"
+                              onClick={() => setGelTimerSeconds(10 * 60)}
+                              className="px-2.5 py-1 bg-white/10 hover:bg-white/20 rounded-lg text-slate-200 transition"
+                            >
+                              +10 min
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setGelTimerSeconds(15 * 60)}
+                              className="px-2.5 py-1 bg-white/10 hover:bg-white/20 rounded-lg text-slate-200 transition"
+                            >
+                              +15 min
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setGelTimerSeconds(30 * 60)}
+                              className="px-2.5 py-1 bg-white/10 hover:bg-white/20 rounded-lg text-slate-200 transition"
+                            >
+                              +30 min
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setGelTimerSeconds(45 * 60)}
+                              className="px-2.5 py-1 bg-white/10 hover:bg-white/20 rounded-lg text-slate-200 transition"
+                            >
+                              +45 min
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setGelTimerSeconds(60 * 60)}
+                              className="px-2.5 py-1 bg-white/10 hover:bg-white/20 rounded-lg text-slate-200 transition"
+                            >
+                              +60 min
+                            </button>
+                          </div>
                         </div>
-                      </div>
+                      )}
 
                       {/* Observações da Intervenção */}
                       <div>
@@ -7288,90 +7398,241 @@ function DashboardContent() {
                     </div>
                   )}
 
-                  {/* ===================== PASSO 3: DESFECHOS CLÍNICOS IMEDIATOS ===================== */}
+                  {/* ===================== PASSO 3: DESFECHOS CLÍNICOS & ECRF ===================== */}
                   {sessionStep === 3 && (
                     <div className="space-y-4 animate-fadeIn">
                       <div className="flex items-center gap-2 text-slate-900 font-bold text-sm border-b border-slate-100 pb-2">
                         <Zap className="w-4 h-4 text-blue-600" />
-                        <span>Passo 3: Desfechos Clínicos Imediatos (Sensibilidade & Tecidos Moles)</span>
+                        <span>Passo 3: Desfechos Clínicos & Fichas eCRF do Estudo</span>
                       </div>
 
-                      {/* Sensibilidade Imediata EVA 0h na Cadeira */}
-                      <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-3 shadow-2xs">
-                        <div className="flex justify-between items-center">
-                          <span className="font-bold text-slate-800 text-xs inline-flex items-center gap-1.5">
-                            <Zap className="w-4 h-4 text-amber-500" />
-                            <span>Dor ou Sensibilidade Imediata no Consultório (Escala EVA)</span>
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-slate-500 leading-relaxed">
-                          Solicite ao voluntário que deslize o marcador na linha até o ponto que melhor represente o nível de dor ou sensibilidade sentida no momento.
-                        </p>
+                      {/* Sensibilidade Imediata EVA 0h na Cadeira (Quando Ativo no Protocolo) */}
+                      {hasPainVAS && (
+                        <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-3 shadow-2xs">
+                          <div className="flex justify-between items-center">
+                            <span className="font-bold text-slate-800 text-xs inline-flex items-center gap-1.5">
+                              <Zap className="w-4 h-4 text-amber-500" />
+                              <span>Dor ou Sensibilidade Imediata no Consultório (Escala EVA: 0 - 10)</span>
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-slate-500 leading-relaxed">
+                            Solicite ao voluntário que deslize o marcador na linha até o ponto que melhor represente o nível de dor ou sensibilidade sentida no momento.
+                          </p>
 
-                        <div className="py-2 px-1 space-y-2">
-                          <input
-                            type="range"
-                            min="0"
-                            max="10"
-                            step="0.1"
-                            value={currentSessionForm.painScore0h}
-                            onChange={(e) =>
-                              setCurrentSessionForm({
-                                ...currentSessionForm,
-                                painScore0h: parseFloat(parseFloat(e.target.value).toFixed(1)),
-                              })
-                            }
-                            className="w-full h-3 bg-slate-200 border border-slate-300 rounded-lg appearance-none cursor-pointer accent-blue-600 focus:outline-none"
-                          />
-                          <div className="flex justify-between items-start text-xs pt-1 px-1">
-                            <div className="text-left max-w-[140px]">
-                              <span className="block font-bold text-slate-800">Nenhuma dor</span>
-                              <span className="text-[10px] text-slate-400 leading-tight block">Ausência total de sensibilidade</span>
-                            </div>
-                            <div className="text-right max-w-[140px]">
-                              <span className="block font-bold text-slate-800">Pior dor possível</span>
-                              <span className="text-[10px] text-slate-400 leading-tight block">Intensidade máxima suportável</span>
+                          <div className="py-2 px-1 space-y-2">
+                            <input
+                              type="range"
+                              min="0"
+                              max="10"
+                              step="0.1"
+                              value={currentSessionForm.painScore0h}
+                              onChange={(e) =>
+                                setCurrentSessionForm({
+                                  ...currentSessionForm,
+                                  painScore0h: parseFloat(parseFloat(e.target.value).toFixed(1)),
+                                })
+                              }
+                              className="w-full h-3 bg-slate-200 border border-slate-300 rounded-lg appearance-none cursor-pointer accent-blue-600 focus:outline-none"
+                            />
+                            <div className="flex justify-between items-start text-xs pt-1 px-1">
+                              <div className="text-left max-w-[140px]">
+                                <span className="block font-bold text-slate-800">Nenhuma dor (0.0)</span>
+                                <span className="text-[10px] text-slate-400 leading-tight block">Ausência total de sensibilidade</span>
+                              </div>
+                              <div className="text-center font-mono font-bold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-md border border-blue-200 text-xs">
+                                Score: {currentSessionForm.painScore0h.toFixed(1)}
+                              </div>
+                              <div className="text-right max-w-[140px]">
+                                <span className="block font-bold text-slate-800">Pior dor possível (10.0)</span>
+                                <span className="text-[10px] text-slate-400 leading-tight block">Intensidade máxima suportável</span>
+                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
+                      )}
 
-                      {/* Exame de Tecidos Moles / Margem / Alvéolo */}
-                      <div>
-                        <label className="block font-bold text-slate-700 uppercase tracking-wider text-[11px] mb-1.5">
-                          Exame de Tecidos Moles / Margem Gengival / Alvéolo / Ferida Operatória:
-                        </label>
-                        <div className="grid grid-cols-2 gap-2">
-                          {[
-                            { val: 'Ausente', title: 'Ausente', desc: 'Tecidos sadios, mucosa íntegra e hemostasia normal' },
-                            { val: 'Leve', title: 'Leve', desc: 'Hiperemia discreta, eritema transitório' },
-                            { val: 'Moderada', title: 'Moderada', desc: 'Eritema acentuado, edema localizado ou branqueamento' },
-                            { val: 'Severa', title: 'Severa', desc: 'Ulceração, sangramento persistente ou queimação intensa' },
-                          ].map((item) => {
-                            const isSelected = currentSessionForm.gingivalIrritation === item.val;
-                            return (
-                              <button
-                                key={item.val}
-                                type="button"
-                                onClick={() =>
-                                  setCurrentSessionForm({
-                                    ...currentSessionForm,
-                                    gingivalIrritation: item.val,
-                                  })
-                                }
-                                className={`p-3 rounded-xl border text-left transition cursor-pointer ${
-                                  isSelected
-                                    ? 'bg-blue-50 border-blue-500 text-blue-900 shadow-2xs ring-1 ring-blue-500'
-                                    : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
-                                }`}
-                              >
-                                <span className="block font-bold text-xs">{item.title}</span>
-                                <span className="block text-[10px] text-slate-500 mt-0.5">{item.desc}</span>
-                              </button>
-                            );
-                          })}
+                      {/* Exame de Tecidos Moles / Margem / Alvéolo (Quando Ativo no Protocolo) */}
+                      {hasSoftTissueExam && (
+                        <div>
+                          <label className="block font-bold text-slate-700 uppercase tracking-wider text-[11px] mb-1.5">
+                            Exame de Tecidos Moles / Margem Gengival / Alvéolo / Ferida Operatória:
+                          </label>
+                          <div className="grid grid-cols-2 gap-2">
+                            {[
+                              { val: 'Ausente', title: 'Ausente', desc: 'Tecidos sadios, mucosa íntegra e hemostasia normal' },
+                              { val: 'Leve', title: 'Leve', desc: 'Hiperemia discreta, eritema transitório' },
+                              { val: 'Moderada', title: 'Moderada', desc: 'Eritema acentuado, edema localizado ou branqueamento' },
+                              { val: 'Severa', title: 'Severa', desc: 'Ulceração, sangramento persistente ou queimação intensa' },
+                            ].map((item) => {
+                              const isSelected = currentSessionForm.gingivalIrritation === item.val;
+                              return (
+                                <button
+                                  key={item.val}
+                                  type="button"
+                                  onClick={() =>
+                                    setCurrentSessionForm({
+                                      ...currentSessionForm,
+                                      gingivalIrritation: item.val,
+                                    })
+                                  }
+                                  className={`p-3 rounded-xl border text-left transition cursor-pointer ${
+                                    isSelected
+                                      ? 'bg-blue-50 border-blue-500 text-blue-900 shadow-2xs ring-1 ring-blue-500'
+                                      : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                                  }`}
+                                >
+                                  <span className="block font-bold text-xs">{item.title}</span>
+                                  <span className="block text-[10px] text-slate-500 mt-0.5">{item.desc}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
                         </div>
-                      </div>
+                      )}
+
+                      {/* Fichas de eCRF e Questionários Específicos Deste Estudo */}
+                      {projectFormsWithQuestions.length > 0 && (
+                        <div className="pt-2 border-t border-slate-200 space-y-4">
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-slate-900 text-xs inline-flex items-center gap-1.5">
+                              <ClipboardList className="w-4 h-4 text-blue-600" />
+                              <span>Fichas eCRF Vinculadas ao Estudo ({projectFormsWithQuestions.length})</span>
+                            </span>
+                            <span className="text-[10px] text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full font-bold">
+                              Preenchimento Clínico
+                            </span>
+                          </div>
+
+                          <div className="space-y-4">
+                            {projectFormsWithQuestions.map((form) => (
+                              <div key={form.id} className="p-4 bg-slate-50/80 border border-slate-200 rounded-2xl space-y-3.5 shadow-2xs">
+                                <div>
+                                  <h4 className="font-bold text-slate-900 text-xs flex items-center gap-1.5">
+                                    <FileText className="w-3.5 h-3.5 text-blue-600" />
+                                    <span>{form.title}</span>
+                                  </h4>
+                                  {form.description && (
+                                    <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">
+                                      {form.description}
+                                    </p>
+                                  )}
+                                </div>
+
+                                <div className="space-y-3 pt-1">
+                                  {form.parsedQuestions.map((q: any, qIdx: number) => {
+                                    const currentVal = sessionFormAnswers[form.id]?.[q.id] ?? '';
+
+                                    return (
+                                      <div key={q.id || qIdx} className="bg-white p-3 rounded-xl border border-slate-200/90 shadow-2xs space-y-2">
+                                        <div className="flex items-start justify-between gap-2">
+                                          <label className="font-bold text-slate-800 text-xs leading-snug">
+                                            {q.title || q.label || `Pergunta ${qIdx + 1}`}
+                                            {q.required && <span className="text-red-500 ml-1">*</span>}
+                                          </label>
+                                          {q.type && (
+                                            <span className="text-[9px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-600 shrink-0 font-mono">
+                                              {q.type}
+                                            </span>
+                                          )}
+                                        </div>
+
+                                        {q.description && (
+                                          <p className="text-[10px] text-slate-500 leading-tight">
+                                            {q.description}
+                                          </p>
+                                        )}
+
+                                        {/* Input conforme o tipo da questão */}
+                                        {q.type === 'boolean' ? (
+                                          <div className="flex gap-2">
+                                            {['Sim', 'Não'].map((opt) => {
+                                              const isSel = currentVal === opt || currentVal === (opt === 'Sim');
+                                              return (
+                                                <button
+                                                  key={opt}
+                                                  type="button"
+                                                  onClick={() => handleSetSessionFormAnswer(form.id, String(q.id), opt)}
+                                                  className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition border cursor-pointer ${
+                                                    isSel
+                                                      ? opt === 'Sim'
+                                                        ? 'bg-emerald-600 text-white border-emerald-600 shadow-2xs'
+                                                        : 'bg-rose-600 text-white border-rose-600 shadow-2xs'
+                                                      : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                                                  }`}
+                                                >
+                                                  {opt}
+                                                </button>
+                                              );
+                                            })}
+                                          </div>
+                                        ) : q.type === 'vas' ? (
+                                          <div className="space-y-1.5 pt-1">
+                                            <div className="flex justify-between items-center text-xs">
+                                              <span className="text-[11px] text-slate-500 font-medium">{q.minLabel || 'Sem dor'}</span>
+                                              <span className="font-mono font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200 text-xs">
+                                                {currentVal !== '' ? currentVal : '0.0'} / 10
+                                              </span>
+                                              <span className="text-[11px] text-slate-500 font-medium">{q.maxLabel || 'Pior dor'}</span>
+                                            </div>
+                                            <input
+                                              type="range"
+                                              min="0"
+                                              max="10"
+                                              step="0.1"
+                                              value={currentVal !== '' ? currentVal : 0}
+                                              onChange={(e) => handleSetSessionFormAnswer(form.id, String(q.id), parseFloat(parseFloat(e.target.value).toFixed(1)))}
+                                              className="w-full h-2.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                                            />
+                                          </div>
+                                        ) : (q.type === 'choice' || q.type === 'likert') && Array.isArray(q.options) && q.options.length > 0 ? (
+                                          <div className="flex flex-wrap gap-1.5 pt-1">
+                                            {q.options.map((opt: any, optIdx: number) => {
+                                              const optVal = typeof opt === 'string' ? opt : opt.value ?? opt.label;
+                                              const optLabel = typeof opt === 'string' ? opt : opt.label ?? opt.value;
+                                              const isSel = String(currentVal) === String(optVal) || String(currentVal) === String(optLabel);
+
+                                              return (
+                                                <button
+                                                  key={optIdx}
+                                                  type="button"
+                                                  onClick={() => handleSetSessionFormAnswer(form.id, String(q.id), optVal)}
+                                                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition border cursor-pointer ${
+                                                    isSel
+                                                      ? 'bg-blue-600 text-white border-blue-600 shadow-2xs ring-1 ring-blue-600'
+                                                      : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50 hover:border-slate-300'
+                                                  }`}
+                                                >
+                                                  {optLabel}
+                                                </button>
+                                              );
+                                            })}
+                                          </div>
+                                        ) : q.type === 'number' ? (
+                                          <input
+                                            type="number"
+                                            value={currentVal}
+                                            onChange={(e) => handleSetSessionFormAnswer(form.id, String(q.id), e.target.value)}
+                                            placeholder="Digite o valor numérico..."
+                                            className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs bg-white text-slate-800 font-mono focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                                          />
+                                        ) : (
+                                          <input
+                                            type="text"
+                                            value={currentVal}
+                                            onChange={(e) => handleSetSessionFormAnswer(form.id, String(q.id), e.target.value)}
+                                            placeholder="Digite a resposta ou observação..."
+                                            className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs bg-white text-slate-800 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                                          />
+                                        )}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
 
                       {/* Aviso sobre os Diários de 1h, 24h e 48h */}
                       <div className="p-3.5 bg-blue-50/70 border border-blue-200 rounded-2xl flex items-start gap-2.5 text-xs text-blue-900">

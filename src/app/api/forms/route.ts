@@ -113,3 +113,39 @@ export async function POST(req: Request) {
     );
   }
 }
+
+export async function DELETE(req: Request) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get('id');
+
+    if (!id) {
+      return NextResponse.json({ error: 'ID do formulário é obrigatório.' }, { status: 400 });
+    }
+
+    const form = await prisma.form.findUnique({
+      where: { id },
+    });
+
+    if (!form) {
+      return NextResponse.json({ error: 'Formulário não encontrado.' }, { status: 404 });
+    }
+
+    // Exclui respostas associadas se houver
+    await prisma.formResponse.deleteMany({
+      where: { formId: id },
+    });
+
+    await prisma.form.delete({
+      where: { id },
+    });
+
+    return NextResponse.json({ success: true, message: 'Formulário excluído com sucesso.' });
+  } catch (error) {
+    console.error('Erro ao excluir formulário:', error);
+    return NextResponse.json(
+      { error: 'Erro ao excluir formulário.' },
+      { status: 500 }
+    );
+  }
+}

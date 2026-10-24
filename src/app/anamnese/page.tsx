@@ -206,6 +206,7 @@ function AnamnesisBuilderContent() {
   });
 
   const [questions, setQuestions] = useState<AnamnesisQuestion[]>([]);
+  const [existingStudyProtocol, setExistingStudyProtocol] = useState<any>(null);
   const [showLibraryModal, setShowLibraryModal] = useState(false);
 
   // Formulários / eCRFs vinculados a este projeto
@@ -289,7 +290,7 @@ function AnamnesisBuilderContent() {
           setProjectName(data.projectName || 'Projeto');
 
           if (data.anamnesisTemplate) {
-            const tmpl: AnamnesisConfig = data.anamnesisTemplate;
+            const tmpl: any = data.anamnesisTemplate;
             setEnableOdontogram(tmpl.enableOdontogram !== undefined ? Boolean(tmpl.enableOdontogram) : true);
             setOdontogramScope(tmpl.odontogramScope || 'anterior');
             setEnablePeriodontogram(Boolean(tmpl.enablePeriodontogram));
@@ -303,6 +304,9 @@ function AnamnesisBuilderContent() {
               }
             );
             setQuestions(tmpl.questions || []);
+            if (tmpl.studyProtocol) {
+              setExistingStudyProtocol(tmpl.studyProtocol);
+            }
           } else {
             // Padrão clínico odontológico: Odontograma ativo para o estudo
             setEnableOdontogram(true);
@@ -331,13 +335,17 @@ function AnamnesisBuilderContent() {
       setSaving(true);
       setSaveSuccess(false);
 
-      const payload: AnamnesisConfig = {
+      const payload: any = {
         enableOdontogram,
         odontogramScope,
         enablePeriodontogram,
         periodontogramFields,
         questions,
       };
+
+      if (existingStudyProtocol) {
+        payload.studyProtocol = existingStudyProtocol;
+      }
 
       const res = await fetch(`/api/projects/${projectId}/anamnesis`, {
         method: 'PUT',
