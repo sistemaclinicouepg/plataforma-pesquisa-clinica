@@ -18,6 +18,9 @@ import {
   ClipboardList,
   AlertTriangle,
   Clock,
+  Check,
+  RotateCcw,
+  AlertCircle,
   Folder,
   FileText,
   ArrowRight,
@@ -208,6 +211,19 @@ function AnamnesisBuilderContent() {
   const [questions, setQuestions] = useState<AnamnesisQuestion[]>([]);
   const [existingStudyProtocol, setExistingStudyProtocol] = useState<any>(null);
   const [showLibraryModal, setShowLibraryModal] = useState(false);
+  const [recentlyAddedId, setRecentlyAddedId] = useState<string | null>(null);
+  const [floatingToast, setFloatingToast] = useState<{
+    type: 'add' | 'save' | 'error';
+    title: string;
+    description?: string;
+  } | null>(null);
+
+  const showToast = (type: 'add' | 'save' | 'error', title: string, description?: string, duration: number = 4000) => {
+    setFloatingToast({ type, title, description });
+    setTimeout(() => {
+      setFloatingToast((current) => (current?.title === title ? null : current));
+    }, duration);
+  };
 
   // Formulários / eCRFs vinculados a este projeto
   const [projectForms, setProjectForms] = useState<Array<{
@@ -356,16 +372,19 @@ function AnamnesisBuilderContent() {
 
       if (res.ok) {
         setSaveSuccess(true);
+        showToast('save', 'Anamnese salva com sucesso!', 'A configuração de perguntas e odontograma foi gravada no banco.');
         if (redirectAfter) {
           window.location.href = `/dashboard?projectId=${projectId}`;
           return;
         }
         setTimeout(() => setSaveSuccess(false), 4000);
       } else {
+        showToast('error', 'Erro ao salvar', 'Não foi possível gravar a configuração da anamnese.');
         alert('Erro ao gravar configuração da anamnese.');
       }
     } catch (err) {
       console.error('Erro ao salvar anamnese:', err);
+      showToast('error', 'Erro de conexão', 'Ocorreu um erro ao salvar a ficha clínica.');
       alert('Ocorreu um erro ao salvar a ficha clínica.');
     } finally {
       setSaving(false);
@@ -496,8 +515,9 @@ function AnamnesisBuilderContent() {
 
   // Gerenciamento de Perguntas
   const addCustomQuestion = () => {
+    const newId = 'q_' + Date.now();
     const newQ: AnamnesisQuestion = {
-      id: 'q_' + Date.now(),
+      id: newId,
       title: 'Nova Pergunta Clínica',
       type: 'boolean',
       required: true,
@@ -505,6 +525,15 @@ function AnamnesisBuilderContent() {
       disqualifyIf: 'sim',
     };
     setQuestions([...questions, newQ]);
+    setRecentlyAddedId(newId);
+    showToast('add', 'Pergunta adicionada à anamnese!', 'A nova pergunta foi inserida na lista.');
+
+    setTimeout(() => {
+      const el = document.getElementById(`anamnesis-card-${newId}`);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 80);
+
+    setTimeout(() => setRecentlyAddedId((curr) => (curr === newId ? null : curr)), 3000);
   };
 
   const removeQuestion = (id: string) => {
@@ -516,8 +545,9 @@ function AnamnesisBuilderContent() {
   };
 
   const addFromLibrary = (item: (typeof CLINICAL_LIBRARY_PRESETS)[0]) => {
+    const newId = 'q_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
     const newQ: AnamnesisQuestion = {
-      id: 'q_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
+      id: newId,
       title: item.title,
       type: item.type,
       required: item.required,
@@ -526,6 +556,15 @@ function AnamnesisBuilderContent() {
       options: item.options,
     };
     setQuestions([...questions, newQ]);
+    setRecentlyAddedId(newId);
+    showToast('add', `Item da biblioteca adicionado: ${item.title.slice(0, 30)}...`, 'Adicionado à anamnese com sucesso.');
+
+    setTimeout(() => {
+      const el = document.getElementById(`anamnesis-card-${newId}`);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 80);
+
+    setTimeout(() => setRecentlyAddedId((curr) => (curr === newId ? null : curr)), 3000);
   };
 
   if (!projectId) {
@@ -615,10 +654,20 @@ function AnamnesisBuilderContent() {
           <button
             onClick={() => handleSave(false)}
             disabled={saving || loading}
-            className="px-4 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-bold transition disabled:opacity-50 flex items-center space-x-1.5"
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition disabled:opacity-50 flex items-center space-x-1.5 cursor-pointer ${
+              saveSuccess
+                ? 'bg-emerald-600 hover:bg-emerald-700 text-white ring-2 ring-emerald-300'
+                : 'bg-white border border-slate-300 hover:bg-slate-50 text-slate-700'
+            }`}
           >
-            {saving ? <Clock className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-            <span>{saving ? 'Gravando...' : 'Salvar Ficha'}</span>
+            {saving ? (
+              <RotateCcw className="w-3.5 h-3.5 animate-spin" />
+            ) : saveSuccess ? (
+              <Check className="w-3.5 h-3.5 stroke-[3]" />
+            ) : (
+              <Save className="w-3.5 h-3.5" />
+            )}
+            <span>{saving ? 'Gravando...' : saveSuccess ? 'Salvo com Sucesso!' : 'Salvar Ficha'}</span>
           </button>
 
           <button
@@ -1063,8 +1112,11 @@ function AnamnesisBuilderContent() {
                   {questions.map((q, idx) => (
                     <div
                       key={q.id}
-                      className={`p-5 rounded-xl border transition-all ${
-                        q.isCriterion
+                      id={`anamnesis-card-${q.id}`}
+                      className={`p-5 rounded-xl border transition-all duration-500 ${
+                        recentlyAddedId === q.id
+                          ? 'ring-4 ring-blue-400/60 bg-blue-50/70 border-blue-500 shadow-lg scale-[1.01]'
+                          : q.isCriterion
                           ? 'bg-amber-50/40 border-amber-300'
                           : 'bg-white border-slate-200 hover:border-slate-300'
                       }`}
@@ -1395,9 +1447,20 @@ function AnamnesisBuilderContent() {
               <button
                 onClick={() => handleSave(false)}
                 disabled={saving || loading}
-                className="px-4 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-bold transition disabled:opacity-50"
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition disabled:opacity-50 flex items-center space-x-1.5 cursor-pointer ${
+                  saveSuccess
+                    ? 'bg-emerald-600 hover:bg-emerald-700 text-white ring-2 ring-emerald-300'
+                    : 'bg-white border border-slate-300 hover:bg-slate-50 text-slate-700'
+                }`}
               >
-                {saving ? 'Gravando...' : 'Salvar Alterações'}
+                {saving ? (
+                  <RotateCcw className="w-3.5 h-3.5 animate-spin" />
+                ) : saveSuccess ? (
+                  <Check className="w-3.5 h-3.5 stroke-[3]" />
+                ) : (
+                  <Save className="w-3.5 h-3.5" />
+                )}
+                <span>{saving ? 'Gravando...' : saveSuccess ? 'Salvo com Sucesso!' : 'Salvar Alterações'}</span>
               </button>
               <button
                 onClick={() => handleSave(true)}
@@ -1473,6 +1536,58 @@ function AnamnesisBuilderContent() {
           </div>
         </div>
       )}
+
+      {/* Toast Flutuante Fixo (Visível em qualquer posição de scroll da tela) */}
+      {floatingToast && (
+        <div className="fixed bottom-6 right-6 z-50 animate-slideUp">
+          <div
+            className={`p-4 rounded-2xl shadow-2xl border flex items-center gap-3.5 text-xs font-bold max-w-sm backdrop-blur-md transition-all ${
+              floatingToast.type === 'save'
+                ? 'bg-emerald-950/95 text-white border-emerald-600 shadow-emerald-950/40'
+                : floatingToast.type === 'error'
+                ? 'bg-rose-950/95 text-white border-rose-600 shadow-rose-950/40'
+                : 'bg-slate-900/95 text-white border-slate-700 shadow-slate-950/40'
+            }`}
+          >
+            <div
+              className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 shadow-xs ${
+                floatingToast.type === 'save'
+                  ? 'bg-emerald-600 text-white'
+                  : floatingToast.type === 'error'
+                  ? 'bg-rose-600 text-white'
+                  : 'bg-blue-600 text-white'
+              }`}
+            >
+              {floatingToast.type === 'save' ? (
+                <Check className="w-5 h-5 stroke-[3]" />
+              ) : floatingToast.type === 'error' ? (
+                <AlertCircle className="w-5 h-5" />
+              ) : (
+                <Sparkles className="w-5 h-5 text-amber-300" />
+              )}
+            </div>
+
+            <div className="flex-1 min-w-0">
+              <span className="block text-xs font-extrabold text-white truncate">{floatingToast.title}</span>
+              {floatingToast.description && (
+                <span className="block text-[11px] font-normal text-slate-200 mt-0.5 leading-tight">
+                  {floatingToast.description}
+                </span>
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setFloatingToast(null)}
+              className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition cursor-pointer shrink-0"
+              title="Fechar notificação"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
         </div>
       </div>
     </div>

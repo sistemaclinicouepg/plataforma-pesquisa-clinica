@@ -30,6 +30,7 @@ import {
   ChevronUp,
   Sliders,
   Check,
+  RotateCcw,
   Table,
   Info,
   BookmarkPlus,
@@ -333,6 +334,19 @@ function FormBuilderContent() {
   const [saving, setSaving] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [recentlyAddedId, setRecentlyAddedId] = useState<string | null>(null);
+  const [floatingToast, setFloatingToast] = useState<{
+    type: 'add' | 'save' | 'error';
+    title: string;
+    description?: string;
+  } | null>(null);
+
+  const showToast = (type: 'add' | 'save' | 'error', title: string, description?: string, duration: number = 4000) => {
+    setFloatingToast({ type, title, description });
+    setTimeout(() => {
+      setFloatingToast((current) => (current?.title === title ? null : current));
+    }, duration);
+  };
 
   useEffect(() => {
     fetch('/api/projects')
@@ -435,19 +449,53 @@ function FormBuilderContent() {
     }
 
     setQuestions((prev) => [...prev, newQ]);
+    setRecentlyAddedId(id);
+
+    const typeLabels: Record<string, string> = {
+      vas: 'Escala EVA (Dor)',
+      likert: 'Escala Likert',
+      boolean: 'Sim / Não',
+      choice: 'Múltipla Escolha',
+      matrix: 'Tabela 1 a 10',
+      text: 'Texto Aberto',
+      number: 'Campo Numérico',
+      instruction: 'Instrução',
+    };
+    showToast('add', `Item adicionado: ${typeLabels[type] || 'Nova Pergunta'}`, 'Pergunta inserida na prancheta com sucesso.');
+
+    setTimeout(() => {
+      const el = document.getElementById(`question-card-${id}`);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 80);
+
+    setTimeout(() => {
+      setRecentlyAddedId((curr) => (curr === id ? null : curr));
+    }, 3000);
   };
 
   const duplicateQuestion = (idx: number) => {
     const target = questions[idx];
+    const newId = `q_${Date.now()}`;
     const clone: FormQuestion = {
       ...target,
-      id: `q_${Date.now()}`,
+      id: newId,
       title: `${target.title} (Cópia)`,
       options: target.options ? target.options.map((o) => ({ ...o })) : undefined,
     };
     const nextList = [...questions];
     nextList.splice(idx + 1, 0, clone);
     setQuestions(nextList);
+    setRecentlyAddedId(newId);
+    showToast('add', 'Pergunta duplicada com sucesso!', 'Uma cópia foi criada logo abaixo.');
+
+    setTimeout(() => {
+      const el = document.getElementById(`question-card-${newId}`);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 80);
+
+    setTimeout(() => {
+      setRecentlyAddedId((curr) => (curr === newId ? null : curr));
+    }, 3000);
   };
 
   const removeQuestion = (id: string) => {
@@ -699,9 +747,11 @@ function FormBuilderContent() {
       }
 
       setSavedSuccess(true);
+      showToast('save', 'Ficha Clínica salva com sucesso!', 'Todas as alterações foram gravadas no banco de dados da pesquisa.');
       setTimeout(() => setSavedSuccess(false), 7000);
     } catch (err: any) {
       setErrorMessage(err.message || 'Erro ao salvar ficha clínica.');
+      showToast('error', 'Erro ao salvar', err.message || 'Falha ao salvar ficha clínica.');
     } finally {
       setSaving(false);
     }
@@ -828,10 +878,20 @@ function FormBuilderContent() {
               type="button"
               onClick={() => handleSaveForm()}
               disabled={saving}
-              className="h-8.5 px-3.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow-2xs transition disabled:opacity-50 inline-flex items-center space-x-1.5 cursor-pointer shrink-0"
+              className={`h-8.5 px-3.5 text-white text-xs font-bold rounded-lg shadow-2xs transition disabled:opacity-50 inline-flex items-center space-x-1.5 cursor-pointer shrink-0 ${
+                savedSuccess
+                  ? 'bg-emerald-600 hover:bg-emerald-700 ring-2 ring-emerald-300'
+                  : 'bg-blue-600 hover:bg-blue-700'
+              }`}
             >
-              {saving ? <Clock className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-              <span>{saving ? 'Salvando...' : 'Salvar Ficha'}</span>
+              {saving ? (
+                <RotateCcw className="w-3.5 h-3.5 animate-spin" />
+              ) : savedSuccess ? (
+                <Check className="w-3.5 h-3.5 stroke-[3]" />
+              ) : (
+                <Save className="w-3.5 h-3.5" />
+              )}
+              <span>{saving ? 'Salvando...' : savedSuccess ? 'Salvo com Sucesso!' : 'Salvar Ficha'}</span>
             </button>
           </div>
 
@@ -1188,7 +1248,12 @@ function FormBuilderContent() {
                 questions.map((q, idx) => (
                   <div
                     key={q.id}
-                    className="bg-slate-50/70 hover:bg-white rounded-2xl p-5 border border-slate-200 hover:border-slate-300 shadow-xs transition space-y-4"
+                    id={`question-card-${q.id}`}
+                    className={`rounded-2xl p-5 border shadow-xs transition-all duration-500 space-y-4 ${
+                      recentlyAddedId === q.id
+                        ? 'bg-blue-50/70 border-blue-500 ring-4 ring-blue-300/60 shadow-lg scale-[1.01]'
+                        : 'bg-slate-50/70 hover:bg-white border-slate-200 hover:border-slate-300'
+                    }`}
                   >
                     {/* Linha Superior do Card: Numeração, Tipo e Ações */}
                     <div className="flex items-center justify-between gap-3">
@@ -1663,10 +1728,20 @@ function FormBuilderContent() {
                   type="button"
                   onClick={() => handleSaveForm()}
                   disabled={saving}
-                  className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-sm transition disabled:opacity-50 flex items-center space-x-2 cursor-pointer"
+                  className={`px-6 py-2.5 text-white font-bold text-xs rounded-xl shadow-sm transition disabled:opacity-50 flex items-center space-x-2 cursor-pointer ${
+                    savedSuccess
+                      ? 'bg-emerald-600 hover:bg-emerald-700 ring-2 ring-emerald-300'
+                      : 'bg-blue-600 hover:bg-blue-700'
+                  }`}
                 >
-                  {saving ? <Clock className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-                  <span>{saving ? 'Publicando...' : 'Salvar Ficha Clínica'}</span>
+                  {saving ? (
+                    <RotateCcw className="w-3.5 h-3.5 animate-spin" />
+                  ) : savedSuccess ? (
+                    <Check className="w-3.5 h-3.5 stroke-[3]" />
+                  ) : (
+                    <Save className="w-3.5 h-3.5" />
+                  )}
+                  <span>{saving ? 'Publicando...' : savedSuccess ? 'Salvo com Sucesso!' : 'Salvar Ficha Clínica'}</span>
                 </button>
               </div>
             </div>
@@ -2382,6 +2457,57 @@ function FormBuilderContent() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Toast Flutuante Fixo (Visível em qualquer posição de scroll da tela) */}
+      {floatingToast && (
+        <div className="fixed bottom-6 right-6 z-50 animate-slideUp">
+          <div
+            className={`p-4 rounded-2xl shadow-2xl border flex items-center gap-3.5 text-xs font-bold max-w-sm backdrop-blur-md transition-all ${
+              floatingToast.type === 'save'
+                ? 'bg-emerald-950/95 text-white border-emerald-600 shadow-emerald-950/40'
+                : floatingToast.type === 'error'
+                ? 'bg-rose-950/95 text-white border-rose-600 shadow-rose-950/40'
+                : 'bg-slate-900/95 text-white border-slate-700 shadow-slate-950/40'
+            }`}
+          >
+            <div
+              className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 shadow-xs ${
+                floatingToast.type === 'save'
+                  ? 'bg-emerald-600 text-white'
+                  : floatingToast.type === 'error'
+                  ? 'bg-rose-600 text-white'
+                  : 'bg-blue-600 text-white'
+              }`}
+            >
+              {floatingToast.type === 'save' ? (
+                <Check className="w-5 h-5 stroke-[3]" />
+              ) : floatingToast.type === 'error' ? (
+                <AlertCircle className="w-5 h-5" />
+              ) : (
+                <Sparkles className="w-5 h-5 text-amber-300" />
+              )}
+            </div>
+
+            <div className="flex-1 min-w-0">
+              <span className="block text-xs font-extrabold text-white truncate">{floatingToast.title}</span>
+              {floatingToast.description && (
+                <span className="block text-[11px] font-normal text-slate-200 mt-0.5 leading-tight">
+                  {floatingToast.description}
+                </span>
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setFloatingToast(null)}
+              className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition cursor-pointer shrink-0"
+              title="Fechar notificação"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
         </div>
       )}
