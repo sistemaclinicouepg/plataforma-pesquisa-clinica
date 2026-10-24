@@ -18,6 +18,8 @@ import {
 import {
   parseStudyProtocol,
   StudyProtocolConfig,
+  StudySessionProtocol,
+  ResearchSpecialty,
   getRespondentLabel,
   getFrequencyLabel,
   PRESET_QUESTIONNAIRES_CATALOG,
@@ -648,6 +650,72 @@ function DashboardContent() {
     currentUser?.role === 'ADMIN' ||
     currentUser?.email === 'admin@uepg.br' ||
     currentUser?.email === 'pesquisadora@uepg.br';
+
+  const canManageStudy = isAdmin || currentMemberRole === 'COORDINATOR';
+
+  // Estados do Editor da Trilha de Atendimento do Estudo
+  const [showTrailEditorModal, setShowTrailEditorModal] = useState(false);
+  const [trailSessions, setTrailSessions] = useState<StudySessionProtocol[]>([]);
+  const [trailSpecialty, setTrailSpecialty] = useState<ResearchSpecialty>('GENERAL');
+  const [savingTrail, setSavingTrail] = useState(false);
+  const [trailSuccessMsg, setTrailSuccessMsg] = useState<string | null>(null);
+
+  const openTrailEditor = () => {
+    setTrailSessions(JSON.parse(JSON.stringify(studyProtocol.sessions || [])));
+    setTrailSpecialty(studyProtocol.specialty || 'GENERAL');
+    setTrailSuccessMsg(null);
+    setShowTrailEditorModal(true);
+  };
+
+  const handleSaveTrail = async () => {
+    if (!project?.id) return;
+    try {
+      setSavingTrail(true);
+      setTrailSuccessMsg(null);
+
+      const updatedProtocol: StudyProtocolConfig = {
+        ...studyProtocol,
+        specialty: trailSpecialty,
+        totalSessions: trailSessions.length,
+        sessions: trailSessions,
+      };
+
+      const res = await fetch(`/api/projects/${project.id}/anamnesis`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          studyProtocol: updatedProtocol,
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error('Falha ao salvar trilha de atendimento no banco.');
+      }
+
+      // Atualiza o estado local do projeto imediatamente
+      let existingTmpl: any = {};
+      try {
+        existingTmpl = project.anamnesisTemplate ? JSON.parse(project.anamnesisTemplate) : {};
+      } catch {}
+      existingTmpl.studyProtocol = updatedProtocol;
+      const updatedProject = {
+        ...project,
+        anamnesisTemplate: JSON.stringify(existingTmpl),
+      };
+      setProject(updatedProject);
+      projectRef.current = updatedProject;
+
+      setTrailSuccessMsg('Trilha de atendimento salva com sucesso!');
+      setTimeout(() => {
+        setShowTrailEditorModal(false);
+        setTrailSuccessMsg(null);
+      }, 1500);
+    } catch (err: any) {
+      alert(err?.message || 'Erro ao salvar trilha de atendimento.');
+    } finally {
+      setSavingTrail(false);
+    }
+  };
 
   const handleSelectTab = (tab: 'active' | 'triage' | 'audit' | 'team' | 'export' | 'settings') => {
     setActiveTab(tab);
@@ -2977,13 +3045,26 @@ function DashboardContent() {
               </div>
 
               {activeTab === 'active' && (
-                <button
-                  onClick={() => setShowNewPatientModal(true)}
-                  className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-xs hover:shadow transition flex items-center space-x-1.5 cursor-pointer shrink-0 self-start sm:self-auto"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>Novo Paciente</span>
-                </button>
+                <div className="flex items-center gap-2">
+                  {canManageStudy && (
+                    <button
+                      type="button"
+                      onClick={openTrailEditor}
+                      className="px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-bold rounded-xl shadow-2xs transition flex items-center space-x-1.5 cursor-pointer shrink-0"
+                      title="Configurar a trilha de sessões clínicas, consultas, checklists e módulos deste estudo"
+                    >
+                      <Sliders className="w-3.5 h-3.5 text-blue-600" />
+                      <span>Trilha de Atendimento</span>
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setShowNewPatientModal(true)}
+                    className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-xs hover:shadow transition flex items-center space-x-1.5 cursor-pointer shrink-0 self-start sm:self-auto"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Novo Paciente</span>
+                  </button>
+                </div>
               )}
             </div>
 
@@ -6890,6 +6971,487 @@ function DashboardContent() {
         </div>
       )}
 
+      {/* Modal de Configuração da Trilha de Atendimento Clínico (Admin & Coordenador) */}
+      {showTrailEditorModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 z-50 overflow-y-auto animate-fadeIn">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full border border-slate-200 my-6 max-h-[92vh] flex flex-col overflow-hidden">
+            {/* Header */}
+            <div className="border-b border-slate-100 p-5 sm:p-6 pb-4 bg-gradient-to-r from-slate-50 via-white to-blue-50/40 shrink-0">
+              <div className="flex justify-between items-start gap-3">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-xs shrink-0">
+                    <Sliders className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-slate-900">
+                      Editor da Trilha de Atendimento & Sessões Clínicas
+                    </h3>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Personalize as consultas, nomes, intervalos, checklists e quais módulos clínicos (cor dental, odontograma, dor EVA, cronômetro) aparecem no atendimento deste estudo.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowTrailEditorModal(false)}
+                  className="text-slate-400 hover:text-slate-600 p-1.5 rounded-xl hover:bg-slate-100 transition shrink-0 cursor-pointer"
+                  title="Fechar editor"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {trailSuccessMsg && (
+                <div className="mt-3 p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold rounded-xl flex items-center gap-2 animate-fadeIn">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  <span>{trailSuccessMsg}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Conteúdo com rolagem */}
+            <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-6 text-xs">
+              {/* Linha de Pesquisa / Especialidade */}
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div>
+                  <label className="block font-bold text-slate-800 text-xs mb-0.5">
+                    Linha / Especialidade da Pesquisa:
+                  </label>
+                  <p className="text-[11px] text-slate-500">
+                    Define o perfil padrão inicial dos formulários e terminologias do ensaio clínico.
+                  </p>
+                </div>
+                <select
+                  value={trailSpecialty}
+                  onChange={(e) => setTrailSpecialty(e.target.value as ResearchSpecialty)}
+                  className="px-3 py-2 border border-slate-300 rounded-xl text-xs bg-white font-bold text-slate-800 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                >
+                  <option value="GENERAL">Geral / Odontologia Integrada</option>
+                  <option value="BLEACHING">Clareamento Dental</option>
+                  <option value="RESTORATIVE">Dentística Restauradora</option>
+                  <option value="SURGERY">Cirurgia & Traumatologia</option>
+                  <option value="ENDODONTICS">Endodontia</option>
+                  <option value="PERIODONTICS">Periodontia</option>
+                </select>
+              </div>
+
+              {/* Lista de Sessões da Trilha */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-slate-800 text-xs uppercase tracking-wider">
+                    Consultas Presenciais da Trilha ({trailSessions.length})
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const nextNum = trailSessions.length + 1;
+                      const newSess: StudySessionProtocol = {
+                        id: `sess_${Date.now()}`,
+                        sessionNumber: nextNum,
+                        name: `Sessão ${nextNum}: Atendimento Clínico`,
+                        type: nextNum <= 2 ? 'CLINICAL' : 'EVALUATION',
+                        daysFromPrevious: nextNum === 1 ? 0 : 7,
+                        toleranceDays: nextNum === 1 ? 0 : 2,
+                        durationMinutes: 30,
+                        description: 'Consulta clínica presencial conforme protocolo.',
+                        requiresPatientQuestionnaire: false,
+                        clinicalModules: {
+                          colorGuide: false,
+                          toothMapping: false,
+                          painVAS: false,
+                          softTissueExam: false,
+                          timer: false,
+                        },
+                        clinicalChecklist: [
+                          'Anti-sepsia e isolamento adequado do campo operatório',
+                          'Execução dos passos clínicos conforme protocolo da pesquisa',
+                          'Checagem imediata pós-atendimento',
+                        ],
+                      };
+                      setTrailSessions([...trailSessions, newSess]);
+                    }}
+                    className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-2xs transition flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Adicionar Consulta à Trilha</span>
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  {trailSessions.map((sess, idx) => {
+                    const isFirst = sess.sessionNumber === 1;
+                    return (
+                      <div
+                        key={sess.id || idx}
+                        className="p-4 sm:p-5 bg-white border border-slate-200 rounded-2xl shadow-2xs space-y-4 hover:border-slate-300 transition"
+                      >
+                        {/* Linha 1: Número da Sessão, Tipo e Botão Excluir */}
+                        <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-3">
+                          <div className="flex items-center gap-2">
+                            <span className="w-7 h-7 rounded-xl bg-blue-50 text-blue-700 font-bold flex items-center justify-center font-mono text-xs border border-blue-200">
+                              S{sess.sessionNumber}
+                            </span>
+                            <span className="font-bold text-slate-800 text-sm">
+                              {sess.name || `Sessão ${sess.sessionNumber}`}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (trailSessions.length <= 1) {
+                                  alert('O estudo deve conter pelo menos 1 consulta na trilha.');
+                                  return;
+                                }
+                                const updated = trailSessions
+                                  .filter((_, sIdx) => sIdx !== idx)
+                                  .map((s, newIdx) => ({
+                                    ...s,
+                                    sessionNumber: newIdx + 1,
+                                  }));
+                                setTrailSessions(updated);
+                              }}
+                              className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition cursor-pointer"
+                              title="Remover esta consulta da trilha"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Linha 2: Nome e Tipo de Atendimento */}
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                          <div className="sm:col-span-2">
+                            <label className="block font-bold text-slate-700 uppercase tracking-wider text-[10px] mb-1">
+                              Nome da Consulta na Trilha:
+                            </label>
+                            <input
+                              type="text"
+                              value={sess.name}
+                              onChange={(e) => {
+                                const updated = [...trailSessions];
+                                updated[idx] = { ...sess, name: e.target.value };
+                                setTrailSessions(updated);
+                              }}
+                              placeholder="Ex: Sessão 1: Intervenção Inicial e Moldagem"
+                              className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs bg-white text-slate-800 font-semibold focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block font-bold text-slate-700 uppercase tracking-wider text-[10px] mb-1">
+                              Tipo de Atendimento:
+                            </label>
+                            <select
+                              value={sess.type || 'CLINICAL'}
+                              onChange={(e) => {
+                                const updated = [...trailSessions];
+                                updated[idx] = { ...sess, type: e.target.value as any };
+                                setTrailSessions(updated);
+                              }}
+                              className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs bg-white text-slate-800 font-semibold focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                            >
+                              <option value="CLINICAL">Intervenção / Procedimento Clínico</option>
+                              <option value="EVALUATION">Avaliação / Retorno de Acompanhamento</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        {/* Linha 3: Intervalos e Tolerância */}
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200/80">
+                          <div>
+                            <label className="block font-semibold text-slate-600 text-[10px] mb-1">
+                              Dias após a consulta anterior:
+                            </label>
+                            <input
+                              type="number"
+                              min={0}
+                              value={sess.daysFromPrevious ?? 0}
+                              onChange={(e) => {
+                                const updated = [...trailSessions];
+                                updated[idx] = { ...sess, daysFromPrevious: Number(e.target.value) || 0 };
+                                setTrailSessions(updated);
+                              }}
+                              disabled={isFirst}
+                              className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs bg-white text-slate-800 font-mono disabled:opacity-50"
+                            />
+                            {isFirst && <span className="text-[9px] text-slate-400">Sessão inicial (0 dias)</span>}
+                          </div>
+
+                          <div>
+                            <label className="block font-semibold text-slate-600 text-[10px] mb-1">
+                              Janela de tolerância (± dias):
+                            </label>
+                            <input
+                              type="number"
+                              min={0}
+                              value={sess.toleranceDays ?? 2}
+                              onChange={(e) => {
+                                const updated = [...trailSessions];
+                                updated[idx] = { ...sess, toleranceDays: Number(e.target.value) || 0 };
+                                setTrailSessions(updated);
+                              }}
+                              className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs bg-white text-slate-800 font-mono"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block font-semibold text-slate-600 text-[10px] mb-1">
+                              Duração estimada (minutos):
+                            </label>
+                            <input
+                              type="number"
+                              min={5}
+                              step={5}
+                              value={sess.durationMinutes ?? 30}
+                              onChange={(e) => {
+                                const updated = [...trailSessions];
+                                updated[idx] = { ...sess, durationMinutes: Number(e.target.value) || 30 };
+                                setTrailSessions(updated);
+                              }}
+                              className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs bg-white text-slate-800 font-mono"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Linha 4: Módulos Clínicos Ativos nesta Consulta na Cadeira */}
+                        <div className="space-y-2">
+                          <span className="block font-bold text-slate-700 uppercase tracking-wider text-[10px]">
+                            Módulos Clínicos que devem aparecer na tela durante o atendimento:
+                          </span>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                            {/* Cor Dental */}
+                            <label className={`p-2.5 rounded-xl border flex items-center gap-2 cursor-pointer transition ${
+                              sess.clinicalModules?.colorGuide ? 'bg-amber-50 border-amber-300 text-amber-950 font-bold' : 'bg-white border-slate-200 text-slate-600'
+                            }`}>
+                              <input
+                                type="checkbox"
+                                checked={Boolean(sess.clinicalModules?.colorGuide)}
+                                onChange={(e) => {
+                                  const updated = [...trailSessions];
+                                  const mods = { ...(sess.clinicalModules || {}), colorGuide: e.target.checked };
+                                  updated[idx] = { ...sess, clinicalModules: mods };
+                                  setTrailSessions(updated);
+                                }}
+                                className="w-4 h-4 text-amber-600 rounded"
+                              />
+                              <div className="min-w-0">
+                                <span className="text-xs block">Aferição de Cor (VITA)</span>
+                                <span className="text-[10px] text-slate-400 font-normal">Escala Classical na cadeira</span>
+                              </div>
+                            </label>
+
+                            {/* Mapeamento Dentário */}
+                            <label className={`p-2.5 rounded-xl border flex items-center gap-2 cursor-pointer transition ${
+                              sess.clinicalModules?.toothMapping ? 'bg-blue-50 border-blue-300 text-blue-950 font-bold' : 'bg-white border-slate-200 text-slate-600'
+                            }`}>
+                              <input
+                                type="checkbox"
+                                checked={Boolean(sess.clinicalModules?.toothMapping)}
+                                onChange={(e) => {
+                                  const updated = [...trailSessions];
+                                  const mods = { ...(sess.clinicalModules || {}), toothMapping: e.target.checked };
+                                  updated[idx] = { ...sess, clinicalModules: mods };
+                                  setTrailSessions(updated);
+                                }}
+                                className="w-4 h-4 text-blue-600 rounded"
+                              />
+                              <div className="min-w-0">
+                                <span className="text-xs block">Mapeamento de Dentes</span>
+                                <span className="text-[10px] text-slate-400 font-normal">Elementos tratados no Passo 1</span>
+                              </div>
+                            </label>
+
+                            {/* Cronômetro */}
+                            <label className={`p-2.5 rounded-xl border flex items-center gap-2 cursor-pointer transition ${
+                              sess.clinicalModules?.timer ? 'bg-indigo-50 border-indigo-300 text-indigo-950 font-bold' : 'bg-white border-slate-200 text-slate-600'
+                            }`}>
+                              <input
+                                type="checkbox"
+                                checked={Boolean(sess.clinicalModules?.timer)}
+                                onChange={(e) => {
+                                  const updated = [...trailSessions];
+                                  const mods = { ...(sess.clinicalModules || {}), timer: e.target.checked };
+                                  updated[idx] = { ...sess, clinicalModules: mods };
+                                  setTrailSessions(updated);
+                                }}
+                                className="w-4 h-4 text-indigo-600 rounded"
+                              />
+                              <div className="min-w-0">
+                                <span className="text-xs block">Cronômetro de Intervenção</span>
+                                <span className="text-[10px] text-slate-400 font-normal">Timer com play/pause no Passo 2</span>
+                              </div>
+                            </label>
+
+                            {/* Escala EVA de Dor */}
+                            <label className={`p-2.5 rounded-xl border flex items-center gap-2 cursor-pointer transition ${
+                              sess.clinicalModules?.painVAS ? 'bg-rose-50 border-rose-300 text-rose-950 font-bold' : 'bg-white border-slate-200 text-slate-600'
+                            }`}>
+                              <input
+                                type="checkbox"
+                                checked={Boolean(sess.clinicalModules?.painVAS)}
+                                onChange={(e) => {
+                                  const updated = [...trailSessions];
+                                  const mods = { ...(sess.clinicalModules || {}), painVAS: e.target.checked };
+                                  updated[idx] = { ...sess, clinicalModules: mods };
+                                  setTrailSessions(updated);
+                                }}
+                                className="w-4 h-4 text-rose-600 rounded"
+                              />
+                              <div className="min-w-0">
+                                <span className="text-xs block">Escala EVA de Dor (0-10)</span>
+                                <span className="text-[10px] text-slate-400 font-normal">Desfecho imediato no Passo 3</span>
+                              </div>
+                            </label>
+
+                            {/* Tecidos Moles */}
+                            <label className={`p-2.5 rounded-xl border flex items-center gap-2 cursor-pointer transition ${
+                              sess.clinicalModules?.softTissueExam ? 'bg-emerald-50 border-emerald-300 text-emerald-950 font-bold' : 'bg-white border-slate-200 text-slate-600'
+                            }`}>
+                              <input
+                                type="checkbox"
+                                checked={Boolean(sess.clinicalModules?.softTissueExam)}
+                                onChange={(e) => {
+                                  const updated = [...trailSessions];
+                                  const mods = { ...(sess.clinicalModules || {}), softTissueExam: e.target.checked };
+                                  updated[idx] = { ...sess, clinicalModules: mods };
+                                  setTrailSessions(updated);
+                                }}
+                                className="w-4 h-4 text-emerald-600 rounded"
+                              />
+                              <div className="min-w-0">
+                                <span className="text-xs block">Exame de Tecidos Moles</span>
+                                <span className="text-[10px] text-slate-400 font-normal">Margem/mucosa no Passo 3</span>
+                              </div>
+                            </label>
+
+                            {/* Diário do Paciente */}
+                            <label className={`p-2.5 rounded-xl border flex items-center gap-2 cursor-pointer transition ${
+                              sess.requiresPatientQuestionnaire ? 'bg-purple-50 border-purple-300 text-purple-950 font-bold' : 'bg-white border-slate-200 text-slate-600'
+                            }`}>
+                              <input
+                                type="checkbox"
+                                checked={Boolean(sess.requiresPatientQuestionnaire)}
+                                onChange={(e) => {
+                                  const updated = [...trailSessions];
+                                  updated[idx] = { ...sess, requiresPatientQuestionnaire: e.target.checked };
+                                  setTrailSessions(updated);
+                                }}
+                                className="w-4 h-4 text-purple-600 rounded"
+                              />
+                              <div className="min-w-0">
+                                <span className="text-xs block">Questionário Pós-Consulta</span>
+                                <span className="text-[10px] text-slate-400 font-normal">WhatsApp com link do portal</span>
+                              </div>
+                            </label>
+                          </div>
+                        </div>
+
+                        {/* Linha 5: Checklist da Sessão */}
+                        <div className="pt-2 border-t border-slate-100 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-slate-700 text-[10px] uppercase tracking-wider">
+                              Checklist de Etapas Clínicas desta Sessão:
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const currentCheck = sess.clinicalChecklist || [];
+                                const updated = [...trailSessions];
+                                updated[idx] = { ...sess, clinicalChecklist: [...currentCheck, 'Nova etapa clínica do protocolo'] };
+                                setTrailSessions(updated);
+                              }}
+                              className="text-[10px] text-blue-600 hover:text-blue-800 font-bold flex items-center gap-1 cursor-pointer"
+                            >
+                              <Plus className="w-3 h-3" />
+                              <span>Adicionar Etapa</span>
+                            </button>
+                          </div>
+
+                          <div className="space-y-1.5">
+                            {((sess.clinicalChecklist && sess.clinicalChecklist.length > 0)
+                              ? sess.clinicalChecklist
+                              : ['Anti-sepsia e isolamento adequado do campo operatório', 'Execução minuciosa conforme protocolo aprovado']
+                            ).map((item, itemIdx) => (
+                              <div key={itemIdx} className="flex items-center gap-2">
+                                <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                                <input
+                                  type="text"
+                                  value={item}
+                                  onChange={(e) => {
+                                    const currentCheck = [...(sess.clinicalChecklist || ['Anti-sepsia e isolamento', 'Execução'])];
+                                    currentCheck[itemIdx] = e.target.value;
+                                    const updated = [...trailSessions];
+                                    updated[idx] = { ...sess, clinicalChecklist: currentCheck };
+                                    setTrailSessions(updated);
+                                  }}
+                                  className="flex-1 px-2.5 py-1 border border-slate-200 rounded-lg text-xs bg-slate-50 focus:bg-white text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const currentCheck = (sess.clinicalChecklist || []).filter((_, cIdx) => cIdx !== itemIdx);
+                                    const updated = [...trailSessions];
+                                    updated[idx] = { ...sess, clinicalChecklist: currentCheck };
+                                    setTrailSessions(updated);
+                                  }}
+                                  className="p-1 text-slate-400 hover:text-rose-600 rounded cursor-pointer"
+                                  title="Remover etapa"
+                                >
+                                  <X className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Rodapé do Modal */}
+            <div className="border-t border-slate-200 p-4 sm:p-5 bg-slate-50 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
+              <span className="text-xs text-slate-600">
+                Total de <strong>{trailSessions.length} consultas</strong> configuradas para a trilha deste estudo.
+              </span>
+
+              <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                <button
+                  type="button"
+                  onClick={() => setShowTrailEditorModal(false)}
+                  disabled={savingTrail}
+                  className="px-4 py-2 bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 rounded-xl text-xs font-bold transition cursor-pointer"
+                >
+                  Cancelar
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleSaveTrail}
+                  disabled={savingTrail || trailSessions.length === 0}
+                  className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-xs transition disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
+                >
+                  {savingTrail ? (
+                    <>
+                      <RotateCcw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Gravando Trilha...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-3.5 h-3.5 stroke-[3]" />
+                      <span>Salvar Trilha de Atendimento</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal de Registro e Edição de Sessão Clínica */}
       {showSessionModal && currentSessionForm && (() => {
         const protoSession = studyProtocol.sessions.find(
@@ -6900,19 +7462,12 @@ function DashboardContent() {
         const displaySubtitle = protoSession?.description || sessionInfo?.subtitle || 'Preencha os desfechos aferidos durante a consulta.';
 
         // Determinar módulos clínicos configurados para esta sessão específica no protocolo do estudo
-        const hasColorGuide = protoSession?.clinicalModules?.colorGuide !== undefined
-          ? protoSession.clinicalModules.colorGuide
-          : (studyProtocol.specialty === 'BLEACHING' || studyProtocol.specialty === 'RESTORATIVE');
-        const hasToothMapping = protoSession?.clinicalModules?.toothMapping !== undefined
-          ? protoSession.clinicalModules.toothMapping
-          : false;
-        const hasPainVAS = protoSession?.clinicalModules?.painVAS !== undefined
-          ? protoSession.clinicalModules.painVAS
-          : true;
-        const hasSoftTissueExam = protoSession?.clinicalModules?.softTissueExam !== undefined
-          ? protoSession.clinicalModules.softTissueExam
-          : true;
-        const isInterventionSession = protoSession?.type === 'CLINICAL' || currentSessionForm.sessionNumber === 1 || currentSessionForm.sessionNumber === 2;
+        const hasColorGuide = protoSession?.clinicalModules?.colorGuide === true;
+        const hasToothMapping = protoSession?.clinicalModules?.toothMapping === true;
+        const hasPainVAS = protoSession?.clinicalModules?.painVAS === true;
+        const hasSoftTissueExam = protoSession?.clinicalModules?.softTissueExam === true;
+        const hasTimer = Boolean(protoSession?.clinicalModules?.timer || protoSession?.clinicalModules?.gelTimer);
+        const isInterventionSession = protoSession?.type === 'CLINICAL' || currentSessionForm.sessionNumber === 1;
 
         // Formulários eCRF cadastrados para este projeto com questões avaliáveis
         const projectFormsWithQuestions = (project?.forms || []).map((f) => {
@@ -7281,8 +7836,8 @@ function DashboardContent() {
                         </div>
                       )}
 
-                      {/* Cronômetro Clínico Integrado (Exibido para intervenções) */}
-                      {isInterventionSession && (
+                      {/* Cronômetro Clínico Integrado (Exibido se configurado na sessão) */}
+                      {hasTimer && (
                         <div className="p-5 bg-gradient-to-br from-slate-900 to-indigo-950 rounded-2xl text-white space-y-3.5 shadow-md text-center">
                           <div className="flex items-center justify-between text-xs text-slate-300">
                             <span className="font-semibold flex items-center gap-1.5">

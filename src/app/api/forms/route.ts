@@ -4,7 +4,26 @@ import { prisma } from '@/lib/prisma';
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
+    const id = searchParams.get('id');
     const projectId = searchParams.get('projectId');
+
+    if (id) {
+      const form = await prisma.form.findUnique({
+        where: { id },
+        include: {
+          project: {
+            select: { id: true, name: true },
+          },
+          _count: {
+            select: { responses: true },
+          },
+        },
+      });
+      if (!form) {
+        return NextResponse.json({ error: 'Formulário não encontrado.' }, { status: 404 });
+      }
+      return NextResponse.json({ form });
+    }
 
     const forms = await prisma.form.findMany({
       where: projectId ? { projectId } : {},
@@ -84,6 +103,7 @@ export async function POST(req: Request) {
       const updated = await prisma.form.update({
         where: { id: existingUnanswered.id },
         data: {
+          title: title.trim(),
           description: description?.trim() || null,
           questionsJson: JSON.stringify(questions || []),
           expirationHours: Number(expirationHours) || 24,

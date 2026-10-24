@@ -492,6 +492,56 @@ export async function GET(req: Request) {
       };
     });
 
+    // Se o protocolo do estudo tiver perguntas de anamnese / elegibilidade configuradas pelo pesquisador
+    let anamnesisQuestions: any[] = [];
+    if (participant.project.anamnesisTemplate) {
+      try {
+        const parsedTmpl = JSON.parse(participant.project.anamnesisTemplate);
+        if (Array.isArray(parsedTmpl.questions) && parsedTmpl.questions.length > 0) {
+          anamnesisQuestions = parsedTmpl.questions;
+        }
+      } catch (err) {
+        console.warn('Erro ao ler perguntas de anamnese para o paciente:', err);
+      }
+    }
+
+    const allFormsWithStatus = [...formsWithStatus];
+
+    if (anamnesisQuestions.length > 0) {
+      let parsedAnamnesisAnswers: Record<string, any> = {};
+      if (participant.anamnesisData) {
+        try {
+          const d = JSON.parse(participant.anamnesisData);
+          parsedAnamnesisAnswers = d.answers || (typeof d === 'object' ? d : {});
+        } catch {}
+      }
+
+      const isCompleted = Boolean(participant.anamnesisDone);
+      allFormsWithStatus.unshift({
+        id: `anamnesis_${participant.project.id}`,
+        title: 'Ficha de Anamnese & Critérios de Participação',
+        description: 'Questionário inicial com perguntas e critérios específicos deste estudo clínico.',
+        occurrence: 'Linha de Base / Admissão',
+        modality: 'SESSION' as const,
+        questions: anamnesisQuestions.map((q: any, qIdx: number) => ({
+          id: q.id || `q_an_${qIdx}`,
+          type: q.type === 'vita_shade' ? 'choice' : q.type === 'sensitivity_scale' ? 'vas' : q.type || 'text',
+          title: q.title,
+          required: Boolean(q.required),
+          options: q.options || (q.type === 'boolean' ? [{ label: 'Sim', value: 'sim' }, { label: 'Não', value: 'nao' }] : undefined),
+          minLabel: q.minLabel,
+          maxLabel: q.maxLabel,
+          observation: q.observation,
+        })),
+        expirationHours: 72,
+        allowLate: true,
+        createdAt: participant.createdAt,
+        isCompleted,
+        submittedAt: isCompleted ? new Date(participant.createdAt).toLocaleString('pt-BR') : null,
+        myAnswers: parsedAnamnesisAnswers,
+      });
+    }
+
     // Buscar se o mesmo paciente participa de outros estudos na plataforma (isolamento completo de dados)
     const otherParticipations = await prisma.participant.findMany({
       where: {
@@ -544,7 +594,7 @@ export async function GET(req: Request) {
         maxCompletedSession,
         studyProtocol: protocol,
         specialty: protocol.specialty,
-        forms: formsWithStatus,
+        forms: allFormsWithStatus,
         otherStudies,
       },
     });

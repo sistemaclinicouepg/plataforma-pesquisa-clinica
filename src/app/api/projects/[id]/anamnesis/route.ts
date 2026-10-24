@@ -63,27 +63,34 @@ export async function PUT(
     }
 
     const body = await req.json();
-    const { anamnesisTemplate } = body;
+    const { anamnesisTemplate, studyProtocol } = body;
 
-    // Preservar studyProtocol caso o formulário de anamnese não o envie explicitamente
-    let finalTemplate = anamnesisTemplate;
     const existingProject = await prisma.project.findUnique({
       where: { id },
       select: { anamnesisTemplate: true },
     });
 
-    if (existingProject?.anamnesisTemplate && finalTemplate) {
+    let existingParsed: any = {};
+    if (existingProject?.anamnesisTemplate) {
       try {
-        const existingParsed = JSON.parse(existingProject.anamnesisTemplate);
-        if (existingParsed?.studyProtocol && !finalTemplate.studyProtocol) {
-          finalTemplate = {
-            ...finalTemplate,
-            studyProtocol: existingParsed.studyProtocol,
-          };
-        }
+        existingParsed = JSON.parse(existingProject.anamnesisTemplate);
       } catch (err) {
-        console.warn('Aviso ao mesclar studyProtocol existente:', err);
+        console.warn('Aviso ao parsear anamnesisTemplate existente:', err);
       }
+    }
+
+    let finalTemplate = anamnesisTemplate || existingParsed;
+
+    if (studyProtocol) {
+      finalTemplate = {
+        ...finalTemplate,
+        studyProtocol,
+      };
+    } else if (existingParsed?.studyProtocol && !finalTemplate.studyProtocol) {
+      finalTemplate = {
+        ...finalTemplate,
+        studyProtocol: existingParsed.studyProtocol,
+      };
     }
 
     const updated = await prisma.project.update({

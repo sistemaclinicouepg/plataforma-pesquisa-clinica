@@ -74,6 +74,37 @@ export async function POST(req: Request) {
       );
     }
 
+    // Tratar envio de respostas para a ficha de anamnese do estudo
+    if (participantId && targetFormId && String(targetFormId).startsWith('anamnesis_')) {
+      const part = await prisma.participant.findUnique({
+        where: { id: participantId },
+      });
+      if (part) {
+        let existingAnamnesis: any = {};
+        try {
+          existingAnamnesis = part.anamnesisData ? JSON.parse(part.anamnesisData) : {};
+        } catch {}
+        existingAnamnesis.answers = { ...(existingAnamnesis.answers || {}), ...(answers || {}) };
+        await prisma.participant.update({
+          where: { id: participantId },
+          data: {
+            anamnesisData: JSON.stringify(existingAnamnesis),
+            anamnesisDone: true,
+          },
+        });
+        return NextResponse.json({
+          success: true,
+          response: {
+            id: `resp_${Date.now()}`,
+            formId: targetFormId,
+            participantId,
+            isAnamnesis: true,
+            submittedAt: new Date(),
+          },
+        });
+      }
+    }
+
     // Se o participante já respondeu a este formulário, atualiza; senão cria
     let response;
     if (participantId && targetFormId) {

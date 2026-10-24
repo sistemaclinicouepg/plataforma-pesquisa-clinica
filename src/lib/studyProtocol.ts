@@ -123,6 +123,8 @@ export interface SessionClinicalModules {
   colorGuide?: boolean; // Escala Vita Classical
   painVAS?: boolean; // Escala EVA na cadeira (0h)
   softTissueExam?: boolean; // Exame de tecidos moles / alvéolo / margem
+  timer?: boolean; // Cronômetro clínico do procedimento
+  gelTimer?: boolean; // Compatibilidade com cronômetro de gel
   edemaTrismus?: boolean; // Aferição de edema facial e trismo (Cirurgia)
   fdiCriteria?: boolean; // Critérios FDI de longevidade (Dentística)
   percussionPalpation?: boolean; // Percussão e palpação (Endodontia)
