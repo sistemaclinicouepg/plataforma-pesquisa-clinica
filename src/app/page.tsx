@@ -125,7 +125,7 @@ export default function HomePage() {
   const [newProjectDesc, setNewProjectDesc] = useState('');
   const [newProjectPrefix, setNewProjectPrefix] = useState('');
   const [newProjectStatus, setNewProjectStatus] = useState<'ACTIVE' | 'COMPLETED' | 'CANCELLED'>('ACTIVE');
-  const [newProjectSpecialty, setNewProjectSpecialty] = useState<ResearchSpecialty>('BLEACHING');
+  const [newProjectSpecialty, setNewProjectSpecialty] = useState<ResearchSpecialty>('GENERAL');
   const [newProjectGroups, setNewProjectGroups] = useState<string[]>([
     'Grupo 1: Convencional (HP 35%)',
     'Grupo 2: Experimental (HP 20%)',
@@ -146,7 +146,7 @@ export default function HomePage() {
   const [editProjectDesc, setEditProjectDesc] = useState('');
   const [editProjectPrefix, setEditProjectPrefix] = useState('');
   const [editProjectStatus, setEditProjectStatus] = useState<'ACTIVE' | 'COMPLETED' | 'CANCELLED'>('ACTIVE');
-  const [editProjectSpecialty, setEditProjectSpecialty] = useState<ResearchSpecialty>('BLEACHING');
+  const [editProjectSpecialty, setEditProjectSpecialty] = useState<ResearchSpecialty>('GENERAL');
   const [editProjectGroups, setEditProjectGroups] = useState<string[]>([]);
   const [editNewGroupInput, setEditNewGroupInput] = useState('');
   const [editEnableOdontogram, setEditEnableOdontogram] = useState(true);

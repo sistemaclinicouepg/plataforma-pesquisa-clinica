@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { checkProjectPermission } from '@/lib/auth';
+import { mergeNotesWithExistingMeta } from '@/lib/unlockProtocol';
 
 export async function GET(
   req: Request,
@@ -119,7 +120,7 @@ export async function POST(
           adverseEvents: adverseEvents !== undefined ? adverseEvents : existing.adverseEvents,
           operatorName: operatorName !== undefined ? operatorName : existing.operatorName,
           evaluatorName: evaluatorName !== undefined ? evaluatorName : existing.evaluatorName,
-          notes: notes !== undefined ? notes : existing.notes,
+          notes: notes !== undefined ? mergeNotesWithExistingMeta(notes, existing.notes) : existing.notes,
         },
       });
     } else {

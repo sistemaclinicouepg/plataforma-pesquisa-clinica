@@ -147,6 +147,7 @@ export type StudySessionProtocol = {
   // Configurações por sessão para o Pesquisador
   clinicalModules?: SessionClinicalModules;
   clinicalChecklist?: string[]; // Etapas clínicas padronizadas desta sessão
+  forms?: string[]; // Formulários clínicos eCRF vinculados especificamente a esta sessão
 };
 
 export type RespondentType = 'RESEARCHER' | 'PATIENT';
@@ -1041,7 +1042,7 @@ export function parseStudyProtocol(templateStringOrObj: any): StudyProtocolConfi
     'GENERAL',
   ];
 
-  let specialty: ResearchSpecialty = 'BLEACHING';
+  let specialty: ResearchSpecialty = 'GENERAL';
   if (studyProtocol.specialty && validSpecialties.includes(studyProtocol.specialty)) {
     specialty = studyProtocol.specialty;
   }
@@ -1080,6 +1081,7 @@ export function parseStudyProtocol(templateStringOrObj: any): StudyProtocolConfi
       clinicalChecklist: Array.isArray(s.clinicalChecklist) && s.clinicalChecklist.length > 0
         ? s.clinicalChecklist
         : undefined,
+      forms: Array.isArray(s.forms) ? s.forms : undefined,
     };
   });
 

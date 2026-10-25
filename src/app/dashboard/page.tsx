@@ -28,7 +28,9 @@ import {
   parseUnlockMeta,
   extractDiaryMomentDetails,
   generateParticipantTabularExport,
+  stripMetaFromNotes,
 } from '@/lib/unlockProtocol';
+import { ClinicalTriageFields } from '@/components/ClinicalTriageFields';
 import {
   Stethoscope,
   ClipboardList,
@@ -2247,7 +2249,7 @@ function DashboardContent() {
       adverseEvents: existing?.adverseEvents || '',
       operatorName: existing?.operatorName || '',
       evaluatorName: existing?.evaluatorName || '',
-      notes: existing?.notes || '',
+      notes: stripMetaFromNotes(existing?.notes),
       justification: '',
     });
     setShowSessionModal(true);
@@ -2266,7 +2268,7 @@ function DashboardContent() {
               painScore1h: fresh.painScore1h ?? prev.painScore1h,
               painScore24h: fresh.painScore24h ?? prev.painScore24h,
               painScore48h: fresh.painScore48h ?? prev.painScore48h,
-              notes: fresh.notes || prev.notes,
+              notes: fresh.notes ? stripMetaFromNotes(fresh.notes) : prev.notes,
               adverseEvents: fresh.adverseEvents || prev.adverseEvents,
             }));
           }
@@ -4844,140 +4846,6 @@ function DashboardContent() {
                   </div>
                 </div>
 
-                {/* CARD 2: PROTOCOLO & DELINEAMENTO DO ESTUDO */}
-                <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-6 space-y-4">
-                  <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
-                        <Stethoscope className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <h3 className="text-base font-bold text-slate-900">
-                          Protocolo & Delineamento Clínico
-                        </h3>
-                        <p className="text-xs text-slate-500">
-                          Parâmetros metodológicos aplicados neste ensaio odontológico da UEPG.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 text-xs">
-                    <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/80">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Sessões Clínicas</span>
-                      <span className="text-lg font-black text-slate-800 mt-0.5 block">
-                        {studyProtocol.sessions?.length || 4} sessões
-                      </span>
-                      <span className="text-[11px] text-slate-500">Longitudinais com janelas de retorno</span>
-                    </div>
-
-                    <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/80">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Delineamento</span>
-                      <span className="text-lg font-black text-slate-800 mt-0.5 block">
-                        {(project.name || '').toLowerCase().includes('split') || (project.name || '').toLowerCase().includes('boca')
-                          ? 'Boca Dividida'
-                          : 'Grupos Paralelos'}
-                      </span>
-                      <span className="text-[11px] text-slate-500">Randomizado e Duplo-Cego</span>
-                    </div>
-
-                    <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/80">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Voluntários</span>
-                      <span className="text-lg font-black text-slate-800 mt-0.5 block">
-                        {totalApproved} ativos
-                      </span>
-                      <span className="text-[11px] text-slate-500">{totalPending} aguardando triagem</span>
-                    </div>
-
-                    <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/80">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Equipe Vinculada</span>
-                      <span className="text-lg font-black text-slate-800 mt-0.5 block">
-                        {totalMembers} membros
-                      </span>
-                      <span className="text-[11px] text-slate-500">{totalForms} formulários eCRF</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* CARD 3: EDITORES ESPECIALIZADOS DESTE ESTUDO */}
-                <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-6 space-y-4">
-                  <div className="pb-3 border-b border-slate-100">
-                    <h3 className="text-base font-bold text-slate-900">
-                      Editores Especializados deste Estudo
-                    </h3>
-                    <p className="text-xs text-slate-500">
-                      Acesse as ferramentas dedicadas para customizar os critérios clínicos, termos de consentimento e formulários eCRF.
-                    </p>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                    <Link
-                      href={`/anamnese?projectId=${project.id}`}
-                      className="p-4 bg-gradient-to-br from-blue-50/70 to-blue-100/40 hover:from-blue-100 hover:to-blue-200/60 border border-blue-200 rounded-2xl text-blue-900 transition flex items-center justify-between group shadow-2xs cursor-pointer"
-                    >
-                      <div className="space-y-1">
-                        <div className="flex items-center space-x-2">
-                          <FileSpreadsheet className="w-4 h-4 text-blue-700" />
-                          <span className="font-bold text-sm text-blue-950">Ficha Clínica & Critérios</span>
-                        </div>
-                        <p className="text-xs text-blue-800/80">
-                          Critérios de inclusão, exclusão, anamnese personalizada e odontograma.
-                        </p>
-                      </div>
-                      <ChevronRight className="w-5 h-5 text-blue-600 group-hover:translate-x-1 transition-transform shrink-0 ml-3" />
-                    </Link>
-
-                    <Link
-                      href={`/construtor?projectId=${project.id}`}
-                      className="p-4 bg-gradient-to-br from-indigo-50/70 to-indigo-100/40 hover:from-indigo-100 hover:to-indigo-200/60 border border-indigo-200 rounded-2xl text-indigo-900 transition flex items-center justify-between group shadow-2xs cursor-pointer"
-                    >
-                      <div className="space-y-1">
-                        <div className="flex items-center space-x-2">
-                          <FileCode className="w-4 h-4 text-indigo-700" />
-                          <span className="font-bold text-sm text-indigo-950">Construtor de eCRF</span>
-                        </div>
-                        <p className="text-xs text-indigo-800/80">
-                          Questionários do paciente (PROMs, OHIP-14), escalas de dor e satisfação.
-                        </p>
-                      </div>
-                      <ChevronRight className="w-5 h-5 text-indigo-600 group-hover:translate-x-1 transition-transform shrink-0 ml-3" />
-                    </Link>
-
-                    <Link
-                      href={`/tcle/editor?projectId=${project.id}`}
-                      className="p-4 bg-gradient-to-br from-emerald-50/70 to-emerald-100/40 hover:from-emerald-100 hover:to-emerald-200/60 border border-emerald-200 rounded-2xl text-emerald-900 transition flex items-center justify-between group shadow-2xs cursor-pointer"
-                    >
-                      <div className="space-y-1">
-                        <div className="flex items-center space-x-2">
-                          <FileText className="w-4 h-4 text-emerald-700" />
-                          <span className="font-bold text-sm text-emerald-950">Termo de Aceite (TCLE)</span>
-                        </div>
-                        <p className="text-xs text-emerald-800/80">
-                          Modelo institucional, consentimento livre e esclarecido e assinaturas digitais.
-                        </p>
-                      </div>
-                      <ChevronRight className="w-5 h-5 text-emerald-600 group-hover:translate-x-1 transition-transform shrink-0 ml-3" />
-                    </Link>
-
-                    <button
-                      type="button"
-                      onClick={() => handleSelectTab('team')}
-                      className="p-4 bg-gradient-to-br from-slate-50 to-slate-100 hover:from-slate-100 hover:to-slate-200/70 border border-slate-200 rounded-2xl text-slate-800 transition flex items-center justify-between text-left group shadow-2xs cursor-pointer"
-                    >
-                      <div className="space-y-1">
-                        <div className="flex items-center space-x-2">
-                          <Users className="w-4 h-4 text-slate-700" />
-                          <span className="font-bold text-sm text-slate-900">Equipe & Mascaramento</span>
-                        </div>
-                        <p className="text-xs text-slate-600">
-                          Pesquisadores vinculados, atribuições clínicas e regras do duplo-cego.
-                        </p>
-                      </div>
-                      <ChevronRight className="w-5 h-5 text-slate-500 group-hover:translate-x-1 transition-transform shrink-0 ml-3" />
-                    </button>
-                  </div>
-                </div>
-
                 {/* BARRA DE AÇÕES INFERIOR */}
                 <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 sticky bottom-4 z-20">
                   <div className="text-xs text-slate-500">
@@ -6235,36 +6103,22 @@ function DashboardContent() {
                       <h4 className="font-bold text-slate-800 text-xs">
                         Dados de Admissão no Estudo para <strong>{selectedPatient.fullName}</strong>
                       </h4>
-                      <div>
-                        <label className="block text-slate-600 mb-1">Queixa Principal / Motivo da Consulta</label>
-                        <input
-                          type="text"
-                          value={selectedPatientAdmissionData.chiefComplaint}
-                          onChange={(e) =>
-                            setSelectedPatientAdmissionData({
-                              ...selectedPatientAdmissionData,
-                              chiefComplaint: e.target.value,
-                            })
-                          }
-                          placeholder="Ex: Quer clarear os dentes para formatura"
-                          className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-slate-600 mb-1">Alergias Relatadas</label>
-                        <input
-                          type="text"
-                          value={selectedPatientAdmissionData.allergies}
-                          onChange={(e) =>
-                            setSelectedPatientAdmissionData({
-                              ...selectedPatientAdmissionData,
-                              allergies: e.target.value,
-                            })
-                          }
-                          placeholder="Ex: Nenhuma ou Alergia a Penicilina"
-                          className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white"
-                        />
-                      </div>
+                      <ClinicalTriageFields
+                        chiefComplaint={selectedPatientAdmissionData.chiefComplaint}
+                        onChiefComplaintChange={(val) =>
+                          setSelectedPatientAdmissionData({
+                            ...selectedPatientAdmissionData,
+                            chiefComplaint: val,
+                          })
+                        }
+                        allergies={selectedPatientAdmissionData.allergies}
+                        onAllergiesChange={(val) =>
+                          setSelectedPatientAdmissionData({
+                            ...selectedPatientAdmissionData,
+                            allergies: val,
+                          })
+                        }
+                      />
                     </div>
                   )}
                 </div>
@@ -6334,28 +6188,16 @@ function DashboardContent() {
 
                   <div className="pt-2 border-t border-slate-100">
                     <h4 className="font-bold text-slate-800 text-sm mb-3">Dados Iniciais de Triagem</h4>
-                    <div className="space-y-3">
-                      <div>
-                        <label className="block text-slate-600 mb-1">Queixa Principal / Motivo da Consulta</label>
-                        <input
-                          type="text"
-                          value={newPatientData.chiefComplaint}
-                          onChange={(e) => setNewPatientData({ ...newPatientData, chiefComplaint: e.target.value })}
-                          placeholder="Ex: Quer clarear os dentes para formatura"
-                          className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-slate-600 mb-1">Alergias Prévias Relatadas</label>
-                        <input
-                          type="text"
-                          value={newPatientData.allergies}
-                          onChange={(e) => setNewPatientData({ ...newPatientData, allergies: e.target.value })}
-                          placeholder="Ex: Nenhuma ou Alergia a Penicilina"
-                          className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
-                        />
-                      </div>
-                    </div>
+                    <ClinicalTriageFields
+                      chiefComplaint={newPatientData.chiefComplaint}
+                      onChiefComplaintChange={(val) =>
+                        setNewPatientData({ ...newPatientData, chiefComplaint: val })
+                      }
+                      allergies={newPatientData.allergies}
+                      onAllergiesChange={(val) =>
+                        setNewPatientData({ ...newPatientData, allergies: val })
+                      }
+                    />
                   </div>
                 </div>
               )}
@@ -7011,30 +6853,6 @@ function DashboardContent() {
 
             {/* Conteúdo com rolagem */}
             <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-6 text-xs">
-              {/* Linha de Pesquisa / Especialidade */}
-              <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                <div>
-                  <label className="block font-bold text-slate-800 text-xs mb-0.5">
-                    Linha / Especialidade da Pesquisa:
-                  </label>
-                  <p className="text-[11px] text-slate-500">
-                    Define o perfil padrão inicial dos formulários e terminologias do ensaio clínico.
-                  </p>
-                </div>
-                <select
-                  value={trailSpecialty}
-                  onChange={(e) => setTrailSpecialty(e.target.value as ResearchSpecialty)}
-                  className="px-3 py-2 border border-slate-300 rounded-xl text-xs bg-white font-bold text-slate-800 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                >
-                  <option value="GENERAL">Geral / Odontologia Integrada</option>
-                  <option value="BLEACHING">Clareamento Dental</option>
-                  <option value="RESTORATIVE">Dentística Restauradora</option>
-                  <option value="SURGERY">Cirurgia & Traumatologia</option>
-                  <option value="ENDODONTICS">Endodontia</option>
-                  <option value="PERIODONTICS">Periodontia</option>
-                </select>
-              </div>
-
               {/* Lista de Sessões da Trilha */}
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
@@ -7469,7 +7287,7 @@ function DashboardContent() {
         const hasTimer = Boolean(protoSession?.clinicalModules?.timer || protoSession?.clinicalModules?.gelTimer);
         const isInterventionSession = protoSession?.type === 'CLINICAL' || currentSessionForm.sessionNumber === 1;
 
-        // Formulários eCRF cadastrados para este projeto com questões avaliáveis
+        // Formulários eCRF cadastrados para este projeto com questões avaliáveis para preenchimento clínico
         const projectFormsWithQuestions = (project?.forms || []).map((f) => {
           let parsedQuestions: any[] = [];
           try {
@@ -7481,7 +7299,18 @@ function DashboardContent() {
             ...f,
             parsedQuestions: parsedQuestions.filter((q) => q.type !== 'instruction'),
           };
-        }).filter((f) => f.parsedQuestions.length > 0);
+        }).filter((f) => {
+          if (f.parsedQuestions.length === 0) return false;
+          // Formulários destinados ao voluntário (PROMs/Questionários do Paciente) são respondidos no celular pelo paciente
+          const isPatientProm = Boolean(
+            f.description?.includes('Preenchido por: Paciente') ||
+            f.description?.toLowerCase().includes('proms') ||
+            f.description?.toLowerCase().includes('relatados pelo paciente')
+          );
+          const isAssignedToThisSession = Boolean(protoSession?.forms?.includes(f.id));
+          // Só exibe na cadeira se for ficha de preenchimento clínico do pesquisador ou vinculada a esta sessão
+          return !isPatientProm || isAssignedToThisSession;
+        });
 
         const ribbonSteps = [
           { step: 1, title: 'Parâmetros Iniciais', sub: 'Data & Checagem' },

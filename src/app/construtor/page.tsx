@@ -360,12 +360,17 @@ function FormBuilderContent() {
     setAllowLate(Boolean(form.allowLate));
 
     const rawDesc = form.description || '';
-    setFormDescription(rawDesc);
-
     const occMatch = rawDesc.match(/Ocorrência:\s*([^|]+)/i) || rawDesc.match(/Frequência:\s*([^|]+)/i);
     if (occMatch) {
       setOccurrence(occMatch[1].trim());
     }
+
+    const cleanDesc = rawDesc
+      .replace(/Modalidade:\s*[^|]+\|?/gi, '')
+      .replace(/Frequência:\s*[^|]+\|?/gi, '')
+      .replace(/Ocorrência:\s*[^|]+\|?/gi, '')
+      .trim();
+    setFormDescription(cleanDesc);
 
     try {
       const parsed = JSON.parse(form.questionsJson || '[]');
@@ -827,9 +832,15 @@ function FormBuilderContent() {
         effectiveOccurrence.toLowerCase().includes('caseiro');
 
       const modalityTag = isTimeBased ? 'Modalidade: TEMPO' : 'Modalidade: SESSAO';
+      const cleanUserDesc = formDescription
+        .replace(/Modalidade:\s*[^|]+\|?/gi, '')
+        .replace(/Frequência:\s*[^|]+\|?/gi, '')
+        .replace(/Ocorrência:\s*[^|]+\|?/gi, '')
+        .trim();
+
       const formattedDesc = effectiveOccurrence
-        ? `${modalityTag} | Frequência: ${effectiveOccurrence} | Ocorrência: ${effectiveOccurrence} | ${formDescription.trim()}`
-        : formDescription.trim();
+        ? `${modalityTag} | Frequência: ${effectiveOccurrence} | Ocorrência: ${effectiveOccurrence} | ${cleanUserDesc}`
+        : cleanUserDesc;
 
       const res = await fetch('/api/forms', {
         method: 'POST',

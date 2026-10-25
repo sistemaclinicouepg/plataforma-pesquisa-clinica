@@ -53,6 +53,41 @@ export function parseUnlockMeta(notes: string | null | undefined): SessionUnlock
 }
 
 /**
+ * Remove qualquer tag de metadado oculta (<!-- UNLOCK_META: ... --> ou <!-- DIARY_DATA: ... -->)
+ * das anotações clínicas, retornando apenas as anotações visíveis do pesquisador.
+ */
+export function stripMetaFromNotes(notes: string | null | undefined): string {
+  if (!notes) return '';
+  return notes
+    .replace(/<!--\s*UNLOCK_META:[\s\S]*?-->/g, '')
+    .replace(/<!--\s*DIARY_DATA:[\s\S]*?-->/g, '')
+    .trim();
+}
+
+/**
+ * Mescla o novo texto digitado pelo pesquisador preservando quaisquer tags de
+ * metadados (desbloqueios e diários) que já existiam no banco de dados.
+ */
+export function mergeNotesWithExistingMeta(
+  newNotesText: string | null | undefined,
+  existingFullNotes: string | null | undefined
+): string {
+  const cleanNewText = stripMetaFromNotes(newNotesText);
+  if (!existingFullNotes) return cleanNewText;
+
+  const unlockMetaMatch = existingFullNotes.match(/<!--\s*UNLOCK_META:[\s\S]*?-->/);
+  const diaryDataMatch = existingFullNotes.match(/<!--\s*DIARY_DATA:[\s\S]*?-->/);
+
+  const metaParts: string[] = [];
+  if (unlockMetaMatch) metaParts.push(unlockMetaMatch[0]);
+  if (diaryDataMatch) metaParts.push(diaryDataMatch[0]);
+
+  if (metaParts.length === 0) return cleanNewText;
+  if (!cleanNewText) return metaParts.join('\n\n');
+  return `${cleanNewText}\n\n${metaParts.join('\n\n')}`;
+}
+
+/**
  * Codifica metadados de desbloqueio dentro do campo de notas da sessão,
  * preservando integralmente o texto das notas do pesquisador.
  */

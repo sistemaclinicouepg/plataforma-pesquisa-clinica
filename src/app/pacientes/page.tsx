@@ -30,6 +30,7 @@ import {
   Save,
   Check,
 } from 'lucide-react';
+import { ClinicalTriageFields } from '@/components/ClinicalTriageFields';
 
 type Participation = {
   id: string;
@@ -1090,13 +1091,11 @@ export default function PacientesPage() {
                 </div>
 
                 <div className="sm:col-span-2">
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Queixa Principal / Motivo da Consulta</label>
-                  <textarea
-                    rows={2}
-                    value={newPatientForm.chiefComplaint}
-                    onChange={(e) => setNewPatientForm({ ...newPatientForm, chiefComplaint: e.target.value })}
-                    placeholder="Ex: Deseja clareamento dental; relata sensibilidade prévia..."
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                  <ClinicalTriageFields
+                    chiefComplaint={newPatientForm.chiefComplaint}
+                    onChiefComplaintChange={(val) => setNewPatientForm({ ...newPatientForm, chiefComplaint: val })}
+                    allergies={newPatientForm.allergies || ''}
+                    onAllergiesChange={(val) => setNewPatientForm({ ...newPatientForm, allergies: val })}
                   />
                 </div>
               </div>
