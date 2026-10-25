@@ -134,25 +134,14 @@ export function ClinicalTriageFields({
       onAllergiesChange(next.join(', '));
     }
     setAllergySearch('');
+    setIsAllergyOpen(false);
   };
 
-  const handleToggleComplaint = (complaint: string) => {
-    if (!chiefComplaint || chiefComplaint.trim() === '') {
-      onChiefComplaintChange(complaint);
-      return;
-    }
-    const isSelected = chiefComplaint.includes(complaint);
-    if (isSelected) {
-      // Remove a queixa mantendo outras anotações digitadas
-      const parts = chiefComplaint
-        .split(/[;,]/)
-        .map((s) => s.trim())
-        .filter((s) => s && s !== complaint);
-      onChiefComplaintChange(parts.join('; '));
-    } else {
-      // Adiciona a queixa
-      onChiefComplaintChange(`${chiefComplaint.trim().replace(/[;,]$/, '')}; ${complaint}`);
-    }
+  const handleSelectComplaint = (complaint: string) => {
+    // Substitui completamente o que estava sendo digitado por apenas uma resposta
+    onChiefComplaintChange(complaint);
+    setComplaintFilter('');
+    setIsComplaintOpen(false);
   };
 
   // Filtragem dinâmica das queixas conforme digitação
@@ -161,6 +150,12 @@ export function ClinicalTriageFields({
     if (!query) return true;
     return opt.toLowerCase().includes(query);
   });
+
+  const isCustomComplaint =
+    complaintFilter.trim().length > 0 &&
+    !COMMON_CHIEF_COMPLAINTS.some(
+      (c) => c.toLowerCase() === chiefComplaint.trim().toLowerCase()
+    );
 
   // Filtragem dinâmica das alergias conforme digitação
   const filteredAllergies = PREDEFINED_ALLERGIES.filter((alg) => {
@@ -195,7 +190,7 @@ export function ClinicalTriageFields({
               value={chiefComplaint}
               onFocus={() => {
                 setIsComplaintOpen(true);
-                setComplaintFilter(chiefComplaint);
+                setComplaintFilter('');
               }}
               onClick={() => {
                 setIsComplaintOpen(true);
@@ -205,17 +200,46 @@ export function ClinicalTriageFields({
                 setComplaintFilter(e.target.value);
                 setIsComplaintOpen(true);
               }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  if (filteredComplaints.length > 0 && complaintFilter.trim().length > 0) {
+                    handleSelectComplaint(filteredComplaints[0]);
+                  } else {
+                    setIsComplaintOpen(false);
+                  }
+                } else if (e.key === 'Escape') {
+                  setIsComplaintOpen(false);
+                }
+              }}
               placeholder="Clique para ver opções ou digite a queixa do paciente..."
-              className="w-full pl-8 pr-8 py-2 border border-slate-300 rounded-xl text-xs bg-white text-slate-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition shadow-2xs"
+              className="w-full pl-8 pr-16 py-2 border border-slate-300 rounded-xl text-xs bg-white text-slate-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition shadow-2xs"
             />
-            <button
-              type="button"
-              onClick={() => setIsComplaintOpen((prev) => !prev)}
-              className="absolute right-2.5 p-1 text-slate-400 hover:text-slate-600 transition cursor-pointer"
-              title={isComplaintOpen ? 'Ocultar opções' : 'Exibir opções frequentes'}
-            >
-              {isComplaintOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-            </button>
+            <div className="absolute right-2 flex items-center gap-1">
+              {chiefComplaint && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onChiefComplaintChange('');
+                    setComplaintFilter('');
+                    setIsComplaintOpen(false);
+                  }}
+                  className="p-1 text-slate-400 hover:text-slate-600 transition cursor-pointer"
+                  title="Limpar queixa"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setIsComplaintOpen((prev) => !prev)}
+                className="p-1 text-slate-400 hover:text-slate-600 transition cursor-pointer"
+                title={isComplaintOpen ? 'Ocultar opções' : 'Exibir opções frequentes'}
+              >
+                {isComplaintOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+              </button>
+            </div>
           </div>
 
           {/* LISTA OCULTA DROPDOWN QUE ABRE AO CLICAR E FILTRA AO DIGITAR */}
@@ -226,21 +250,21 @@ export function ClinicalTriageFields({
                 <span className="font-normal text-slate-400 lowercase">clique para selecionar</span>
               </div>
 
-              {filteredComplaints.length === 0 ? (
+              {filteredComplaints.length === 0 && !isCustomComplaint ? (
                 <div className="p-3 text-center text-xs text-slate-500">
                   Nenhuma opção pré-definida para "{complaintFilter}". O texto digitado será gravado normalmente.
                 </div>
               ) : (
                 filteredComplaints.map((option) => {
-                  const isSelected = Boolean(chiefComplaint && chiefComplaint.includes(option));
+                  const isSelected = chiefComplaint.trim() === option.trim();
                   return (
                     <button
                       key={option}
                       type="button"
-                      onClick={() => handleToggleComplaint(option)}
-                      className={`w-full text-left px-3.5 py-2 text-xs flex items-center justify-between transition cursor-pointer select-none ${
+                      onClick={() => handleSelectComplaint(option)}
+                      className={`w-full text-left px-3.5 py-2.5 text-xs flex items-center justify-between transition cursor-pointer select-none ${
                         isSelected
-                          ? 'bg-blue-50/80 text-blue-900 font-semibold'
+                          ? 'bg-blue-50/90 text-blue-900 font-semibold'
                           : 'text-slate-700 hover:bg-slate-50'
                       }`}
                     >
@@ -264,6 +288,21 @@ export function ClinicalTriageFields({
                     </button>
                   );
                 })
+              )}
+
+              {/* Se o usuário digitou uma queixa personalizada que não é uma opção pré-definida */}
+              {isCustomComplaint && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsComplaintOpen(false);
+                    setComplaintFilter('');
+                  }}
+                  className="w-full text-left px-3.5 py-2.5 text-xs font-bold text-blue-700 bg-blue-50/80 hover:bg-blue-100 transition flex items-center gap-2 cursor-pointer border-t border-slate-100"
+                >
+                  <Check className="w-3.5 h-3.5 shrink-0" />
+                  <span>Usar queixa digitada: <strong>"{chiefComplaint.trim()}"</strong></span>
+                </button>
               )}
             </div>
           )}
@@ -390,6 +429,7 @@ export function ClinicalTriageFields({
                         onClick={() => {
                           handleToggleAllergyTag(alg);
                           setAllergySearch('');
+                          setIsAllergyOpen(false);
                         }}
                         className={`w-full text-left px-3.5 py-2 text-xs flex items-center justify-between transition cursor-pointer select-none ${
                           isSelected
