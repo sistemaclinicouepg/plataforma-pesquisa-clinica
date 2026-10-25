@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Plus, X, AlertCircle, Check, Sparkles } from 'lucide-react';
+import { Plus, X, AlertCircle, Check, ShieldAlert, ListChecks } from 'lucide-react';
 
 interface ClinicalTriageFieldsProps {
   chiefComplaint: string;
@@ -100,58 +100,87 @@ export function ClinicalTriageFields({
     setCustomAllergyInput('');
   };
 
-  const handleSelectComplaint = (complaint: string) => {
+  const handleToggleComplaint = (complaint: string) => {
     if (!chiefComplaint || chiefComplaint.trim() === '') {
       onChiefComplaintChange(complaint);
-    } else if (!chiefComplaint.includes(complaint)) {
-      onChiefComplaintChange(`${chiefComplaint}; ${complaint}`);
+      return;
+    }
+    const isSelected = chiefComplaint.includes(complaint);
+    if (isSelected) {
+      // Remove a queixa mantendo outras anotações livres digitadas
+      const parts = chiefComplaint
+        .split(/[;,]/)
+        .map((s) => s.trim())
+        .filter((s) => s && s !== complaint);
+      onChiefComplaintChange(parts.join('; '));
+    } else {
+      // Adiciona a queixa
+      onChiefComplaintChange(`${chiefComplaint.trim().replace(/[;,]$/, '')}; ${complaint}`);
     }
   };
 
   return (
     <div className="space-y-4 pt-1">
-      {/* QUEIXA PRINCIPAL */}
+      {/* QUEIXA PRINCIPAL EM FORMATO DE LISTA */}
       <div className="space-y-2">
-        <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center justify-between">
-          <span>Queixa Principal / Motivo da Consulta</span>
-          <span className="text-[11px] font-normal text-slate-400 lowercase">
-            selecione opções rápidas ou digite
+        <div className="flex items-center justify-between">
+          <label className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+            <ListChecks className="w-3.5 h-3.5 text-blue-600" />
+            <span>Queixa Principal / Motivo da Consulta</span>
+          </label>
+          <span className="text-[11px] text-slate-400">
+            Selecione na lista ou digite
           </span>
-        </label>
+        </div>
 
-        {/* Sugestões rápidas de Queixa Principal */}
-        <div className="flex flex-wrap gap-1.5">
+        {/* Lista estruturada de queixas frequentes */}
+        <div className="rounded-xl border border-slate-200 bg-white divide-y divide-slate-100 overflow-hidden shadow-2xs max-h-56 overflow-y-auto">
           {COMMON_CHIEF_COMPLAINTS.map((option) => {
-            const isSelected = chiefComplaint?.includes(option);
+            const isSelected = Boolean(chiefComplaint && chiefComplaint.includes(option));
             return (
               <button
                 key={option}
                 type="button"
-                onClick={() => handleSelectComplaint(option)}
-                className={`text-[11px] px-2.5 py-1 rounded-lg border font-medium transition cursor-pointer text-left ${
+                onClick={() => handleToggleComplaint(option)}
+                className={`w-full text-left px-3.5 py-2 text-xs flex items-center justify-between transition cursor-pointer select-none ${
                   isSelected
-                    ? 'bg-blue-50 text-blue-800 border-blue-300 font-bold shadow-2xs'
-                    : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
+                    ? 'bg-blue-50/70 text-blue-900 font-semibold'
+                    : 'text-slate-700 hover:bg-slate-50'
                 }`}
               >
-                {isSelected ? '✓ ' : '+ '}
-                {option}
+                <span className="flex items-center gap-2.5">
+                  <span
+                    className={`w-4 h-4 rounded-md flex items-center justify-center border transition shrink-0 ${
+                      isSelected
+                        ? 'bg-blue-600 border-blue-600 text-white'
+                        : 'border-slate-300 bg-white'
+                    }`}
+                  >
+                    {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                  </span>
+                  <span>{option}</span>
+                </span>
+                {isSelected && (
+                  <span className="text-[10px] text-blue-600 font-bold uppercase tracking-wider shrink-0 ml-2">
+                    Selecionado
+                  </span>
+                )}
               </button>
             );
           })}
         </div>
 
-        {/* Campo de texto livre para Queixa Principal */}
+        {/* Campo de texto livre para complemento ou nova queixa */}
         <input
           type="text"
           value={chiefComplaint}
           onChange={(e) => onChiefComplaintChange(e.target.value)}
           placeholder="Ex: Quer clarear os dentes para formatura ou relata sensibilidade..."
-          className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs bg-white text-slate-900 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+          className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs bg-white text-slate-900 focus:ring-2 focus:ring-blue-500 focus:outline-none shadow-2xs"
         />
       </div>
 
-      {/* ALERGIAS */}
+      {/* ALERGIAS EM FORMATO DE LISTA */}
       <div className="space-y-2 pt-2 border-t border-slate-100">
         <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider">
           Alergias Prévias Relatadas
@@ -186,14 +215,21 @@ export function ClinicalTriageFields({
           </button>
         </div>
 
-        {/* Se Sim: Lista de alergias comuns e inclusão de outras */}
+        {/* Se Sim: Lista estruturada de alergias com inclusão de outras */}
         {hasAllergy && (
-          <div className="p-3 bg-rose-50/50 border border-rose-200 rounded-xl space-y-2.5 animate-fadeIn">
-            <span className="text-[11px] font-bold text-rose-900 block">
-              Selecione uma ou mais alergias da lista:
-            </span>
+          <div className="p-3 bg-rose-50/40 border border-rose-200 rounded-2xl space-y-2.5 animate-fadeIn">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-rose-900 flex items-center gap-1.5">
+                <ShieldAlert className="w-3.5 h-3.5 text-rose-600" />
+                <span>Lista de Alergias Frequentes:</span>
+              </span>
+              <span className="text-[11px] text-rose-700 font-semibold">
+                {selectedAllergies.length} registrada{selectedAllergies.length === 1 ? '' : 's'}
+              </span>
+            </div>
 
-            <div className="flex flex-wrap gap-1.5">
+            {/* Lista com checkboxes */}
+            <div className="rounded-xl border border-rose-200 bg-white divide-y divide-rose-100 overflow-hidden shadow-2xs max-h-56 overflow-y-auto">
               {PREDEFINED_ALLERGIES.map((alg) => {
                 const isSelected = selectedAllergies.includes(alg);
                 return (
@@ -201,21 +237,62 @@ export function ClinicalTriageFields({
                     key={alg}
                     type="button"
                     onClick={() => handleToggleAllergyTag(alg)}
-                    className={`text-[11px] px-2.5 py-1 rounded-lg border font-medium transition cursor-pointer ${
+                    className={`w-full text-left px-3.5 py-2 text-xs flex items-center justify-between transition cursor-pointer select-none ${
                       isSelected
-                        ? 'bg-rose-600 text-white border-rose-600 font-bold shadow-2xs'
-                        : 'bg-white hover:bg-rose-100/70 text-rose-900 border-rose-200'
+                        ? 'bg-rose-50/80 text-rose-900 font-semibold'
+                        : 'text-slate-700 hover:bg-rose-50/30'
                     }`}
                   >
-                    {isSelected ? '✕ ' : '+ '}
-                    {alg}
+                    <span className="flex items-center gap-2.5">
+                      <span
+                        className={`w-4 h-4 rounded-md flex items-center justify-center border transition shrink-0 ${
+                          isSelected
+                            ? 'bg-rose-600 border-rose-600 text-white'
+                            : 'border-slate-300 bg-white'
+                        }`}
+                      >
+                        {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                      </span>
+                      <span>{alg}</span>
+                    </span>
+                    {isSelected && (
+                      <span className="text-[10px] text-rose-600 font-bold uppercase tracking-wider shrink-0 ml-2">
+                        Ativa
+                      </span>
+                    )}
                   </button>
                 );
               })}
+
+              {/* Alergias adicionadas manualmente */}
+              {selectedAllergies
+                .filter((item) => !PREDEFINED_ALLERGIES.includes(item))
+                .map((customItem) => (
+                  <div
+                    key={customItem}
+                    className="w-full text-left px-3.5 py-2 text-xs flex items-center justify-between bg-rose-50/90 text-rose-900 font-semibold"
+                  >
+                    <span className="flex items-center gap-2.5">
+                      <span className="w-4 h-4 rounded-md flex items-center justify-center border bg-rose-600 border-rose-600 text-white shrink-0">
+                        <Check className="w-3 h-3 stroke-[3]" />
+                      </span>
+                      <span>{customItem}</span>
+                      <span className="text-[10px] text-rose-500 font-normal italic">(outra)</span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleToggleAllergyTag(customItem)}
+                      className="text-rose-500 hover:text-rose-700 p-1 rounded-md hover:bg-rose-100 transition cursor-pointer"
+                      title="Remover alergia"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
             </div>
 
-            {/* Adicionar outra alergia personalizada */}
-            <div className="pt-1 flex gap-2">
+            {/* Inserção de nova alergia personalizada */}
+            <div className="flex gap-2">
               <input
                 type="text"
                 value={customAllergyInput}
@@ -227,41 +304,17 @@ export function ClinicalTriageFields({
                   }
                 }}
                 placeholder="Digitar outra alergia (ex: Corantes, Frutos do mar, Dipirona sódica...)"
-                className="flex-1 px-3 py-1.5 bg-white border border-rose-300 rounded-lg text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-rose-500"
+                className="flex-1 px-3 py-2 bg-white border border-rose-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-rose-500 shadow-2xs"
               />
               <button
                 type="button"
                 onClick={handleAddCustomAllergy}
-                className="px-3 py-1.5 bg-rose-700 hover:bg-rose-800 text-white text-xs font-bold rounded-lg transition flex items-center gap-1 cursor-pointer shrink-0"
+                className="px-4 py-2 bg-rose-700 hover:bg-rose-800 text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 cursor-pointer shrink-0 shadow-2xs"
               >
                 <Plus className="w-3.5 h-3.5" />
-                <span>Adicionar</span>
+                <span>Adicionar à Lista</span>
               </button>
             </div>
-
-            {/* Alergias Selecionadas / Ativas */}
-            {selectedAllergies.length > 0 && (
-              <div className="pt-2 border-t border-rose-200/60 flex flex-wrap items-center gap-1.5">
-                <span className="text-[10px] uppercase font-bold text-rose-800 tracking-wider mr-1">
-                  Alergias registradas:
-                </span>
-                {selectedAllergies.map((item) => (
-                  <span
-                    key={item}
-                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white border border-rose-300 text-rose-900 text-xs font-semibold shadow-2xs"
-                  >
-                    <span>{item}</span>
-                    <button
-                      type="button"
-                      onClick={() => handleToggleAllergyTag(item)}
-                      className="text-rose-500 hover:text-rose-700 ml-0.5 cursor-pointer"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </span>
-                ))}
-              </div>
-            )}
           </div>
         )}
       </div>
