@@ -31,6 +31,7 @@ import {
   stripMetaFromNotes,
 } from '@/lib/unlockProtocol';
 import { ClinicalTriageFields } from '@/components/ClinicalTriageFields';
+import { RandomizationGroupSelector } from '@/components/RandomizationGroupSelector';
 import {
   Stethoscope,
   ClipboardList,
@@ -6225,18 +6226,11 @@ function DashboardContent() {
                   <Shuffle className="w-3.5 h-3.5 text-indigo-600" />
                   <span>Grupo de Randomização / Alocação Inicial (Opcional)</span>
                 </label>
-                <select
+                <RandomizationGroupSelector
                   value={selectedAdmissionGroup}
-                  onChange={(e) => setSelectedAdmissionGroup(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                >
-                  <option value="">Não alocar agora (Definir depois na lista de participantes)</option>
-                  {availableStudyGroups.map((grp) => (
-                    <option key={grp} value={grp}>
-                      {grp}
-                    </option>
-                  ))}
-                </select>
+                  onChange={setSelectedAdmissionGroup}
+                  availableGroups={availableStudyGroups}
+                />
                 <p className="text-[10px] text-indigo-700">
                   {availableStudyGroups.length > 0
                     ? 'Você pode selecionar um grupo existente ou alocar o paciente a qualquer momento pela tabela.'
