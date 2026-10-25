@@ -1,7 +1,16 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { Plus, X, AlertCircle, Check, ShieldAlert, ListChecks } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  Plus,
+  X,
+  AlertCircle,
+  Check,
+  ShieldAlert,
+  Search,
+  ChevronDown,
+  ChevronUp,
+} from 'lucide-react';
 
 interface ClinicalTriageFieldsProps {
   chiefComplaint: string;
@@ -46,8 +55,17 @@ export function ClinicalTriageFields({
     allergies.toLowerCase().includes('nega');
 
   const [hasAllergy, setHasAllergy] = useState<boolean>(!isNegative && allergies.trim().length > 0);
-  const [customAllergyInput, setCustomAllergyInput] = useState('');
   const [selectedAllergies, setSelectedAllergies] = useState<string[]>([]);
+
+  // Estados da Lista Oculta / Autocomplete de Queixa Principal
+  const [isComplaintOpen, setIsComplaintOpen] = useState(false);
+  const [complaintFilter, setComplaintFilter] = useState('');
+  const complaintContainerRef = useRef<HTMLDivElement>(null);
+
+  // Estados da Lista Oculta / Autocomplete de Alergias
+  const [isAllergyOpen, setIsAllergyOpen] = useState(false);
+  const [allergySearch, setAllergySearch] = useState('');
+  const allergyContainerRef = useRef<HTMLDivElement>(null);
 
   // Sincroniza selectedAllergies a partir da prop allergies
   useEffect(() => {
@@ -64,11 +82,29 @@ export function ClinicalTriageFields({
     }
   }, [allergies]);
 
+  // Fechar listas suspensas ao clicar fora dos campos
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (complaintContainerRef.current && !complaintContainerRef.current.contains(target)) {
+        setIsComplaintOpen(false);
+      }
+      if (allergyContainerRef.current && !allergyContainerRef.current.contains(target)) {
+        setIsAllergyOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   const handleToggleHasAllergy = (status: boolean) => {
     setHasAllergy(status);
     if (!status) {
       setSelectedAllergies([]);
       onAllergiesChange('Nenhuma alergia conhecida');
+      setIsAllergyOpen(false);
+      setAllergySearch('');
     } else {
       if (selectedAllergies.length === 0) {
         onAllergiesChange('');
@@ -89,15 +125,15 @@ export function ClinicalTriageFields({
     onAllergiesChange(next.length > 0 ? next.join(', ') : '');
   };
 
-  const handleAddCustomAllergy = () => {
-    const trimmed = customAllergyInput.trim();
+  const handleAddCustomAllergy = (customName: string) => {
+    const trimmed = customName.trim();
     if (!trimmed) return;
     if (!selectedAllergies.includes(trimmed)) {
       const next = [...selectedAllergies, trimmed];
       setSelectedAllergies(next);
       onAllergiesChange(next.join(', '));
     }
-    setCustomAllergyInput('');
+    setAllergySearch('');
   };
 
   const handleToggleComplaint = (complaint: string) => {
@@ -107,7 +143,7 @@ export function ClinicalTriageFields({
     }
     const isSelected = chiefComplaint.includes(complaint);
     if (isSelected) {
-      // Remove a queixa mantendo outras anotações livres digitadas
+      // Remove a queixa mantendo outras anotações digitadas
       const parts = chiefComplaint
         .split(/[;,]/)
         .map((s) => s.trim())
@@ -119,68 +155,122 @@ export function ClinicalTriageFields({
     }
   };
 
+  // Filtragem dinâmica das queixas conforme digitação
+  const filteredComplaints = COMMON_CHIEF_COMPLAINTS.filter((opt) => {
+    const query = complaintFilter.trim().toLowerCase();
+    if (!query) return true;
+    return opt.toLowerCase().includes(query);
+  });
+
+  // Filtragem dinâmica das alergias conforme digitação
+  const filteredAllergies = PREDEFINED_ALLERGIES.filter((alg) => {
+    const query = allergySearch.trim().toLowerCase();
+    if (!query) return true;
+    return alg.toLowerCase().includes(query);
+  });
+
+  const isCustomAllergy =
+    allergySearch.trim().length > 0 &&
+    !PREDEFINED_ALLERGIES.some((a) => a.toLowerCase() === allergySearch.trim().toLowerCase()) &&
+    !selectedAllergies.some((a) => a.toLowerCase() === allergySearch.trim().toLowerCase());
+
   return (
     <div className="space-y-4 pt-1">
-      {/* QUEIXA PRINCIPAL EM FORMATO DE LISTA */}
-      <div className="space-y-2">
+      {/* QUEIXA PRINCIPAL COM LISTA OCULTA / AUTOCOMPLETE */}
+      <div className="space-y-1.5" ref={complaintContainerRef}>
         <div className="flex items-center justify-between">
-          <label className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-            <ListChecks className="w-3.5 h-3.5 text-blue-600" />
-            <span>Queixa Principal / Motivo da Consulta</span>
+          <label className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+            Queixa Principal / Motivo da Consulta
           </label>
           <span className="text-[11px] text-slate-400">
-            Selecione na lista ou digite
+            clique para ver opções ou digite
           </span>
         </div>
 
-        {/* Lista estruturada de queixas frequentes */}
-        <div className="rounded-xl border border-slate-200 bg-white divide-y divide-slate-100 overflow-hidden shadow-2xs max-h-56 overflow-y-auto">
-          {COMMON_CHIEF_COMPLAINTS.map((option) => {
-            const isSelected = Boolean(chiefComplaint && chiefComplaint.includes(option));
-            return (
-              <button
-                key={option}
-                type="button"
-                onClick={() => handleToggleComplaint(option)}
-                className={`w-full text-left px-3.5 py-2 text-xs flex items-center justify-between transition cursor-pointer select-none ${
-                  isSelected
-                    ? 'bg-blue-50/70 text-blue-900 font-semibold'
-                    : 'text-slate-700 hover:bg-slate-50'
-                }`}
-              >
-                <span className="flex items-center gap-2.5">
-                  <span
-                    className={`w-4 h-4 rounded-md flex items-center justify-center border transition shrink-0 ${
-                      isSelected
-                        ? 'bg-blue-600 border-blue-600 text-white'
-                        : 'border-slate-300 bg-white'
-                    }`}
-                  >
-                    {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
-                  </span>
-                  <span>{option}</span>
-                </span>
-                {isSelected && (
-                  <span className="text-[10px] text-blue-600 font-bold uppercase tracking-wider shrink-0 ml-2">
-                    Selecionado
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
+        <div className="relative">
+          <div className="relative flex items-center">
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 pointer-events-none" />
+            <input
+              type="text"
+              value={chiefComplaint}
+              onFocus={() => {
+                setIsComplaintOpen(true);
+                setComplaintFilter(chiefComplaint);
+              }}
+              onClick={() => {
+                setIsComplaintOpen(true);
+              }}
+              onChange={(e) => {
+                onChiefComplaintChange(e.target.value);
+                setComplaintFilter(e.target.value);
+                setIsComplaintOpen(true);
+              }}
+              placeholder="Clique para ver opções ou digite a queixa do paciente..."
+              className="w-full pl-8 pr-8 py-2 border border-slate-300 rounded-xl text-xs bg-white text-slate-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition shadow-2xs"
+            />
+            <button
+              type="button"
+              onClick={() => setIsComplaintOpen((prev) => !prev)}
+              className="absolute right-2.5 p-1 text-slate-400 hover:text-slate-600 transition cursor-pointer"
+              title={isComplaintOpen ? 'Ocultar opções' : 'Exibir opções frequentes'}
+            >
+              {isComplaintOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+            </button>
+          </div>
 
-        {/* Campo de texto livre para complemento ou nova queixa */}
-        <input
-          type="text"
-          value={chiefComplaint}
-          onChange={(e) => onChiefComplaintChange(e.target.value)}
-          placeholder="Ex: Quer clarear os dentes para formatura ou relata sensibilidade..."
-          className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs bg-white text-slate-900 focus:ring-2 focus:ring-blue-500 focus:outline-none shadow-2xs"
-        />
+          {/* LISTA OCULTA DROPDOWN QUE ABRE AO CLICAR E FILTRA AO DIGITAR */}
+          {isComplaintOpen && (
+            <div className="absolute left-0 right-0 top-full mt-1.5 z-40 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden divide-y divide-slate-100 max-h-56 overflow-y-auto animate-in fade-in duration-100">
+              <div className="px-3 py-1.5 bg-slate-50 text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center justify-between">
+                <span>Opções Frequentes ({filteredComplaints.length})</span>
+                <span className="font-normal text-slate-400 lowercase">clique para selecionar</span>
+              </div>
+
+              {filteredComplaints.length === 0 ? (
+                <div className="p-3 text-center text-xs text-slate-500">
+                  Nenhuma opção pré-definida para "{complaintFilter}". O texto digitado será gravado normalmente.
+                </div>
+              ) : (
+                filteredComplaints.map((option) => {
+                  const isSelected = Boolean(chiefComplaint && chiefComplaint.includes(option));
+                  return (
+                    <button
+                      key={option}
+                      type="button"
+                      onClick={() => handleToggleComplaint(option)}
+                      className={`w-full text-left px-3.5 py-2 text-xs flex items-center justify-between transition cursor-pointer select-none ${
+                        isSelected
+                          ? 'bg-blue-50/80 text-blue-900 font-semibold'
+                          : 'text-slate-700 hover:bg-slate-50'
+                      }`}
+                    >
+                      <span className="flex items-center gap-2.5">
+                        <span
+                          className={`w-4 h-4 rounded-md flex items-center justify-center border transition shrink-0 ${
+                            isSelected
+                              ? 'bg-blue-600 border-blue-600 text-white'
+                              : 'border-slate-300 bg-white'
+                          }`}
+                        >
+                          {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                        </span>
+                        <span>{option}</span>
+                      </span>
+                      {isSelected && (
+                        <span className="text-[10px] text-blue-600 font-bold uppercase tracking-wider shrink-0 ml-2">
+                          Selecionado
+                        </span>
+                      )}
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* ALERGIAS EM FORMATO DE LISTA */}
+      {/* ALERGIAS COM LISTA OCULTA / AUTOCOMPLETE */}
       <div className="space-y-2 pt-2 border-t border-slate-100">
         <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider">
           Alergias Prévias Relatadas
@@ -215,105 +305,138 @@ export function ClinicalTriageFields({
           </button>
         </div>
 
-        {/* Se Sim: Lista estruturada de alergias com inclusão de outras */}
+        {/* Campo com Lista Oculta que abre ao clicar e filtra ao digitar */}
         {hasAllergy && (
-          <div className="p-3 bg-rose-50/40 border border-rose-200 rounded-2xl space-y-2.5 animate-fadeIn">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-rose-900 flex items-center gap-1.5">
-                <ShieldAlert className="w-3.5 h-3.5 text-rose-600" />
-                <span>Lista de Alergias Frequentes:</span>
-              </span>
-              <span className="text-[11px] text-rose-700 font-semibold">
-                {selectedAllergies.length} registrada{selectedAllergies.length === 1 ? '' : 's'}
-              </span>
-            </div>
-
-            {/* Lista com checkboxes */}
-            <div className="rounded-xl border border-rose-200 bg-white divide-y divide-rose-100 overflow-hidden shadow-2xs max-h-56 overflow-y-auto">
-              {PREDEFINED_ALLERGIES.map((alg) => {
-                const isSelected = selectedAllergies.includes(alg);
-                return (
-                  <button
-                    key={alg}
-                    type="button"
-                    onClick={() => handleToggleAllergyTag(alg)}
-                    className={`w-full text-left px-3.5 py-2 text-xs flex items-center justify-between transition cursor-pointer select-none ${
-                      isSelected
-                        ? 'bg-rose-50/80 text-rose-900 font-semibold'
-                        : 'text-slate-700 hover:bg-rose-50/30'
-                    }`}
+          <div className="space-y-2 pt-1 animate-fadeIn" ref={allergyContainerRef}>
+            {/* Alergias Selecionadas / Ativas como Badges compactas */}
+            {selectedAllergies.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5 p-2 bg-rose-50/60 border border-rose-200 rounded-xl">
+                <span className="text-[10px] uppercase font-bold text-rose-800 tracking-wider mr-1 flex items-center gap-1">
+                  <ShieldAlert className="w-3 h-3 text-rose-600" />
+                  <span>Alergias registradas ({selectedAllergies.length}):</span>
+                </span>
+                {selectedAllergies.map((item) => (
+                  <span
+                    key={item}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white border border-rose-300 text-rose-900 text-xs font-bold shadow-2xs"
                   >
-                    <span className="flex items-center gap-2.5">
-                      <span
-                        className={`w-4 h-4 rounded-md flex items-center justify-center border transition shrink-0 ${
-                          isSelected
-                            ? 'bg-rose-600 border-rose-600 text-white'
-                            : 'border-slate-300 bg-white'
-                        }`}
-                      >
-                        {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
-                      </span>
-                      <span>{alg}</span>
-                    </span>
-                    {isSelected && (
-                      <span className="text-[10px] text-rose-600 font-bold uppercase tracking-wider shrink-0 ml-2">
-                        Ativa
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-
-              {/* Alergias adicionadas manualmente */}
-              {selectedAllergies
-                .filter((item) => !PREDEFINED_ALLERGIES.includes(item))
-                .map((customItem) => (
-                  <div
-                    key={customItem}
-                    className="w-full text-left px-3.5 py-2 text-xs flex items-center justify-between bg-rose-50/90 text-rose-900 font-semibold"
-                  >
-                    <span className="flex items-center gap-2.5">
-                      <span className="w-4 h-4 rounded-md flex items-center justify-center border bg-rose-600 border-rose-600 text-white shrink-0">
-                        <Check className="w-3 h-3 stroke-[3]" />
-                      </span>
-                      <span>{customItem}</span>
-                      <span className="text-[10px] text-rose-500 font-normal italic">(outra)</span>
-                    </span>
+                    <span>{item}</span>
                     <button
                       type="button"
-                      onClick={() => handleToggleAllergyTag(customItem)}
-                      className="text-rose-500 hover:text-rose-700 p-1 rounded-md hover:bg-rose-100 transition cursor-pointer"
-                      title="Remover alergia"
+                      onClick={() => handleToggleAllergyTag(item)}
+                      className="text-rose-400 hover:text-rose-700 transition cursor-pointer"
+                      title={`Remover alergia ${item}`}
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
-                  </div>
+                  </span>
                 ))}
-            </div>
+              </div>
+            )}
 
-            {/* Inserção de nova alergia personalizada */}
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={customAllergyInput}
-                onChange={(e) => setCustomAllergyInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    handleAddCustomAllergy();
-                  }
-                }}
-                placeholder="Digitar outra alergia (ex: Corantes, Frutos do mar, Dipirona sódica...)"
-                className="flex-1 px-3 py-2 bg-white border border-rose-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-rose-500 shadow-2xs"
-              />
-              <button
-                type="button"
-                onClick={handleAddCustomAllergy}
-                className="px-4 py-2 bg-rose-700 hover:bg-rose-800 text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 cursor-pointer shrink-0 shadow-2xs"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Adicionar à Lista</span>
-              </button>
+            {/* Input de Busca / Adição com Lista Dropdown */}
+            <div className="relative">
+              <div className="relative flex items-center">
+                <Search className="w-3.5 h-3.5 text-rose-400 absolute left-3 pointer-events-none" />
+                <input
+                  type="text"
+                  value={allergySearch}
+                  onFocus={() => setIsAllergyOpen(true)}
+                  onClick={() => setIsAllergyOpen(true)}
+                  onChange={(e) => {
+                    setAllergySearch(e.target.value);
+                    setIsAllergyOpen(true);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      if (isCustomAllergy) {
+                        handleAddCustomAllergy(allergySearch);
+                      } else if (filteredAllergies.length > 0) {
+                        handleToggleAllergyTag(filteredAllergies[0]);
+                        setAllergySearch('');
+                      }
+                    } else if (e.key === 'Escape') {
+                      setIsAllergyOpen(false);
+                    }
+                  }}
+                  placeholder="Clique para buscar ou digitar uma alergia (ex: Penicilina, Dipirona, Látex...)"
+                  className="w-full pl-8 pr-8 py-2 border border-rose-300 rounded-xl text-xs bg-white text-slate-900 focus:ring-2 focus:ring-rose-500 focus:border-rose-500 focus:outline-none transition shadow-2xs"
+                />
+                <button
+                  type="button"
+                  onClick={() => setIsAllergyOpen((prev) => !prev)}
+                  className="absolute right-2.5 p-1 text-rose-400 hover:text-rose-600 transition cursor-pointer"
+                  title={isAllergyOpen ? 'Ocultar opções' : 'Exibir opções de alergias'}
+                >
+                  {isAllergyOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                </button>
+              </div>
+
+              {/* LISTA OCULTA DROPDOWN QUE ABRE AO CLICAR E FILTRA AO DIGITAR */}
+              {isAllergyOpen && (
+                <div className="absolute left-0 right-0 top-full mt-1.5 z-40 bg-white border border-rose-200 rounded-xl shadow-xl overflow-hidden divide-y divide-rose-100 max-h-56 overflow-y-auto animate-in fade-in duration-100">
+                  <div className="px-3 py-1.5 bg-rose-50 text-[10px] font-bold text-rose-800 uppercase tracking-wider flex items-center justify-between">
+                    <span>Lista de Alergias ({filteredAllergies.length})</span>
+                    <span className="font-normal text-rose-600 lowercase">clique para selecionar</span>
+                  </div>
+
+                  {filteredAllergies.map((alg) => {
+                    const isSelected = selectedAllergies.includes(alg);
+                    return (
+                      <button
+                        key={alg}
+                        type="button"
+                        onClick={() => {
+                          handleToggleAllergyTag(alg);
+                          setAllergySearch('');
+                        }}
+                        className={`w-full text-left px-3.5 py-2 text-xs flex items-center justify-between transition cursor-pointer select-none ${
+                          isSelected
+                            ? 'bg-rose-50 text-rose-900 font-semibold'
+                            : 'text-slate-700 hover:bg-rose-50/40'
+                        }`}
+                      >
+                        <span className="flex items-center gap-2.5">
+                          <span
+                            className={`w-4 h-4 rounded-md flex items-center justify-center border transition shrink-0 ${
+                              isSelected
+                                ? 'bg-rose-600 border-rose-600 text-white'
+                                : 'border-slate-300 bg-white'
+                            }`}
+                          >
+                            {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                          </span>
+                          <span>{alg}</span>
+                        </span>
+                        {isSelected && (
+                          <span className="text-[10px] text-rose-600 font-bold uppercase tracking-wider shrink-0 ml-2">
+                            Ativa
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+
+                  {/* Opção para adicionar nova alergia digitada */}
+                  {isCustomAllergy && (
+                    <button
+                      type="button"
+                      onClick={() => handleAddCustomAllergy(allergySearch)}
+                      className="w-full text-left px-3.5 py-2.5 text-xs font-bold text-rose-700 bg-rose-50/80 hover:bg-rose-100 transition flex items-center gap-2 cursor-pointer"
+                    >
+                      <Plus className="w-3.5 h-3.5 shrink-0" />
+                      <span>Adicionar <strong>"{allergySearch.trim()}"</strong> como alergia</span>
+                    </button>
+                  )}
+
+                  {filteredAllergies.length === 0 && !isCustomAllergy && (
+                    <div className="p-3 text-center text-xs text-slate-500">
+                      Nenhuma alergia encontrada.
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         )}
