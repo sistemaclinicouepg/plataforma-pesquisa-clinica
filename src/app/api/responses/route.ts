@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/auth';
+import { encodeDetailedDiaryReport } from '@/lib/unlockProtocol';
 
 export async function GET(req: Request) {
   try {
@@ -44,7 +45,62 @@ export async function GET(req: Request) {
       orderBy: { submittedAt: 'desc' },
     });
 
-    return NextResponse.json({ responses });
+    const allResponses = [...responses];
+
+    // Se a consulta foi por um participante específico, também agrega as respostas de perguntas customizadas de anamnese do estudo
+    if (participantId) {
+      try {
+        const part = await prisma.participant.findUnique({
+          where: { id: participantId },
+          include: {
+            project: { select: { id: true, name: true, anamnesisTemplate: true } },
+            patient: { select: { fullName: true } },
+          },
+        });
+
+        if (part && part.project?.anamnesisTemplate) {
+          const parsedTmpl = JSON.parse(part.project.anamnesisTemplate);
+          const anQuestions = parsedTmpl.questions || [];
+          if (Array.isArray(anQuestions) && anQuestions.length > 0) {
+            let anAnswers: Record<string, any> = {};
+            if (part.anamnesisData) {
+              try {
+                const parsedData = JSON.parse(part.anamnesisData);
+                anAnswers = parsedData.answers || (typeof parsedData === 'object' ? parsedData : {});
+              } catch {}
+            }
+
+            if (Object.keys(anAnswers).length > 0) {
+              allResponses.unshift({
+                id: `anamnesis_resp_${part.id}`,
+                formId: `anamnesis_${part.project.id}`,
+                participantId: part.id,
+                answersJson: JSON.stringify(anAnswers),
+                signatureData: null,
+                isLate: false,
+                submittedAt: part.createdAt,
+                form: {
+                  id: `anamnesis_${part.project.id}`,
+                  title: 'Ficha de Anamnese & Critérios de Participação',
+                  questionsJson: JSON.stringify(anQuestions),
+                },
+                participant: {
+                  id: part.id,
+                  researchCode: part.researchCode,
+                  patient: {
+                    fullName: part.patient.fullName,
+                  },
+                },
+              } as any);
+            }
+          }
+        }
+      } catch (anErr) {
+        console.warn('Erro ao carregar respostas de anamnese no GET /api/responses:', anErr);
+      }
+    }
+
+    return NextResponse.json({ responses: allResponses });
   } catch (error) {
     console.error('Erro ao buscar respostas:', error);
     return NextResponse.json(
@@ -249,6 +305,85 @@ export async function POST(req: Request) {
             });
           }
         }
+      }
+    }
+
+    // Se o formulário enviado contém escalas de dor (EVA) ou se é um diário de sensibilidade,
+    // sincroniza automaticamente com a sessão clínica mais recente do participante
+    if (participantId && answers && typeof answers === 'object') {
+      try {
+        const latestSession = await prisma.clinicalSession.findFirst({
+          where: { participantId },
+          orderBy: { sessionNumber: 'desc' },
+        });
+
+        if (latestSession) {
+          let vasScore: number | null = null;
+          let analgesicUsed: string | null = null;
+          let analgesicDet: string | null = null;
+          let painTypeVal: string | null = null;
+
+          for (const [key, val] of Object.entries(answers)) {
+            const k = key.toLowerCase();
+            const num =
+              typeof val === 'number'
+                ? val
+                : typeof val === 'string' && !isNaN(Number(val)) && val.trim() !== ''
+                ? Number(val)
+                : null;
+            if (num !== null && (k.includes('vas') || k.includes('sens') || k.includes('dor') || (num >= 0 && num <= 10 && vasScore === null))) {
+              vasScore = num;
+            }
+            if (k.includes('analgesic') || k.includes('remedio') || k.includes('medic')) {
+              if (val === 'sim' || val === true || val === 'Sim') analgesicUsed = 'Sim';
+              else if (val === 'nao' || val === false || val === 'Não') analgesicUsed = 'Não';
+              else if (typeof val === 'string') analgesicDet = val;
+            }
+            if (k.includes('type') || k.includes('tipo')) {
+              painTypeVal = String(val);
+            }
+          }
+
+          if (vasScore !== null) {
+            const sessDate = new Date(latestSession.sessionDate);
+            const now = new Date();
+            const elapsedHours = (now.getTime() - sessDate.getTime()) / (1000 * 60 * 60);
+
+            const sessionUpdate: Record<string, any> = {};
+            let determinedTimePoint: '0h' | '1h' | '24h' | '48h' = '0h';
+
+            if (elapsedHours >= 36) {
+              determinedTimePoint = '48h';
+              sessionUpdate.painScore48h = vasScore;
+            } else if (elapsedHours >= 12) {
+              determinedTimePoint = '24h';
+              sessionUpdate.painScore24h = vasScore;
+            } else if (elapsedHours >= 0.5) {
+              determinedTimePoint = '1h';
+              sessionUpdate.painScore1h = vasScore;
+            } else {
+              determinedTimePoint = '0h';
+              sessionUpdate.painScore0h = vasScore;
+            }
+
+            const currentNotes = encodeDetailedDiaryReport(latestSession.notes, {
+              timePoint: determinedTimePoint,
+              painScore: vasScore,
+              painType: painTypeVal || undefined,
+              usedAnalgesic: analgesicUsed || undefined,
+              analgesicDetails: analgesicDet || undefined,
+              submittedAt: now.toISOString(),
+            });
+            sessionUpdate.notes = currentNotes;
+
+            await prisma.clinicalSession.update({
+              where: { id: latestSession.id },
+              data: sessionUpdate,
+            });
+          }
+        }
+      } catch (syncErr) {
+        console.warn('Erro ao sincronizar relato com sessão clínica:', syncErr);
       }
     }
 

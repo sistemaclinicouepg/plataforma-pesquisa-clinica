@@ -300,7 +300,21 @@ function FormBuilderContent() {
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
-  const [selectedProjectId, setSelectedProjectId] = useState<string>(projectIdParam || '');
+  const [selectedProjectId, setSelectedProjectId] = useState<string>(() => {
+    if (projectIdParam) return projectIdParam;
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('uepg_selected_project_id');
+      if (saved) return saved;
+      try {
+        const last = localStorage.getItem('uepg_cached_last_project');
+        if (last) {
+          const parsed = JSON.parse(last);
+          if (parsed?.id) return parsed.id;
+        }
+      } catch {}
+    }
+    return '';
+  });
   const [editingFormId, setEditingFormId] = useState<string | null>(formIdParam || null);
   const [currentProjectForms, setCurrentProjectForms] = useState<any[]>([]);
   const [loadingProjectForms, setLoadingProjectForms] = useState(false);
@@ -457,7 +471,21 @@ function FormBuilderContent() {
         if (data.projects) {
           setProjects(data.projects);
           if (!selectedProjectId && data.projects.length > 0) {
-            setSelectedProjectId(data.projects[0].id);
+            let initialId = projectIdParam;
+            if (!initialId && typeof window !== 'undefined') {
+              initialId = localStorage.getItem('uepg_selected_project_id');
+              if (!initialId) {
+                try {
+                  const last = localStorage.getItem('uepg_cached_last_project');
+                  if (last) initialId = JSON.parse(last)?.id;
+                } catch {}
+              }
+            }
+            const validId = initialId && data.projects.some((p: any) => p.id === initialId) ? initialId : data.projects[0].id;
+            setSelectedProjectId(validId);
+            try {
+              localStorage.setItem('uepg_selected_project_id', validId);
+            } catch {}
           }
         }
       })
@@ -1227,7 +1255,13 @@ function FormBuilderContent() {
                     <span className="text-slate-400 font-bold">Estudo:</span>
                     <select
                       value={selectedProjectId}
-                      onChange={(e) => setSelectedProjectId(e.target.value)}
+                      onChange={(e) => {
+                        const newId = e.target.value;
+                        setSelectedProjectId(newId);
+                        try {
+                          localStorage.setItem('uepg_selected_project_id', newId);
+                        } catch {}
+                      }}
                       className="bg-transparent font-semibold text-slate-800 focus:outline-none text-xs cursor-pointer max-w-[180px] truncate"
                     >
                       {projects.map((p) => (

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { parseStudyProtocol, getFrequencyLabel } from '@/lib/studyProtocol';
 import { parseUnlockMeta } from '@/lib/unlockProtocol';
+import { getStandardPreset } from '@/lib/presetQuestionnaires';
 
 function matchesBirthDate(dobRaw: Date | string | null | undefined, inputRaw: string): boolean {
   if (!dobRaw || !inputRaw) return false;
@@ -354,6 +355,44 @@ export async function GET(req: Request) {
     // Metadados de liberação manual configurados pelos pesquisadores
     const allUnlockedForms = participant.sessions.flatMap((s) => parseUnlockMeta(s.notes).unlockedForms);
 
+    // Se o protocolo do estudo contiver questionários habilitados para o paciente (ex: EVA, Satisfação, OHIP, Hábitos)
+    // que ainda não existem fisicamente na tabela Form do projeto, cria-os e inclui-os para o paciente
+    const existingTitles = new Set(participant.project.forms.map((f: any) => f.title.toLowerCase().trim()));
+    const existingDesc = participant.project.forms.map((f: any) => (f.description || '').toLowerCase());
+
+    if (Array.isArray(protocol.forms)) {
+      for (const pf of protocol.forms) {
+        if (!pf.enabled || pf.respondent === 'RESEARCHER') continue;
+        const presetDef = getStandardPreset(pf.id || pf.title);
+        if (!presetDef) continue;
+
+        const alreadyExists =
+          existingTitles.has(presetDef.title.toLowerCase().trim()) ||
+          existingTitles.has(pf.title.toLowerCase().trim()) ||
+          existingDesc.some((d: string) => d.includes(presetDef.title.toLowerCase()) || d.includes(pf.id.toLowerCase()));
+
+        if (!alreadyExists) {
+          try {
+            // Materializa na tabela Form do projeto garantindo integridade referencial GCP e respostas válidas
+            const created = await prisma.form.create({
+              data: {
+                projectId: participant.project.id,
+                title: presetDef.title,
+                description: `${presetDef.description} | Preenchido por: Paciente | Frequência: ${presetDef.frequency}`,
+                questionsJson: JSON.stringify(presetDef.questions),
+                expirationHours: 48,
+                allowLate: true,
+              },
+            });
+            participant.project.forms.push(created);
+            existingTitles.add(presetDef.title.toLowerCase().trim());
+          } catch (createErr) {
+            console.warn(`Erro ao materializar questionário padrão ${presetDef.title}:`, createErr);
+          }
+        }
+      }
+    }
+
     // Processar formulários do projeto destinados ao paciente (PROMs)
     // Regra GCP: Exibir exclusivamente os questionários e perguntas criadas no eCRF deste projeto de pesquisa
     const patientForms = participant.project.forms.filter(
@@ -516,7 +555,13 @@ export async function GET(req: Request) {
         } catch {}
       }
 
-      const isCompleted = Boolean(participant.anamnesisDone);
+      // O questionário de anamnese só deve constar como concluído se o paciente de fato já tiver gravado respostas
+      const hasAnsweredAnamnesis = Boolean(
+        parsedAnamnesisAnswers &&
+        Object.keys(parsedAnamnesisAnswers).length > 0 &&
+        Object.values(parsedAnamnesisAnswers).some((v) => v !== undefined && v !== null && v !== '')
+      );
+      const isCompleted = hasAnsweredAnamnesis;
       allFormsWithStatus.unshift({
         id: `anamnesis_${participant.project.id}`,
         title: 'Ficha de Anamnese & Critérios de Participação',

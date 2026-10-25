@@ -843,12 +843,16 @@ function DashboardContent() {
     }
   }, [activeRowMenu]);
 
-  const handleOpenResponses = async (part: Participant) => {
+  const [refreshingResponses, setRefreshingResponses] = useState(false);
+
+  const handleOpenResponses = async (part: Participant, defaultTab: 'forms' | 'scales' | 'export' = 'forms') => {
     setResponsesParticipant(part);
+    setResponsesModalTab(defaultTab);
     setShowResponsesModal(true);
     setCopiedTSV(false);
     try {
-      const res = await fetch(`/api/responses?participantId=${part.id}`);
+      setRefreshingResponses(true);
+      const res = await fetch(`/api/responses?participantId=${part.id}&projectId=${project?.id || ''}`);
       if (res.ok) {
         const data = await res.json();
         if (data.responses) {
@@ -864,7 +868,9 @@ function DashboardContent() {
           });
         }
       }
-    } catch {}
+    } catch {} finally {
+      setRefreshingResponses(false);
+    }
   };
 
   const handleToggleUnlock = async (
@@ -4556,7 +4562,7 @@ function DashboardContent() {
                   </div>
 
                   <Link
-                    href="/construtor"
+                    href={`/construtor?projectId=${project.id}`}
                     className="text-xs font-bold text-blue-600 hover:text-blue-800 flex items-center space-x-1"
                   >
                     <span>+ Gerenciar Formulários no Construtor</span>
@@ -4567,7 +4573,7 @@ function DashboardContent() {
                 {project.forms.length === 0 ? (
                   <div className="p-8 text-center text-slate-400 text-xs">
                     Nenhum formulário eCRF cadastrado neste projeto. Crie questionários personalizados no{' '}
-                    <Link href="/construtor" className="text-blue-600 underline font-bold">
+                    <Link href={`/construtor?projectId=${project.id}`} className="text-blue-600 underline font-bold">
                       Construtor de Fichas
                     </Link>.
                   </div>
@@ -8284,8 +8290,32 @@ function DashboardContent() {
         const sessions = part.sessions || [];
         const isCurrentBlinded = overrideBlindedView !== null ? overrideBlindedView : (project?.isBlinded ?? false);
 
+        // 1. Incluir perguntas customizadas de anamnese do estudo na listagem de questionários
+        const allModalForms = [...projectForms];
+        let anamnesisQuestions: any[] = [];
+        if (project?.anamnesisTemplate) {
+          try {
+            const tmpl = JSON.parse(project.anamnesisTemplate);
+            if (Array.isArray(tmpl.questions) && tmpl.questions.length > 0) {
+              anamnesisQuestions = tmpl.questions;
+            }
+          } catch {}
+        }
+        if (anamnesisQuestions.length > 0) {
+          allModalForms.unshift({
+            id: `anamnesis_${project.id}`,
+            title: 'Ficha de Anamnese & Critérios de Participação',
+            description: 'Questionário inicial com perguntas e critérios específicos deste estudo clínico.',
+            questionsJson: JSON.stringify(anamnesisQuestions),
+            expirationHours: 72,
+            allowLate: true,
+            createdAt: new Date(),
+            projectId: project.id,
+          } as any);
+        }
+
         // Gera a exportação tabular individual
-        const exportData = generateParticipantTabularExport(part, projectForms);
+        const exportData = generateParticipantTabularExport(part, allModalForms);
 
         // Obter meta de liberação da 1ª sessão (ou da sessão ativa) para formulários
         const firstSessionNotes = sessions[0]?.notes || null;
@@ -8310,12 +8340,24 @@ function DashboardContent() {
                       Paciente: <strong className="text-slate-800">{part.patient.fullName}</strong> • Grupo: <span className="font-semibold text-blue-700">{part.group || 'Pendente'}</span> • Contato: {part.patient.phoneWhatsApp || 'Sem telefone'}
                     </p>
                   </div>
-                  <button
-                    onClick={() => setShowResponsesModal(false)}
-                    className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-200/60 transition cursor-pointer"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={refreshingResponses}
+                      onClick={() => handleOpenResponses(part, responsesModalTab)}
+                      className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl text-xs font-bold transition inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                      title="Recarregar respostas em tempo real"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${refreshingResponses ? 'animate-spin' : ''}`} />
+                      <span>{refreshingResponses ? 'Atualizando...' : 'Atualizar Respostas'}</span>
+                    </button>
+                    <button
+                      onClick={() => setShowResponsesModal(false)}
+                      className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-200/60 transition cursor-pointer"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
                 </div>
 
                 {/* Simulador Interativo de Cegamento */}
@@ -8713,20 +8755,34 @@ function DashboardContent() {
                 {/* ABA 2: QUESTIONÁRIOS DE PESQUISA & eCRF */}
                 {responsesModalTab === 'forms' && (
                   <div className="space-y-4">
-                    {projectForms.length === 0 ? (
+                    {allModalForms.length === 0 ? (
                       <div className="text-center py-10 text-slate-400 bg-white rounded-2xl border border-slate-200">
                         <ClipboardList className="w-10 h-10 text-slate-300 mx-auto mb-2" />
                         <p className="text-sm font-medium">Nenhum questionário cadastrado para este projeto.</p>
                         <Link
-                          href="/construtor"
+                          href={`/construtor?projectId=${project.id}`}
                           className="inline-block mt-3 text-xs font-bold text-blue-600 hover:underline"
                         >
                           + Criar questionários no Construtor de Fichas
                         </Link>
                       </div>
                     ) : (
-                      projectForms.map((form) => {
-                        const resp = responses.find((r) => r.formId === form.id);
+                      allModalForms.map((form) => {
+                        const rawResp = responses.find((r) => r.formId === form.id);
+                        let anAnswers: Record<string, any> = {};
+                        if (part.anamnesisData) {
+                          try {
+                            const d = JSON.parse(part.anamnesisData);
+                            anAnswers = d.answers || (typeof d === 'object' ? d : {});
+                          } catch {}
+                        }
+                        const resp = rawResp || (form.id === `anamnesis_${project.id}` && Object.keys(anAnswers).length > 0 ? {
+                          id: `anamnesis_resp_${part.id}`,
+                          formId: form.id,
+                          submittedAt: new Date().toISOString(),
+                          answersJson: JSON.stringify(anAnswers),
+                        } : null);
+
                         const isUnlocked = globalUnlockMeta.unlockedForms.includes(form.id);
                         const isActionLoading = unlockingAction === `form-${form.id}`;
 
@@ -8734,8 +8790,8 @@ function DashboardContent() {
                         try {
                           if (form.questionsJson) {
                             parsedQuestions = JSON.parse(form.questionsJson);
-                          } else if (resp?.form?.questionsJson) {
-                            parsedQuestions = JSON.parse(resp.form.questionsJson);
+                          } else if ((resp as any)?.form?.questionsJson) {
+                            parsedQuestions = JSON.parse((resp as any).form.questionsJson);
                           }
                         } catch (e) {
                           parsedQuestions = [];

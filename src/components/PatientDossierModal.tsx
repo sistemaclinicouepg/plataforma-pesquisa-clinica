@@ -881,14 +881,42 @@ export const PatientDossierModal: React.FC<PatientDossierModalProps> = ({
                     Questionários eCRFs Respondidos ({participant.responses.length}):
                   </h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {participant.responses.map((resp: any, i: number) => (
-                      <div key={resp.id || i} className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs">
-                        <strong className="text-slate-900 block">{resp.form?.title || 'Formulário Clínico'}</strong>
-                        <span className="text-[11px] text-slate-400">
-                          Enviado em: {resp.submittedAt ? new Date(resp.submittedAt).toLocaleDateString('pt-BR') : 'Data registrada'}
-                        </span>
-                      </div>
-                    ))}
+                    {participant.responses.map((resp: any, i: number) => {
+                      let parsedAnswers: Record<string, any> = {};
+                      try {
+                        parsedAnswers = JSON.parse(resp.answersJson || '{}');
+                      } catch {}
+                      const answerEntries = Object.entries(parsedAnswers);
+
+                      return (
+                        <div key={resp.id || i} className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <strong className="text-slate-900 block font-bold">{resp.form?.title || 'Formulário Clínico'}</strong>
+                            <span className="text-[10px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full font-semibold border border-emerald-200">
+                              Respondido
+                            </span>
+                          </div>
+                          <span className="text-[11px] text-slate-400 block">
+                            Enviado em: {resp.submittedAt ? new Date(resp.submittedAt).toLocaleDateString('pt-BR') : 'Data registrada'}
+                          </span>
+                          {answerEntries.length > 0 && (
+                            <div className="mt-1 pt-1.5 border-t border-slate-200/60 text-[11px] space-y-1">
+                              {answerEntries.slice(0, 4).map(([k, v]) => (
+                                <div key={k} className="flex justify-between text-slate-600">
+                                  <span className="truncate max-w-[150px] text-slate-500">{k}:</span>
+                                  <span className="font-semibold text-slate-800">{String(v)}</span>
+                                </div>
+                              ))}
+                              {answerEntries.length > 4 && (
+                                <span className="text-[10px] text-blue-600 font-bold block pt-0.5">
+                                  +{answerEntries.length - 4} outras respostas
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
