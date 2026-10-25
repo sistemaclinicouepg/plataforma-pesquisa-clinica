@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, Suspense } from 'react';
+import React, { useState, useEffect, useMemo, useRef, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import type { AnamnesisConfig, AnamnesisQuestion } from '@/app/anamnese/page';
@@ -644,6 +644,7 @@ function DashboardContent() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<'active' | 'triage' | 'audit' | 'team' | 'export' | 'settings'>('active');
+  const initialTabLoadedRef = useRef(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [isBlindedUser, setIsBlindedUser] = useState<boolean>(false);
   const [currentMemberRole, setCurrentMemberRole] = useState<string>('COORDINATOR');
@@ -724,6 +725,11 @@ function DashboardContent() {
     if (project?.id && typeof window !== 'undefined') {
       try {
         sessionStorage.setItem(`uepg_tab_${project.id}`, tab);
+      } catch (e) {}
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.set('tab', tab);
+        window.history.replaceState(null, '', url.pathname + url.search);
       } catch (e) {}
     }
   };
@@ -1109,20 +1115,25 @@ function DashboardContent() {
       localStorage.setItem('uepg_cached_last_project', JSON.stringify(data.project));
     } catch (e) {}
 
-    // Seleção de aba inteligente:
-    // Se não há participantes ativos aprovados, mas há candidatos na triagem, abre direto na Triagem!
+    // Seleção de aba inteligente (apenas na carga inicial da tela).
+    // Durante recarregamentos e ações clínicas em segundo plano, preserva integralmente a aba atual do usuário!
     const approvedCount = (data.project.participants || []).filter((p: any) => p.status === 'APPROVED').length;
     const pendingCount = (data.project.participants || []).filter((p: any) => p.status === 'PENDING').length;
 
-    const tabParam = searchParams.get('tab');
-    if (tabParam && ['active', 'triage', 'audit', 'team', 'export', 'settings'].includes(tabParam)) {
-      setActiveTab(tabParam as any);
-    } else {
-      const savedTab = typeof window !== 'undefined' ? sessionStorage.getItem(`uepg_tab_${data.project.id}`) : null;
-      if (savedTab && ['active', 'triage', 'audit', 'team', 'export', 'settings'].includes(savedTab)) {
-        setActiveTab(savedTab as any);
-      } else if (approvedCount === 0 && pendingCount > 0) {
-        setActiveTab('triage');
+    if (!initialTabLoadedRef.current) {
+      initialTabLoadedRef.current = true;
+      const tabParam = searchParams.get('tab');
+      if (tabParam && ['active', 'triage', 'audit', 'team', 'export', 'settings'].includes(tabParam)) {
+        setActiveTab(tabParam as any);
+      } else {
+        const savedTab = typeof window !== 'undefined' ? sessionStorage.getItem(`uepg_tab_${data.project.id}`) : null;
+        if (savedTab && ['active', 'triage', 'audit', 'team', 'export', 'settings'].includes(savedTab)) {
+          setActiveTab(savedTab as any);
+        } else if (approvedCount === 0 && pendingCount > 0) {
+          setActiveTab('triage');
+        } else {
+          setActiveTab('active');
+        }
       }
     }
 
@@ -1996,7 +2007,7 @@ function DashboardContent() {
         }
 
         // Alterna imediatamente para a aba de Triagem para exibir o voluntário recém-adicionado
-        setActiveTab('triage');
+        handleSelectTab('triage');
 
         // Sincroniza em segundo plano sem travar o usuário
         loadProject(true);

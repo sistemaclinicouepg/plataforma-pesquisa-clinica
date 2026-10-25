@@ -1137,7 +1137,7 @@ export default function HomePage() {
         setNewProjectGroups(['Grupo 1: Convencional (HP 35%)', 'Grupo 2: Experimental (HP 20%)']);
         setNewGroupInput('');
         setNewProjectStatus('ACTIVE');
-        setNewProjectSpecialty('BLEACHING');
+        setNewProjectSpecialty('GENERAL');
         setStudySessions(DEFAULT_STUDY_SESSIONS);
         setFormTargets(DEFAULT_FORM_TARGETS);
         if (data.project?.id) {
