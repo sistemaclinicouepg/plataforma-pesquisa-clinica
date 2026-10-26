@@ -2966,7 +2966,7 @@ function DashboardContent() {
   });
 
   return (
-    <div className="min-h-[calc(100vh-57px)] bg-slate-50 font-sans text-slate-800 flex flex-col">
+    <div className="min-h-[calc(100vh-4rem)] bg-slate-50 font-sans text-slate-800 flex flex-col">
       <div className="flex-1 flex w-full relative">
         {/* SIDEBAR LATERAL PROFISSIONAL COMPARTILHADA */}
         <StudySidebar
@@ -2990,7 +2990,7 @@ function DashboardContent() {
         {/* ÁREA PRINCIPAL DE CONTEÚDO */}
         <div className="flex-1 min-w-0 flex flex-col">
           {/* Barra Superior Mobile para Abrir Sidebar */}
-          <div className="lg:hidden p-3 bg-white border-b border-slate-200 flex items-center justify-between sticky top-[57px] z-30 shadow-2xs">
+          <div className="lg:hidden p-3 bg-white border-b border-slate-200 flex items-center justify-between sticky top-16 z-20 shadow-2xs">
             <button
               type="button"
               onClick={() => setMobileMenuOpen(true)}

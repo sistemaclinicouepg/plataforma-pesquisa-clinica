@@ -598,7 +598,7 @@ function AnamnesisBuilderContent() {
   }
 
   return (
-    <div className="min-h-[calc(100vh-57px)] bg-slate-50 font-sans text-slate-800 flex flex-col">
+    <div className="min-h-[calc(100vh-4rem)] bg-slate-50 font-sans text-slate-800 flex flex-col">
       <div className="flex-1 flex w-full relative">
         <StudySidebar
           projectId={projectId}

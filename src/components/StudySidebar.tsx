@@ -19,6 +19,7 @@ import {
   ShieldCheck,
   AlertTriangle,
   Menu,
+  ChevronDown,
 } from 'lucide-react';
 import { parseStudyProtocol } from '@/lib/studyProtocol';
 
@@ -214,26 +215,28 @@ export function StudySidebar({
 
       {/* SIDEBAR LATERAL */}
       <aside
-        className={`fixed lg:sticky top-[57px] bottom-0 left-0 z-40 w-72 bg-white border-r border-slate-200 flex flex-col transition-transform duration-300 ease-in-out lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-40 w-72 max-w-[85vw] bg-white border-r border-slate-200/90 flex flex-col transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:sticky lg:top-16 lg:z-30 lg:h-[calc(100vh-4rem)] lg:max-w-none shrink-0 ${
           isMobileOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full lg:translate-x-0'
-        } h-[calc(100vh-57px)] shrink-0`}
+        }`}
       >
         {/* Topo do Sidebar: Identificação e Ação do Estudo */}
-        <div className="p-4 border-b border-slate-100 flex flex-col gap-3 shrink-0">
+        <div className="p-3.5 border-b border-slate-100 flex flex-col gap-3 shrink-0 bg-gradient-to-b from-slate-50/70 to-white">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Estudo Atual</span>
+              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                Estudo Clínico
+              </span>
               {project?.status === 'COMPLETED' ? (
-                <span className="px-2 py-0.2 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 inline-flex items-center gap-1">
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 inline-flex items-center gap-1 shadow-2xs">
                   <CheckCircle2 className="w-2.5 h-2.5 text-blue-600" />
                   <span>Finalizado</span>
                 </span>
               ) : project?.status === 'CANCELLED' ? (
-                <span className="px-2 py-0.2 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200 shadow-2xs">
                   Cancelado
                 </span>
               ) : (
-                <span className="px-2 py-0.2 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 inline-flex items-center gap-1">
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/90 inline-flex items-center gap-1 shadow-2xs">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                   <span>Ativo</span>
                 </span>
@@ -244,8 +247,8 @@ export function StudySidebar({
             <button
               type="button"
               onClick={() => setMobileOpen(false)}
-              className="lg:hidden p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100"
-              title="Fechar menu"
+              className="lg:hidden p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition cursor-pointer"
+              title="Fechar menu lateral"
             >
               <X className="w-4 h-4" />
             </button>
@@ -254,43 +257,53 @@ export function StudySidebar({
           {/* Nome do Estudo ou Seletor */}
           <div>
             {allProjects.length > 1 ? (
-              <select
-                value={currentProjectId}
-                onChange={(e) => handleProjectSwitch(e.target.value)}
-                className="w-full text-xs font-bold text-slate-900 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer truncate"
-                title="Alternar entre estudos de pesquisa"
-              >
-                {allProjects.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
+              <div className="relative">
+                <select
+                  value={currentProjectId}
+                  onChange={(e) => handleProjectSwitch(e.target.value)}
+                  className="w-full text-xs font-bold text-slate-900 bg-white hover:bg-slate-50 border border-slate-200/90 rounded-xl px-2.5 py-2 pr-7 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 cursor-pointer truncate shadow-2xs transition appearance-none"
+                  title="Alternar entre estudos de pesquisa"
+                >
+                  {allProjects.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              </div>
             ) : (
-              <h2 className="text-xs font-bold text-slate-900 line-clamp-2 leading-snug" title={project?.name || 'Carregando estudo...'}>
-                {project?.name || 'Estudo de Pesquisa'}
-              </h2>
+              <div className="bg-white p-2.5 rounded-xl border border-slate-200/80 shadow-2xs">
+                <h2
+                  className="text-xs font-bold text-slate-900 line-clamp-2 leading-snug"
+                  title={project?.name || 'Carregando estudo...'}
+                >
+                  {project?.name || 'Estudo de Pesquisa'}
+                </h2>
+              </div>
             )}
           </div>
 
-          {/* CTA Primário de Cadastro de Paciente */}
-          <button
-            onClick={handleNewPatientClick}
-            className="w-full py-2 px-3 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-xs hover:shadow transition flex items-center justify-center space-x-2 cursor-pointer"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Cadastrar Paciente</span>
-          </button>
+          {/* Botões de Ação Rápida */}
+          <div className="flex flex-col gap-1.5">
+            <button
+              onClick={handleNewPatientClick}
+              className="w-full py-2 px-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 active:scale-[0.99] text-white text-xs font-bold rounded-xl shadow-xs hover:shadow transition-all flex items-center justify-center space-x-1.5 cursor-pointer"
+              title="Cadastrar novo participante voluntário no estudo"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Cadastrar Paciente</span>
+            </button>
 
-          {/* CTA Secundário de Adicionar Pesquisador */}
-          <button
-            onClick={handleNewMemberClick}
-            className="w-full mt-2 py-2 px-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 hover:text-indigo-800 border border-indigo-200/90 text-xs font-bold rounded-xl shadow-2xs hover:shadow-xs transition flex items-center justify-center space-x-2 cursor-pointer"
-            title="Adicionar ou vincular pesquisador ao estudo"
-          >
-            <UserPlus className="w-4 h-4 text-indigo-600" />
-            <span>Adicionar Pesquisador</span>
-          </button>
+            <button
+              onClick={handleNewMemberClick}
+              className="w-full py-1.5 px-3 bg-white hover:bg-slate-50 text-slate-700 hover:text-indigo-700 border border-slate-200/90 hover:border-indigo-200 text-xs font-semibold rounded-xl shadow-2xs transition-all flex items-center justify-center space-x-1.5 cursor-pointer"
+              title="Adicionar ou vincular pesquisador ao estudo"
+            >
+              <UserPlus className="w-3.5 h-3.5 text-indigo-600" />
+              <span>Adicionar Pesquisador</span>
+            </button>
+          </div>
         </div>
 
         {/* Menus e Navegação do Estudo */}
@@ -304,20 +317,24 @@ export function StudySidebar({
               <button
                 type="button"
                 onClick={() => handleTabClick('active')}
-                className={`w-full px-3 py-2 rounded-xl text-xs font-bold transition flex items-center justify-between text-left cursor-pointer ${
+                className={`w-full px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-between text-left cursor-pointer group ${
                   activeItem === 'active'
                     ? 'bg-blue-50 text-blue-700 border border-blue-200/80 shadow-2xs'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50/80 border border-transparent'
                 }`}
               >
                 <div className="flex items-center space-x-2.5 truncate">
-                  <Stethoscope className={`w-4 h-4 shrink-0 ${activeItem === 'active' ? 'text-blue-600' : 'text-slate-400'}`} />
+                  <Stethoscope
+                    className={`w-4 h-4 shrink-0 transition-colors ${
+                      activeItem === 'active' ? 'text-blue-600' : 'text-slate-400 group-hover:text-slate-600'
+                    }`}
+                  />
                   <span className="truncate">Prontuários & Consultas</span>
                 </div>
                 {approvedCount > 0 && (
                   <span
-                    className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
-                      activeItem === 'active' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600'
+                    className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold transition-colors ${
+                      activeItem === 'active' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 group-hover:bg-slate-200'
                     }`}
                   >
                     {approvedCount}
@@ -328,20 +345,24 @@ export function StudySidebar({
               <button
                 type="button"
                 onClick={() => handleTabClick('triage')}
-                className={`w-full px-3 py-2 rounded-xl text-xs font-bold transition flex items-center justify-between text-left cursor-pointer ${
+                className={`w-full px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-between text-left cursor-pointer group ${
                   activeItem === 'triage'
                     ? 'bg-blue-50 text-blue-700 border border-blue-200/80 shadow-2xs'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50/80 border border-transparent'
                 }`}
               >
                 <div className="flex items-center space-x-2.5 truncate">
-                  <ClipboardList className={`w-4 h-4 shrink-0 ${activeItem === 'triage' ? 'text-blue-600' : 'text-slate-400'}`} />
+                  <ClipboardList
+                    className={`w-4 h-4 shrink-0 transition-colors ${
+                      activeItem === 'triage' ? 'text-blue-600' : 'text-slate-400 group-hover:text-slate-600'
+                    }`}
+                  />
                   <span className="truncate">Triagem & Inclusão</span>
                 </div>
                 {pendingCount > 0 && (
                   <span
-                    className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold shrink-0 ml-1.5 ${
-                      activeItem === 'triage' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600'
+                    className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold shrink-0 ml-1.5 transition-colors ${
+                      activeItem === 'triage' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 group-hover:bg-slate-200'
                     }`}
                   >
                     {pendingCount}
@@ -360,20 +381,24 @@ export function StudySidebar({
               <button
                 type="button"
                 onClick={() => handleTabClick('team')}
-                className={`w-full px-3 py-2 rounded-xl text-xs font-bold transition flex items-center justify-between text-left cursor-pointer ${
+                className={`w-full px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-between text-left cursor-pointer group ${
                   activeItem === 'team'
                     ? 'bg-blue-50 text-blue-700 border border-blue-200/80 shadow-2xs'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50/80 border border-transparent'
                 }`}
               >
                 <div className="flex items-center space-x-2.5 truncate">
-                  <Users className={`w-4 h-4 shrink-0 ${activeItem === 'team' ? 'text-blue-600' : 'text-slate-400'}`} />
+                  <Users
+                    className={`w-4 h-4 shrink-0 transition-colors ${
+                      activeItem === 'team' ? 'text-blue-600' : 'text-slate-400 group-hover:text-slate-600'
+                    }`}
+                  />
                   <span className="truncate">Equipe do Estudo</span>
                 </div>
                 {membersCount > 0 && (
                   <span
-                    className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
-                      activeItem === 'team' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600'
+                    className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold transition-colors ${
+                      activeItem === 'team' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 group-hover:bg-slate-200'
                     }`}
                   >
                     {membersCount}
@@ -384,14 +409,16 @@ export function StudySidebar({
               <Link
                 href={`/anamnese?projectId=${currentProjectId}`}
                 onClick={() => setMobileOpen(false)}
-                className={`w-full px-3 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-2.5 text-left cursor-pointer ${
+                className={`w-full px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-2.5 text-left cursor-pointer group ${
                   activeItem === 'anamnese'
                     ? 'bg-blue-50 text-blue-700 border border-blue-200/80 shadow-2xs'
-                    : 'text-slate-600 hover:text-blue-700 hover:bg-blue-50'
+                    : 'text-slate-600 hover:text-blue-700 hover:bg-blue-50/70 border border-transparent'
                 }`}
               >
                 <FileSpreadsheet
-                  className={`w-4 h-4 shrink-0 ${activeItem === 'anamnese' ? 'text-blue-600' : 'text-blue-500'}`}
+                  className={`w-4 h-4 shrink-0 transition-colors ${
+                    activeItem === 'anamnese' ? 'text-blue-600' : 'text-blue-500/80 group-hover:text-blue-600'
+                  }`}
                 />
                 <span className="truncate">Ficha Clínica & Critérios</span>
               </Link>
@@ -399,14 +426,16 @@ export function StudySidebar({
               <Link
                 href={`/construtor?projectId=${currentProjectId}`}
                 onClick={() => setMobileOpen(false)}
-                className={`w-full px-3 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-2.5 text-left cursor-pointer ${
+                className={`w-full px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-2.5 text-left cursor-pointer group ${
                   activeItem === 'construtor'
                     ? 'bg-indigo-50 text-indigo-700 border border-indigo-200/80 shadow-2xs'
-                    : 'text-slate-600 hover:text-indigo-700 hover:bg-indigo-50'
+                    : 'text-slate-600 hover:text-indigo-700 hover:bg-indigo-50/70 border border-transparent'
                 }`}
               >
                 <FileCode
-                  className={`w-4 h-4 shrink-0 ${activeItem === 'construtor' ? 'text-indigo-600' : 'text-indigo-500'}`}
+                  className={`w-4 h-4 shrink-0 transition-colors ${
+                    activeItem === 'construtor' ? 'text-indigo-600' : 'text-indigo-500/80 group-hover:text-indigo-600'
+                  }`}
                 />
                 <span className="truncate">Construtor de eCRF</span>
               </Link>
@@ -414,14 +443,16 @@ export function StudySidebar({
               <Link
                 href={`/tcle/editor?projectId=${currentProjectId}`}
                 onClick={() => setMobileOpen(false)}
-                className={`w-full px-3 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-2.5 text-left cursor-pointer ${
+                className={`w-full px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-2.5 text-left cursor-pointer group ${
                   activeItem === 'tcle'
                     ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/80 shadow-2xs'
-                    : 'text-slate-600 hover:text-emerald-700 hover:bg-emerald-50'
+                    : 'text-slate-600 hover:text-emerald-700 hover:bg-emerald-50/70 border border-transparent'
                 }`}
               >
                 <FileText
-                  className={`w-4 h-4 shrink-0 ${activeItem === 'tcle' ? 'text-emerald-600' : 'text-emerald-500'}`}
+                  className={`w-4 h-4 shrink-0 transition-colors ${
+                    activeItem === 'tcle' ? 'text-emerald-600' : 'text-emerald-500/80 group-hover:text-emerald-600'
+                  }`}
                 />
                 <span className="truncate">Termo de Aceite (TCLE)</span>
               </Link>
@@ -429,21 +460,23 @@ export function StudySidebar({
               <button
                 type="button"
                 onClick={handleEditProjectClick}
-                className={`w-full px-3 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-2.5 text-left cursor-pointer ${
+                className={`w-full px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-2.5 text-left cursor-pointer group ${
                   activeItem === 'settings'
                     ? 'bg-blue-50 text-blue-700 border border-blue-200/80 shadow-2xs'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50/80 border border-transparent'
                 }`}
               >
                 <Sliders
-                  className={`w-4 h-4 shrink-0 ${activeItem === 'settings' ? 'text-blue-600' : 'text-slate-400'}`}
+                  className={`w-4 h-4 shrink-0 transition-colors ${
+                    activeItem === 'settings' ? 'text-blue-600' : 'text-slate-400 group-hover:text-slate-600'
+                  }`}
                 />
                 <span className="truncate">Editar Dados do Estudo</span>
               </button>
             </div>
           </div>
 
-          {/* GRUPO 3: DADOS (Posicionado no fim do menu) */}
+          {/* GRUPO 3: DADOS */}
           <div>
             <p className="px-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
               Dados
@@ -452,13 +485,17 @@ export function StudySidebar({
               <button
                 type="button"
                 onClick={() => handleTabClick('export')}
-                className={`w-full px-3 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-2.5 text-left cursor-pointer ${
+                className={`w-full px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-2.5 text-left cursor-pointer group ${
                   activeItem === 'export'
                     ? 'bg-blue-50 text-blue-700 border border-blue-200/80 shadow-2xs'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50/80 border border-transparent'
                 }`}
               >
-                <Download className={`w-4 h-4 shrink-0 ${activeItem === 'export' ? 'text-blue-600' : 'text-slate-400'}`} />
+                <Download
+                  className={`w-4 h-4 shrink-0 transition-colors ${
+                    activeItem === 'export' ? 'text-blue-600' : 'text-slate-400 group-hover:text-slate-600'
+                  }`}
+                />
                 <span className="truncate">Exportar Dados</span>
               </button>
 
@@ -466,20 +503,24 @@ export function StudySidebar({
                 <button
                   type="button"
                   onClick={() => handleTabClick('audit')}
-                  className={`w-full px-3 py-2 rounded-xl text-xs font-bold transition flex items-center justify-between text-left cursor-pointer ${
+                  className={`w-full px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-between text-left cursor-pointer group ${
                     activeItem === 'audit'
                       ? 'bg-indigo-50 text-indigo-700 border border-indigo-200/80 shadow-2xs'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50/80 border border-transparent'
                   }`}
                 >
                   <div className="flex items-center space-x-2.5 truncate">
-                    <ShieldCheck className={`w-4 h-4 shrink-0 ${activeItem === 'audit' ? 'text-indigo-600' : 'text-slate-400'}`} />
+                    <ShieldCheck
+                      className={`w-4 h-4 shrink-0 transition-colors ${
+                        activeItem === 'audit' ? 'text-indigo-600' : 'text-slate-400 group-hover:text-slate-600'
+                      }`}
+                    />
                     <span className="truncate">Trilha de Auditoria</span>
                   </div>
                   {auditLogsCount > 0 && (
                     <span
-                      className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
-                        activeItem === 'audit' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600'
+                      className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold transition-colors ${
+                        activeItem === 'audit' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 group-hover:bg-slate-200'
                       }`}
                     >
                       {auditLogsCount}
@@ -492,21 +533,28 @@ export function StudySidebar({
         </nav>
 
         {/* Rodapé do Sidebar */}
-        <div className="p-3 border-t border-slate-100 bg-slate-50/50 shrink-0">
+        <div className="p-3 border-t border-slate-100 bg-slate-50/60 shrink-0">
           {userIsAdmin ? (
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] text-slate-400">Ambiente do Estudo</span>
-              <Link
-                href={`/relatorio-cep?projectId=${currentProjectId}`}
-                className="text-[11px] font-bold text-blue-600 hover:underline"
-              >
-                Relatório CEP
-              </Link>
-            </div>
+            <Link
+              href={`/relatorio-cep?projectId=${currentProjectId}`}
+              className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl bg-white hover:bg-blue-50/80 border border-slate-200/80 hover:border-blue-200 text-slate-700 hover:text-blue-700 shadow-2xs transition group cursor-pointer"
+              title="Acessar Relatório para Comitê de Ética em Pesquisa (CEP / CONEP)"
+            >
+              <div className="flex items-center space-x-2 truncate">
+                <ShieldCheck className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                <span className="text-xs font-bold truncate">Relatório CEP / CONEP</span>
+              </div>
+              <span className="text-[10px] font-bold text-blue-600 bg-blue-50 group-hover:bg-blue-100 px-1.5 py-0.5 rounded-md transition shrink-0 ml-1">
+                Abrir
+              </span>
+            </Link>
           ) : (
-            <div className="text-[11px] text-slate-400 px-2 flex items-center justify-between">
-              <span>Protocolo Clínico UEPG</span>
-              <span>Ambiente Ativo</span>
+            <div className="text-[11px] text-slate-500 px-1.5 py-1 flex items-center justify-between">
+              <span className="flex items-center gap-1.5 truncate">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                <span className="font-semibold text-slate-600 truncate">Protocolo GCP / ICH</span>
+              </span>
+              <span className="text-[10px] font-bold text-slate-400 shrink-0">UEPG</span>
             </div>
           )}
         </div>
@@ -523,13 +571,13 @@ export function StudyMobileBar({
   onOpenMenu: () => void;
 }) {
   return (
-    <div className="lg:hidden p-3 bg-white border-b border-slate-200 flex items-center justify-between sticky top-[57px] z-30 shadow-2xs">
+    <div className="lg:hidden p-2.5 sm:p-3 bg-white border-b border-slate-200 flex items-center justify-between sticky top-16 z-20 shadow-2xs">
       <button
         type="button"
         onClick={onOpenMenu}
         className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg flex items-center space-x-2 transition cursor-pointer"
       >
-        <Menu className="w-4 h-4" />
+        <Menu className="w-4 h-4 text-blue-600" />
         <span>Menu do Estudo</span>
       </button>
 
