@@ -46,10 +46,16 @@ export async function GET(req: Request) {
     });
 
     const allResponses = [...responses];
+    let participantSessions: any[] = [];
 
-    // Se a consulta foi por um participante específico, também agrega as respostas de perguntas customizadas de anamnese do estudo
+    // Se a consulta foi por um participante específico, também agrega as respostas de perguntas customizadas de anamnese do estudo e busca sessões atualizadas
     if (participantId) {
       try {
+        participantSessions = await prisma.clinicalSession.findMany({
+          where: { participantId },
+          orderBy: { sessionNumber: 'asc' },
+        });
+
         const part = await prisma.participant.findUnique({
           where: { id: participantId },
           include: {
@@ -100,7 +106,7 @@ export async function GET(req: Request) {
       }
     }
 
-    return NextResponse.json({ responses: allResponses });
+    return NextResponse.json({ responses: allResponses, sessions: participantSessions });
   } catch (error) {
     console.error('Erro ao buscar respostas:', error);
     return NextResponse.json(
@@ -323,24 +329,63 @@ export async function POST(req: Request) {
           let analgesicDet: string | null = null;
           let painTypeVal: string | null = null;
 
-          for (const [key, val] of Object.entries(answers)) {
-            const k = key.toLowerCase();
-            const num =
-              typeof val === 'number'
-                ? val
-                : typeof val === 'string' && !isNaN(Number(val)) && val.trim() !== ''
-                ? Number(val)
-                : null;
-            if (num !== null && (k.includes('vas') || k.includes('sens') || k.includes('dor') || (num >= 0 && num <= 10 && vasScore === null))) {
-              vasScore = num;
+          // Se targetFormId existir, busca a definição das perguntas para extração precisa por tipo e título
+          let formQuestions: any[] = [];
+          if (targetFormId) {
+            try {
+              const formDef = await prisma.form.findUnique({
+                where: { id: targetFormId },
+                select: { questionsJson: true },
+              });
+              if (formDef?.questionsJson) {
+                formQuestions = JSON.parse(formDef.questionsJson);
+              }
+            } catch {}
+          }
+
+          if (Array.isArray(formQuestions) && formQuestions.length > 0) {
+            for (const q of formQuestions) {
+              const val = answers[q.id];
+              if (val !== undefined && val !== null && val !== '') {
+                const lowerTitle = (q.title || '').toLowerCase();
+                if (q.type === 'vas' || lowerTitle.includes('sensib') || lowerTitle.includes('dor')) {
+                  const num = Number(val);
+                  if (!isNaN(num)) vasScore = num;
+                }
+                if (q.type === 'boolean' || lowerTitle.includes('analgés') || lowerTitle.includes('medic')) {
+                  if (val === 'sim' || val === true || val === 'Sim') analgesicUsed = 'Sim';
+                  else if (val === 'nao' || val === false || val === 'Não') analgesicUsed = 'Não';
+                  else if (typeof val === 'string') analgesicDet = val;
+                }
+                if (q.type === 'choice' || lowerTitle.includes('sensação') || lowerTitle.includes('tipo')) {
+                  const opt = q.options?.find((o: any) => String(o.value) === String(val));
+                  painTypeVal = opt ? opt.label : String(val);
+                }
+              }
             }
-            if (k.includes('analgesic') || k.includes('remedio') || k.includes('medic')) {
-              if (val === 'sim' || val === true || val === 'Sim') analgesicUsed = 'Sim';
-              else if (val === 'nao' || val === false || val === 'Não') analgesicUsed = 'Não';
-              else if (typeof val === 'string') analgesicDet = val;
-            }
-            if (k.includes('type') || k.includes('tipo')) {
-              painTypeVal = String(val);
+          }
+
+          // Fallback heurístico caso a definição das perguntas não esteja disponível ou vasScore ainda seja nulo
+          if (vasScore === null) {
+            for (const [key, val] of Object.entries(answers)) {
+              const k = key.toLowerCase();
+              const num =
+                typeof val === 'number'
+                  ? val
+                  : typeof val === 'string' && !isNaN(Number(val)) && val.trim() !== ''
+                  ? Number(val)
+                  : null;
+              if (num !== null && (k.includes('vas') || k.includes('sens') || k.includes('dor') || (num >= 0 && num <= 10 && vasScore === null))) {
+                vasScore = num;
+              }
+              if (!analgesicUsed && (k.includes('analgesic') || k.includes('remedio') || k.includes('medic'))) {
+                if (val === 'sim' || val === true || val === 'Sim') analgesicUsed = 'Sim';
+                else if (val === 'nao' || val === false || val === 'Não') analgesicUsed = 'Não';
+                else if (typeof val === 'string') analgesicDet = val;
+              }
+              if (!painTypeVal && (k.includes('type') || k.includes('tipo'))) {
+                painTypeVal = String(val);
+              }
             }
           }
 

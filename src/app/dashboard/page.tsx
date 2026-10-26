@@ -824,8 +824,19 @@ function DashboardContent() {
   }, [dossierParticipant, project?.participants]);
 
   const currentResponsesParticipant = useMemo(() => {
-    if (!responsesParticipant || !project?.participants) return responsesParticipant;
-    return (project.participants as Participant[]).find((p) => p.id === responsesParticipant.id) || responsesParticipant;
+    if (!responsesParticipant) return null;
+    const fromProject = (project?.participants as Participant[] | undefined)?.find((p) => p.id === responsesParticipant.id);
+    if (!fromProject) return responsesParticipant;
+    return {
+      ...fromProject,
+      ...responsesParticipant,
+      responses: (responsesParticipant.responses && responsesParticipant.responses.length > 0)
+        ? responsesParticipant.responses
+        : (fromProject.responses || []),
+      sessions: (responsesParticipant.sessions && responsesParticipant.sessions.length > 0)
+        ? responsesParticipant.sessions
+        : (fromProject.sessions || []),
+    };
   }, [responsesParticipant, project?.participants]);
 
   // Menu dropdown de mais ações da linha do participante
@@ -846,9 +857,11 @@ function DashboardContent() {
 
   const [refreshingResponses, setRefreshingResponses] = useState(false);
 
-  const handleOpenResponses = async (part: Participant, defaultTab: 'forms' | 'scales' | 'export' = 'forms') => {
+  const handleOpenResponses = async (part: Participant, defaultTab?: 'forms' | 'scales' | 'export') => {
     setResponsesParticipant(part);
-    setResponsesModalTab(defaultTab);
+    const hasInitialForms = (part.responses && part.responses.length > 0);
+    const chosenTab = defaultTab || (hasInitialForms ? 'forms' : 'scales');
+    setResponsesModalTab(chosenTab);
     setShowResponsesModal(true);
     setCopiedTSV(false);
     try {
@@ -857,16 +870,25 @@ function DashboardContent() {
       if (res.ok) {
         const data = await res.json();
         if (data.responses) {
-          setResponsesParticipant((prev) => (prev && prev.id === part.id ? { ...prev, responses: data.responses } : prev));
+          const freshResponses = data.responses;
+          const freshSessions = data.sessions && data.sessions.length > 0 ? data.sessions : part.sessions;
+          setResponsesParticipant((prev) => (prev && prev.id === part.id ? {
+            ...prev,
+            responses: freshResponses,
+            sessions: freshSessions,
+          } : prev));
           setProject((prev) => {
             if (!prev) return prev;
             return {
               ...prev,
               participants: (prev.participants || []).map((p) =>
-                p.id === part.id ? { ...p, responses: data.responses } : p
+                p.id === part.id ? { ...p, responses: freshResponses, sessions: freshSessions } : p
               ),
             };
           });
+          if (!defaultTab && freshResponses.length > 0) {
+            setResponsesModalTab('forms');
+          }
         }
       }
     } catch {} finally {
@@ -8308,6 +8330,82 @@ function DashboardContent() {
           } as any);
         }
 
+        // Também inclui formulários referenciados nas respostas que possam não constar na lista principal
+        responses.forEach((r) => {
+          if (r.form && !allModalForms.some((f) => f.id === r.formId)) {
+            allModalForms.push(r.form as any);
+          }
+        });
+
+        // 2. Processar respostas de formulários do participante para exibição imediata
+        const parsedFormResponses = responses.map((r) => {
+          let answers: Record<string, any> = {};
+          try {
+            answers = JSON.parse(r.answersJson || '{}');
+          } catch {}
+
+          let questions: any[] = [];
+          const matchingForm = allModalForms.find((f) => f.id === r.formId);
+          try {
+            if (matchingForm?.questionsJson) {
+              questions = JSON.parse(matchingForm.questionsJson);
+            } else if (r.form?.questionsJson) {
+              questions = JSON.parse(r.form.questionsJson);
+            }
+          } catch {}
+
+          const items: Array<{ title: string; type: string; value: any; displayValue: string }> = [];
+          let extractedVas: number | null = null;
+          let analgesicUsed: string | null = null;
+          let painTypeVal: string | null = null;
+
+          questions.forEach((q: any) => {
+            const val = answers[q.id];
+            if (val !== undefined && val !== null && val !== '') {
+              let displayValue = String(val);
+              const lowerTitle = (q.title || '').toLowerCase();
+              if (q.type === 'vas' || lowerTitle.includes('sensib') || lowerTitle.includes('dor')) {
+                const num = Number(val);
+                if (!isNaN(num)) {
+                  extractedVas = num;
+                  displayValue = `${num.toFixed(1)} / 10.0`;
+                }
+              } else if (q.type === 'likert' || q.type === 'choice') {
+                const opt = q.options?.find((o: any) => String(o.value) === String(val));
+                displayValue = opt ? `${opt.label} (${val})` : String(val);
+                if (lowerTitle.includes('sensação') || lowerTitle.includes('tipo')) {
+                  painTypeVal = displayValue;
+                }
+              } else if (q.type === 'matrix') {
+                displayValue = val === 'NA' ? 'NA (Não se aplica)' : `Nota ${val}`;
+              } else if (q.type === 'boolean') {
+                displayValue = val === 'Sim' || val === true || val === 'sim' ? 'Sim' : 'Não';
+                if (lowerTitle.includes('analgés') || lowerTitle.includes('medic')) {
+                  analgesicUsed = displayValue;
+                }
+              }
+              items.push({
+                title: q.title || q.label || 'Pergunta',
+                type: q.type,
+                value: val,
+                displayValue,
+              });
+            }
+          });
+
+          return {
+            responseId: r.id,
+            formId: r.formId,
+            formTitle: matchingForm?.title || r.form?.title || 'Questionário Clínico',
+            submittedAt: r.submittedAt,
+            extractedVas,
+            analgesicUsed,
+            painTypeVal,
+            items,
+            answers,
+          };
+        });
+
         // Gera a exportação tabular individual
         const exportData = generateParticipantTabularExport(part, allModalForms);
 
@@ -8426,8 +8524,16 @@ function DashboardContent() {
                   >
                     <ClipboardList className="w-4 h-4" />
                     <span>Questionários & eCRF</span>
-                    <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-blue-100 text-blue-800 font-bold">
-                      {responses.length}/{projectForms.length}
+                    <span
+                      className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                        responses.length > 0
+                          ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                          : 'bg-blue-100 text-blue-800'
+                      }`}
+                    >
+                      {responses.length > 0
+                        ? `${responses.length} respondido(s)`
+                        : `${responses.length}/${projectForms.length}`}
                     </span>
                   </button>
 
@@ -8451,6 +8557,30 @@ function DashboardContent() {
                 {/* ABA 1: ESCALAS CLÍNICAS & DIÁRIOS DE DOR (EVA) */}
                 {responsesModalTab === 'scales' && (
                   <div className="space-y-6">
+                    {/* Alerta de Destaque quando há questionários preenchidos */}
+                    {parsedFormResponses.length > 0 && (
+                      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+                        <div className="flex items-start space-x-3">
+                          <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                          <div>
+                            <h4 className="text-xs font-bold text-slate-900">
+                              {parsedFormResponses.length} Questionário(s) Respondido(s) pelo Paciente
+                            </h4>
+                            <p className="text-xs text-slate-600 mt-0.5">
+                              As respostas completas das perguntas e escalas clínicas estão correlacionadas abaixo nas sessões e detalhadas na aba Questionários & eCRF.
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setResponsesModalTab('forms')}
+                          className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition shrink-0 cursor-pointer flex items-center justify-center space-x-1.5 shadow-2xs"
+                        >
+                          <ClipboardList className="w-3.5 h-3.5" />
+                          <span>Ver na Aba Questionários</span>
+                        </button>
+                      </div>
+                    )}
                     {sessions.length === 0 ? (
                       <div className="text-center py-12 bg-white rounded-2xl border border-dashed border-slate-300 p-8">
                         <Activity className="w-12 h-12 text-slate-300 mx-auto mb-3" />
@@ -8541,9 +8671,25 @@ function DashboardContent() {
                             <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
                               {moments.map((m) => {
                                 const details = extractDiaryMomentDetails(sess, m);
-                                const hasScore = details.score !== null && details.score !== undefined;
+                                const hasDirectScore = details.score !== null && details.score !== undefined;
+                                const isZeroWithoutDiary = details.score === 0 && !details.painType && !details.usedAnalgesic && !details.gingivalSensation && !details.otherSymptoms;
+
+                                // Correlacionar com resposta de questionário que contenha escala EVA:
+                                const matchingFormResp = m === '0h'
+                                  ? parsedFormResponses.find((pr) => pr.extractedVas !== null)
+                                  : null;
+
+                                const scoreToShow = (matchingFormResp?.extractedVas !== null && matchingFormResp?.extractedVas !== undefined && (isZeroWithoutDiary || !hasDirectScore))
+                                  ? matchingFormResp.extractedVas
+                                  : details.score;
+
+                                const hasScore = scoreToShow !== null && scoreToShow !== undefined;
                                 const isUnlocked = unlockMeta.unlockedMoments.includes(m);
                                 const isActionLoading = unlockingAction === `${sess.sessionNumber}-${m}`;
+
+                                const painTypeToShow = details.painType || matchingFormResp?.painTypeVal;
+                                const usedAnalgesicToShow = details.usedAnalgesic || matchingFormResp?.analgesicUsed;
+                                const submittedAtToShow = details.submittedAt || (matchingFormResp?.submittedAt ? new Date(matchingFormResp.submittedAt).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : undefined);
 
                                 const momentLabels: Record<string, { title: string; subtitle: string }> = {
                                   '0h': { title: 'Imediato (0h)', subtitle: 'Durante a sessão clínica' },
@@ -8606,7 +8752,7 @@ function DashboardContent() {
                                               <div className="flex items-baseline justify-between">
                                                 <span className="text-xs text-slate-500 font-medium">EVA:</span>
                                                 <span className="text-lg font-black font-mono text-indigo-700">
-                                                  {Number(details.score).toFixed(1)}
+                                                  {Number(scoreToShow).toFixed(1)}
                                                   <span className="text-xs text-slate-400 font-normal"> / 10.0</span>
                                                 </span>
                                               </div>
@@ -8615,34 +8761,34 @@ function DashboardContent() {
                                               <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
                                                 <div
                                                   className={`h-full rounded-full transition-all ${
-                                                    (details.score || 0) <= 2
+                                                    (scoreToShow || 0) <= 2
                                                       ? 'bg-emerald-500'
-                                                      : (details.score || 0) <= 5
+                                                      : (scoreToShow || 0) <= 5
                                                       ? 'bg-amber-500'
                                                       : 'bg-red-500'
                                                   }`}
-                                                  style={{ width: `${Math.min(Math.max(((details.score || 0) / 10) * 100, 0), 100)}%` }}
+                                                  style={{ width: `${Math.min(Math.max(((scoreToShow || 0) / 10) * 100, 0), 100)}%` }}
                                                 />
                                               </div>
 
                                               {/* Detalhes Clínicos do Relato */}
                                               <div className="pt-2 border-t border-slate-200/60 text-[11px] text-slate-600 space-y-0.5">
-                                                {details.painType && (
+                                                {painTypeToShow && (
                                                   <p>
-                                                    <strong className="text-slate-700">Tipo:</strong> {details.painType}
+                                                    <strong className="text-slate-700">Tipo:</strong> {painTypeToShow}
                                                   </p>
                                                 )}
-                                                {details.usedAnalgesic && (
+                                                {usedAnalgesicToShow && (
                                                   <p>
                                                     <strong className="text-slate-700">Analgésico:</strong>{' '}
                                                     <span
                                                       className={
-                                                        details.usedAnalgesic === 'Sim'
+                                                        usedAnalgesicToShow === 'Sim'
                                                           ? 'text-red-600 font-bold'
                                                           : 'text-slate-600'
                                                       }
                                                     >
-                                                      {details.usedAnalgesic}
+                                                      {usedAnalgesicToShow}
                                                     </span>{' '}
                                                     {details.analgesicDetails ? `(${details.analgesicDetails})` : ''}
                                                   </p>
@@ -8657,10 +8803,34 @@ function DashboardContent() {
                                                     <strong className="text-slate-700">Obs:</strong> {details.otherSymptoms}
                                                   </p>
                                                 )}
-                                                {details.submittedAt && (
+                                                {submittedAtToShow && (
                                                   <p className="text-[10px] text-slate-400 pt-1">
-                                                    Envio: {details.submittedAt}
+                                                    Envio: {submittedAtToShow}
                                                   </p>
+                                                )}
+
+                                                {/* Perguntas e respostas do questionário vinculado */}
+                                                {matchingFormResp && matchingFormResp.items.length > 0 && (
+                                                  <div className="pt-2 mt-2 border-t border-slate-200/70 space-y-1.5">
+                                                    <span className="text-[10px] font-bold text-slate-700 uppercase tracking-wide block">
+                                                      Respostas ({matchingFormResp.formTitle}):
+                                                    </span>
+                                                    <div className="space-y-1">
+                                                      {matchingFormResp.items.map((item, itemIdx) => (
+                                                        <div
+                                                          key={itemIdx}
+                                                          className="p-1.5 rounded-md bg-white border border-slate-200/80 text-[11px] flex justify-between items-center gap-2 shadow-2xs"
+                                                        >
+                                                          <span className="text-slate-600 font-medium truncate" title={item.title}>
+                                                            {item.title}
+                                                          </span>
+                                                          <span className="font-bold text-indigo-900 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100 text-[10px] shrink-0 font-mono">
+                                                            {item.displayValue}
+                                                          </span>
+                                                        </div>
+                                                      ))}
+                                                    </div>
+                                                  </div>
                                                 )}
                                               </div>
                                             </div>
@@ -8739,6 +8909,84 @@ function DashboardContent() {
                                 );
                               })}
                             </div>
+
+                            {/* Questionários & Respostas do Paciente vinculados a este período/sessão */}
+                            {parsedFormResponses.length > 0 && (
+                              <div className="p-4 border-t border-slate-200/80 bg-slate-50/60">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+                                  <div className="flex items-center space-x-2">
+                                    <ClipboardList className="w-4 h-4 text-blue-600" />
+                                    <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wide">
+                                      Respostas Completas dos Questionários do Paciente ({parsedFormResponses.length})
+                                    </h4>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => setResponsesModalTab('forms')}
+                                    className="text-xs font-bold text-blue-600 hover:text-blue-800 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                                  >
+                                    <span>Ver detalhes na aba Questionários</span>
+                                    <span>→</span>
+                                  </button>
+                                </div>
+
+                                <div className="space-y-3">
+                                  {parsedFormResponses.map((pfr) => (
+                                    <div
+                                      key={pfr.responseId}
+                                      className="bg-white rounded-xl border border-blue-200 p-4 shadow-xs"
+                                    >
+                                      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-2.5 mb-3 border-b border-slate-100 gap-1.5">
+                                        <div className="flex items-center space-x-2">
+                                          <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                                          <h5 className="font-bold text-slate-900 text-xs sm:text-sm">
+                                            {pfr.formTitle}
+                                          </h5>
+                                        </div>
+                                        <div className="flex items-center space-x-2">
+                                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                            Respondido
+                                          </span>
+                                          <span className="text-[11px] text-slate-400">
+                                            {new Date(pfr.submittedAt).toLocaleDateString('pt-BR', {
+                                              day: '2-digit',
+                                              month: '2-digit',
+                                              year: 'numeric',
+                                              hour: '2-digit',
+                                              minute: '2-digit',
+                                            })}
+                                          </span>
+                                        </div>
+                                      </div>
+
+                                      {/* Lista de Questões e Respostas */}
+                                      <div className="space-y-2">
+                                        {pfr.items.map((it, idx) => (
+                                          <div
+                                            key={idx}
+                                            className="p-2.5 bg-slate-50/80 rounded-lg border border-slate-200/60 flex flex-col sm:flex-row sm:items-center justify-between gap-2"
+                                          >
+                                            <div className="min-w-0">
+                                              <span className="text-[10px] uppercase font-bold text-slate-400 block">
+                                                Item {idx + 1}
+                                              </span>
+                                              <span className="text-xs font-medium text-slate-800 block">
+                                                {it.title}
+                                              </span>
+                                            </div>
+                                            <div className="shrink-0 text-left sm:text-right">
+                                              <span className="inline-block px-2.5 py-1 rounded-md text-xs font-bold font-mono bg-blue-50 text-blue-900 border border-blue-200 shadow-2xs">
+                                                {it.displayValue}
+                                              </span>
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
                           </div>
                         );
                       })
