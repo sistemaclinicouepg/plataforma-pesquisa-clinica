@@ -616,70 +616,64 @@ function AnamnesisBuilderContent() {
           />
 
           {/* Barra Superior */}
-          <header className="bg-white border-b border-slate-200 px-4 sm:px-6 lg:px-8 py-3.5 relative shadow-xs flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div className="flex items-center space-x-3">
-          <Link
-            href={`/dashboard?projectId=${projectId}`}
-            className="text-slate-500 hover:text-blue-600 transition text-sm font-bold inline-flex items-center"
-          >
-            <ArrowLeft className="w-3.5 h-3.5 mr-1" />
-            <span>Painel da Pesquisa</span>
-          </Link>
-          <span className="text-slate-300">|</span>
-          <div>
-            <h1 className="text-xl font-bold text-slate-900 flex items-center">
-              <span>Construtor de Ficha Clínica & Anamnese</span>
-              {saveSuccess && (
-                <span className="ml-3 px-3 py-0.5 bg-green-100 text-green-800 text-xs font-bold rounded-full inline-flex items-center">
-                  <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
-                  <span>Configuração Salva!</span>
-                </span>
-              )}
-            </h1>
-            <p className="text-xs text-slate-500">
-              Projeto: <strong>{projectName}</strong>
-            </p>
-          </div>
-        </div>
+          <header className="bg-white border-b border-slate-200 px-4 sm:px-6 py-3 relative shadow-xs flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+              <Link
+                href={`/dashboard?projectId=${projectId}`}
+                className="text-slate-500 hover:text-blue-600 text-xs font-semibold transition inline-flex items-center px-2.5 py-1.5 rounded-lg hover:bg-slate-100"
+                title="Voltar ao Painel do Estudo"
+              >
+                <ArrowLeft className="w-3.5 h-3.5 mr-1" />
+                <span>Painel da Pesquisa</span>
+              </Link>
 
-        <div className="flex items-center space-x-3 w-full sm:w-auto justify-end">
-          <button
-            onClick={() => setShowLibraryModal(true)}
-            className="px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl text-xs font-bold transition flex items-center space-x-1.5"
-          >
-            <BookOpen className="w-3.5 h-3.5" />
-            <span>Biblioteca de Perguntas Clínicas</span>
-          </button>
+              <div className="hidden sm:block h-4 w-px bg-slate-200" />
 
-          <button
-            onClick={() => handleSave(false)}
-            disabled={saving || loading}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition disabled:opacity-50 flex items-center space-x-1.5 cursor-pointer ${
-              saveSuccess
-                ? 'bg-emerald-600 hover:bg-emerald-700 text-white ring-2 ring-emerald-300'
-                : 'bg-white border border-slate-300 hover:bg-slate-50 text-slate-700'
-            }`}
-          >
-            {saving ? (
-              <RotateCcw className="w-3.5 h-3.5 animate-spin" />
-            ) : saveSuccess ? (
-              <Check className="w-3.5 h-3.5 stroke-[3]" />
-            ) : (
-              <Save className="w-3.5 h-3.5" />
-            )}
-            <span>{saving ? 'Gravando...' : saveSuccess ? 'Salvo com Sucesso!' : 'Salvar Ficha'}</span>
-          </button>
+              <div className="flex items-center gap-2">
+                <h1 className="text-sm sm:text-base font-bold text-slate-900 tracking-tight">
+                  Construtor de Ficha Clínica & Anamnese
+                </h1>
+                {saveSuccess && (
+                  <span className="px-2.5 py-0.5 bg-emerald-100 text-emerald-800 rounded-full text-xs font-bold inline-flex items-center gap-1 shadow-2xs">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700" />
+                    <span>Salvo com Sucesso!</span>
+                  </span>
+                )}
+              </div>
+            </div>
 
-          <button
-            onClick={() => handleSave(true)}
-            disabled={saving || loading}
-            className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-xs transition disabled:opacity-50 flex items-center space-x-1.5"
-          >
-            <span>Concluir & Abrir Painel</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      </header>
+            <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto justify-end">
+              <button
+                onClick={() => handleSave(false)}
+                disabled={saving || loading}
+                className={`px-3.5 py-2 rounded-lg text-xs font-bold transition disabled:opacity-50 inline-flex items-center gap-1.5 cursor-pointer shadow-2xs ${
+                  saveSuccess
+                    ? 'bg-emerald-600 hover:bg-emerald-700 text-white ring-2 ring-emerald-300'
+                    : 'bg-white border border-slate-300 hover:bg-slate-50 text-slate-700'
+                }`}
+                title="Salvar alterações na ficha deste estudo"
+              >
+                {saving ? (
+                  <RotateCcw className="w-3.5 h-3.5 animate-spin" />
+                ) : saveSuccess ? (
+                  <Check className="w-3.5 h-3.5 stroke-[3] text-white" />
+                ) : (
+                  <Save className="w-3.5 h-3.5" />
+                )}
+                <span>{saving ? 'Gravando...' : saveSuccess ? 'Salvo!' : 'Salvar Ficha'}</span>
+              </button>
+
+              <button
+                onClick={() => handleSave(true)}
+                disabled={saving || loading}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold shadow-xs transition disabled:opacity-50 inline-flex items-center gap-1.5 cursor-pointer"
+                title="Salvar e retornar ao painel do estudo"
+              >
+                <span>Concluir & Abrir Painel</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </header>
 
       {/* Navegação por Abas Modulares */}
       <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-10 pt-6">
