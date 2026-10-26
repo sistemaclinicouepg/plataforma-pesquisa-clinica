@@ -927,177 +927,169 @@ function FormBuilderContent() {
 
           {/* Barra Superior de Comando Clínico */}
           <header className="bg-white border-b border-slate-200/90 relative shadow-2xs">
-        <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-10 py-2.5 flex flex-col xl:flex-row xl:items-center xl:justify-between gap-3">
-          
-          <div className="flex items-center space-x-3 shrink-0">
-            <Link
-              href={selectedProjectId ? `/dashboard?projectId=${selectedProjectId}` : '/'}
-              className="h-8.5 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition inline-flex items-center space-x-1.5 shrink-0"
-              title="Voltar ao Painel do Estudo"
-            >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Painel</span>
-            </Link>
+            <div className="w-full px-4 sm:px-6 py-2.5 flex flex-wrap items-center justify-between gap-2.5 sm:gap-3">
+              
+              {/* Lado Esquerdo: Navegação + Título + Seletor de Ficha */}
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                <Link
+                  href={selectedProjectId ? `/dashboard?projectId=${selectedProjectId}` : '/'}
+                  className="h-8 px-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition inline-flex items-center space-x-1 shrink-0"
+                  title="Voltar ao Painel do Estudo"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Painel</span>
+                </Link>
 
-            <div>
-              <div className="flex items-center space-x-2">
-                <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
-                <h1 className="text-sm font-bold text-slate-900 tracking-tight">
-                  Prancheta de Ficha Clínica (eCRF)
-                </h1>
-                <span className="text-[10px] font-bold px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-md">
-                  {questions.length} {questions.length === 1 ? 'item' : 'itens'}
-                </span>
-                {editingFormId ? (
-                  <span className="text-[10px] font-bold px-2 py-0.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-md hidden sm:inline">
-                    Editando Ficha Existente
+                <div className="flex items-center space-x-1.5 shrink-0">
+                  <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
+                  <h1 className="text-xs sm:text-sm font-bold text-slate-900 tracking-tight">
+                    Ficha Clínica (eCRF)
+                  </h1>
+                  <span className="text-[10px] font-bold px-1.5 py-0.5 bg-blue-50 text-blue-700 border border-blue-200/80 rounded-md">
+                    {questions.length} {questions.length === 1 ? 'item' : 'itens'}
                   </span>
-                ) : (
-                  <span className="text-[10px] font-bold px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-md hidden sm:inline">
-                    Nova Ficha em Branco
-                  </span>
-                )}
+                </div>
+
+                <div className="h-4 w-px bg-slate-200 hidden sm:block" />
+
+                {/* Seletor Compacto da Ficha Atual */}
+                <div className="flex items-center bg-slate-50 border border-slate-200 rounded-lg p-0.5 shadow-2xs">
+                  <select
+                    value={editingFormId || 'new'}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === 'new') {
+                        handleNewBlankForm();
+                      } else {
+                        const found = currentProjectForms.find((f) => f.id === val);
+                        if (found) loadFormData(found);
+                      }
+                    }}
+                    className="h-7 px-2 bg-transparent text-xs font-bold text-slate-800 focus:outline-none max-w-[130px] sm:max-w-[190px] md:max-w-[220px] truncate cursor-pointer"
+                    title="Alternar entre fichas clínicas deste estudo"
+                  >
+                    {currentProjectForms.length > 0 && (
+                      <optgroup label="Fichas Deste Estudo">
+                        {currentProjectForms.map((f) => (
+                          <option key={f.id} value={f.id}>
+                            {f.title}
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
+                    <option value="new">+ Nova Ficha em Branco</option>
+                  </select>
+
+                  <button
+                    type="button"
+                    onClick={handleNewBlankForm}
+                    className="h-7 w-7 flex items-center justify-center bg-white hover:bg-slate-100 text-blue-700 font-bold border border-slate-200 rounded-md transition shadow-2xs cursor-pointer shrink-0"
+                    title="Criar nova ficha clínica em branco"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
-              <p className="text-[11px] text-slate-500 truncate max-w-xs sm:max-w-md">
-                Estudo: <strong className="text-slate-700 font-semibold">{selectedProjectObj?.name || 'Selecione o Projeto'}</strong>
-              </p>
-            </div>
-          </div>
 
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 xl:pb-0 shrink-0">
-            {/* Seletor de Fichas do Estudo */}
-            <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200 shrink-0">
-              <span className="text-[10px] font-bold text-slate-500 uppercase px-1.5 hidden md:inline">
-                Ficha:
-              </span>
-              <select
-                value={editingFormId || 'new'}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  if (val === 'new') {
-                    handleNewBlankForm();
-                  } else {
-                    const found = currentProjectForms.find((f) => f.id === val);
-                    if (found) loadFormData(found);
-                  }
-                }}
-                className="h-7 px-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500 max-w-[160px] sm:max-w-[220px] truncate cursor-pointer"
-              >
-                {currentProjectForms.length > 0 && (
-                  <optgroup label="Fichas Deste Estudo">
-                    {currentProjectForms.map((f) => (
-                      <option key={f.id} value={f.id}>
-                        {f.title}
-                      </option>
-                    ))}
-                  </optgroup>
+              {/* Lado Direito: Modos, Modelos e Ação Principal de Salvar */}
+              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                
+                {/* Toggle Compacto: Edição vs Prévia */}
+                <div className="h-8 p-0.5 bg-slate-100 rounded-lg flex items-center border border-slate-200 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setViewMode('edit')}
+                    className={`h-full px-2.5 rounded-md transition inline-flex items-center space-x-1 text-xs ${
+                      viewMode === 'edit'
+                        ? 'bg-white text-slate-900 shadow-2xs font-bold'
+                        : 'text-slate-600 hover:text-slate-900 font-medium'
+                    }`}
+                    title="Modo de edição das perguntas da ficha"
+                  >
+                    <FileText className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Edição</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setViewMode('preview')}
+                    className={`h-full px-2.5 rounded-md transition inline-flex items-center space-x-1 text-xs ${
+                      viewMode === 'preview'
+                        ? 'bg-blue-600 text-white shadow-2xs font-bold'
+                        : 'text-slate-600 hover:text-slate-900 font-medium'
+                    }`}
+                    title="Visualização da ficha como o paciente / avaliador verá"
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Prévia</span>
+                  </button>
+                </div>
+
+                {/* Biblioteca de Modelos */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveLibraryTab('validated');
+                    setShowLibraryModal(true);
+                  }}
+                  className="h-8 px-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-semibold rounded-lg transition inline-flex items-center space-x-1 cursor-pointer shrink-0"
+                  title="Abrir biblioteca de modelos validados da odontologia"
+                >
+                  <BookOpen className="w-3.5 h-3.5 text-indigo-600" />
+                  <span className="hidden md:inline">Modelos</span>
+                </button>
+
+                {/* Salvar como Modelo Reutilizável */}
+                <button
+                  type="button"
+                  onClick={handleOpenSaveTemplateModal}
+                  disabled={questions.length === 0}
+                  className="h-8 px-2 sm:px-2.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-semibold rounded-lg transition inline-flex items-center space-x-1 disabled:opacity-40 cursor-pointer shrink-0 shadow-2xs"
+                  title="Salvar este questionário na biblioteca de modelos"
+                >
+                  <BookmarkPlus className="w-3.5 h-3.5 text-slate-500" />
+                  <span className="hidden lg:inline">Salvar Modelo</span>
+                </button>
+
+                {/* Excluir Ficha (se existente) */}
+                {editingFormId && (
+                  <button
+                    type="button"
+                    onClick={handleDeleteCurrentForm}
+                    disabled={saving}
+                    className="h-8 px-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-semibold rounded-lg transition inline-flex items-center space-x-1 cursor-pointer shrink-0 disabled:opacity-40"
+                    title="Excluir este questionário deste estudo"
+                  >
+                    <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                    <span className="hidden xl:inline">Excluir</span>
+                  </button>
                 )}
-                <option value="new">+ Nova Ficha em Branco</option>
-              </select>
 
-              <button
-                type="button"
-                onClick={handleNewBlankForm}
-                className="h-7 px-2 bg-white hover:bg-slate-50 text-blue-700 font-bold border border-blue-200 rounded-lg text-xs transition inline-flex items-center gap-1 cursor-pointer"
-                title="Criar nova ficha clínica em branco para este estudo"
-              >
-                <Plus className="w-3 h-3" />
-                <span className="hidden sm:inline">Nova</span>
-              </button>
+                {/* CTA Primário: Salvar Ficha */}
+                <button
+                  type="button"
+                  onClick={() => handleSaveForm()}
+                  disabled={saving}
+                  className={`h-8 px-3 text-white text-xs font-bold rounded-lg shadow-xs transition disabled:opacity-50 inline-flex items-center space-x-1.5 cursor-pointer shrink-0 ${
+                    savedSuccess
+                      ? 'bg-emerald-600 hover:bg-emerald-700 ring-2 ring-emerald-300'
+                      : 'bg-blue-600 hover:bg-blue-700'
+                  }`}
+                  title="Salvar ficha clínica no estudo"
+                >
+                  {saving ? (
+                    <RotateCcw className="w-3.5 h-3.5 animate-spin" />
+                  ) : savedSuccess ? (
+                    <Check className="w-3.5 h-3.5 stroke-[3]" />
+                  ) : (
+                    <Save className="w-3.5 h-3.5" />
+                  )}
+                  <span>{saving ? 'Salvando...' : savedSuccess ? 'Salvo!' : 'Salvar Ficha'}</span>
+                </button>
+
+              </div>
+
             </div>
-
-            {/* Toggle de Modo: Edição vs Prévia */}
-            <div className="h-8.5 p-0.5 bg-slate-100 rounded-lg flex items-center border border-slate-200 shrink-0">
-              <button
-                type="button"
-                onClick={() => setViewMode('edit')}
-                className={`h-full px-3 rounded-md transition inline-flex items-center space-x-1.5 text-xs ${
-                  viewMode === 'edit'
-                    ? 'bg-white text-slate-900 shadow-2xs font-bold'
-                    : 'text-slate-600 hover:text-slate-900 font-medium'
-                }`}
-              >
-                <FileText className="w-3.5 h-3.5" />
-                <span>Modo Edição</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setViewMode('preview')}
-                className={`h-full px-3 rounded-md transition inline-flex items-center space-x-1.5 text-xs ${
-                  viewMode === 'preview'
-                    ? 'bg-blue-600 text-white shadow-2xs font-bold'
-                    : 'text-slate-600 hover:text-slate-900 font-medium'
-                }`}
-              >
-                <Eye className="w-3.5 h-3.5" />
-                <span>Prévia</span>
-              </button>
-            </div>
-
-            {/* Modelos Validados & Salvos */}
-            <button
-              type="button"
-              onClick={() => {
-                setActiveLibraryTab('validated');
-                setShowLibraryModal(true);
-              }}
-              className="h-8.5 px-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-semibold rounded-lg transition inline-flex items-center space-x-1.5 cursor-pointer shrink-0"
-              title="Abrir biblioteca de modelos da odontologia e modelos salvos"
-            >
-              <BookOpen className="w-3.5 h-3.5 text-indigo-600" />
-              <span>Modelos</span>
-            </button>
-
-            {/* Salvar como Modelo Reutilizável */}
-            <button
-              type="button"
-              onClick={handleOpenSaveTemplateModal}
-              disabled={questions.length === 0}
-              className="h-8.5 px-3 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-semibold rounded-lg transition inline-flex items-center space-x-1.5 disabled:opacity-40 cursor-pointer shrink-0"
-              title="Salvar este questionário como um modelo reutilizável em outras pesquisas"
-            >
-              <BookmarkPlus className="w-3.5 h-3.5 text-slate-500" />
-              <span className="hidden sm:inline">Salvar Modelo</span>
-            </button>
-
-            {/* Excluir Ficha (apenas se for edição de ficha existente) */}
-            {editingFormId && (
-              <button
-                type="button"
-                onClick={handleDeleteCurrentForm}
-                disabled={saving}
-                className="h-8.5 px-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-semibold rounded-lg transition inline-flex items-center space-x-1 cursor-pointer shrink-0 disabled:opacity-40"
-                title="Excluir este questionário deste estudo"
-              >
-                <Trash2 className="w-3.5 h-3.5 text-rose-600" />
-                <span className="hidden sm:inline">Excluir</span>
-              </button>
-            )}
-
-            {/* Salvar Ficha */}
-            <button
-              type="button"
-              onClick={() => handleSaveForm()}
-              disabled={saving}
-              className={`h-8.5 px-3.5 text-white text-xs font-bold rounded-lg shadow-2xs transition disabled:opacity-50 inline-flex items-center space-x-1.5 cursor-pointer shrink-0 ${
-                savedSuccess
-                  ? 'bg-emerald-600 hover:bg-emerald-700 ring-2 ring-emerald-300'
-                  : 'bg-blue-600 hover:bg-blue-700'
-              }`}
-            >
-              {saving ? (
-                <RotateCcw className="w-3.5 h-3.5 animate-spin" />
-              ) : savedSuccess ? (
-                <Check className="w-3.5 h-3.5 stroke-[3]" />
-              ) : (
-                <Save className="w-3.5 h-3.5" />
-              )}
-              <span>{saving ? 'Salvando...' : savedSuccess ? 'Salvo com Sucesso!' : 'Salvar Ficha'}</span>
-            </button>
-          </div>
-
-        </div>
-      </header>
+          </header>
 
       {/* Alerta de Sucesso com Acesso Rápido */}
       {savedSuccess && (
