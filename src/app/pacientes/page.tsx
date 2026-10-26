@@ -437,8 +437,8 @@ export default function PacientesPage() {
   };
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] bg-slate-50 py-8 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="flex-1 flex flex-col bg-slate-50 py-6 sm:py-8 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto space-y-6 w-full flex-1">
         
         {/* Topo Limpo & Apresentação */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">

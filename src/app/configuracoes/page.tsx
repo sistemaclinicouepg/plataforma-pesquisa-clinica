@@ -22,7 +22,7 @@ function ConfiguracoesRedirectInner() {
   }, [router, searchParams]);
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-slate-500">
+    <div className="flex-1 bg-slate-50 flex flex-col items-center justify-center p-6 text-slate-500">
       <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mb-4 animate-bounce">
         <Sliders className="w-6 h-6" />
       </div>
@@ -35,7 +35,7 @@ function ConfiguracoesRedirectInner() {
 export default function ConfiguracoesPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="flex-1 bg-slate-50 flex items-center justify-center">
         <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
       </div>
     }>

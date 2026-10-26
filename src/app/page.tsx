@@ -1233,9 +1233,9 @@ export default function HomePage() {
   }, [projects, statusFilter, searchQuery]);
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-800 pb-20">
+    <div className="flex-1 flex flex-col bg-slate-50 font-sans text-slate-800">
       {/* Conteúdo Principal */}
-      <main className="w-full px-4 sm:px-6 lg:px-8 xl:px-10 py-8">
+      <main className="w-full px-4 sm:px-6 lg:px-8 xl:px-10 py-6 sm:py-8 flex-1">
         {/* Painel do Administrador: Aprovações Pendentes */}
         {currentUser?.role === 'ADMIN' && pendingUsers.length > 0 && (
           <div className="mb-8 bg-amber-50 border border-amber-200 rounded-2xl p-6 shadow-xs">

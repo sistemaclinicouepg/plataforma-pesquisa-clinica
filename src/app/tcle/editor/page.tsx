@@ -118,14 +118,14 @@ function TcleEditorContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center text-slate-400">
+      <div className="flex-1 bg-slate-50 flex items-center justify-center text-slate-400">
         <p className="animate-pulse">Carregando configurações do TCLE...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] bg-slate-50 font-sans text-slate-800 flex flex-col">
+    <div className="flex-1 bg-slate-50 font-sans text-slate-800 flex flex-col">
       <div className="flex-1 flex w-full relative">
         <StudySidebar
           projectId={projectId}
@@ -134,7 +134,7 @@ function TcleEditorContent() {
           setMobileMenuOpen={setMobileMenuOpen}
         />
 
-        <div className="flex-1 min-w-0 flex flex-col pb-20">
+        <div className="flex-1 min-w-0 flex flex-col pb-8 sm:pb-12">
           {/* Barra Superior Mobile para Abrir Sidebar */}
           <StudyMobileBar
             projectName={formData.title || 'Termo de Aceite (TCLE)'}

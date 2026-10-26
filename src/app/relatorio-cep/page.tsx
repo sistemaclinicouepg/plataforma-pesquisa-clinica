@@ -13,7 +13,7 @@ function RedirectContent() {
   }, [projectId, router]);
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+    <div className="flex-1 flex items-center justify-center p-4 bg-slate-50">
       <div className="text-center text-slate-500 text-xs font-semibold">
         Redirecionando para o Prontuário e Atendimento...
       </div>
@@ -23,7 +23,7 @@ function RedirectContent() {
 
 export default function RelatorioCepPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-slate-50" />}>
+    <Suspense fallback={<div className="flex-1 bg-slate-50" />}>
       <RedirectContent />
     </Suspense>
   );

@@ -2880,7 +2880,7 @@ function DashboardContent() {
 
   if (loading && !project) {
     return (
-      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-center">
+      <div className="flex-1 bg-slate-50 flex flex-col items-center justify-center p-6 text-center">
         <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 mx-auto flex items-center justify-center mb-4">
           <RefreshCw className="w-6 h-6 animate-spin text-blue-600" />
         </div>
@@ -2894,7 +2894,7 @@ function DashboardContent() {
 
   if (!project) {
     return (
-      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-center">
+      <div className="flex-1 bg-slate-50 flex flex-col items-center justify-center p-6 text-center">
         <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 mx-auto flex items-center justify-center mb-4">
           <AlertTriangle className="w-6 h-6 text-amber-600" />
         </div>
@@ -2966,7 +2966,7 @@ function DashboardContent() {
   });
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] bg-slate-50 font-sans text-slate-800 flex flex-col">
+    <div className="flex-1 bg-slate-50 font-sans text-slate-800 flex flex-col">
       <div className="flex-1 flex w-full relative">
         {/* SIDEBAR LATERAL PROFISSIONAL COMPARTILHADA */}
         <StudySidebar

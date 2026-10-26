@@ -569,8 +569,8 @@ function AnamnesisBuilderContent() {
 
   if (!projectId) {
     return (
-      <div className="min-h-screen bg-slate-50 p-8">
-        <div className="max-w-2xl mx-auto bg-white p-8 rounded-2xl shadow-sm border border-slate-200 text-center">
+      <div className="flex-1 bg-slate-50 p-8 flex items-center justify-center">
+        <div className="max-w-2xl w-full bg-white p-8 rounded-2xl shadow-sm border border-slate-200 text-center">
           <h2 className="text-xl font-bold text-slate-800 mb-4">Selecione um Projeto</h2>
           <p className="text-slate-600 text-sm mb-6">
             Para configurar a Ficha Clínica e Anamnese, escolha para qual pesquisa deseja personalizar os módulos:
@@ -598,7 +598,7 @@ function AnamnesisBuilderContent() {
   }
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] bg-slate-50 font-sans text-slate-800 flex flex-col">
+    <div className="flex-1 bg-slate-50 font-sans text-slate-800 flex flex-col">
       <div className="flex-1 flex w-full relative">
         <StudySidebar
           projectId={projectId}
@@ -608,7 +608,7 @@ function AnamnesisBuilderContent() {
           setMobileMenuOpen={setMobileMenuOpen}
         />
 
-        <div className="flex-1 min-w-0 flex flex-col pb-20">
+        <div className="flex-1 min-w-0 flex flex-col pb-8 sm:pb-12">
           {/* Barra Superior Mobile para Abrir Sidebar */}
           <StudyMobileBar
             projectName={projectName}

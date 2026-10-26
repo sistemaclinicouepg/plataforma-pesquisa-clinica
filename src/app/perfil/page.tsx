@@ -298,7 +298,7 @@ export default function ProfilePage() {
     : '2026';
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-800 pb-20">
+    <div className="flex-1 flex flex-col bg-slate-50 font-sans text-slate-800">
       {/* Barra Superior / Breadcrumb */}
       <div className="bg-white border-b border-slate-200 shadow-xs">
         <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-10 py-3.5 flex items-center justify-between">
@@ -325,7 +325,7 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      <main className="w-full px-4 sm:px-6 lg:px-8 xl:px-10 py-8 max-w-6xl mx-auto">
+      <main className="w-full px-4 sm:px-6 lg:px-8 xl:px-10 py-6 sm:py-8 max-w-6xl mx-auto flex-1">
         {/* Banner de Erro Geral */}
         {loadError && !profile && (
           <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-2xl flex items-center justify-between text-xs text-red-900 shadow-2xs">

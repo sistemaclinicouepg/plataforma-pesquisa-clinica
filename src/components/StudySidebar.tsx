@@ -307,7 +307,7 @@ export function StudySidebar({
         </div>
 
         {/* Menus e Navegação do Estudo */}
-        <nav className="flex-1 overflow-y-auto p-3 space-y-5">
+        <nav className="flex-1 overflow-y-auto overscroll-contain p-3 space-y-5">
           {/* GRUPO 1: ATENDIMENTO CLÍNICO */}
           <div>
             <p className="px-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">

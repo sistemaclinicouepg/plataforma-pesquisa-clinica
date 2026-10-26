@@ -908,7 +908,7 @@ function FormBuilderContent() {
   const selectedProjectObj = projects.find((p) => p.id === selectedProjectId);
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] bg-slate-50 font-sans text-slate-800 flex flex-col">
+    <div className="flex-1 bg-slate-50 font-sans text-slate-800 flex flex-col">
       <div className="flex-1 flex w-full relative">
         <StudySidebar
           projectId={selectedProjectId}
@@ -918,7 +918,7 @@ function FormBuilderContent() {
           setMobileMenuOpen={setMobileMenuOpen}
         />
 
-        <div className="flex-1 min-w-0 flex flex-col pb-28">
+        <div className="flex-1 min-w-0 flex flex-col pb-8 sm:pb-12">
           {/* Barra Superior Mobile para Abrir Sidebar */}
           <StudyMobileBar
             projectName={selectedProjectObj?.name}
