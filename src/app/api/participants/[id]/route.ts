@@ -2,6 +2,76 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/auth';
 
+export async function GET(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      return NextResponse.json(
+        { error: 'Não autorizado. Autenticação de pesquisador necessária.' },
+        { status: 401 }
+      );
+    }
+
+    const participant = await prisma.participant.findUnique({
+      where: { id },
+      include: {
+        patient: true,
+        project: {
+          include: {
+            forms: { orderBy: { createdAt: 'desc' } },
+          },
+        },
+        sessions: {
+          orderBy: { sessionNumber: 'asc' },
+        },
+        responses: {
+          include: {
+            form: { select: { id: true, title: true, description: true, questionsJson: true } },
+          },
+          orderBy: { submittedAt: 'desc' },
+        },
+      },
+    });
+
+    if (!participant) {
+      return NextResponse.json({ error: 'Participante não encontrado.' }, { status: 404 });
+    }
+
+    let isBlinded = false;
+    if (currentUser.role !== 'ADMIN') {
+      const member = await prisma.projectMember.findFirst({
+        where: { projectId: participant.projectId, userId: currentUser.id },
+      });
+      if (!member) {
+        return NextResponse.json(
+          { error: 'Acesso negado. Você não é membro deste projeto.' },
+          { status: 403 }
+        );
+      }
+      if (member.isBlinded) {
+        isBlinded = true;
+      }
+    }
+
+    const participantResponse = {
+      ...participant,
+      ...(isBlinded && { group: 'OCULTO (Avaliador Cego)' }),
+    };
+
+    return NextResponse.json({ participant: participantResponse, isBlinded });
+  } catch (error) {
+    console.error('Erro ao buscar participante:', error);
+    return NextResponse.json(
+      { error: 'Erro ao carregar dados do participante.' },
+      { status: 500 }
+    );
+  }
+}
+
 export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> }

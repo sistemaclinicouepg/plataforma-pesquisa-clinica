@@ -857,43 +857,9 @@ function DashboardContent() {
 
   const [refreshingResponses, setRefreshingResponses] = useState(false);
 
-  const handleOpenResponses = async (part: Participant, defaultTab?: 'forms' | 'scales' | 'export') => {
-    setResponsesParticipant(part);
-    const hasInitialForms = (part.responses && part.responses.length > 0);
-    const chosenTab = defaultTab || (hasInitialForms ? 'forms' : 'scales');
-    setResponsesModalTab(chosenTab);
-    setShowResponsesModal(true);
-    setCopiedTSV(false);
-    try {
-      setRefreshingResponses(true);
-      const res = await fetch(`/api/responses?participantId=${part.id}&projectId=${project?.id || ''}`);
-      if (res.ok) {
-        const data = await res.json();
-        if (data.responses) {
-          const freshResponses = data.responses;
-          const freshSessions = data.sessions && data.sessions.length > 0 ? data.sessions : part.sessions;
-          setResponsesParticipant((prev) => (prev && prev.id === part.id ? {
-            ...prev,
-            responses: freshResponses,
-            sessions: freshSessions,
-          } : prev));
-          setProject((prev) => {
-            if (!prev) return prev;
-            return {
-              ...prev,
-              participants: (prev.participants || []).map((p) =>
-                p.id === part.id ? { ...p, responses: freshResponses, sessions: freshSessions } : p
-              ),
-            };
-          });
-          if (!defaultTab && freshResponses.length > 0) {
-            setResponsesModalTab('forms');
-          }
-        }
-      }
-    } catch {} finally {
-      setRefreshingResponses(false);
-    }
+  const handleOpenResponses = (part: Participant, defaultTab?: 'forms' | 'scales' | 'export') => {
+    const tabParam = defaultTab ? `&tab=${defaultTab}` : '';
+    router.push(`/resultados?participantId=${part.id}&projectId=${project?.id || ''}${tabParam}`);
   };
 
   const handleToggleUnlock = async (
@@ -3442,15 +3408,15 @@ function DashboardContent() {
                                     <span>Ficha</span>
                                   </button>
 
-                                  {/* Respostas das Escalas & Questionários */}
+                                  {/* Resultados das Escalas & Questionários */}
                                   <button
                                     type="button"
                                     onClick={() => handleOpenResponses(part)}
                                     className="h-8 px-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg text-xs font-bold transition inline-flex items-center justify-center gap-1 shadow-2xs shrink-0 cursor-pointer"
-                                    title="Visualizar todas as respostas de escalas de dor (EVA), diários, questionários e exportar para bioestatística"
+                                    title="Abrir página dedicada com todas as respostas de escalas de dor (EVA), diários, questionários e bioestatística"
                                   >
                                     <BarChart3 className="w-3.5 h-3.5 text-indigo-600" />
-                                    <span>Respostas</span>
+                                    <span>Resultados</span>
                                   </button>
 
                                   {/* WhatsApp / Agendamento */}
@@ -3510,7 +3476,7 @@ function DashboardContent() {
                                           type="button"
                                           onClick={() => {
                                             setActiveRowMenu(null);
-                                            handleOpenResponses(part);
+                                            handleOpenResponses(part, 'forms');
                                           }}
                                           className="w-full px-3 py-2 text-left hover:bg-slate-50 flex items-center justify-between text-slate-700 transition cursor-pointer"
                                         >
