@@ -12,6 +12,27 @@ const INSTITUTIONAL_USERS: Record<
   string,
   { id: string; name: string; role: string; passwords: string[]; isApproved: boolean }
 > = {
+  'admin@uepg.br': {
+    id: '66bd6d23-08ed-45a4-a760-607657267231',
+    name: 'Administrador Geral',
+    role: 'ADMIN',
+    passwords: ['admin', '123', 'admin123'],
+    isApproved: true,
+  },
+  'administrador@uepg.br': {
+    id: '66bd6d23-08ed-45a4-a760-607657267231',
+    name: 'Administrador Geral',
+    role: 'ADMIN',
+    passwords: ['admin', '123', 'admin123'],
+    isApproved: true,
+  },
+  'alessandra@uepg.br': {
+    id: '66bd6d23-08ed-45a4-a760-607657267231',
+    name: 'Dra. Alessandra Reis',
+    role: 'ADMIN',
+    passwords: ['admin', '123', 'alessandra123'],
+    isApproved: true,
+  },
   'pesquisadora@uepg.br': {
     id: '6a3acd06-9687-43d0-a6ab-db16614b6ade',
     name: 'Dra. Roberta Micheten Dias',
@@ -19,28 +40,16 @@ const INSTITUTIONAL_USERS: Record<
     passwords: ['123', 'admin', 'roberta123'],
     isApproved: true,
   },
-  'admin@uepg.br': {
-    id: '66bd6d23-08ed-45a4-a760-607657267231',
-    name: 'Dra. Alessandra Reis (Admin)',
-    role: 'ADMIN',
-    passwords: ['admin', '123'],
-    isApproved: true,
-  },
-  'carlos@uepg.br': {
-    id: '61a3f075-ec0a-4f1a-98a8-034f02b9c46b',
-    name: 'Carlos Eduardo (Mestrando)',
+  'roberta@uepg.br': {
+    id: '6a3acd06-9687-43d0-a6ab-db16614b6ade',
+    name: 'Dra. Roberta Micheten Dias',
     role: 'RESEARCHER',
-    passwords: ['123', 'carlos123'],
+    passwords: ['123', 'admin', 'roberta123'],
     isApproved: true,
-  },
-  'pendente@uepg.br': {
-    id: '8bd46c0c-560c-4ab0-b1eb-ab35a253ac9b',
-    name: 'Lucas Penteado (Mestrando - Pendente)',
-    role: 'RESEARCHER',
-    passwords: ['123'],
-    isApproved: false,
   },
 };
+
+const ALLOWED_EMAILS = Object.keys(INSTITUTIONAL_USERS);
 
 export async function POST(req: Request) {
   try {

@@ -11,10 +11,11 @@ import {
 export const dynamic = 'force-dynamic';
 
 const INSTITUTIONAL_USERS: Record<string, { passwords: string[] }> = {
+  'admin@uepg.br': { passwords: ['admin', '123', 'admin123'] },
+  'administrador@uepg.br': { passwords: ['admin', '123', 'admin123'] },
+  'alessandra@uepg.br': { passwords: ['admin', '123', 'alessandra123'] },
   'pesquisadora@uepg.br': { passwords: ['123', 'admin', 'roberta123'] },
-  'admin@uepg.br': { passwords: ['admin', '123'] },
-  'carlos@uepg.br': { passwords: ['123', 'carlos123'] },
-  'pendente@uepg.br': { passwords: ['123'] },
+  'roberta@uepg.br': { passwords: ['123', 'admin', 'roberta123'] },
 };
 
 /**

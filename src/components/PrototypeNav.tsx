@@ -206,22 +206,7 @@ export default function PrototypeNav() {
               title="Coordenação / Admin (Dra. Alessandra)"
             >
               <Shield className="w-3 h-3 text-purple-600" />
-              <span>Admin</span>
-            </button>
-
-            <button
-              type="button"
-              disabled={switching}
-              onClick={() => handleQuickSwitch('carlos@uepg.br', '123')}
-              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md transition ${
-                currentUser?.email === 'carlos@uepg.br'
-                  ? 'bg-white text-amber-700 font-bold shadow-2xs'
-                  : 'text-slate-600 hover:bg-white/60'
-              }`}
-              title="Avaliador Cego (Carlos)"
-            >
-              <GraduationCap className="w-3 h-3 text-amber-600" />
-              <span>Avaliador Cego</span>
+              <span>Admin (Dra. Alessandra)</span>
             </button>
           </div>
 

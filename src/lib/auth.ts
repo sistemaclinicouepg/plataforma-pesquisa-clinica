@@ -126,7 +126,10 @@ export async function getCurrentUser() {
     if (!verified?.id) return null;
 
     const role =
-      verified.email === 'admin@uepg.br'
+      verified.email === 'admin@uepg.br' ||
+      verified.email === 'administrador@uepg.br' ||
+      verified.email === 'alessandra@uepg.br' ||
+      verified.role === 'ADMIN'
         ? 'ADMIN'
         : verified.role || 'RESEARCHER';
 
@@ -167,7 +170,12 @@ export async function checkProjectPermission(
     };
   }
 
-  if (user.role === 'ADMIN' || user.email === 'admin@uepg.br') {
+  if (
+    user.role === 'ADMIN' ||
+    user.email === 'admin@uepg.br' ||
+    user.email === 'administrador@uepg.br' ||
+    user.email === 'alessandra@uepg.br'
+  ) {
     return { authorized: true, user };
   }
 
