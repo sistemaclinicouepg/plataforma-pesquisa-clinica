@@ -14,3 +14,6 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - Todo deploy deve ocorrer **exclusivamente via Git**: basta realizar `git push origin main`.
 - A Cloudflare detecta o commit automaticamente, executa a compilação em ambiente isolado e publica a nova versão com rastreabilidade total (autor, hash e mensagem do commit).
 
+## Guia de Continuidade de Projeto (Onboarding)
+- Consulte sempre o arquivo [ANTIGRAVITY_ONBOARDING.md](file:///Users/emigliorini/Programação/Pesquisa%20clínica%20UEPG/ANTIGRAVITY_ONBOARDING.md) para detalhes completos de arquitetura, variáveis de ambiente (.env), credenciais autorizadas, estrutura de banco de dados e histórico recente de tarefas.
+
