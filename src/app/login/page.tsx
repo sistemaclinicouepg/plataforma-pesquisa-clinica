@@ -209,28 +209,8 @@ export default function LoginPage() {
           </button>
         </form>
 
-        {/* Informação sobre os Acessos Autorizados */}
-        <div className="pt-4 border-t border-slate-100 text-center space-y-1.5">
-          <p className="text-[11px] text-slate-400 font-medium">
-            Acesso autorizado para a equipe de pesquisa:
-          </p>
-          <div className="flex flex-wrap items-center justify-center gap-1.5">
-            <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-semibold text-[10px]">
-              Administrador Geral
-            </span>
-            <span className="text-slate-300">•</span>
-            <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-semibold text-[10px]">
-              Dra. Alessandra
-            </span>
-            <span className="text-slate-300">•</span>
-            <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-semibold text-[10px]">
-              Dra. Roberta
-            </span>
-          </div>
-        </div>
-
         {/* Link para o Portal do Paciente */}
-        <div className="pt-2 text-center border-t border-slate-100">
+        <div className="pt-4 text-center border-t border-slate-100">
           <Link
             href="/paciente"
             className="text-xs text-emerald-700 hover:text-emerald-800 font-semibold inline-flex items-center space-x-1.5 transition"
