@@ -1906,6 +1906,45 @@ function DashboardContent() {
     await handleSaveProjectGroups(combined);
   };
 
+  const handleAutoRandomize = () => {
+    if (!availableStudyGroups || availableStudyGroups.length === 0) return;
+
+    const isSplitMouth = studyProtocol.studyDesign === 'SPLIT_MOUTH' ||
+      availableStudyGroups.some((g) => g.toLowerCase().includes('direito') || g.toLowerCase().includes('boca'));
+
+    if (isSplitMouth && availableStudyGroups.length >= 2) {
+      const gA = availableStudyGroups[0];
+      const gB = availableStudyGroups[1];
+      const combo1 = `Direito: ${gA} | Esquerdo: ${gB}`;
+      const combo2 = `Direito: ${gB} | Esquerdo: ${gA}`;
+
+      const count1 = (project?.participants || []).filter((p) => p.group === combo1).length;
+      const count2 = (project?.participants || []).filter((p) => p.group === combo2).length;
+
+      let selectedCombo = '';
+      if (count1 < count2) {
+        selectedCombo = combo1;
+      } else if (count2 < count1) {
+        selectedCombo = combo2;
+      } else {
+        selectedCombo = Math.random() < 0.5 ? combo1 : combo2;
+      }
+      setAllocatedGroupInput(selectedCombo);
+      return;
+    }
+
+    // Grupos Paralelos: Selecionar o grupo com menor frequência para manter balanceamento
+    const groupCounts = availableStudyGroups.map((grp) => ({
+      grp,
+      count: (project?.participants || []).filter((p) => p.group === grp).length,
+    }));
+
+    const minCount = Math.min(...groupCounts.map((gc) => gc.count));
+    const candidateGroups = groupCounts.filter((gc) => gc.count === minCount);
+    const picked = candidateGroups[Math.floor(Math.random() * candidateGroups.length)].grp;
+    setAllocatedGroupInput(picked);
+  };
+
   const handleSaveAllocation = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!allocatingParticipant) return;
@@ -3373,6 +3412,15 @@ function DashboardContent() {
                                         <Lock className="w-2.5 h-2.5 text-slate-400" />
                                         <span>Oculto</span>
                                       </span>
+                                    ) : part.group && part.group.includes('Direito:') ? (
+                                      <div className="flex flex-col gap-0.5 text-[9px] font-semibold leading-tight text-left">
+                                        <span className="text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200 truncate max-w-[150px]">
+                                          {part.group.split('|')[0]?.trim()}
+                                        </span>
+                                        <span className="text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 truncate max-w-[150px]">
+                                          {part.group.split('|')[1]?.trim()}
+                                        </span>
+                                      </div>
                                     ) : (
                                       part.group || 'Pendente'
                                     )}
@@ -5038,6 +5086,85 @@ function DashboardContent() {
             </div>
 
             <form onSubmit={handleSaveAllocation} className="flex-1 overflow-y-auto p-5 space-y-4 text-xs">
+              {/* Randomização Automatizada em Bloco Balanceado */}
+              <div className="p-3.5 bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-200 rounded-2xl space-y-2.5 shadow-2xs">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-indigo-950 text-xs flex items-center gap-1.5">
+                    <Shuffle className="w-3.5 h-3.5 text-indigo-600" />
+                    <span>Randomização Automatizada em Bloco</span>
+                  </span>
+                  <span className="text-[10px] text-indigo-800 font-semibold bg-indigo-100 px-2 py-0.5 rounded-full border border-indigo-200">
+                    Padrão CONSORT / GCP
+                  </span>
+                </div>
+                <p className="text-[11px] text-indigo-900/80 leading-relaxed">
+                  Sorteia o grupo (ou a combinação de lados no split-mouth) mantendo o balanceamento estocástico de voluntários entre os braços para eliminar viés de seleção.
+                </p>
+                <button
+                  type="button"
+                  onClick={handleAutoRandomize}
+                  className="w-full py-2 px-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-xs transition flex items-center justify-center gap-2 cursor-pointer shadow-xs"
+                >
+                  <Shuffle className="w-4 h-4" />
+                  <span>Sortear / Randomizar Paciente Agora</span>
+                </button>
+              </div>
+
+              {/* Seletor de Lateralidade para Boca Dividida (Split-Mouth) */}
+              {(studyProtocol.studyDesign === 'SPLIT_MOUTH' || availableStudyGroups.length >= 2) && (
+                <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-slate-800 text-xs flex items-center gap-1.5">
+                      <span>👄</span>
+                      <span>Configuração por Hemi-arco (Boca Dividida)</span>
+                    </span>
+                    <span className="text-[10px] text-slate-500">Q1/Q4 vs Q2/Q3</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                    <div>
+                      <label className="block text-[10px] uppercase font-bold text-slate-500 mb-1">
+                        Hemi-arco Direito (13-11 / 43-41):
+                      </label>
+                      <select
+                        value={allocatedGroupInput.includes('Direito:') ? (allocatedGroupInput.split('|')[0]?.replace('Direito:', '').trim() || '') : ''}
+                        onChange={(e) => {
+                          const rightG = e.target.value;
+                          const currentLeft = allocatedGroupInput.includes('Esquerdo:') ? (allocatedGroupInput.split('|')[1]?.replace('Esquerdo:', '').trim() || '') : '';
+                          const leftG = currentLeft || (availableStudyGroups.find(g => g !== rightG) || '');
+                          setAllocatedGroupInput(`Direito: ${rightG} | Esquerdo: ${leftG}`);
+                        }}
+                        className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg bg-white text-xs text-slate-800 font-semibold focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">Selecione o grupo/gel...</option>
+                        {availableStudyGroups.map((g) => (
+                          <option key={g} value={g}>{g}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] uppercase font-bold text-slate-500 mb-1">
+                        Hemi-arco Esquerdo (21-23 / 31-33):
+                      </label>
+                      <select
+                        value={allocatedGroupInput.includes('Esquerdo:') ? (allocatedGroupInput.split('|')[1]?.replace('Esquerdo:', '').trim() || '') : ''}
+                        onChange={(e) => {
+                          const leftG = e.target.value;
+                          const currentRight = allocatedGroupInput.includes('Direito:') ? (allocatedGroupInput.split('|')[0]?.replace('Direito:', '').trim() || '') : '';
+                          const rightG = currentRight || (availableStudyGroups.find(g => g !== leftG) || '');
+                          setAllocatedGroupInput(`Direito: ${rightG} | Esquerdo: ${leftG}`);
+                        }}
+                        className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg bg-white text-xs text-slate-800 font-semibold focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">Selecione o grupo/gel...</option>
+                        {availableStudyGroups.map((g) => (
+                          <option key={g} value={g}>{g}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Seção 1: Grupos Salvos para este Estudo */}
               <div>
                 <div className="flex items-center justify-between mb-2">
@@ -7567,6 +7694,12 @@ function DashboardContent() {
                             TCLE Assinado
                           </span>
                         )}
+                        {!isBlindedUser && currentSessionParticipant.group && (
+                          <span className="inline-flex items-center gap-1 text-[11px] text-blue-900 font-bold bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200">
+                            <Shuffle className="w-3 h-3 text-blue-600" />
+                            <span>{currentSessionParticipant.group}</span>
+                          </span>
+                        )}
                       </div>
                     )}
                   </div>
@@ -8074,6 +8207,196 @@ function DashboardContent() {
                                 </div>
                               </div>
                             )}
+
+                            {/* Feedback Clínico e Bioestatístico em Tempo Real */}
+                            {currentSessionForm.sessionNumber === 1 ? (
+                              <div className="p-3 bg-amber-50/70 border border-amber-200 rounded-xl text-center text-xs text-amber-900 flex items-center justify-center gap-2">
+                                <Info className="w-4 h-4 text-amber-600 shrink-0" />
+                                <span>
+                                  <strong>Linha de Base (Baseline):</strong> A cor aferida nesta Sessão 1 será salva como o padrão inicial de referência para o cálculo automático de eficácia clareadora (ΔSGU e ΔE*) nas próximas sessões.
+                                </span>
+                              </div>
+                            ) : (
+                              (() => {
+                                const bSess = currentSessionParticipant?.sessions?.find((s) => s.sessionNumber === 1);
+                                const bColor = bSess ? parseColorAssessmentData(bSess.notes) : null;
+
+                                // VITA Classical
+                                const bSguR = bSess?.shadeRight ? getVitaSGU(bSess.shadeRight) : (bColor?.vitaClassical?.sguRight ?? 0);
+                                const bSguL = bSess?.shadeLeft ? getVitaSGU(bSess.shadeLeft) : (bColor?.vitaClassical?.sguLeft ?? 0);
+                                const bShadeR = bSess?.shadeRight || bColor?.vitaClassical?.shadeRight || '';
+                                const bShadeL = bSess?.shadeLeft || bColor?.vitaClassical?.shadeLeft || '';
+                                const curSguR = colorAssessment.vitaClassical?.sguRight ?? (currentSessionForm.shadeRight ? getVitaSGU(currentSessionForm.shadeRight) : 0);
+                                const curSguL = colorAssessment.vitaClassical?.sguLeft ?? (currentSessionForm.shadeLeft ? getVitaSGU(currentSessionForm.shadeLeft) : 0);
+                                const curShadeR = colorAssessment.vitaClassical?.shadeRight || currentSessionForm.shadeRight || '';
+                                const curShadeL = colorAssessment.vitaClassical?.shadeLeft || currentSessionForm.shadeLeft || '';
+                                const deltaClassR = (bSguR > 0 && curSguR > 0) ? (bSguR - curSguR) : null;
+                                const deltaClassL = (bSguL > 0 && curSguL > 0) ? (bSguL - curSguL) : null;
+
+                                // VITA 3D
+                                const b3dR = bColor?.vita3D?.sguRight ?? 0;
+                                const b3dL = bColor?.vita3D?.sguLeft ?? 0;
+                                const b3dLabelR = bColor?.vita3D?.labelRight || '';
+                                const b3dLabelL = bColor?.vita3D?.labelLeft || '';
+                                const cur3dR = colorAssessment.vita3D?.sguRight ?? 0;
+                                const cur3dL = colorAssessment.vita3D?.sguLeft ?? 0;
+                                const cur3dLabelR = colorAssessment.vita3D?.labelRight || '';
+                                const cur3dLabelL = colorAssessment.vita3D?.labelLeft || '';
+                                const delta3dR = (b3dR > 0 && cur3dR > 0) ? (b3dR - cur3dR) : null;
+                                const delta3dL = (b3dL > 0 && cur3dL > 0) ? (b3dL - cur3dL) : null;
+
+                                // Easyshade
+                                const bEasyR = bColor?.easyshade?.rightL !== undefined && bColor?.easyshade?.rightL !== null ? bColor.easyshade : null;
+                                const bEasyL = bColor?.easyshade?.leftL !== undefined && bColor?.easyshade?.leftL !== null ? bColor.easyshade : null;
+                                const curEasyR = colorAssessment.easyshade?.rightL !== undefined && colorAssessment.easyshade?.rightL !== null ? colorAssessment.easyshade : null;
+                                const curEasyL = colorAssessment.easyshade?.leftL !== undefined && colorAssessment.easyshade?.leftL !== null ? colorAssessment.easyshade : null;
+
+                                let deltaEasyR: { dE: number; dL: number; db: number } | null = null;
+                                if (bEasyR?.rightL != null && curEasyR?.rightL != null) {
+                                  const dL = Number(curEasyR.rightL) - Number(bEasyR.rightL);
+                                  const da = Number(curEasyR.rightA ?? 0) - Number(bEasyR.rightA ?? 0);
+                                  const db = Number(curEasyR.rightB ?? 0) - Number(bEasyR.rightB ?? 0);
+                                  deltaEasyR = {
+                                    dE: Number(Math.sqrt(dL * dL + da * da + db * db).toFixed(2)),
+                                    dL: Number(dL.toFixed(2)),
+                                    db: Number(db.toFixed(2)),
+                                  };
+                                }
+
+                                let deltaEasyL: { dE: number; dL: number; db: number } | null = null;
+                                if (bEasyL?.leftL != null && curEasyL?.leftL != null) {
+                                  const dL = Number(curEasyL.leftL) - Number(bEasyL.leftL);
+                                  const da = Number(curEasyL.leftA ?? 0) - Number(bEasyL.leftA ?? 0);
+                                  const db = Number(curEasyL.leftB ?? 0) - Number(bEasyL.leftB ?? 0);
+                                  deltaEasyL = {
+                                    dE: Number(Math.sqrt(dL * dL + da * da + db * db).toFixed(2)),
+                                    dL: Number(dL.toFixed(2)),
+                                    db: Number(db.toFixed(2)),
+                                  };
+                                }
+
+                                const hasAnyDelta = deltaClassR !== null || deltaClassL !== null || delta3dR !== null || delta3dL !== null || deltaEasyR !== null || deltaEasyL !== null;
+
+                                return (
+                                  <div className="p-4 bg-gradient-to-br from-emerald-50/90 via-teal-50/70 to-blue-50/90 border-2 border-emerald-300 rounded-2xl space-y-3 shadow-xs">
+                                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-emerald-200/80 pb-2">
+                                      <div className="flex items-center gap-2">
+                                        <div className="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center shadow-xs">
+                                          <Sparkles className="w-4 h-4" />
+                                        </div>
+                                        <div>
+                                          <span className="font-bold text-emerald-950 text-xs block">
+                                            Evolução do Clareamento em Tempo Real (vs. Sessão 1 Baseline)
+                                          </span>
+                                          <span className="text-[10px] text-emerald-800">
+                                            Cálculo imediato de eficácia para acompanhamento clínico na cadeira
+                                          </span>
+                                        </div>
+                                      </div>
+                                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-600 text-white shadow-2xs">
+                                        Bioestatística Imediata
+                                      </span>
+                                    </div>
+
+                                    {!bSess ? (
+                                      <p className="text-[11px] text-slate-500 italic">
+                                        Sessão 1 (Baseline) ainda não registrada para este paciente. Os deltas de clareamento serão exibidos assim que a Linha de Base for salva.
+                                      </p>
+                                    ) : !hasAnyDelta ? (
+                                      <p className="text-[11px] text-slate-600">
+                                        Selecione a cor atual nos modelos acima para visualizar a variação de clareamento instantânea em relação à Sessão 1.
+                                      </p>
+                                    ) : (
+                                      <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 pt-0.5">
+                                        {/* Card VITA Classical */}
+                                        {activeModels.includes('VITA_CLASSICAL') && (
+                                          <div className="bg-white/95 p-3 rounded-xl border border-emerald-200/90 shadow-2xs space-y-2">
+                                            <div className="flex items-center justify-between">
+                                              <span className="text-[10px] uppercase font-bold text-slate-600">VITA Classical</span>
+                                              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-900">ΔSGU (1-16)</span>
+                                            </div>
+                                            <div className="space-y-1 text-xs">
+                                              <div className="flex items-center justify-between bg-slate-50 px-2 py-1 rounded-md">
+                                                <span className="text-slate-600 text-[11px]">Dir (13-11):</span>
+                                                {deltaClassR !== null ? (
+                                                  <span className={`font-mono font-bold ${deltaClassR > 0 ? 'text-emerald-700' : deltaClassR === 0 ? 'text-slate-600' : 'text-rose-600'}`}>
+                                                    {deltaClassR > 0 ? `+${deltaClassR}` : deltaClassR} tons ({bShadeR} → {curShadeR})
+                                                  </span>
+                                                ) : <span className="text-slate-400">Pendente</span>}
+                                              </div>
+                                              <div className="flex items-center justify-between bg-slate-50 px-2 py-1 rounded-md">
+                                                <span className="text-slate-600 text-[11px]">Esq (21-23):</span>
+                                                {deltaClassL !== null ? (
+                                                  <span className={`font-mono font-bold ${deltaClassL > 0 ? 'text-emerald-700' : deltaClassL === 0 ? 'text-slate-600' : 'text-rose-600'}`}>
+                                                    {deltaClassL > 0 ? `+${deltaClassL}` : deltaClassL} tons ({bShadeL} → {curShadeL})
+                                                  </span>
+                                                ) : <span className="text-slate-400">Pendente</span>}
+                                              </div>
+                                            </div>
+                                          </div>
+                                        )}
+
+                                        {/* Card VITA 3D */}
+                                        {activeModels.includes('VITA_3D') && (
+                                          <div className="bg-white/95 p-3 rounded-xl border border-indigo-200/90 shadow-2xs space-y-2">
+                                            <div className="flex items-center justify-between">
+                                              <span className="text-[10px] uppercase font-bold text-indigo-900">VITA 3D-MASTER</span>
+                                              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-900">ΔSGU 3D (1-29)</span>
+                                            </div>
+                                            <div className="space-y-1 text-xs">
+                                              <div className="flex items-center justify-between bg-indigo-50/50 px-2 py-1 rounded-md">
+                                                <span className="text-slate-600 text-[11px]">Dir (13-11):</span>
+                                                {delta3dR !== null ? (
+                                                  <span className={`font-mono font-bold ${delta3dR > 0 ? 'text-emerald-700' : delta3dR === 0 ? 'text-slate-600' : 'text-rose-600'}`}>
+                                                    {delta3dR > 0 ? `+${delta3dR}` : delta3dR} níveis ({b3dLabelR || `SGU ${b3dR}`} → {cur3dLabelR || `SGU ${cur3dR}`})
+                                                  </span>
+                                                ) : <span className="text-slate-400">Pendente</span>}
+                                              </div>
+                                              <div className="flex items-center justify-between bg-indigo-50/50 px-2 py-1 rounded-md">
+                                                <span className="text-slate-600 text-[11px]">Esq (21-23):</span>
+                                                {delta3dL !== null ? (
+                                                  <span className={`font-mono font-bold ${delta3dL > 0 ? 'text-emerald-700' : delta3dL === 0 ? 'text-slate-600' : 'text-rose-600'}`}>
+                                                    {delta3dL > 0 ? `+${delta3dL}` : delta3dL} níveis ({b3dLabelL || `SGU ${b3dL}`} → {cur3dLabelL || `SGU ${cur3dL}`})
+                                                  </span>
+                                                ) : <span className="text-slate-400">Pendente</span>}
+                                              </div>
+                                            </div>
+                                          </div>
+                                        )}
+
+                                        {/* Card Easyshade */}
+                                        {activeModels.includes('VITA_EASYSHADE') && (
+                                          <div className="bg-white/95 p-3 rounded-xl border border-teal-200/90 shadow-2xs space-y-2">
+                                            <div className="flex items-center justify-between">
+                                              <span className="text-[10px] uppercase font-bold text-teal-900">Easyshade</span>
+                                              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-teal-100 text-teal-900">ΔE* & ΔL* CIELAB</span>
+                                            </div>
+                                            <div className="space-y-1 text-xs">
+                                              <div className="flex items-center justify-between bg-teal-50/50 px-2 py-1 rounded-md">
+                                                <span className="text-slate-600 text-[11px]">Dir (13-11):</span>
+                                                {deltaEasyR !== null ? (
+                                                  <span className="font-mono font-bold text-teal-900 text-[11px]">
+                                                    ΔE* = <strong className="text-emerald-700 text-xs">{deltaEasyR.dE}</strong> (ΔL*: {deltaEasyR.dL > 0 ? `+${deltaEasyR.dL}` : deltaEasyR.dL}, Δb*: {deltaEasyR.db})
+                                                  </span>
+                                                ) : <span className="text-slate-400">Pendente</span>}
+                                              </div>
+                                              <div className="flex items-center justify-between bg-teal-50/50 px-2 py-1 rounded-md">
+                                                <span className="text-slate-600 text-[11px]">Esq (21-23):</span>
+                                                {deltaEasyL !== null ? (
+                                                  <span className="font-mono font-bold text-teal-900 text-[11px]">
+                                                    ΔE* = <strong className="text-emerald-700 text-xs">{deltaEasyL.dE}</strong> (ΔL*: {deltaEasyL.dL > 0 ? `+${deltaEasyL.dL}` : deltaEasyL.dL}, Δb*: {deltaEasyL.db})
+                                                  </span>
+                                                ) : <span className="text-slate-400">Pendente</span>}
+                                              </div>
+                                            </div>
+                                          </div>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })()
+                            )}
                           </div>
                         );
                       })()}
@@ -8320,12 +8643,66 @@ function DashboardContent() {
                                 <span className="block font-bold text-slate-800">Nenhuma dor (0.0)</span>
                                 <span className="text-[10px] text-slate-400 leading-tight block">Ausência total de sensibilidade</span>
                               </div>
-                              <div className="text-center font-mono font-bold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-md border border-blue-200 text-xs">
-                                Score: {currentSessionForm.painScore0h.toFixed(1)}
+                              <div className="flex items-center gap-1.5 justify-center">
+                                <button
+                                  type="button"
+                                  onClick={() => setCurrentSessionForm({
+                                    ...currentSessionForm,
+                                    painScore0h: Math.max(0, parseFloat((currentSessionForm.painScore0h - 0.5).toFixed(1))),
+                                  })}
+                                  className="w-6 h-6 rounded-md bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs flex items-center justify-center cursor-pointer"
+                                  title="Diminuir 0.5"
+                                >
+                                  -
+                                </button>
+                                <div className="text-center font-mono font-bold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-md border border-blue-200 text-xs shadow-2xs">
+                                  Score: {currentSessionForm.painScore0h.toFixed(1)}
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => setCurrentSessionForm({
+                                    ...currentSessionForm,
+                                    painScore0h: Math.min(10, parseFloat((currentSessionForm.painScore0h + 0.5).toFixed(1))),
+                                  })}
+                                  className="w-6 h-6 rounded-md bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs flex items-center justify-center cursor-pointer"
+                                  title="Aumentar 0.5"
+                                >
+                                  +
+                                </button>
                               </div>
                               <div className="text-right max-w-[140px]">
                                 <span className="block font-bold text-slate-800">Pior dor possível (10.0)</span>
                                 <span className="text-[10px] text-slate-400 leading-tight block">Intensidade máxima suportável</span>
+                              </div>
+                            </div>
+
+                            {/* Seletor Rápido de Números Inteiros (Pills de Acesso Rápido para Luva / Touch) */}
+                            <div className="pt-1.5 border-t border-slate-200/80">
+                              <div className="flex items-center justify-between mb-1 text-[10px] text-slate-500">
+                                <span>Acesso rápido com toque:</span>
+                                <span>0 a 10</span>
+                              </div>
+                              <div className="flex items-center justify-between gap-1 overflow-x-auto pb-0.5">
+                                {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => {
+                                  const isSel = Math.round(currentSessionForm.painScore0h) === num;
+                                  return (
+                                    <button
+                                      key={num}
+                                      type="button"
+                                      onClick={() => setCurrentSessionForm({
+                                        ...currentSessionForm,
+                                        painScore0h: num,
+                                      })}
+                                      className={`flex-1 h-7 rounded-lg text-xs font-bold transition flex items-center justify-center cursor-pointer ${
+                                        isSel
+                                          ? 'bg-blue-600 text-white shadow-2xs scale-105 ring-1 ring-blue-600'
+                                          : 'bg-white border border-slate-200 hover:bg-slate-100 text-slate-700'
+                                      }`}
+                                    >
+                                      {num}
+                                    </button>
+                                  );
+                                })}
                               </div>
                             </div>
                           </div>

@@ -308,6 +308,7 @@ export const PRESET_QUESTIONNAIRES_CATALOG: AvailableQuestionnaireOption[] = [
 
 export type StudyProtocolConfig = {
   specialty?: ResearchSpecialty; // Área/Linha de pesquisa clínica do estudo
+  studyDesign?: 'PARALLEL' | 'SPLIT_MOUTH' | string; // Desenho metodológico (Paralelo vs Boca Dividida)
   projectPrefix?: string; // Prefixo personalizado do código dos participantes (ex: 'P01', 'EXP', 'CLAR')
   totalSessions: number;
   sessions: StudySessionProtocol[];
@@ -1188,8 +1189,11 @@ export function parseStudyProtocol(templateStringOrObj: any): StudyProtocolConfi
     new Set(rawGroups.map((g: unknown) => String(g).trim()).filter(Boolean))
   );
 
+  const studyDesign = studyProtocol.studyDesign || parsed.studyDesign || (groups.some((g: string) => g.toLowerCase().includes('direito') || g.toLowerCase().includes('boca')) ? 'SPLIT_MOUTH' : 'PARALLEL');
+
   return {
     specialty,
+    studyDesign,
     projectPrefix: studyProtocol.projectPrefix ? String(studyProtocol.projectPrefix).trim().toUpperCase() : undefined,
     totalSessions: Number(studyProtocol.totalSessions) || sessions.length,
     sessions,

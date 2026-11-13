@@ -4,6 +4,8 @@
  * Suporte para: R, SPSS, Jamovi, GraphPad Prism e Dicionário de Variáveis
  */
 
+import { parseColorAssessmentData } from './unlockProtocol';
+
 export interface ExportDatasetParticipant {
   researchCode: string;
   biologicalSex: string;
@@ -53,6 +55,7 @@ export function buildNumericCSVContent(projectName: string, participants: Export
     'SEXO',
     'IDADE',
     'GRUPO_COD',
+    'GRUPO_NOME',
     'S1_EVA_0H',
     'S1_EVA_1H',
     'S1_EVA_24H',
@@ -77,6 +80,32 @@ export function buildNumericCSVContent(projectName: string, participants: Export
     'R30_SGU_ESQ',
     'DELTA_SGU_DIR',
     'DELTA_SGU_ESQ',
+    // VITA Bleachedguide 3D-MASTER (SGU 1-29)
+    'S1_VITA3D_DIR',
+    'S1_VITA3D_ESQ',
+    'S2_VITA3D_DIR',
+    'S2_VITA3D_ESQ',
+    'DELTA_VITA3D_DIR',
+    'DELTA_VITA3D_ESQ',
+    // VITA Easyshade Espectrofotômetro (CIELAB)
+    'S1_EASY_L_DIR',
+    'S1_EASY_A_DIR',
+    'S1_EASY_B_DIR',
+    'S1_EASY_L_ESQ',
+    'S1_EASY_A_ESQ',
+    'S1_EASY_B_ESQ',
+    'S2_EASY_L_DIR',
+    'S2_EASY_A_DIR',
+    'S2_EASY_B_DIR',
+    'S2_EASY_L_ESQ',
+    'S2_EASY_A_ESQ',
+    'S2_EASY_B_ESQ',
+    'DELTA_E_DIR',
+    'DELTA_E_ESQ',
+    'DELTA_L_DIR',
+    'DELTA_L_ESQ',
+    'DELTA_B_DIR',
+    'DELTA_B_ESQ',
     'EVENTO_ADVERSO_S1',
     'EVENTO_ADVERSO_S2',
     'ANALGESICO_S1',
@@ -106,21 +135,95 @@ export function buildNumericCSVContent(projectName: string, participants: Export
         groupCode = 2;
       }
     }
+    const groupName = p.group ? `"${p.group.replace(/"/g, '""')}"` : '"Pendente"';
 
-    const s1SguR = s1?.shadeRight ? getVitaSGU(s1.shadeRight) : 'NA';
-    const s1SguL = s1?.shadeLeft ? getVitaSGU(s1.shadeLeft) : 'NA';
-    const s2SguR = s2?.shadeRight ? getVitaSGU(s2.shadeRight) : 'NA';
-    const s2SguL = s2?.shadeLeft ? getVitaSGU(s2.shadeLeft) : 'NA';
-    const r14SguR = r14?.shadeRight ? getVitaSGU(r14.shadeRight) : 'NA';
-    const r14SguL = r14?.shadeLeft ? getVitaSGU(r14.shadeLeft) : 'NA';
-    const r30SguR = r30?.shadeRight ? getVitaSGU(r30.shadeRight) : 'NA';
-    const r30SguL = r30?.shadeLeft ? getVitaSGU(r30.shadeLeft) : 'NA';
+    // Parse de dados multiescala armazenados em notas
+    const s1Color = parseColorAssessmentData(s1?.notes);
+    const s2Color = parseColorAssessmentData(s2?.notes);
+    const r14Color = parseColorAssessmentData(r14?.notes);
+    const r30Color = parseColorAssessmentData(r30?.notes);
+
+    // VITA Classical (SGU 1-16)
+    const s1SguR = s1?.shadeRight ? getVitaSGU(s1.shadeRight) : (s1Color?.vitaClassical?.sguRight ?? 'NA');
+    const s1SguL = s1?.shadeLeft ? getVitaSGU(s1.shadeLeft) : (s1Color?.vitaClassical?.sguLeft ?? 'NA');
+    const s2SguR = s2?.shadeRight ? getVitaSGU(s2.shadeRight) : (s2Color?.vitaClassical?.sguRight ?? 'NA');
+    const s2SguL = s2?.shadeLeft ? getVitaSGU(s2.shadeLeft) : (s2Color?.vitaClassical?.sguLeft ?? 'NA');
+    const r14SguR = r14?.shadeRight ? getVitaSGU(r14.shadeRight) : (r14Color?.vitaClassical?.sguRight ?? 'NA');
+    const r14SguL = r14?.shadeLeft ? getVitaSGU(r14.shadeLeft) : (r14Color?.vitaClassical?.sguLeft ?? 'NA');
+    const r30SguR = r30?.shadeRight ? getVitaSGU(r30.shadeRight) : (r30Color?.vitaClassical?.sguRight ?? 'NA');
+    const r30SguL = r30?.shadeLeft ? getVitaSGU(r30.shadeLeft) : (r30Color?.vitaClassical?.sguLeft ?? 'NA');
 
     const latestR = r30SguR !== 'NA' ? r30SguR : (r14SguR !== 'NA' ? r14SguR : s2SguR);
     const latestL = r30SguL !== 'NA' ? r30SguL : (r14SguL !== 'NA' ? r14SguL : s2SguL);
 
     const deltaR = (s1SguR !== 'NA' && latestR !== 'NA') ? Number(s1SguR) - Number(latestR) : 'NA';
     const deltaL = (s1SguL !== 'NA' && latestL !== 'NA') ? Number(s1SguL) - Number(latestL) : 'NA';
+
+    // VITA Bleachedguide 3D-MASTER (SGU 1-29)
+    const s1Vita3dR = s1Color?.vita3D?.sguRight ?? 'NA';
+    const s1Vita3dL = s1Color?.vita3D?.sguLeft ?? 'NA';
+    const s2Vita3dR = s2Color?.vita3D?.sguRight ?? 'NA';
+    const s2Vita3dL = s2Color?.vita3D?.sguLeft ?? 'NA';
+    const r14Vita3dR = r14Color?.vita3D?.sguRight ?? 'NA';
+    const r14Vita3dL = r14Color?.vita3D?.sguLeft ?? 'NA';
+    const r30Vita3dR = r30Color?.vita3D?.sguRight ?? 'NA';
+    const r30Vita3dL = r30Color?.vita3D?.sguLeft ?? 'NA';
+
+    const latestVita3dR = r30Vita3dR !== 'NA' ? r30Vita3dR : (r14Vita3dR !== 'NA' ? r14Vita3dR : (s2Vita3dR !== 'NA' ? s2Vita3dR : 'NA'));
+    const latestVita3dL = r30Vita3dL !== 'NA' ? r30Vita3dL : (r14Vita3dL !== 'NA' ? r14Vita3dL : (s2Vita3dL !== 'NA' ? s2Vita3dL : 'NA'));
+
+    const delta3dR = (s1Vita3dR !== 'NA' && latestVita3dR !== 'NA') ? Number(s1Vita3dR) - Number(latestVita3dR) : 'NA';
+    const delta3dL = (s1Vita3dL !== 'NA' && latestVita3dL !== 'NA') ? Number(s1Vita3dL) - Number(latestVita3dL) : 'NA';
+
+    // VITA Easyshade Espectrofotômetro (L*, a*, b*)
+    const s1EasyLR = s1Color?.easyshade?.rightL ?? 'NA';
+    const s1EasyAR = s1Color?.easyshade?.rightA ?? 'NA';
+    const s1EasyBR = s1Color?.easyshade?.rightB ?? 'NA';
+    const s1EasyLL = s1Color?.easyshade?.leftL ?? 'NA';
+    const s1EasyAL = s1Color?.easyshade?.leftA ?? 'NA';
+    const s1EasyBL = s1Color?.easyshade?.leftB ?? 'NA';
+
+    const s2EasyLR = s2Color?.easyshade?.rightL ?? 'NA';
+    const s2EasyAR = s2Color?.easyshade?.rightA ?? 'NA';
+    const s2EasyBR = s2Color?.easyshade?.rightB ?? 'NA';
+    const s2EasyLL = s2Color?.easyshade?.leftL ?? 'NA';
+    const s2EasyAL = s2Color?.easyshade?.leftA ?? 'NA';
+    const s2EasyBL = s2Color?.easyshade?.leftB ?? 'NA';
+
+    const latestEasy = (r30Color?.easyshade && r30Color.easyshade.rightL !== null) ? r30Color
+      : (r14Color?.easyshade && r14Color.easyshade.rightL !== null) ? r14Color
+      : s2Color;
+
+    const latestEasyLR = latestEasy?.easyshade?.rightL ?? s2EasyLR;
+    const latestEasyAR = latestEasy?.easyshade?.rightA ?? s2EasyAR;
+    const latestEasyBR = latestEasy?.easyshade?.rightB ?? s2EasyBR;
+    const latestEasyLL = latestEasy?.easyshade?.leftL ?? s2EasyLL;
+    const latestEasyAL = latestEasy?.easyshade?.leftA ?? s2EasyAL;
+    const latestEasyBL = latestEasy?.easyshade?.leftB ?? s2EasyBL;
+
+    let deltaER: string | number = 'NA';
+    let deltaLR: string | number = 'NA';
+    let deltaBR: string | number = 'NA';
+    if (s1EasyLR !== 'NA' && latestEasyLR !== 'NA' && s1EasyAR !== 'NA' && latestEasyAR !== 'NA' && s1EasyBR !== 'NA' && latestEasyBR !== 'NA') {
+      const dL = Number(latestEasyLR) - Number(s1EasyLR);
+      const da = Number(latestEasyAR) - Number(s1EasyAR);
+      const db = Number(latestEasyBR) - Number(s1EasyBR);
+      deltaLR = Number(dL.toFixed(2));
+      deltaBR = Number(db.toFixed(2));
+      deltaER = Number(Math.sqrt(dL * dL + da * da + db * db).toFixed(2));
+    }
+
+    let deltaEL: string | number = 'NA';
+    let deltaLL: string | number = 'NA';
+    let deltaBL: string | number = 'NA';
+    if (s1EasyLL !== 'NA' && latestEasyLL !== 'NA' && s1EasyAL !== 'NA' && latestEasyAL !== 'NA' && s1EasyBL !== 'NA' && latestEasyBL !== 'NA') {
+      const dL = Number(latestEasyLL) - Number(s1EasyLL);
+      const da = Number(latestEasyAL) - Number(s1EasyAL);
+      const db = Number(latestEasyBL) - Number(s1EasyBL);
+      deltaLL = Number(dL.toFixed(2));
+      deltaBL = Number(db.toFixed(2));
+      deltaEL = Number(Math.sqrt(dL * dL + da * da + db * db).toFixed(2));
+    }
 
     const advS1 = s1?.adverseEvents ? 1 : 0;
     const advS2 = s2?.adverseEvents ? 1 : 0;
@@ -144,6 +247,7 @@ export function buildNumericCSVContent(projectName: string, participants: Export
       sexCode,
       age,
       groupCode,
+      groupName,
       s1?.painScore0h ?? 'NA',
       s1?.painScore1h ?? 'NA',
       s1?.painScore24h ?? 'NA',
@@ -163,6 +267,30 @@ export function buildNumericCSVContent(projectName: string, participants: Export
       r30SguL,
       deltaR,
       deltaL,
+      s1Vita3dR,
+      s1Vita3dL,
+      s2Vita3dR,
+      s2Vita3dL,
+      delta3dR,
+      delta3dL,
+      s1EasyLR,
+      s1EasyAR,
+      s1EasyBR,
+      s1EasyLL,
+      s1EasyAL,
+      s1EasyBL,
+      s2EasyLR,
+      s2EasyAR,
+      s2EasyBR,
+      s2EasyLL,
+      s2EasyAL,
+      s2EasyBL,
+      deltaER,
+      deltaEL,
+      deltaLR,
+      deltaLL,
+      deltaBR,
+      deltaBL,
       advS1,
       advS2,
       analgS1,
@@ -392,6 +520,7 @@ GET DATA
     SEXO F1.0
     IDADE F3.0
     GRUPO_COD F1.0
+    GRUPO_NOME A50
     S1_EVA_0H F4.1
     S1_EVA_1H F4.1
     S1_EVA_24H F4.1
@@ -410,6 +539,30 @@ GET DATA
     R30_SGU_ESQ F2.0
     DELTA_SGU_DIR F4.1
     DELTA_SGU_ESQ F4.1
+    S1_VITA3D_DIR F2.0
+    S1_VITA3D_ESQ F2.0
+    S2_VITA3D_DIR F2.0
+    S2_VITA3D_ESQ F2.0
+    DELTA_VITA3D_DIR F4.1
+    DELTA_VITA3D_ESQ F4.1
+    S1_EASY_L_DIR F5.2
+    S1_EASY_A_DIR F5.2
+    S1_EASY_B_DIR F5.2
+    S1_EASY_L_ESQ F5.2
+    S1_EASY_A_ESQ F5.2
+    S1_EASY_B_ESQ F5.2
+    S2_EASY_L_DIR F5.2
+    S2_EASY_A_DIR F5.2
+    S2_EASY_B_DIR F5.2
+    S2_EASY_L_ESQ F5.2
+    S2_EASY_A_ESQ F5.2
+    S2_EASY_B_ESQ F5.2
+    DELTA_E_DIR F5.2
+    DELTA_E_ESQ F5.2
+    DELTA_L_DIR F5.2
+    DELTA_L_ESQ F5.2
+    DELTA_B_DIR F5.2
+    DELTA_B_ESQ F5.2
     EVENTO_ADVERSO_S1 F1.0
     EVENTO_ADVERSO_S2 F1.0
     ANALGESICO_S1 F1.0
@@ -424,12 +577,21 @@ VARIABLE LABELS
   SEXO 'Sexo Biológico'
   IDADE 'Idade em Anos'
   GRUPO_COD 'Grupo Alocado de Clareamento'
+  GRUPO_NOME 'Identificação e Lateralidade do Grupo'
   S1_EVA_0H 'Sensibilidade Imediata Sessão 1 (0h)'
   S1_EVA_1H 'Sensibilidade 1 hora Sessão 1'
   S1_EVA_24H 'Sensibilidade 24 horas Sessão 1'
   S1_EVA_48H 'Sensibilidade 48 horas Sessão 1'
-  DELTA_SGU_DIR 'Eficácia Clareadora ΔSGU Hemi-arco Direito'
-  DELTA_SGU_ESQ 'Eficácia Clareadora ΔSGU Hemi-arco Esquerdo'
+  DELTA_SGU_DIR 'Eficácia Clareadora ΔSGU Classical Direito'
+  DELTA_SGU_ESQ 'Eficácia Clareadora ΔSGU Classical Esquerdo'
+  DELTA_VITA3D_DIR 'Eficácia Clareadora ΔSGU VITA 3D Direito'
+  DELTA_VITA3D_ESQ 'Eficácia Clareadora ΔSGU VITA 3D Esquerdo'
+  DELTA_E_DIR 'Variação Total de Cor ΔE* Easyshade Direito'
+  DELTA_E_ESQ 'Variação Total de Cor ΔE* Easyshade Esquerdo'
+  DELTA_L_DIR 'Ganho de Luminosidade ΔL* Direito'
+  DELTA_L_ESQ 'Ganho de Luminosidade ΔL* Esquerdo'
+  DELTA_B_DIR 'Redução de Amarelamento Δb* Direito'
+  DELTA_B_ESQ 'Redução de Amarelamento Δb* Esquerdo'
   RETENCAO_STATUS 'Status de Retenção CONSORT'.
 
 * 3. Definição de Rótulos de Valores (Value Labels) .
@@ -489,9 +651,9 @@ export function generateGraphPadPrismFormat(projectName: string, participants: E
     });
   }
 
-  out += `\n### TABELA 2: EFICÁCIA CLAREADORA BOCA DIVIDIDA (COLUMN / PAIRED T-TEST)\n`;
+  out += `\n### TABELA 2: EFICÁCIA CLAREADORA VITA CLASSICAL (COLUMN / PAIRED T-TEST)\n`;
   out += `### Coluna A = Hemi-arco Direito (ΔSGU) | Coluna B = Hemi-arco Esquerdo (ΔSGU)\n`;
-  out += `ParticipantID\tDelta_Direito\tDelta_Esquerdo\n`;
+  out += `ParticipantID\tDelta_Classical_Direito\tDelta_Classical_Esquerdo\n`;
 
   participants.forEach((p) => {
     const s1 = p.sessions?.find((s) => s.sessionNumber === 1);
@@ -499,15 +661,86 @@ export function generateGraphPadPrismFormat(projectName: string, participants: E
     const r14 = p.sessions?.find((s) => s.sessionNumber === 3);
     const r30 = p.sessions?.find((s) => s.sessionNumber === 4);
 
-    const s1R = s1?.shadeRight ? getVitaSGU(s1.shadeRight) : 0;
-    const s1L = s1?.shadeLeft ? getVitaSGU(s1.shadeLeft) : 0;
-    const latestR = r30?.shadeRight ? getVitaSGU(r30.shadeRight) : (r14?.shadeRight ? getVitaSGU(r14.shadeRight) : (s2?.shadeRight ? getVitaSGU(s2.shadeRight) : 0));
-    const latestL = r30?.shadeLeft ? getVitaSGU(r30.shadeLeft) : (r14?.shadeLeft ? getVitaSGU(r14.shadeLeft) : (s2?.shadeLeft ? getVitaSGU(s2.shadeLeft) : 0));
+    const s1Color = parseColorAssessmentData(s1?.notes);
+    const s2Color = parseColorAssessmentData(s2?.notes);
+    const r14Color = parseColorAssessmentData(r14?.notes);
+    const r30Color = parseColorAssessmentData(r30?.notes);
+
+    const s1R = s1?.shadeRight ? getVitaSGU(s1.shadeRight) : (s1Color?.vitaClassical?.sguRight ?? 0);
+    const s1L = s1?.shadeLeft ? getVitaSGU(s1.shadeLeft) : (s1Color?.vitaClassical?.sguLeft ?? 0);
+
+    const latest = r30 || r14 || s2;
+    const latestColor = r30Color || r14Color || s2Color;
+    const latestR = latest?.shadeRight ? getVitaSGU(latest.shadeRight) : (latestColor?.vitaClassical?.sguRight ?? 0);
+    const latestL = latest?.shadeLeft ? getVitaSGU(latest.shadeLeft) : (latestColor?.vitaClassical?.sguLeft ?? 0);
 
     const deltaR = (s1R > 0 && latestR > 0) ? (s1R - latestR) : '';
     const deltaL = (s1L > 0 && latestL > 0) ? (s1L - latestL) : '';
 
     out += `${p.researchCode}\t${deltaR}\t${deltaL}\n`;
+  });
+
+  out += `\n### TABELA 3: EFICÁCIA CLAREADORA VITA 3D BLEACHEDGUIDE (COLUMN / PAIRED T-TEST)\n`;
+  out += `### Coluna A = Hemi-arco Direito (ΔSGU 3D) | Coluna B = Hemi-arco Esquerdo (ΔSGU 3D)\n`;
+  out += `ParticipantID\tDelta_3D_Direito\tDelta_3D_Esquerdo\n`;
+
+  participants.forEach((p) => {
+    const s1 = p.sessions?.find((s) => s.sessionNumber === 1);
+    const s2 = p.sessions?.find((s) => s.sessionNumber === 2);
+    const r14 = p.sessions?.find((s) => s.sessionNumber === 3);
+    const r30 = p.sessions?.find((s) => s.sessionNumber === 4);
+
+    const s1Color = parseColorAssessmentData(s1?.notes);
+    const latestColor = parseColorAssessmentData(r30?.notes || r14?.notes || s2?.notes);
+
+    const s1_3dR = s1Color?.vita3D?.sguRight ?? 0;
+    const s1_3dL = s1Color?.vita3D?.sguLeft ?? 0;
+    const latest_3dR = latestColor?.vita3D?.sguRight ?? 0;
+    const latest_3dL = latestColor?.vita3D?.sguLeft ?? 0;
+
+    const deltaR = (s1_3dR > 0 && latest_3dR > 0) ? (s1_3dR - latest_3dR) : '';
+    const deltaL = (s1_3dL > 0 && latest_3dL > 0) ? (s1_3dL - latest_3dL) : '';
+
+    out += `${p.researchCode}\t${deltaR}\t${deltaL}\n`;
+  });
+
+  out += `\n### TABELA 4: ESPECTROFOTOMETRIA VITA EASYSHADE (ΔE* CIELAB)\n`;
+  out += `### Coluna A = ΔE* Hemi-arco Direito | Coluna B = ΔE* Hemi-arco Esquerdo\n`;
+  out += `ParticipantID\tDelta_E_Direito\tDelta_E_Esquerdo\n`;
+
+  participants.forEach((p) => {
+    const s1 = p.sessions?.find((s) => s.sessionNumber === 1);
+    const s2 = p.sessions?.find((s) => s.sessionNumber === 2);
+    const r14 = p.sessions?.find((s) => s.sessionNumber === 3);
+    const r30 = p.sessions?.find((s) => s.sessionNumber === 4);
+
+    const s1Color = parseColorAssessmentData(s1?.notes);
+    const latestColor = parseColorAssessmentData(r30?.notes || r14?.notes || s2?.notes);
+
+    let dE_R = '';
+    let dE_L = '';
+
+    if (
+      s1Color?.easyshade?.rightL !== undefined && s1Color?.easyshade?.rightL !== null &&
+      latestColor?.easyshade?.rightL !== undefined && latestColor?.easyshade?.rightL !== null
+    ) {
+      const dL = Number(latestColor.easyshade.rightL) - Number(s1Color.easyshade.rightL);
+      const da = Number(latestColor.easyshade.rightA ?? 0) - Number(s1Color.easyshade.rightA ?? 0);
+      const db = Number(latestColor.easyshade.rightB ?? 0) - Number(s1Color.easyshade.rightB ?? 0);
+      dE_R = Math.sqrt(dL * dL + da * da + db * db).toFixed(2);
+    }
+
+    if (
+      s1Color?.easyshade?.leftL !== undefined && s1Color?.easyshade?.leftL !== null &&
+      latestColor?.easyshade?.leftL !== undefined && latestColor?.easyshade?.leftL !== null
+    ) {
+      const dL = Number(latestColor.easyshade.leftL) - Number(s1Color.easyshade.leftL);
+      const da = Number(latestColor.easyshade.leftA ?? 0) - Number(s1Color.easyshade.leftA ?? 0);
+      const db = Number(latestColor.easyshade.leftB ?? 0) - Number(s1Color.easyshade.leftB ?? 0);
+      dE_L = Math.sqrt(dL * dL + da * da + db * db).toFixed(2);
+    }
+
+    out += `${p.researchCode}\t${dE_R}\t${dE_L}\n`;
   });
 
   return out;
@@ -542,17 +775,26 @@ Codificação: UTF-8 | Delimitador: Vírgula (,) | Missing Value: NA ou 999
 - S2_EVA_24H: Sensibilidade 24 horas pós-sessão 2
 - S2_EVA_48H: Sensibilidade 48 horas pós-sessão 2
 
-3. EFICÁCIA CLAREADORA (ESCALA VITA CLASSICAL ORDENADA 1 a 16)
+3. EFICÁCIA CLAREADORA (VITA CLASSICAL, VITA 3D E EASYSHADE)
 --------------------------------------------------------------------------------
-Convenção SGU (Luminosidade):
-1=B1, 2=A1, 3=B2, 4=D2, 5=A2, 6=C1, 7=C2, 8=D4,
-9=A3, 10=D3, 11=B3, 12=A3.5, 13=B4, 14=C3, 15=A4, 16=C4
+A) VITA Classical (SGU 1 a 16 ordenado por luminosidade):
+   1=B1, 2=A1, 3=B2, 4=D2, 5=A2, 6=C1, 7=C2, 8=D4,
+   9=A3, 10=D3, 11=B3, 12=A3.5, 13=B4, 14=C3, 15=A4, 16=C4
+   - S1_SGU_DIR / S1_SGU_ESQ: Cor inicial baseline
+   - S2_SGU_DIR / S2_SGU_ESQ: Cor na sessão 2
+   - DELTA_SGU_DIR / DELTA_SGU_ESQ: Variação de clareamento (S1 - Último)
 
-- S1_SGU_DIR / S1_SGU_ESQ: Cor inicial baseline (hemi-arco direito e esquerdo)
-- S2_SGU_DIR / S2_SGU_ESQ: Cor após 2ª sessão de clareamento
-- R14_SGU_DIR / R14_SGU_ESQ: Cor no retorno de 14 dias
-- R30_SGU_DIR / R30_SGU_ESQ: Cor no retorno de 30 dias
-- DELTA_SGU_DIR / DELTA_SGU_ESQ: Variação de clareamento (S1_SGU - Último_SGU)
+B) VITA Bleachedguide 3D-MASTER (SGU 1 a 29):
+   - S1_VITA3D_DIR / S1_VITA3D_ESQ: SGU baseline (1=0M1 a 29=5M3+)
+   - S2_VITA3D_DIR / S2_VITA3D_ESQ: SGU pós-clareamento
+   - DELTA_VITA3D_DIR / DELTA_VITA3D_ESQ: ΔSGU 3D (Baseline - Pós)
+
+C) VITA Easyshade Espectrofotômetro (Coordenadas CIELAB):
+   - S1_EASY_L/A/B_DIR e ESQ: Coordenadas baseline L*, a*, b*
+   - S2_EASY_L/A/B_DIR e ESQ: Coordenadas pós-clareamento
+   - DELTA_E_DIR / DELTA_E_ESQ: Variação total de cor ΔE* = sqrt(ΔL² + Δa² + Δb²)
+   - DELTA_L_DIR / DELTA_L_ESQ: Ganho de luminosidade (+ = mais claro)
+   - DELTA_B_DIR / DELTA_B_ESQ: Redução de amarelamento (- = menos amarelo)
 
 4. FARMACOVIGILÂNCIA E SEGURANÇA CLÍNICA
 --------------------------------------------------------------------------------
