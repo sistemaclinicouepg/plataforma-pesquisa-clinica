@@ -1131,7 +1131,6 @@ export default function HomePage() {
         setCreateStepError(null);
         setNewProjectName('');
         setNewProjectDesc('');
-        setNewProjectPrefix('');
         setNewProjectGroups(['Grupo 1: Convencional (HP 35%)', 'Grupo 2: Experimental (HP 20%)']);
         setNewGroupInput('');
         setNewProjectStatus('ACTIVE');
