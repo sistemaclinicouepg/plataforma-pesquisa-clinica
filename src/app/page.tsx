@@ -123,7 +123,6 @@ export default function HomePage() {
   const [createStepError, setCreateStepError] = useState<string | null>(null);
   const [newProjectName, setNewProjectName] = useState('');
   const [newProjectDesc, setNewProjectDesc] = useState('');
-  const [newProjectPrefix, setNewProjectPrefix] = useState('');
   const [newProjectStatus, setNewProjectStatus] = useState<'ACTIVE' | 'COMPLETED' | 'CANCELLED'>('ACTIVE');
   const [newProjectSpecialty, setNewProjectSpecialty] = useState<ResearchSpecialty>('GENERAL');
   const [newProjectGroups, setNewProjectGroups] = useState<string[]>([
@@ -1102,7 +1101,6 @@ export default function HomePage() {
         questions: [],
         studyProtocol: {
           specialty: newProjectSpecialty,
-          projectPrefix: newProjectPrefix.trim().toUpperCase() || undefined,
           totalSessions: studySessions.length,
           sessions: studySessions,
           forms: formTargets,
@@ -1974,26 +1972,6 @@ export default function HomePage() {
                       className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none transition resize-none"
                     />
                   </div>
-
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
-                      Prefixo dos Códigos dos Participantes (Opcional)
-                    </label>
-                    <input
-                      type="text"
-                      value={newProjectPrefix}
-                      onChange={(e) => setNewProjectPrefix(e.target.value.toUpperCase())}
-                      placeholder="Ex: CLAR, EXP, HP35 (Deixe em branco para numeração automática: P01, P02...)"
-                      maxLength={8}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs font-mono uppercase bg-white focus:ring-2 focus:ring-blue-500"
-                    />
-                    <div className="mt-2 p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-[11px] text-slate-600 flex items-center justify-between">
-                      <span>Pré-visualização do código dos voluntários:</span>
-                      <span className="font-mono font-bold text-blue-700 bg-white px-2 py-0.5 rounded border border-slate-200 shadow-2xs">
-                        {newProjectPrefix.trim() ? `${newProjectPrefix.trim()}-001` : 'P01-001'}
-                      </span>
-                    </div>
-                  </div>
                 </div>
               )}
 
@@ -2299,8 +2277,8 @@ export default function HomePage() {
                         </span>
                       </div>
                       <div>
-                        <span className="text-slate-500 text-[11px] block">Prefixo dos Códigos:</span>
-                        <strong className="font-mono text-blue-700">{newProjectPrefix.trim() || 'Automático (P01, P02...)'}</strong>
+                        <span className="text-slate-500 text-[11px] block">Códigos dos Voluntários:</span>
+                        <strong className="text-emerald-700 font-semibold">Automático do Estudo</strong>
                       </div>
                       <div>
                         <span className="text-slate-500 text-[11px] block">Desenho do Estudo / Grupos:</span>
