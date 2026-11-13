@@ -19,6 +19,7 @@ import {
   parseStudyProtocol,
   StudyProtocolConfig,
   StudySessionProtocol,
+  SessionClinicalModules,
   ResearchSpecialty,
   getRespondentLabel,
   getFrequencyLabel,
@@ -7146,12 +7147,14 @@ function DashboardContent() {
                                   const updated = [...trailSessions];
                                   const isChecking = e.target.checked;
                                   const prevMods = sess.clinicalModules || {};
-                                  const mods = {
+                                  const defaultModels: ColorAssessmentModel[] = ['VITA_CLASSICAL'];
+                                  const activeModels: ColorAssessmentModel[] | undefined = isChecking
+                                    ? (prevMods.colorModels && prevMods.colorModels.length > 0 ? prevMods.colorModels : defaultModels)
+                                    : prevMods.colorModels;
+                                  const mods: SessionClinicalModules = {
                                     ...prevMods,
                                     colorGuide: isChecking,
-                                    colorModels: isChecking
-                                      ? (prevMods.colorModels && prevMods.colorModels.length > 0 ? prevMods.colorModels : ['VITA_CLASSICAL'])
-                                      : prevMods.colorModels,
+                                    colorModels: activeModels,
                                   };
                                   updated[idx] = { ...sess, clinicalModules: mods };
                                   setTrailSessions(updated);
@@ -7291,9 +7294,9 @@ function DashboardContent() {
                                       type="button"
                                       onClick={() => {
                                         const updated = [...trailSessions];
-                                        const prev = sess.clinicalModules?.colorModels || ['VITA_CLASSICAL'];
-                                        const next = isSel ? prev.filter((m) => m !== cMod.id) : [...prev, cMod.id];
-                                        const mods = {
+                                        const prev: ColorAssessmentModel[] = sess.clinicalModules?.colorModels || ['VITA_CLASSICAL'];
+                                        const next: ColorAssessmentModel[] = isSel ? prev.filter((m) => m !== cMod.id) : [...prev, cMod.id];
+                                        const mods: SessionClinicalModules = {
                                           ...(sess.clinicalModules || {}),
                                           colorGuide: next.length > 0,
                                           colorModels: next,
