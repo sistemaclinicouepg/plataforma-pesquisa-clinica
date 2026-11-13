@@ -1869,7 +1869,7 @@ export default function HomePage() {
             <div className="grid grid-cols-4 border-b border-slate-200 bg-slate-50/80 shrink-0 text-xs">
               {[
                 { num: 1, title: '1. Identificação', sub: 'Nome e código' },
-                { num: 2, title: '2. Randomização', sub: 'Grupos do estudo' },
+                { num: 2, title: '2. Desenho do Estudo', sub: 'Grupos do estudo' },
                 { num: 3, title: '3. Cronograma', sub: 'Consultas clínicas' },
                 { num: 4, title: '4. Formulários', sub: 'Instrumentos e revisão' },
               ].map((step) => {
@@ -1997,13 +1997,13 @@ export default function HomePage() {
                 </div>
               )}
 
-              {/* ETAPA 2: ALOCAÇÃO DE RANDOMIZAÇÃO & GRUPOS */}
+              {/* ETAPA 2: DESENHO DO ESTUDO & GRUPOS */}
               {createStep === 2 && (
                 <div className="space-y-4 animate-in fade-in duration-150">
                   <div className="p-3.5 bg-indigo-50/70 border border-indigo-200 rounded-xl text-xs text-indigo-900 flex items-start gap-2.5">
                     <Shuffle className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
                     <div>
-                      <p className="font-bold">Etapa 2 de 4: Grupos de Randomização & Alocação Experimental</p>
+                      <p className="font-bold">Etapa 2 de 4: Desenho do Estudo & Grupos Experimentais</p>
                       <p className="text-indigo-800 text-[11px] mt-0.5">
                         Defina os grupos ou braços de tratamento deste estudo. Eles ficarão salvos no protocolo e prontos para seleção rápida ao randomizar qualquer paciente.
                       </p>
@@ -2303,7 +2303,7 @@ export default function HomePage() {
                         <strong className="font-mono text-blue-700">{newProjectPrefix.trim() || 'Automático (P01, P02...)'}</strong>
                       </div>
                       <div>
-                        <span className="text-slate-500 text-[11px] block">Grupos de Randomização:</span>
+                        <span className="text-slate-500 text-[11px] block">Desenho do Estudo / Grupos:</span>
                         <strong className="text-indigo-700">
                           {newProjectGroups.length > 0 ? `${newProjectGroups.length} grupos (${newProjectGroups.join(', ')})` : 'Nenhum grupo pré-configurado'}
                         </strong>
@@ -2427,7 +2427,7 @@ export default function HomePage() {
                     : 'border-transparent text-slate-500 hover:text-slate-800'
                 }`}
               >
-                <span>🔀 2. Grupos de Randomização ({editProjectGroups.length})</span>
+                <span>🔀 2. Desenho do Estudo ({editProjectGroups.length})</span>
               </button>
               <button
                 type="button"
@@ -2558,14 +2558,14 @@ export default function HomePage() {
                 </div>
               )}
 
-              {/* ABA 2: GRUPOS DE RANDOMIZAÇÃO */}
+              {/* ABA 2: DESENHO DO ESTUDO / GRUPOS */}
               {editTab === 'GROUPS' && (
                 <div className="space-y-4 animate-in fade-in duration-150">
                   <div className="flex items-center justify-between bg-indigo-50/70 p-3 rounded-xl border border-indigo-200">
                     <div>
                       <h4 className="text-xs font-bold text-indigo-950 flex items-center gap-1.5">
                         <Shuffle className="w-3.5 h-3.5 text-indigo-600" />
-                        <span>Grupos de Randomização & Alocação Experimental</span>
+                        <span>Desenho do Estudo & Grupos Experimentais</span>
                       </h4>
                       <p className="text-[11px] text-indigo-800 mt-0.5">
                         Gerencie os grupos cadastrados neste estudo. Eles ficam salvos e disponíveis para seleção em qualquer voluntário.
