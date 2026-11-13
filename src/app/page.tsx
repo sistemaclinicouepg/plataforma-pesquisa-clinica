@@ -50,6 +50,8 @@ import {
   ResearchSpecialty,
   PRESET_QUESTIONNAIRES_CATALOG,
   SessionClinicalModules,
+  ColorAssessmentModel,
+  COLOR_MODEL_OPTIONS,
 } from '@/lib/studyProtocol';
 
 type Project = {
@@ -242,11 +244,43 @@ export default function HomePage() {
   ) => {
     const list = isEdit ? editStudySessions : studySessions;
     const currentModules = list[index]?.clinicalModules || {};
+    const willBeActive = !currentModules[moduleKey];
     const updatedModules: SessionClinicalModules = {
       ...currentModules,
-      [moduleKey]: !currentModules[moduleKey],
+      [moduleKey]: willBeActive,
     };
+    if (moduleKey === 'colorGuide') {
+      if (willBeActive && (!updatedModules.colorModels || updatedModules.colorModels.length === 0)) {
+        updatedModules.colorModels = ['VITA_CLASSICAL'];
+      }
+    }
     handleUpdateSession(index, 'clinicalModules', updatedModules, isEdit);
+  };
+
+  const handleToggleSessionColorModel = (
+    sessionIndex: number,
+    colorModel: ColorAssessmentModel,
+    isEdit: boolean
+  ) => {
+    const list = isEdit ? editStudySessions : studySessions;
+    const currentModules = list[sessionIndex]?.clinicalModules || {};
+    const existingModels: ColorAssessmentModel[] = Array.isArray(currentModules.colorModels)
+      ? [...currentModules.colorModels]
+      : currentModules.colorGuide ? ['VITA_CLASSICAL'] : [];
+
+    let updatedModels: ColorAssessmentModel[];
+    if (existingModels.includes(colorModel)) {
+      updatedModels = existingModels.filter((m) => m !== colorModel);
+    } else {
+      updatedModels = [...existingModels, colorModel];
+    }
+
+    const updatedModules: SessionClinicalModules = {
+      ...currentModules,
+      colorGuide: updatedModels.length > 0,
+      colorModels: updatedModels,
+    };
+    handleUpdateSession(sessionIndex, 'clinicalModules', updatedModules, isEdit);
   };
 
   const handleApplyBleachingPreset = (
@@ -605,6 +639,56 @@ export default function HomePage() {
               );
             })}
           </div>
+
+          {/* Sub-seleção dos Modelos de Tomada de Cor */}
+          {clinicalMods.colorGuide && (
+            <div className="mt-2.5 p-3 bg-amber-50/70 rounded-xl border border-amber-200/90 space-y-2 animate-in fade-in duration-150">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold text-amber-950 flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                  <span>Modelos de Tomada de Cor Selecionados:</span>
+                </span>
+                <span className="text-[10px] text-amber-800 font-semibold bg-amber-100/70 px-2 py-0.5 rounded-full">
+                  {(clinicalMods.colorModels || ['VITA_CLASSICAL']).length} de 3 modelos ativos
+                </span>
+              </div>
+              <p className="text-[10px] text-amber-900/80 leading-snug">
+                Selecione quais e quantos dos 3 modelos serão utilizados nesta consulta. Cada um disponibilizará os campos correspondentes no prontuário.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-0.5">
+                {COLOR_MODEL_OPTIONS.map((cMod) => {
+                  const activeModels = clinicalMods.colorModels || ['VITA_CLASSICAL'];
+                  const isChecked = activeModels.includes(cMod.id);
+                  return (
+                    <button
+                      key={cMod.id}
+                      type="button"
+                      onClick={() => handleToggleSessionColorModel(idx, cMod.id, isEdit)}
+                      className={`p-2 rounded-lg border text-left transition text-xs flex flex-col justify-between cursor-pointer ${
+                        isChecked
+                          ? 'bg-white border-amber-400 text-amber-950 shadow-xs ring-1 ring-amber-400'
+                          : 'bg-white/60 border-amber-200/60 text-slate-500 hover:bg-white'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between w-full mb-1">
+                        <span className="font-bold flex items-center gap-1 text-[11px] text-slate-900">
+                          <span>{cMod.icon}</span>
+                          <span>{cMod.name}</span>
+                        </span>
+                        <div className={`w-4 h-4 rounded flex items-center justify-center shrink-0 text-[10px] font-bold ${
+                          isChecked ? 'bg-amber-500 text-white' : 'border border-slate-300'
+                        }`}>
+                          {isChecked && <Check className="w-3 h-3 stroke-[3]" />}
+                        </div>
+                      </div>
+                      <span className="text-[10px] text-amber-800 font-medium">{cMod.badge}</span>
+                      <span className="text-[9px] text-slate-500 mt-0.5 leading-tight">{cMod.description}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Questionário / Diário do Paciente no Celular */}

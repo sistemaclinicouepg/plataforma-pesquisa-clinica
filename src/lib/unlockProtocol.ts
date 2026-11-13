@@ -52,8 +52,72 @@ export function parseUnlockMeta(notes: string | null | undefined): SessionUnlock
   }
 }
 
+export interface SessionColorAssessmentData {
+  modelsUsed: Array<'VITA_CLASSICAL' | 'VITA_3D' | 'VITA_EASYSHADE'>;
+  vitaClassical?: {
+    shadeRight: string;
+    sguRight: number;
+    shadeLeft: string;
+    sguLeft: number;
+  };
+  vita3D?: {
+    sguRight: number;
+    labelRight: string;
+    sguLeft: number;
+    labelLeft: string;
+  };
+  easyshade?: {
+    rightL: number | null;
+    rightA: number | null;
+    rightB: number | null;
+    leftL: number | null;
+    leftA: number | null;
+    leftB: number | null;
+  };
+}
+
+const COLOR_PREFIX = '<!-- COLOR_DATA:';
+const COLOR_SUFFIX = '-->';
+
+export function parseColorAssessmentData(notes: string | null | undefined): SessionColorAssessmentData | null {
+  if (!notes) return null;
+  const startIdx = notes.indexOf(COLOR_PREFIX);
+  if (startIdx === -1) return null;
+  const endIdx = notes.indexOf(COLOR_SUFFIX, startIdx + COLOR_PREFIX.length);
+  if (endIdx === -1) return null;
+
+  const rawJson = notes.substring(startIdx + COLOR_PREFIX.length, endIdx).trim();
+  try {
+    return JSON.parse(rawJson);
+  } catch {
+    return null;
+  }
+}
+
+export function encodeColorAssessmentData(
+  existingNotes: string | null | undefined,
+  colorData: SessionColorAssessmentData
+): string {
+  const colorTag = `${COLOR_PREFIX} ${JSON.stringify(colorData)} ${COLOR_SUFFIX}`;
+  if (!existingNotes) return colorTag;
+
+  const startIdx = existingNotes.indexOf(COLOR_PREFIX);
+  if (startIdx === -1) {
+    return `${existingNotes}\n\n${colorTag}`;
+  }
+
+  const endIdx = existingNotes.indexOf(COLOR_SUFFIX, startIdx + COLOR_PREFIX.length);
+  if (endIdx === -1) {
+    return `${existingNotes}\n\n${colorTag}`;
+  }
+
+  const before = existingNotes.substring(0, startIdx).trimEnd();
+  const after = existingNotes.substring(endIdx + COLOR_SUFFIX.length).trimStart();
+  return [before, colorTag, after].filter(Boolean).join('\n\n');
+}
+
 /**
- * Remove qualquer tag de metadado oculta (<!-- UNLOCK_META: ... --> ou <!-- DIARY_DATA: ... -->)
+ * Remove qualquer tag de metadado oculta (<!-- UNLOCK_META: ... -->, <!-- DIARY_DATA: ... --> ou <!-- COLOR_DATA: ... -->)
  * das anotações clínicas, retornando apenas as anotações visíveis do pesquisador.
  */
 export function stripMetaFromNotes(notes: string | null | undefined): string {
@@ -61,12 +125,13 @@ export function stripMetaFromNotes(notes: string | null | undefined): string {
   return notes
     .replace(/<!--\s*UNLOCK_META:[\s\S]*?-->/g, '')
     .replace(/<!--\s*DIARY_DATA:[\s\S]*?-->/g, '')
+    .replace(/<!--\s*COLOR_DATA:[\s\S]*?-->/g, '')
     .trim();
 }
 
 /**
  * Mescla o novo texto digitado pelo pesquisador preservando quaisquer tags de
- * metadados (desbloqueios e diários) que já existiam no banco de dados.
+ * metadados (desbloqueios, diários e cores) que já existiam no banco de dados.
  */
 export function mergeNotesWithExistingMeta(
   newNotesText: string | null | undefined,
@@ -77,10 +142,12 @@ export function mergeNotesWithExistingMeta(
 
   const unlockMetaMatch = existingFullNotes.match(/<!--\s*UNLOCK_META:[\s\S]*?-->/);
   const diaryDataMatch = existingFullNotes.match(/<!--\s*DIARY_DATA:[\s\S]*?-->/);
+  const colorDataMatch = existingFullNotes.match(/<!--\s*COLOR_DATA:[\s\S]*?-->/);
 
   const metaParts: string[] = [];
   if (unlockMetaMatch) metaParts.push(unlockMetaMatch[0]);
   if (diaryDataMatch) metaParts.push(diaryDataMatch[0]);
+  if (colorDataMatch) metaParts.push(colorDataMatch[0]);
 
   if (metaParts.length === 0) return cleanNewText;
   if (!cleanNewText) return metaParts.join('\n\n');

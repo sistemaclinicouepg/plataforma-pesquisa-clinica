@@ -23,12 +23,18 @@ import {
   getRespondentLabel,
   getFrequencyLabel,
   PRESET_QUESTIONNAIRES_CATALOG,
+  ColorAssessmentModel,
+  COLOR_MODEL_OPTIONS,
+  VITA_3D_SHADES,
 } from '@/lib/studyProtocol';
 import {
   parseUnlockMeta,
   extractDiaryMomentDetails,
   generateParticipantTabularExport,
   stripMetaFromNotes,
+  SessionColorAssessmentData,
+  parseColorAssessmentData,
+  encodeColorAssessmentData,
 } from '@/lib/unlockProtocol';
 import { ClinicalTriageFields } from '@/components/ClinicalTriageFields';
 import { RandomizationGroupSelector } from '@/components/RandomizationGroupSelector';
@@ -1015,6 +1021,29 @@ function DashboardContent() {
     evaluatorName: '',
     notes: '',
     justification: '',
+  });
+  const [colorAssessment, setColorAssessment] = useState<SessionColorAssessmentData>({
+    modelsUsed: ['VITA_CLASSICAL'],
+    vitaClassical: {
+      shadeRight: 'A3',
+      sguRight: 9,
+      shadeLeft: 'A3',
+      sguLeft: 9,
+    },
+    vita3D: {
+      sguRight: 5,
+      labelRight: '5 (1M1)',
+      sguLeft: 5,
+      labelLeft: '5 (1M1)',
+    },
+    easyshade: {
+      rightL: null,
+      rightA: null,
+      rightB: null,
+      leftL: null,
+      leftA: null,
+      leftB: null,
+    },
   });
   const [savingSession, setSavingSession] = useState(false);
   const [sessionFormAnswers, setSessionFormAnswers] = useState<Record<string, Record<string, any>>>({});
@@ -2258,6 +2287,65 @@ function DashboardContent() {
       notes: stripMetaFromNotes(existing?.notes),
       justification: '',
     });
+
+    // Carregar ou inicializar modelos e aferições de cor detalhadas (VITA Classical, 3D e Easyshade)
+    const savedColor = parseColorAssessmentData(existing?.notes);
+    const protoSess = studyProtocol?.sessions?.find((s) => s.sessionNumber === sessionNumber);
+    const sessionConfiguredModels: ColorAssessmentModel[] = (
+      protoSess?.clinicalModules?.colorModels && protoSess.clinicalModules.colorModels.length > 0
+    ) ? protoSess.clinicalModules.colorModels : (protoSess?.clinicalModules?.colorGuide ? ['VITA_CLASSICAL'] : ['VITA_CLASSICAL']);
+
+    if (savedColor) {
+      setColorAssessment({
+        modelsUsed: savedColor.modelsUsed && savedColor.modelsUsed.length > 0 ? savedColor.modelsUsed : sessionConfiguredModels,
+        vitaClassical: savedColor.vitaClassical || {
+          shadeRight: existing?.shadeRight || 'A3',
+          sguRight: getVitaSGU(existing?.shadeRight || 'A3'),
+          shadeLeft: existing?.shadeLeft || 'A3',
+          sguLeft: getVitaSGU(existing?.shadeLeft || 'A3'),
+        },
+        vita3D: savedColor.vita3D || {
+          sguRight: 5,
+          labelRight: '5 (1M1)',
+          sguLeft: 5,
+          labelLeft: '5 (1M1)',
+        },
+        easyshade: savedColor.easyshade || {
+          rightL: null,
+          rightA: null,
+          rightB: null,
+          leftL: null,
+          leftA: null,
+          leftB: null,
+        },
+      });
+    } else {
+      const shR = existing?.shadeRight || 'A3';
+      const shL = existing?.shadeLeft || 'A3';
+      setColorAssessment({
+        modelsUsed: sessionConfiguredModels,
+        vitaClassical: {
+          shadeRight: shR,
+          sguRight: getVitaSGU(shR),
+          shadeLeft: shL,
+          sguLeft: getVitaSGU(shL),
+        },
+        vita3D: {
+          sguRight: 5,
+          labelRight: '5 (1M1)',
+          sguLeft: 5,
+          labelLeft: '5 (1M1)',
+        },
+        easyshade: {
+          rightL: null,
+          rightA: null,
+          rightB: null,
+          leftL: null,
+          leftA: null,
+          leftB: null,
+        },
+      });
+    }
     setShowSessionModal(true);
 
     // Consulta em tempo real para sincronizar quaisquer relatos submetidos pelo paciente no portal
@@ -2296,7 +2384,16 @@ function DashboardContent() {
     e.preventDefault();
     if (!currentSessionForm.participantId) return;
 
-    const formData = { ...currentSessionForm };
+    const finalShadeRight = colorAssessment.vitaClassical?.shadeRight || currentSessionForm.shadeRight || 'A3';
+    const finalShadeLeft = colorAssessment.vitaClassical?.shadeLeft || currentSessionForm.shadeLeft || 'A3';
+    const notesWithColor = encodeColorAssessmentData(currentSessionForm.notes, colorAssessment);
+
+    const formData = {
+      ...currentSessionForm,
+      notes: notesWithColor,
+      shadeRight: finalShadeRight,
+      shadeLeft: finalShadeLeft,
+    };
 
     // Fecha o modal e atualiza a interface instantaneamente (0 ms de latência percebida)
     setShowSessionModal(false);
@@ -7047,7 +7144,15 @@ function DashboardContent() {
                                 checked={Boolean(sess.clinicalModules?.colorGuide)}
                                 onChange={(e) => {
                                   const updated = [...trailSessions];
-                                  const mods = { ...(sess.clinicalModules || {}), colorGuide: e.target.checked };
+                                  const isChecking = e.target.checked;
+                                  const prevMods = sess.clinicalModules || {};
+                                  const mods = {
+                                    ...prevMods,
+                                    colorGuide: isChecking,
+                                    colorModels: isChecking
+                                      ? (prevMods.colorModels && prevMods.colorModels.length > 0 ? prevMods.colorModels : ['VITA_CLASSICAL'])
+                                      : prevMods.colorModels,
+                                  };
                                   updated[idx] = { ...sess, clinicalModules: mods };
                                   setTrailSessions(updated);
                                 }}
@@ -7055,7 +7160,7 @@ function DashboardContent() {
                               />
                               <div className="min-w-0">
                                 <span className="text-xs block">Aferição de Cor (VITA)</span>
-                                <span className="text-[10px] text-slate-400 font-normal">Escala Classical na cadeira</span>
+                                <span className="text-[10px] text-slate-400 font-normal">Escalas e Espectrofotômetro</span>
                               </div>
                             </label>
 
@@ -7163,6 +7268,63 @@ function DashboardContent() {
                               </div>
                             </label>
                           </div>
+
+                          {/* Sub-seleção dos Modelos de Tomada de Cor no Protocolo */}
+                          {sess.clinicalModules?.colorGuide && (
+                            <div className="p-3 bg-amber-50/70 rounded-xl border border-amber-200 space-y-2">
+                              <div className="flex items-center justify-between">
+                                <span className="text-[11px] font-bold text-amber-950 flex items-center gap-1.5">
+                                  <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                                  <span>Modelos de Tomada de Cor para esta Sessão:</span>
+                                </span>
+                                <span className="text-[10px] text-amber-800 font-semibold bg-amber-100 px-2 py-0.5 rounded-full">
+                                  {(sess.clinicalModules?.colorModels || ['VITA_CLASSICAL']).length} de 3 selecionados
+                                </span>
+                              </div>
+                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                {COLOR_MODEL_OPTIONS.map((cMod) => {
+                                  const currentSelected = sess.clinicalModules?.colorModels || ['VITA_CLASSICAL'];
+                                  const isSel = currentSelected.includes(cMod.id);
+                                  return (
+                                    <button
+                                      key={cMod.id}
+                                      type="button"
+                                      onClick={() => {
+                                        const updated = [...trailSessions];
+                                        const prev = sess.clinicalModules?.colorModels || ['VITA_CLASSICAL'];
+                                        const next = isSel ? prev.filter((m) => m !== cMod.id) : [...prev, cMod.id];
+                                        const mods = {
+                                          ...(sess.clinicalModules || {}),
+                                          colorGuide: next.length > 0,
+                                          colorModels: next,
+                                        };
+                                        updated[idx] = { ...sess, clinicalModules: mods };
+                                        setTrailSessions(updated);
+                                      }}
+                                      className={`p-2 rounded-lg border text-left text-xs transition flex flex-col justify-between cursor-pointer ${
+                                        isSel
+                                          ? 'bg-white border-amber-400 text-amber-950 font-bold shadow-xs'
+                                          : 'bg-white/60 border-amber-200/60 text-slate-500'
+                                      }`}
+                                    >
+                                      <div className="flex items-center justify-between w-full mb-1">
+                                        <span className="flex items-center gap-1 text-[11px]">
+                                          <span>{cMod.icon}</span>
+                                          <span>{cMod.name}</span>
+                                        </span>
+                                        <div className={`w-3.5 h-3.5 rounded flex items-center justify-center text-[9px] ${
+                                          isSel ? 'bg-amber-500 text-white' : 'border border-slate-300'
+                                        }`}>
+                                          {isSel && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                                        </div>
+                                      </div>
+                                      <span className="text-[10px] text-amber-800 font-medium">{cMod.badge}</span>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
                         </div>
 
                         {/* Linha 5: Checklist da Sessão */}
@@ -7527,58 +7689,391 @@ function DashboardContent() {
                         </div>
                       )}
 
-                      {/* Aferição de Cor Dental (Escala VITA Classical - Quando Ativo no Protocolo) */}
-                      {hasColorGuide && (
-                        <div className="p-4 bg-amber-50/50 border border-amber-200/80 rounded-2xl space-y-3 shadow-2xs">
-                          <div className="flex items-center justify-between">
-                            <span className="font-bold text-amber-950 text-xs inline-flex items-center gap-1.5">
-                              <Sparkles className="w-4 h-4 text-amber-600" />
-                              <span>Aferição de Cor Dental (Escala VITA Classical)</span>
-                            </span>
-                            <span className="text-[10px] text-amber-800 font-medium">Boca Dividida ou Dentes Teste</span>
-                          </div>
+                      {/* Aferição de Cor Dental (Modelos Configurados no Protocolo) */}
+                      {hasColorGuide && (() => {
+                        const activeModels: ColorAssessmentModel[] = (
+                          colorAssessment.modelsUsed && colorAssessment.modelsUsed.length > 0
+                        ) ? colorAssessment.modelsUsed : (
+                          protoSession?.clinicalModules?.colorModels && protoSession.clinicalModules.colorModels.length > 0
+                            ? protoSession.clinicalModules.colorModels
+                            : ['VITA_CLASSICAL']
+                        );
 
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                            <div className="bg-white p-3 rounded-xl border border-amber-200 shadow-2xs">
-                              <label className="block font-bold text-slate-700 text-xs mb-1.5">
-                                Lado Direito / Hemi-arco 1 (ou Dente Teste A)
-                              </label>
-                              <select
-                                value={currentSessionForm.shadeRight}
-                                onChange={(e) =>
-                                  setCurrentSessionForm({ ...currentSessionForm, shadeRight: e.target.value })
-                                }
-                                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs bg-white font-mono font-bold text-slate-800 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                              >
-                                {VITA_CLASSICAL_SHADES.map((sh, idx) => (
-                                  <option key={sh} value={sh}>
-                                    Tom {sh} (Passo {idx + 1})
-                                  </option>
-                                ))}
-                              </select>
+                        return (
+                          <div className="p-4 bg-amber-50/60 border border-amber-200/90 rounded-2xl space-y-4 shadow-2xs">
+                            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-amber-200/80 pb-2.5">
+                              <div>
+                                <span className="font-bold text-amber-950 text-xs inline-flex items-center gap-1.5">
+                                  <Sparkles className="w-4 h-4 text-amber-600" />
+                                  <span>Aferição de Cor Dental do Estudo</span>
+                                </span>
+                                <p className="text-[10px] text-amber-900/80 mt-0.5">
+                                  Preencha os desfechos com base nos modelos selecionados para esta consulta:
+                                </p>
+                              </div>
+
+                              {/* Seletor rápido de modelos na própria consulta */}
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                {COLOR_MODEL_OPTIONS.map((cMod) => {
+                                  const isSel = activeModels.includes(cMod.id);
+                                  return (
+                                    <button
+                                      key={cMod.id}
+                                      type="button"
+                                      onClick={() => {
+                                        const next = isSel
+                                          ? activeModels.filter(m => m !== cMod.id)
+                                          : [...activeModels, cMod.id];
+                                        if (next.length === 0) return;
+                                        setColorAssessment(prev => ({
+                                          ...prev,
+                                          modelsUsed: next,
+                                        }));
+                                      }}
+                                      className={`px-2 py-1 rounded-lg text-[10px] font-bold border transition flex items-center gap-1 cursor-pointer ${
+                                        isSel
+                                          ? 'bg-amber-600 text-white border-amber-600 shadow-2xs'
+                                          : 'bg-white text-slate-600 border-slate-300 hover:bg-amber-50'
+                                      }`}
+                                    >
+                                      <span>{cMod.icon}</span>
+                                      <span>{cMod.shortName}</span>
+                                      {isSel && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                                    </button>
+                                  );
+                                })}
+                              </div>
                             </div>
 
-                            <div className="bg-white p-3 rounded-xl border border-amber-200 shadow-2xs">
-                              <label className="block font-bold text-slate-700 text-xs mb-1.5">
-                                Lado Esquerdo / Hemi-arco 2 (ou Dente Teste B)
-                              </label>
-                              <select
-                                value={currentSessionForm.shadeLeft}
-                                onChange={(e) =>
-                                  setCurrentSessionForm({ ...currentSessionForm, shadeLeft: e.target.value })
-                                }
-                                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs bg-white font-mono font-bold text-slate-800 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                              >
-                                {VITA_CLASSICAL_SHADES.map((sh, idx) => (
-                                  <option key={sh} value={sh}>
-                                    Tom {sh} (Passo {idx + 1})
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
+                            {/* 1. Modelo 1 - Escala VITA Classical (Ordenada por Valor) */}
+                            {activeModels.includes('VITA_CLASSICAL') && (
+                              <div className="bg-white p-3.5 rounded-xl border border-amber-300 shadow-2xs space-y-2.5">
+                                <div className="flex items-center justify-between">
+                                  <span className="font-bold text-amber-950 text-xs flex items-center gap-1.5">
+                                    <span>🎨</span>
+                                    <span>Modelo 1: Escala VITA Classical (Ordenada por Valor / Luminosidade)</span>
+                                  </span>
+                                  <span className="text-[10px] text-amber-900 bg-amber-100 font-bold px-2 py-0.5 rounded-full">
+                                    16 Níveis (SGU 1 a 16)
+                                  </span>
+                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-0.5">
+                                  <div className="bg-slate-50/70 p-3 rounded-xl border border-slate-200">
+                                    <label className="block font-bold text-slate-800 text-xs mb-1">
+                                      Hemi-arco Direito / Dente Teste A
+                                    </label>
+                                    <select
+                                      value={colorAssessment.vitaClassical?.shadeRight || currentSessionForm.shadeRight || 'A3'}
+                                      onChange={(e) => {
+                                        const sh = e.target.value;
+                                        const sgu = getVitaSGU(sh);
+                                        setColorAssessment((prev) => ({
+                                          ...prev,
+                                          vitaClassical: {
+                                            ...(prev.vitaClassical || { shadeLeft: 'A3', sguLeft: 9 }),
+                                            shadeRight: sh,
+                                            sguRight: sgu,
+                                          },
+                                        }));
+                                        setCurrentSessionForm((prev) => ({ ...prev, shadeRight: sh }));
+                                      }}
+                                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs bg-white font-mono font-bold text-slate-900 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                                    >
+                                      {VITA_CLASSICAL_SHADES.map((sh, idx) => (
+                                        <option key={sh} value={sh}>
+                                          Escore {idx + 1} — Tom {sh} {idx === 0 ? '(Mais Claro)' : idx === 15 ? '(Mais Escuro)' : ''}
+                                        </option>
+                                      ))}
+                                    </select>
+                                    <div className="mt-1.5 flex items-center justify-between text-[11px] text-slate-600">
+                                      <span>Escore Numérico (SGU):</span>
+                                      <strong className="text-amber-700 bg-white px-2 py-0.5 rounded border border-slate-200">
+                                        {colorAssessment.vitaClassical?.sguRight ?? getVitaSGU(currentSessionForm.shadeRight)} / 16
+                                      </strong>
+                                    </div>
+                                  </div>
+
+                                  <div className="bg-slate-50/70 p-3 rounded-xl border border-slate-200">
+                                    <label className="block font-bold text-slate-800 text-xs mb-1">
+                                      Hemi-arco Esquerdo / Dente Teste B
+                                    </label>
+                                    <select
+                                      value={colorAssessment.vitaClassical?.shadeLeft || currentSessionForm.shadeLeft || 'A3'}
+                                      onChange={(e) => {
+                                        const sh = e.target.value;
+                                        const sgu = getVitaSGU(sh);
+                                        setColorAssessment((prev) => ({
+                                          ...prev,
+                                          vitaClassical: {
+                                            ...(prev.vitaClassical || { shadeRight: 'A3', sguRight: 9 }),
+                                            shadeLeft: sh,
+                                            sguLeft: sgu,
+                                          },
+                                        }));
+                                        setCurrentSessionForm((prev) => ({ ...prev, shadeLeft: sh }));
+                                      }}
+                                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs bg-white font-mono font-bold text-slate-900 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                                    >
+                                      {VITA_CLASSICAL_SHADES.map((sh, idx) => (
+                                        <option key={sh} value={sh}>
+                                          Escore {idx + 1} — Tom {sh} {idx === 0 ? '(Mais Claro)' : idx === 15 ? '(Mais Escuro)' : ''}
+                                        </option>
+                                      ))}
+                                    </select>
+                                    <div className="mt-1.5 flex items-center justify-between text-[11px] text-slate-600">
+                                      <span>Escore Numérico (SGU):</span>
+                                      <strong className="text-amber-700 bg-white px-2 py-0.5 rounded border border-slate-200">
+                                        {colorAssessment.vitaClassical?.sguLeft ?? getVitaSGU(currentSessionForm.shadeLeft)} / 16
+                                      </strong>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* 2. Modelo 2 - VITA Bleachedguide 3D-MASTER (29 níveis) */}
+                            {activeModels.includes('VITA_3D') && (
+                              <div className="bg-white p-3.5 rounded-xl border border-indigo-300 shadow-2xs space-y-2.5">
+                                <div className="flex items-center justify-between">
+                                  <span className="font-bold text-indigo-950 text-xs flex items-center gap-1.5">
+                                    <span>📐</span>
+                                    <span>Modelo 2: VITA Bleachedguide 3D-MASTER (Vita 3D)</span>
+                                  </span>
+                                  <span className="text-[10px] text-indigo-900 bg-indigo-100 font-bold px-2 py-0.5 rounded-full">
+                                    29 Níveis (15 Abas Físicas + 14 Intermediários)
+                                  </span>
+                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-0.5">
+                                  <div className="bg-slate-50/70 p-3 rounded-xl border border-slate-200">
+                                    <label className="block font-bold text-slate-800 text-xs mb-1">
+                                      Hemi-arco Direito / Dente Teste A
+                                    </label>
+                                    <select
+                                      value={colorAssessment.vita3D?.sguRight ?? 5}
+                                      onChange={(e) => {
+                                        const sgu = Number(e.target.value);
+                                        const item = VITA_3D_SHADES.find((s) => s.sgu === sgu);
+                                        setColorAssessment((prev) => ({
+                                          ...prev,
+                                          vita3D: {
+                                            ...(prev.vita3D || { sguLeft: 5, labelLeft: '5 (1M1)' }),
+                                            sguRight: sgu,
+                                            labelRight: item?.display_label || `${sgu}`,
+                                          },
+                                        }));
+                                      }}
+                                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs bg-white font-bold text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                                    >
+                                      {VITA_3D_SHADES.map((s) => (
+                                        <option key={s.sgu} value={s.sgu}>
+                                          {s.has_physical_tab ? `⭐ Aba Física: ${s.display_label}` : `▫️ ${s.display_label}`}
+                                        </option>
+                                      ))}
+                                    </select>
+                                    <div className="mt-1.5 flex items-center justify-between text-[11px] text-slate-600">
+                                      <span>Escore 3D (SGU):</span>
+                                      <strong className="text-indigo-700 bg-white px-2 py-0.5 rounded border border-slate-200">
+                                        Nível {colorAssessment.vita3D?.sguRight ?? 5} / 29
+                                      </strong>
+                                    </div>
+                                  </div>
+
+                                  <div className="bg-slate-50/70 p-3 rounded-xl border border-slate-200">
+                                    <label className="block font-bold text-slate-800 text-xs mb-1">
+                                      Hemi-arco Esquerdo / Dente Teste B
+                                    </label>
+                                    <select
+                                      value={colorAssessment.vita3D?.sguLeft ?? 5}
+                                      onChange={(e) => {
+                                        const sgu = Number(e.target.value);
+                                        const item = VITA_3D_SHADES.find((s) => s.sgu === sgu);
+                                        setColorAssessment((prev) => ({
+                                          ...prev,
+                                          vita3D: {
+                                            ...(prev.vita3D || { sguRight: 5, labelRight: '5 (1M1)' }),
+                                            sguLeft: sgu,
+                                            labelLeft: item?.display_label || `${sgu}`,
+                                          },
+                                        }));
+                                      }}
+                                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs bg-white font-bold text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                                    >
+                                      {VITA_3D_SHADES.map((s) => (
+                                        <option key={s.sgu} value={s.sgu}>
+                                          {s.has_physical_tab ? `⭐ Aba Física: ${s.display_label}` : `▫️ ${s.display_label}`}
+                                        </option>
+                                      ))}
+                                    </select>
+                                    <div className="mt-1.5 flex items-center justify-between text-[11px] text-slate-600">
+                                      <span>Escore 3D (SGU):</span>
+                                      <strong className="text-indigo-700 bg-white px-2 py-0.5 rounded border border-slate-200">
+                                        Nível {colorAssessment.vita3D?.sguLeft ?? 5} / 29
+                                      </strong>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* 3. Modelo 3 - VITA Easyshade (Espectrofotômetro L* a* b*) */}
+                            {activeModels.includes('VITA_EASYSHADE') && (
+                              <div className="bg-white p-3.5 rounded-xl border border-emerald-300 shadow-2xs space-y-2.5">
+                                <div className="flex items-center justify-between">
+                                  <span className="font-bold text-emerald-950 text-xs flex items-center gap-1.5">
+                                    <span>📟</span>
+                                    <span>Modelo 3: VITA Easyshade (Espectrofotômetro Digital CIELAB)</span>
+                                  </span>
+                                  <span className="text-[10px] text-emerald-900 bg-emerald-100 font-bold px-2 py-0.5 rounded-full">
+                                    Coordenadas L*, a*, b*
+                                  </span>
+                                </div>
+                                <p className="text-[11px] text-slate-600">
+                                  Digite as coordenadas analíticas aferidas no visor do espectrofotômetro:
+                                </p>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-0.5">
+                                  {/* Lado Direito */}
+                                  <div className="p-3 bg-slate-50/70 rounded-xl border border-slate-200 space-y-2">
+                                    <span className="font-bold text-slate-800 text-xs block">
+                                      Hemi-arco Direito / Dente Teste A
+                                    </span>
+                                    <div className="grid grid-cols-3 gap-2">
+                                      <div>
+                                        <label className="block text-[10px] font-bold text-slate-600 mb-0.5">L* (0-100)</label>
+                                        <input
+                                          type="number"
+                                          step="0.01"
+                                          placeholder="Ex: 78.4"
+                                          value={colorAssessment.easyshade?.rightL ?? ''}
+                                          onChange={(e) => {
+                                            const val = e.target.value === '' ? null : parseFloat(e.target.value);
+                                            setColorAssessment((prev) => ({
+                                              ...prev,
+                                              easyshade: {
+                                                ...(prev.easyshade || { rightA: null, rightB: null, leftL: null, leftA: null, leftB: null }),
+                                                rightL: val,
+                                              },
+                                            }));
+                                          }}
+                                          className="w-full px-2 py-1.5 border border-slate-300 rounded-lg text-xs bg-white font-mono focus:ring-2 focus:ring-emerald-500"
+                                        />
+                                      </div>
+                                      <div>
+                                        <label className="block text-[10px] font-bold text-slate-600 mb-0.5">a* (-50 a +50)</label>
+                                        <input
+                                          type="number"
+                                          step="0.01"
+                                          placeholder="Ex: 1.2"
+                                          value={colorAssessment.easyshade?.rightA ?? ''}
+                                          onChange={(e) => {
+                                            const val = e.target.value === '' ? null : parseFloat(e.target.value);
+                                            setColorAssessment((prev) => ({
+                                              ...prev,
+                                              easyshade: {
+                                                ...(prev.easyshade || { rightL: null, rightB: null, leftL: null, leftA: null, leftB: null }),
+                                                rightA: val,
+                                              },
+                                            }));
+                                          }}
+                                          className="w-full px-2 py-1.5 border border-slate-300 rounded-lg text-xs bg-white font-mono focus:ring-2 focus:ring-emerald-500"
+                                        />
+                                      </div>
+                                      <div>
+                                        <label className="block text-[10px] font-bold text-slate-600 mb-0.5">b* (-50 a +50)</label>
+                                        <input
+                                          type="number"
+                                          step="0.01"
+                                          placeholder="Ex: 18.5"
+                                          value={colorAssessment.easyshade?.rightB ?? ''}
+                                          onChange={(e) => {
+                                            const val = e.target.value === '' ? null : parseFloat(e.target.value);
+                                            setColorAssessment((prev) => ({
+                                              ...prev,
+                                              easyshade: {
+                                                ...(prev.easyshade || { rightL: null, rightA: null, leftL: null, leftA: null, leftB: null }),
+                                                rightB: val,
+                                              },
+                                            }));
+                                          }}
+                                          className="w-full px-2 py-1.5 border border-slate-300 rounded-lg text-xs bg-white font-mono focus:ring-2 focus:ring-emerald-500"
+                                        />
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  {/* Lado Esquerdo */}
+                                  <div className="p-3 bg-slate-50/70 rounded-xl border border-slate-200 space-y-2">
+                                    <span className="font-bold text-slate-800 text-xs block">
+                                      Hemi-arco Esquerdo / Dente Teste B
+                                    </span>
+                                    <div className="grid grid-cols-3 gap-2">
+                                      <div>
+                                        <label className="block text-[10px] font-bold text-slate-600 mb-0.5">L* (0-100)</label>
+                                        <input
+                                          type="number"
+                                          step="0.01"
+                                          placeholder="Ex: 78.2"
+                                          value={colorAssessment.easyshade?.leftL ?? ''}
+                                          onChange={(e) => {
+                                            const val = e.target.value === '' ? null : parseFloat(e.target.value);
+                                            setColorAssessment((prev) => ({
+                                              ...prev,
+                                              easyshade: {
+                                                ...(prev.easyshade || { rightL: null, rightA: null, rightB: null, leftA: null, leftB: null }),
+                                                leftL: val,
+                                              },
+                                            }));
+                                          }}
+                                          className="w-full px-2 py-1.5 border border-slate-300 rounded-lg text-xs bg-white font-mono focus:ring-2 focus:ring-emerald-500"
+                                        />
+                                      </div>
+                                      <div>
+                                        <label className="block text-[10px] font-bold text-slate-600 mb-0.5">a* (-50 a +50)</label>
+                                        <input
+                                          type="number"
+                                          step="0.01"
+                                          placeholder="Ex: 1.1"
+                                          value={colorAssessment.easyshade?.leftA ?? ''}
+                                          onChange={(e) => {
+                                            const val = e.target.value === '' ? null : parseFloat(e.target.value);
+                                            setColorAssessment((prev) => ({
+                                              ...prev,
+                                              easyshade: {
+                                                ...(prev.easyshade || { rightL: null, rightA: null, rightB: null, leftL: null, leftB: null }),
+                                                leftA: val,
+                                              },
+                                            }));
+                                          }}
+                                          className="w-full px-2 py-1.5 border border-slate-300 rounded-lg text-xs bg-white font-mono focus:ring-2 focus:ring-emerald-500"
+                                        />
+                                      </div>
+                                      <div>
+                                        <label className="block text-[10px] font-bold text-slate-600 mb-0.5">b* (-50 a +50)</label>
+                                        <input
+                                          type="number"
+                                          step="0.01"
+                                          placeholder="Ex: 18.3"
+                                          value={colorAssessment.easyshade?.leftB ?? ''}
+                                          onChange={(e) => {
+                                            const val = e.target.value === '' ? null : parseFloat(e.target.value);
+                                            setColorAssessment((prev) => ({
+                                              ...prev,
+                                              easyshade: {
+                                                ...(prev.easyshade || { rightL: null, rightA: null, rightB: null, leftL: null, leftA: null }),
+                                                leftB: val,
+                                              },
+                                            }));
+                                          }}
+                                          className="w-full px-2 py-1.5 border border-slate-300 rounded-lg text-xs bg-white font-mono focus:ring-2 focus:ring-emerald-500"
+                                        />
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
                           </div>
-                        </div>
-                      )}
+                        );
+                      })()}
 
                       {/* Checagem de Tecidos e Critérios de Manutenção */}
                       <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1.5 text-slate-600 text-[11px]">

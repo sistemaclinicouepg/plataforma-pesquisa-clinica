@@ -25,6 +25,7 @@ import {
   AlertCircle,
   ClipboardList,
 } from 'lucide-react';
+import { parseColorAssessmentData, stripMetaFromNotes } from '@/lib/unlockProtocol';
 
 export type DossierTab = 'geral' | 'odontograma' | 'anamnese' | 'periodontograma' | 'historico';
 
@@ -834,41 +835,87 @@ export const PatientDossierModal: React.FC<PatientDossierModalProps> = ({
                       </div>
 
                       {/* Parâmetros da Sessão: Cor e Dor */}
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-                        {sess.shadeRight && (
-                          <div className="p-2 bg-slate-50 rounded-lg">
-                            <span className="text-[10px] text-slate-400 block font-bold">Cor Hemi-arcada Direita:</span>
-                            <strong className="text-slate-800">{sess.shadeRight}</strong>
-                          </div>
-                        )}
+                      {(() => {
+                        const colorData = parseColorAssessmentData(sess.notes);
+                        const cleanNotes = stripMetaFromNotes(sess.notes);
+                        return (
+                          <div className="space-y-2">
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                              {colorData?.vitaClassical ? (
+                                <>
+                                  <div className="p-2 bg-amber-50/70 border border-amber-200/60 rounded-lg">
+                                    <span className="text-[10px] text-amber-800 block font-bold">VITA Classical (Dir):</span>
+                                    <strong className="text-slate-800">{colorData.vitaClassical.shadeRight}</strong>{' '}
+                                    <span className="text-[10px] text-amber-700">(SGU {colorData.vitaClassical.sguRight})</span>
+                                  </div>
+                                  <div className="p-2 bg-amber-50/70 border border-amber-200/60 rounded-lg">
+                                    <span className="text-[10px] text-amber-800 block font-bold">VITA Classical (Esq):</span>
+                                    <strong className="text-slate-800">{colorData.vitaClassical.shadeLeft}</strong>{' '}
+                                    <span className="text-[10px] text-amber-700">(SGU {colorData.vitaClassical.sguLeft})</span>
+                                  </div>
+                                </>
+                              ) : (
+                                <>
+                                  {sess.shadeRight && (
+                                    <div className="p-2 bg-slate-50 rounded-lg">
+                                      <span className="text-[10px] text-slate-400 block font-bold">Cor Hemi-arcada Direita:</span>
+                                      <strong className="text-slate-800">{sess.shadeRight}</strong>
+                                    </div>
+                                  )}
+                                  {sess.shadeLeft && (
+                                    <div className="p-2 bg-slate-50 rounded-lg">
+                                      <span className="text-[10px] text-slate-400 block font-bold">Cor Hemi-arcada Esquerda:</span>
+                                      <strong className="text-slate-800">{sess.shadeLeft}</strong>
+                                    </div>
+                                  )}
+                                </>
+                              )}
 
-                        {sess.shadeLeft && (
-                          <div className="p-2 bg-slate-50 rounded-lg">
-                            <span className="text-[10px] text-slate-400 block font-bold">Cor Hemi-arcada Esquerda:</span>
-                            <strong className="text-slate-800">{sess.shadeLeft}</strong>
-                          </div>
-                        )}
+                              {sess.painScore0h !== null && sess.painScore0h !== undefined && (
+                                <div className="p-2 bg-slate-50 rounded-lg">
+                                  <span className="text-[10px] text-slate-400 block font-bold">Escala Dor (0h):</span>
+                                  <strong className="text-slate-800">{sess.painScore0h} / 10</strong>
+                                </div>
+                              )}
 
-                        {sess.painScore0h !== null && sess.painScore0h !== undefined && (
-                          <div className="p-2 bg-slate-50 rounded-lg">
-                            <span className="text-[10px] text-slate-400 block font-bold">Escala Dor (0h):</span>
-                            <strong className="text-slate-800">{sess.painScore0h} / 10</strong>
-                          </div>
-                        )}
+                              {sess.painScore24h !== null && sess.painScore24h !== undefined && (
+                                <div className="p-2 bg-slate-50 rounded-lg">
+                                  <span className="text-[10px] text-slate-400 block font-bold">Escala Dor (24h):</span>
+                                  <strong className="text-slate-800">{sess.painScore24h} / 10</strong>
+                                </div>
+                              )}
+                            </div>
 
-                        {sess.painScore24h !== null && sess.painScore24h !== undefined && (
-                          <div className="p-2 bg-slate-50 rounded-lg">
-                            <span className="text-[10px] text-slate-400 block font-bold">Escala Dor (24h):</span>
-                            <strong className="text-slate-800">{sess.painScore24h} / 10</strong>
-                          </div>
-                        )}
-                      </div>
+                            {/* Detalhes adicionais se houver VITA 3D ou Easyshade */}
+                            {(colorData?.vita3D || colorData?.easyshade) && (
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs pt-0.5">
+                                {colorData.vita3D && (
+                                  <div className="p-2 bg-indigo-50/70 border border-indigo-200/60 rounded-lg">
+                                    <span className="text-[10px] text-indigo-800 block font-bold">VITA Bleachedguide 3D:</span>
+                                    <p className="text-[11px] text-indigo-950 font-medium">
+                                      Dir: <strong>{colorData.vita3D.labelRight}</strong> | Esq: <strong>{colorData.vita3D.labelLeft}</strong>
+                                    </p>
+                                  </div>
+                                )}
+                                {colorData.easyshade && (colorData.easyshade.rightL !== null || colorData.easyshade.leftL !== null) && (
+                                  <div className="p-2 bg-emerald-50/70 border border-emerald-200/60 rounded-lg">
+                                    <span className="text-[10px] text-emerald-800 block font-bold">Easyshade CIELAB (L*, a*, b*):</span>
+                                    <p className="text-[10px] font-mono text-emerald-950">
+                                      Dir: {colorData.easyshade.rightL ?? '—'} / {colorData.easyshade.rightA ?? '—'} / {colorData.easyshade.rightB ?? '—'} | Esq: {colorData.easyshade.leftL ?? '—'} / {colorData.easyshade.leftA ?? '—'} / {colorData.easyshade.leftB ?? '—'}
+                                    </p>
+                                  </div>
+                                )}
+                              </div>
+                            )}
 
-                      {sess.notes && (
-                        <p className="text-[11px] text-slate-600 bg-slate-50 p-2.5 rounded-lg border border-slate-100 italic">
-                          &ldquo;{sess.notes}&rdquo;
-                        </p>
-                      )}
+                            {cleanNotes && (
+                              <p className="text-[11px] text-slate-600 bg-slate-50 p-2.5 rounded-lg border border-slate-100 italic">
+                                &ldquo;{cleanNotes}&rdquo;
+                              </p>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </div>
                   ))}
                 </div>

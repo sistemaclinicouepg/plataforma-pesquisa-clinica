@@ -118,9 +118,95 @@ export const RESEARCH_SPECIALTIES: SpecialtyDefinition[] = [
   },
 ];
 
+export type ColorAssessmentModel = 'VITA_CLASSICAL' | 'VITA_3D' | 'VITA_EASYSHADE';
+
+export interface Vita3DShadeItem {
+  sgu: number;
+  vita_code: string | null;
+  has_physical_tab: boolean;
+  is_interpolated: boolean;
+  display_label: string;
+}
+
+export const VITA_CLASSICAL_SHADES = [
+  'B1', 'A1', 'B2', 'D2', 'A2', 'C1', 'C2', 'D4',
+  'A3', 'D3', 'B3', 'A3.5', 'B4', 'C3', 'A4', 'C4'
+] as const;
+
+export const VITA_3D_SHADES: Vita3DShadeItem[] = [
+  { sgu: 1, vita_code: "0M1", has_physical_tab: true, is_interpolated: false, display_label: "1 (0M1)" },
+  { sgu: 2, vita_code: null, has_physical_tab: false, is_interpolated: true, display_label: "2 (Intermediário 0M1 - 0.5M1)" },
+  { sgu: 3, vita_code: "0.5M1", has_physical_tab: true, is_interpolated: false, display_label: "3 (0.5M1)" },
+  { sgu: 4, vita_code: null, has_physical_tab: false, is_interpolated: true, display_label: "4 (Intermediário 0.5M1 - 1M1)" },
+  { sgu: 5, vita_code: "1M1", has_physical_tab: true, is_interpolated: false, display_label: "5 (1M1)" },
+  { sgu: 6, vita_code: null, has_physical_tab: false, is_interpolated: true, display_label: "6 (Intermediário 1M1 - 1M1.5)" },
+  { sgu: 7, vita_code: "1M1.5", has_physical_tab: true, is_interpolated: false, display_label: "7 (1M1.5)" },
+  { sgu: 8, vita_code: null, has_physical_tab: false, is_interpolated: true, display_label: "8 (Intermediário 1M1.5 - 1.5M2)" },
+  { sgu: 9, vita_code: "1.5M2", has_physical_tab: true, is_interpolated: false, display_label: "9 (1.5M2)" },
+  { sgu: 10, vita_code: null, has_physical_tab: false, is_interpolated: true, display_label: "10 (Intermediário 1.5M2 - 2M2)" },
+  { sgu: 11, vita_code: "2M2", has_physical_tab: true, is_interpolated: false, display_label: "11 (2M2)" },
+  { sgu: 12, vita_code: null, has_physical_tab: false, is_interpolated: true, display_label: "12 (Intermediário 2M2 - 2.5M2)" },
+  { sgu: 13, vita_code: "2.5M2", has_physical_tab: true, is_interpolated: false, display_label: "13 (2.5M2)" },
+  { sgu: 14, vita_code: null, has_physical_tab: false, is_interpolated: true, display_label: "14 (Intermediário 2.5M2 - 3M2)" },
+  { sgu: 15, vita_code: "3M2", has_physical_tab: true, is_interpolated: false, display_label: "15 (3M2)" },
+  { sgu: 16, vita_code: null, has_physical_tab: false, is_interpolated: true, display_label: "16 (Intermediário 3M2 - 3.5M2)" },
+  { sgu: 17, vita_code: "3.5M2", has_physical_tab: true, is_interpolated: false, display_label: "17 (3.5M2)" },
+  { sgu: 18, vita_code: null, has_physical_tab: false, is_interpolated: true, display_label: "18 (Intermediário 3.5M2 - 4M2)" },
+  { sgu: 19, vita_code: "4M2", has_physical_tab: true, is_interpolated: false, display_label: "19 (4M2)" },
+  { sgu: 20, vita_code: null, has_physical_tab: false, is_interpolated: true, display_label: "20 (Intermediário 4M2 - 4M2.5)" },
+  { sgu: 21, vita_code: "4M2.5", has_physical_tab: true, is_interpolated: false, display_label: "21 (4M2.5)" },
+  { sgu: 22, vita_code: null, has_physical_tab: false, is_interpolated: true, display_label: "22 (Intermediário 4M2.5 - 4.5M2.5)" },
+  { sgu: 23, vita_code: "4.5M2.5", has_physical_tab: true, is_interpolated: false, display_label: "23 (4.5M2.5)" },
+  { sgu: 24, vita_code: null, has_physical_tab: false, is_interpolated: true, display_label: "24 (Intermediário 4.5M2.5 - 5M2.5)" },
+  { sgu: 25, vita_code: "5M2.5", has_physical_tab: true, is_interpolated: false, display_label: "25 (5M2.5)" },
+  { sgu: 26, vita_code: null, has_physical_tab: false, is_interpolated: true, display_label: "26 (Intermediário 5M2.5 - 5M3)" },
+  { sgu: 27, vita_code: "5M3", has_physical_tab: true, is_interpolated: false, display_label: "27 (5M3)" },
+  { sgu: 28, vita_code: null, has_physical_tab: false, is_interpolated: true, display_label: "28 (Intermediário 5M3 - 5M3+)" },
+  { sgu: 29, vita_code: "5M3+", has_physical_tab: true, is_interpolated: false, display_label: "29 (5M3+)" }
+];
+
+export const COLOR_MODEL_OPTIONS: Array<{
+  id: ColorAssessmentModel;
+  modelNumber: number;
+  name: string;
+  shortName: string;
+  badge: string;
+  description: string;
+  icon: string;
+}> = [
+  {
+    id: 'VITA_CLASSICAL',
+    modelNumber: 1,
+    name: 'Modelo 1 - Escala VITA Classical',
+    shortName: 'VITA Classical',
+    badge: '16 Níveis (Valor)',
+    description: '16 níveis ordenados por valor/luminosidade (B1 até C4, SGU 1 a 16)',
+    icon: '🎨',
+  },
+  {
+    id: 'VITA_3D',
+    modelNumber: 2,
+    name: 'Modelo 2 - VITA Bleachedguide 3D-MASTER',
+    shortName: 'VITA 3D',
+    badge: '29 Níveis (SGU 1-29)',
+    description: '29 níveis com 15 abas físicas e 14 intermediários interpolados',
+    icon: '📐',
+  },
+  {
+    id: 'VITA_EASYSHADE',
+    modelNumber: 3,
+    name: 'Modelo 3 - VITA Easyshade',
+    shortName: 'Easyshade',
+    badge: 'Valores L* a* b*',
+    description: 'Espectrofotômetro digital para inserção dos valores analíticos L*, a* e b*',
+    icon: '📟',
+  },
+];
+
 export interface SessionClinicalModules {
   toothMapping?: boolean; // Mapeamento de dentes/quadrantes
-  colorGuide?: boolean; // Escala Vita Classical
+  colorGuide?: boolean; // Tomada de cor ativa
+  colorModels?: ColorAssessmentModel[]; // Modelos de tomada de cor selecionados (VITA Classical, VITA 3D, Easyshade)
   painVAS?: boolean; // Escala EVA na cadeira (0h)
   softTissueExam?: boolean; // Exame de tecidos moles / alvéolo / margem
   timer?: boolean; // Cronômetro clínico do procedimento
@@ -1068,9 +1154,15 @@ export function parseStudyProtocol(templateStringOrObj: any): StudyProtocolConfi
         ? s.patientQuestionnaireIds
         : (s.requiresPatientQuestionnaire === false ? [] : ['eva']),
       patientInstructions: s.patientInstructions || '',
-      clinicalModules: s.clinicalModules || {
+      clinicalModules: s.clinicalModules ? {
+        ...s.clinicalModules,
+        colorModels: Array.isArray(s.clinicalModules.colorModels) && s.clinicalModules.colorModels.length > 0
+          ? s.clinicalModules.colorModels
+          : (s.clinicalModules.colorGuide ? ['VITA_CLASSICAL'] : undefined),
+      } : {
         toothMapping: true,
         colorGuide: specialty === 'BLEACHING' || specialty === 'RESTORATIVE',
+        colorModels: (specialty === 'BLEACHING' || specialty === 'RESTORATIVE') ? ['VITA_CLASSICAL'] : undefined,
         painVAS: true,
         softTissueExam: true,
         fdiCriteria: specialty === 'RESTORATIVE',
