@@ -13,6 +13,8 @@ export type FormQuestionDef = {
   minLabel?: string;
   maxLabel?: string;
   observation?: string;
+  enableGateQuestion?: boolean;
+  gateQuestionTitle?: string;
 };
 
 export type PresetQuestionnaireDef = {
@@ -40,6 +42,8 @@ export const STANDARD_PRESETS: Record<string, PresetQuestionnaireDef> = {
         maxLabel: '10.0 - Pior Dor Imaginável',
         required: true,
         observation: 'Deslize a barra contínua de 0 a 10 de acordo com sua percepção.',
+        enableGateQuestion: true,
+        gateQuestionTitle: 'Você teve dor ou sensibilidade?',
       },
       {
         id: 'q_sens_type',

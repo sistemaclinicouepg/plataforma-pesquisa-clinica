@@ -3296,26 +3296,64 @@ export default function HomePage() {
 
                                             {/* Configurações Específicas: Escala EVA / VAS */}
                                             {q.type === 'vas' && (
-                                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 border-t border-slate-100 text-[11px]">
-                                                <div className="flex items-center gap-1.5">
-                                                  <span className="text-slate-500 font-semibold shrink-0">Rótulo Mínimo (0):</span>
-                                                  <input
-                                                    type="text"
-                                                    value={q.minLabel || ''}
-                                                    onChange={(e) => handleUpdateQuestionInForm(f.id, qIdx, 'minLabel', e.target.value)}
-                                                    placeholder="Ex: 0 - Sem Dor"
-                                                    className="w-full px-2 py-0.5 border border-slate-200 rounded text-[11px] bg-slate-50"
-                                                  />
+                                              <div className="space-y-2 pt-1 border-t border-slate-100 text-[11px]">
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                                  <div className="flex items-center gap-1.5">
+                                                    <span className="text-slate-500 font-semibold shrink-0">Rótulo Mínimo (0):</span>
+                                                    <input
+                                                      type="text"
+                                                      value={q.minLabel || ''}
+                                                      onChange={(e) => handleUpdateQuestionInForm(f.id, qIdx, 'minLabel', e.target.value)}
+                                                      placeholder="Ex: 0 - Sem Dor"
+                                                      className="w-full px-2 py-0.5 border border-slate-200 rounded text-[11px] bg-slate-50"
+                                                    />
+                                                  </div>
+                                                  <div className="flex items-center gap-1.5">
+                                                    <span className="text-slate-500 font-semibold shrink-0">Rótulo Máximo (10):</span>
+                                                    <input
+                                                      type="text"
+                                                      value={q.maxLabel || ''}
+                                                      onChange={(e) => handleUpdateQuestionInForm(f.id, qIdx, 'maxLabel', e.target.value)}
+                                                      placeholder="Ex: 10 - Pior Dor"
+                                                      className="w-full px-2 py-0.5 border border-slate-200 rounded text-[11px] bg-slate-50"
+                                                    />
+                                                  </div>
                                                 </div>
-                                                <div className="flex items-center gap-1.5">
-                                                  <span className="text-slate-500 font-semibold shrink-0">Rótulo Máximo (10):</span>
-                                                  <input
-                                                    type="text"
-                                                    value={q.maxLabel || ''}
-                                                    onChange={(e) => handleUpdateQuestionInForm(f.id, qIdx, 'maxLabel', e.target.value)}
-                                                    placeholder="Ex: 10 - Pior Dor"
-                                                    className="w-full px-2 py-0.5 border border-slate-200 rounded text-[11px] bg-slate-50"
-                                                  />
+
+                                                {/* Pergunta preliminar Sim / Não condicional */}
+                                                <div className="p-2.5 bg-blue-50/70 border border-blue-200 rounded-xl space-y-1.5">
+                                                  <label className="flex items-center gap-2 font-bold text-slate-800 cursor-pointer">
+                                                    <input
+                                                      type="checkbox"
+                                                      checked={Boolean(q.enableGateQuestion)}
+                                                      onChange={(e) => {
+                                                        handleUpdateQuestionInForm(f.id, qIdx, 'enableGateQuestion', e.target.checked);
+                                                        if (e.target.checked && !q.gateQuestionTitle) {
+                                                          handleUpdateQuestionInForm(f.id, qIdx, 'gateQuestionTitle', 'Você teve dor ou sensibilidade?');
+                                                        }
+                                                      }}
+                                                      className="w-4 h-4 text-blue-600 rounded cursor-pointer"
+                                                    />
+                                                    <span className="text-xs">Exigir pergunta preliminar (Sim / Não) antes de liberar a escala</span>
+                                                  </label>
+                                                  <p className="text-[10px] text-slate-500 pl-6 leading-tight">
+                                                    Se ativado, a régua de intensidade só abre se o paciente responder &quot;Sim&quot;. Se responder &quot;Não&quot;, a escala permanece bloqueada com nota 0.0.
+                                                  </p>
+
+                                                  {Boolean(q.enableGateQuestion) && (
+                                                    <div className="pl-6 pt-1 space-y-1">
+                                                      <label className="block text-[10px] font-bold text-slate-700">
+                                                        Personalizar texto da pergunta preliminar:
+                                                      </label>
+                                                      <input
+                                                        type="text"
+                                                        value={q.gateQuestionTitle || ''}
+                                                        onChange={(e) => handleUpdateQuestionInForm(f.id, qIdx, 'gateQuestionTitle', e.target.value)}
+                                                        placeholder="Ex: Você teve dor ou sensibilidade?"
+                                                        className="w-full px-2.5 py-1 border border-blue-300 rounded-lg text-xs bg-white text-slate-900 focus:ring-1 focus:ring-blue-500"
+                                                      />
+                                                    </div>
+                                                  )}
                                                 </div>
                                               </div>
                                             )}

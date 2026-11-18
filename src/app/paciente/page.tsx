@@ -43,6 +43,8 @@ type FormQuestionItem = {
   minLabel?: string;
   maxLabel?: string;
   observation?: string;
+  enableGateQuestion?: boolean;
+  gateQuestionTitle?: string;
 };
 
 type FormAnswerValue = string | number | boolean | null | undefined;
@@ -131,12 +133,30 @@ function PacienteContent() {
     setSelectedForm(form);
     const initialAnswers: Record<string, FormAnswerValue> = { ...(form.myAnswers || {}) };
 
-    // Inicializa perguntas VAS para 0.0 caso não haja resposta prévia, evitando bloqueio do voluntário
+    // Inicializa perguntas VAS caso não haja resposta prévia, respeitando perguntas-filtro (gate questions)
     (form.questions || []).forEach((q: FormQuestionItem) => {
       const qKey = String(q.id);
-      if (q.type === 'vas' && initialAnswers[qKey] === undefined && initialAnswers[q.id] === undefined) {
-        initialAnswers[qKey] = 0;
-        initialAnswers[q.id] = 0;
+      if (q.type === 'vas') {
+        if (!q.enableGateQuestion) {
+          if (initialAnswers[qKey] === undefined && initialAnswers[q.id] === undefined) {
+            initialAnswers[qKey] = 0;
+            initialAnswers[q.id] = 0;
+          }
+        } else {
+          // Se já havia resposta salva anteriormente, reconstrói o estado do gate
+          const existingScore = initialAnswers[qKey] ?? initialAnswers[q.id];
+          const existingGate = initialAnswers[`${qKey}_gate`] ?? initialAnswers[`${q.id}_gate`];
+          if (existingGate === undefined && existingScore !== undefined && existingScore !== null) {
+            const num = Number(existingScore);
+            if (num > 0) {
+              initialAnswers[`${qKey}_gate`] = 'sim';
+              initialAnswers[`${q.id}_gate`] = 'sim';
+            } else if (form.myAnswers) {
+              initialAnswers[`${qKey}_gate`] = 'nao';
+              initialAnswers[`${q.id}_gate`] = 'nao';
+            }
+          }
+        }
       }
     });
 
@@ -265,6 +285,15 @@ function PacienteContent() {
     const missing = selectedForm.questions.filter((q) => {
       if (q.type === 'instruction') return false;
       if (!q.required) return false;
+      if (q.type === 'vas' && q.enableGateQuestion) {
+        const gateVal = formAnswers[`${String(q.id)}_gate`] ?? formAnswers[`${q.id}_gate`];
+        if (!gateVal) return true; // Pergunta preliminar Sim / Não não respondida
+        if (gateVal === 'sim') {
+          const val = formAnswers[String(q.id)] ?? formAnswers[q.id];
+          return val === undefined || val === null || val === '';
+        }
+        return false; // Respondeu 'Não', bloqueado em 0.0 (válido)
+      }
       const val = formAnswers[String(q.id)] ?? formAnswers[q.id];
       return val === undefined || val === null || val === '';
     });
@@ -1022,6 +1051,13 @@ function PacienteContent() {
 
                         {/* Escala Visual Analógica (EVA) */}
                         {q.type === 'vas' && (() => {
+                          const gateKey = `${String(q.id)}_gate`;
+                          const gateVal = formAnswers[gateKey] ?? formAnswers[`${q.id}_gate`];
+                          const isGateEnabled = Boolean(q.enableGateQuestion);
+                          const isGateAnswered = Boolean(gateVal);
+                          const hasPain = gateVal === 'sim';
+                          const isBlockedNoPain = isGateEnabled && gateVal === 'nao';
+
                           const vasVal =
                             typeof currentAnswer === 'number'
                               ? currentAnswer
@@ -1036,38 +1072,110 @@ function PacienteContent() {
                             .trim() || 'Severo / Máximo';
 
                           return (
-                            <div className="py-3 px-1 space-y-3">
-                              <p className="text-[11px] text-slate-500 italic px-1">
-                                Deslize o marcador na linha contínua até o ponto que melhor representa o que você sente:
-                              </p>
-                              <div className="relative flex items-center py-1">
-                                <div className="w-1 h-6 bg-slate-400 rounded-full shrink-0 -mr-1 z-10" />
-                                <input
-                                  type="range"
-                                  min="0"
-                                  max="10"
-                                  step="0.1"
-                                  value={vasVal}
-                                  onTouchStart={() => handleFormAnswerChange(q.id, vasVal)}
-                                  onMouseDown={() => handleFormAnswerChange(q.id, vasVal)}
-                                  onChange={(e) =>
-                                    handleFormAnswerChange(
-                                      q.id,
-                                      parseFloat(parseFloat(e.target.value).toFixed(1))
-                                    )
-                                  }
-                                  className="w-full h-3 bg-slate-200 border border-slate-300 rounded-lg appearance-none cursor-pointer accent-blue-600 focus:outline-none shadow-inner"
-                                />
-                                <div className="w-1 h-6 bg-slate-400 rounded-full shrink-0 -ml-1 z-10" />
-                              </div>
-                              <div className="flex justify-between items-start text-xs pt-0.5 px-1">
-                                <span className="font-bold text-slate-800 max-w-[48%] text-left leading-snug">
-                                  {cleanMinLabel}
-                                </span>
-                                <span className="font-bold text-slate-800 max-w-[48%] text-right leading-snug">
-                                  {cleanMaxLabel}
-                                </span>
-                              </div>
+                            <div className="py-2 px-1 space-y-3">
+                              {/* Pergunta preliminar Sim / Não condicional (se habilitada no CRF) */}
+                              {isGateEnabled && (
+                                <div className="p-3.5 bg-gradient-to-r from-blue-50/80 to-indigo-50/60 border border-blue-200/90 rounded-2xl space-y-2.5 shadow-2xs">
+                                  <div className="flex items-center gap-2">
+                                    <span className="w-2.5 h-2.5 rounded-full bg-blue-600 shrink-0" />
+                                    <span className="text-xs sm:text-sm font-bold text-slate-800">
+                                      {q.gateQuestionTitle || 'Você teve dor ou sensibilidade?'}
+                                    </span>
+                                  </div>
+                                  <p className="text-[11px] text-slate-500 pl-4 leading-tight">
+                                    Indique abaixo se sentiu qualquer grau de dor ou sensibilidade para liberar a régua de intensidade:
+                                  </p>
+                                  <div className="grid grid-cols-2 gap-2.5 pt-1 pl-4">
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        handleFormAnswerChange(gateKey, 'sim');
+                                        handleFormAnswerChange(`${q.id}_gate`, 'sim');
+                                        if (currentAnswer === undefined || currentAnswer === null) {
+                                          handleFormAnswerChange(q.id, 0);
+                                        }
+                                      }}
+                                      className={`py-2 px-3 rounded-xl text-xs sm:text-sm font-bold transition flex items-center justify-center gap-2 border cursor-pointer ${
+                                        hasPain
+                                          ? 'bg-blue-600 text-white border-blue-600 shadow-sm ring-2 ring-blue-300'
+                                          : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
+                                      }`}
+                                    >
+                                      <span>Sim (Tive dor)</span>
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        handleFormAnswerChange(gateKey, 'nao');
+                                        handleFormAnswerChange(`${q.id}_gate`, 'nao');
+                                        handleFormAnswerChange(q.id, 0);
+                                      }}
+                                      className={`py-2 px-3 rounded-xl text-xs sm:text-sm font-bold transition flex items-center justify-center gap-2 border cursor-pointer ${
+                                        isBlockedNoPain
+                                          ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm ring-2 ring-emerald-300'
+                                          : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
+                                      }`}
+                                    >
+                                      <span>Não (Sem dor)</span>
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Alerta de bloqueio enquanto o paciente não responder a pergunta preliminar */}
+                              {isGateEnabled && !isGateAnswered && (
+                                <div className="p-3 bg-slate-50 border border-dashed border-slate-300 rounded-xl text-center text-xs text-slate-500">
+                                  Responda &quot;Sim&quot; ou &quot;Não&quot; acima para liberar a escala de intensidade da dor.
+                                </div>
+                              )}
+
+                              {/* Alerta de confirmação quando responder "Não" (sem dor) -> nota 0.0 */}
+                              {isBlockedNoPain && (
+                                <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center gap-2.5 text-emerald-800 text-xs">
+                                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                                  <div className="leading-snug">
+                                    <span className="font-bold">Ausência de dor registrada (Nota 0.0).</span>
+                                    <span className="text-emerald-700 block text-[11px]">A escala permanece bloqueada pois você informou que não sentiu dor.</span>
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Régua Contínua EVA: Exibida se a pergunta preliminar não estiver ativa OU se o voluntário respondeu "Sim" */}
+                              {(!isGateEnabled || hasPain) && (
+                                <div className="space-y-3 pt-1">
+                                  <p className="text-[11px] text-slate-500 italic px-1">
+                                    Deslize o marcador na linha contínua até o ponto que melhor representa o que você sente:
+                                  </p>
+                                  <div className="relative flex items-center py-1">
+                                    <div className="w-1 h-6 bg-slate-400 rounded-full shrink-0 -mr-1 z-10" />
+                                    <input
+                                      type="range"
+                                      min="0"
+                                      max="10"
+                                      step="0.1"
+                                      value={vasVal}
+                                      onTouchStart={() => handleFormAnswerChange(q.id, vasVal)}
+                                      onMouseDown={() => handleFormAnswerChange(q.id, vasVal)}
+                                      onChange={(e) =>
+                                        handleFormAnswerChange(
+                                          q.id,
+                                          parseFloat(parseFloat(e.target.value).toFixed(1))
+                                        )
+                                      }
+                                      className="w-full h-3 bg-slate-200 border border-slate-300 rounded-lg appearance-none cursor-pointer accent-blue-600 focus:outline-none shadow-inner"
+                                    />
+                                    <div className="w-1 h-6 bg-slate-400 rounded-full shrink-0 -ml-1 z-10" />
+                                  </div>
+                                  <div className="flex justify-between items-start text-xs pt-0.5 px-1">
+                                    <span className="font-bold text-slate-800 max-w-[48%] text-left leading-snug">
+                                      {cleanMinLabel}
+                                    </span>
+                                    <span className="font-bold text-slate-800 max-w-[48%] text-right leading-snug">
+                                      {cleanMaxLabel}
+                                    </span>
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           );
                         })()}

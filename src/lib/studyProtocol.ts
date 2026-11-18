@@ -256,6 +256,8 @@ export type FormQuestionProtocol = {
   minLabel?: string;
   maxLabel?: string;
   observation?: string;
+  enableGateQuestion?: boolean;
+  gateQuestionTitle?: string;
 };
 
 export type FormTargetProtocol = {
@@ -965,6 +967,8 @@ export const PRESET_FORM_QUESTIONS: Record<string, FormQuestionProtocol[]> = {
       maxLabel: '10 - Dor Severa',
       required: true,
       observation: 'Deslize a barra contínua de 0 a 10 de acordo com sua percepção.',
+      enableGateQuestion: true,
+      gateQuestionTitle: 'Você teve dor ou sensibilidade?',
     },
     {
       id: 'q_sens_desc',

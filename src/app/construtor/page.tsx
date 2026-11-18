@@ -67,6 +67,8 @@ type FormQuestion = {
   minLabel?: string;
   maxLabel?: string;
   observation?: string;
+  enableGateQuestion?: boolean;
+  gateQuestionTitle?: string;
 };
 
 type ProjectSummary = {
@@ -165,6 +167,8 @@ const PAIN_SENSITIVITY_QUESTIONS: FormQuestion[] = [
     minLabel: 'Nenhuma dor',
     maxLabel: 'Pior dor possível',
     observation: 'Aferida imediatamente após o término do procedimento clínico.',
+    enableGateQuestion: true,
+    gateQuestionTitle: 'Você teve dor ou sensibilidade?',
   },
   {
     id: 'pain_2',
@@ -174,6 +178,8 @@ const PAIN_SENSITIVITY_QUESTIONS: FormQuestion[] = [
     minLabel: 'Nenhuma dor',
     maxLabel: 'Pior dor possível',
     observation: 'Sensibilidade percebida no repouso ou nas primeiras 24 horas.',
+    enableGateQuestion: true,
+    gateQuestionTitle: 'Você teve dor ou sensibilidade?',
   },
   {
     id: 'pain_3',
@@ -770,6 +776,29 @@ function FormBuilderContent() {
 
   const updateQuestionMaxLabel = (id: string, maxLabel: string) => {
     setQuestions((prev) => prev.map((q) => (q.id === id ? { ...q, maxLabel } : q)));
+  };
+
+  const updateQuestionEnableGate = (id: string, enableGateQuestion: boolean) => {
+    setQuestions((prev) =>
+      prev.map((q) =>
+        q.id === id
+          ? {
+              ...q,
+              enableGateQuestion,
+              gateQuestionTitle:
+                enableGateQuestion && !q.gateQuestionTitle
+                  ? 'Você teve dor ou sensibilidade?'
+                  : q.gateQuestionTitle,
+            }
+          : q
+      )
+    );
+  };
+
+  const updateQuestionGateTitle = (id: string, gateQuestionTitle: string) => {
+    setQuestions((prev) =>
+      prev.map((q) => (q.id === id ? { ...q, gateQuestionTitle } : q))
+    );
   };
 
   const updateQuestionObservation = (id: string, observation: string) => {
@@ -1653,6 +1682,37 @@ function FormBuilderContent() {
                           </div>
                         </div>
 
+                        {/* Pergunta preliminar Sim / Não condicional */}
+                        <div className="p-3 bg-blue-50/70 border border-blue-200 rounded-xl space-y-2">
+                          <label className="flex items-center gap-2 font-bold text-slate-800 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={Boolean(q.enableGateQuestion)}
+                              onChange={(e) => updateQuestionEnableGate(q.id, e.target.checked)}
+                              className="w-4 h-4 text-blue-600 rounded cursor-pointer"
+                            />
+                            <span className="text-xs">Exigir pergunta preliminar (Sim / Não) antes de liberar a escala</span>
+                          </label>
+                          <p className="text-[11px] text-slate-500 pl-6 leading-tight">
+                            Se ativado, a régua de intensidade só abre se o participante responder &quot;Sim&quot;. Se responder &quot;Não&quot;, a escala permanece bloqueada com nota 0.0.
+                          </p>
+
+                          {Boolean(q.enableGateQuestion) && (
+                            <div className="pl-6 pt-1 space-y-1">
+                              <label className="block text-[10px] font-bold text-slate-700">
+                                Personalizar texto da pergunta preliminar:
+                              </label>
+                              <input
+                                type="text"
+                                value={q.gateQuestionTitle || ''}
+                                onChange={(e) => updateQuestionGateTitle(q.id, e.target.value)}
+                                placeholder="Ex: Você teve dor ou sensibilidade?"
+                                className="w-full px-2.5 py-1.5 border border-blue-300 rounded-lg text-xs bg-white text-slate-900 focus:ring-1 focus:ring-blue-500"
+                              />
+                            </div>
+                          )}
+                        </div>
+
                         {/* Prévia da Linha Contínua da EVA */}
                         <div className="pt-2">
                           <div className="flex justify-between items-center text-[10px] text-slate-400 mb-1.5 font-mono">
@@ -2088,31 +2148,100 @@ function FormBuilderContent() {
                   </div>
 
                   {/* Renderização do Controle Conforme o Tipo */}
-                  {q.type === 'vas' && (
-                    <div className="pt-3 px-2 space-y-2">
-                      <div className="flex justify-between text-xs font-bold text-slate-600 mb-1">
-                        <span>{q.minLabel || 'Sem dor'}</span>
-                        <span className="text-blue-600 font-mono">
-                          {previewAnswers[q.id] !== undefined ? `${previewAnswers[q.id]} mm` : 'Toque na barra para registrar'}
-                        </span>
-                        <span>{q.maxLabel || 'Pior dor possível'}</span>
+                  {q.type === 'vas' && (() => {
+                    const gateKey = `${q.id}_gate`;
+                    const gateVal = previewAnswers[gateKey];
+                    const isGateEnabled = Boolean(q.enableGateQuestion);
+                    const isUnlocked = !isGateEnabled || gateVal === 'sim';
+                    const isBlockedNoPain = isGateEnabled && gateVal === 'nao';
+
+                    return (
+                      <div className="pt-2 px-2 space-y-3">
+                        {isGateEnabled && (
+                          <div className="p-3 bg-blue-50/60 border border-blue-200 rounded-xl space-y-2">
+                            <div className="flex items-center gap-2">
+                              <span className="w-2 h-2 rounded-full bg-blue-600 shrink-0" />
+                              <span className="text-xs font-bold text-slate-800">
+                                {q.gateQuestionTitle || 'Você teve dor ou sensibilidade?'}
+                              </span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2 pt-1">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setPreviewAnswers((prev) => ({
+                                    ...prev,
+                                    [gateKey]: 'sim',
+                                    [q.id]: prev[q.id] !== undefined ? prev[q.id] : 0,
+                                  }));
+                                }}
+                                className={`py-1.5 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 border ${
+                                  gateVal === 'sim'
+                                    ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                                    : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
+                                }`}
+                              >
+                                <span>Sim (Tive dor)</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setPreviewAnswers((prev) => ({
+                                    ...prev,
+                                    [gateKey]: 'nao',
+                                    [q.id]: 0,
+                                  }));
+                                }}
+                                className={`py-1.5 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 border ${
+                                  gateVal === 'nao'
+                                    ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
+                                    : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
+                                }`}
+                              >
+                                <span>Não (Sem dor)</span>
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {isBlockedNoPain ? (
+                          <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl text-center">
+                            <p className="text-xs font-bold text-emerald-800">
+                              Ausência de dor registrada (Escala bloqueada em 0.0)
+                            </p>
+                          </div>
+                        ) : !isUnlocked ? (
+                          <div className="p-2.5 bg-slate-100 border border-slate-200 rounded-xl text-center text-slate-500 text-xs">
+                            Responda &quot;Sim&quot; ou &quot;Não&quot; acima para liberar a escala de intensidade
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            <div className="flex justify-between text-xs font-bold text-slate-600 mb-1">
+                              <span>{q.minLabel || 'Sem dor'}</span>
+                              <span className="text-blue-600 font-mono">
+                                {previewAnswers[q.id] !== undefined ? `${previewAnswers[q.id]} mm` : 'Toque na barra para registrar'}
+                              </span>
+                              <span>{q.maxLabel || 'Pior dor possível'}</span>
+                            </div>
+                            <input
+                              type="range"
+                              min="0"
+                              max="10"
+                              step="0.1"
+                              value={previewAnswers[q.id] || 0}
+                              onChange={(e) =>
+                                setPreviewAnswers({ ...previewAnswers, [q.id]: e.target.value })
+                              }
+                              className="w-full h-3 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                            />
+                            <p className="text-[10px] text-center text-slate-400">
+                              Deslize o marcador para a posição que melhor reflete sua dor
+                            </p>
+                          </div>
+                        )}
                       </div>
-                      <input
-                        type="range"
-                        min="0"
-                        max="10"
-                        step="0.1"
-                        value={previewAnswers[q.id] || 0}
-                        onChange={(e) =>
-                          setPreviewAnswers({ ...previewAnswers, [q.id]: e.target.value })
-                        }
-                        className="w-full h-3 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                      />
-                      <p className="text-[10px] text-center text-slate-400">
-                        Deslize o marcador para a posição que melhor reflete sua dor
-                      </p>
-                    </div>
-                  )}
+                    );
+                  })()}
 
                   {q.type === 'likert' && (
                     <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 pt-2">
