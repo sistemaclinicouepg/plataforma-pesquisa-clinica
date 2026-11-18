@@ -304,6 +304,15 @@ export const PRESET_QUESTIONNAIRES_CATALOG: AvailableQuestionnaireOption[] = [
     description: '14 perguntas em escala Likert de 5 pontos validada internacionalmente.',
     defaultRespondent: 'PATIENT',
   },
+  {
+    id: 'oes',
+    title: 'Escala de Estética Orofacial (OES)',
+    badge: 'OES / Estética',
+    icon: '✨',
+    category: 'Percepção Estética do Sorriso',
+    description: '8 itens validados (escala 0 a 10) para mensurar a percepção de dentes, gengiva, lábios e estética global do sorriso.',
+    defaultRespondent: 'PATIENT',
+  },
 ];
 
 export interface EthicsApprovalConfig {

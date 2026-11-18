@@ -271,6 +271,81 @@ const FDI_RESTORATION_QUESTIONS: FormQuestion[] = [
   },
 ];
 
+const OES_QUESTIONS: FormQuestion[] = [
+  {
+    id: 'oes_1',
+    type: 'vas',
+    title: '1. Aparência dos dentes anteriores (dentes da frente)',
+    required: true,
+    minLabel: '0 - Muito Insatisfeito / Péssima',
+    maxLabel: '10 - Totalmente Satisfeito / Excelente',
+    observation: 'Como você avalia a estética e harmonia dos seus dentes anteriores? (Larsson et al., 2010)',
+  },
+  {
+    id: 'oes_2',
+    type: 'vas',
+    title: '2. Alinhamento dos dentes',
+    required: true,
+    minLabel: '0 - Muito Insatisfeito / Péssima',
+    maxLabel: '10 - Totalmente Satisfeito / Excelente',
+    observation: 'Como você avalia o alinhamento e nivelamento dos seus dentes?',
+  },
+  {
+    id: 'oes_3',
+    type: 'vas',
+    title: '3. Cor dos dentes',
+    required: true,
+    minLabel: '0 - Muito Insatisfeito / Péssima',
+    maxLabel: '10 - Totalmente Satisfeito / Excelente',
+    observation: 'Como você avalia a cor, tonalidade e brilho dos seus dentes?',
+  },
+  {
+    id: 'oes_4',
+    type: 'vas',
+    title: '4. Forma e contorno dos dentes',
+    required: true,
+    minLabel: '0 - Muito Insatisfeito / Péssima',
+    maxLabel: '10 - Totalmente Satisfeito / Excelente',
+    observation: 'Como você avalia a anatomia, proporção e formato dos seus dentes?',
+  },
+  {
+    id: 'oes_5',
+    type: 'vas',
+    title: '5. Aparência da gengiva',
+    required: true,
+    minLabel: '0 - Muito Insatisfeito / Péssima',
+    maxLabel: '10 - Totalmente Satisfeito / Excelente',
+    observation: 'Como você avalia a cor, contorno e exposição da sua gengiva ao sorrir?',
+  },
+  {
+    id: 'oes_6',
+    type: 'vas',
+    title: '6. Aparência dos lábios e perfil facial',
+    required: true,
+    minLabel: '0 - Muito Insatisfeito / Péssima',
+    maxLabel: '10 - Totalmente Satisfeito / Excelente',
+    observation: 'Como você avalia a harmonia dos seus lábios com o sorriso e o perfil do rosto?',
+  },
+  {
+    id: 'oes_7',
+    type: 'vas',
+    title: '7. Aparência global do seu sorriso',
+    required: true,
+    minLabel: '0 - Muito Insatisfeito / Péssima',
+    maxLabel: '10 - Totalmente Satisfeito / Excelente',
+    observation: 'Como você avalia o conjunto estético geral do seu sorriso? (Composição itens 1 a 7)',
+  },
+  {
+    id: 'oes_8',
+    type: 'vas',
+    title: '8. Impressão estética orofacial geral (Face & Sorriso)',
+    required: true,
+    minLabel: '0 - Muito Insatisfeito / Péssima',
+    maxLabel: '10 - Totalmente Satisfeito / Excelente',
+    observation: 'Escore Global OES: Avaliação geral da estética orofacial completa da sua face.',
+  },
+];
+
 type CustomTemplate = {
   id: string;
   name: string;
@@ -2248,7 +2323,7 @@ function FormBuilderContent() {
               >
                 <BookOpen className="w-3.5 h-3.5" />
                 <span>Modelos Validados (Odontologia)</span>
-                <span className="px-1.5 py-0.2 bg-white/20 rounded-full text-[10px]">5</span>
+                <span className="px-1.5 py-0.2 bg-white/20 rounded-full text-[10px]">6</span>
               </button>
 
               <button
@@ -2292,6 +2367,14 @@ function FormBuilderContent() {
               {activeLibraryTab === 'validated' && (
                 <div className="space-y-3.5">
                   {[
+                    {
+                      id: 'oes',
+                      badge: 'Estética Orofacial (Larsson et al.)',
+                      badgeColor: 'bg-teal-100 text-teal-800',
+                      title: 'OES (Orofacial Esthetic Scale - Escala de Estética Orofacial)',
+                      description: 'Instrumento padrão-ouro internacional validado com 8 itens (0 a 10) para avaliar a percepção estética do paciente quanto aos dentes anteriores, alinhamento, cor, forma, gengiva, lábios e estética orofacial global.',
+                      questions: OES_QUESTIONS,
+                    },
                     {
                       id: 'ohip',
                       badge: 'PROMs Odontológico (Padrão Ouro)',

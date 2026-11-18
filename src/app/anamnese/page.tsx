@@ -393,7 +393,7 @@ function AnamnesisBuilderContent() {
   };
 
   // Criação rápida de questionários validados (1 clique)
-  const handleCreateFormPreset = async (presetType: 'eva' | 'ohip' | 'satisfaction') => {
+  const handleCreateFormPreset = async (presetType: 'eva' | 'ohip' | 'satisfaction' | 'oes') => {
     if (!projectId) return;
     try {
       setCreatingFormPreset(presetType);
@@ -482,6 +482,75 @@ function AnamnesisBuilderContent() {
             type: 'text',
             title: 'Comentários ou impressões pessoais sobre sua experiência no estudo:',
             required: false,
+          },
+        ];
+      } else if (presetType === 'oes') {
+        title = 'Escala de Estética Orofacial (OES)';
+        description = 'Instrumento padrão-ouro com 8 itens validados (0 a 10) para avaliação da percepção estética orofacial (Larsson et al., 2010).';
+        questionsPayload = [
+          {
+            id: 'oes_1',
+            type: 'vas',
+            title: '1. Aparência dos dentes anteriores (dentes da frente)',
+            required: true,
+            minLabel: '0 - Muito Insatisfeito / Péssima',
+            maxLabel: '10 - Totalmente Satisfeito / Excelente',
+          },
+          {
+            id: 'oes_2',
+            type: 'vas',
+            title: '2. Alinhamento dos dentes',
+            required: true,
+            minLabel: '0 - Muito Insatisfeito / Péssima',
+            maxLabel: '10 - Totalmente Satisfeito / Excelente',
+          },
+          {
+            id: 'oes_3',
+            type: 'vas',
+            title: '3. Cor dos dentes',
+            required: true,
+            minLabel: '0 - Muito Insatisfeito / Péssima',
+            maxLabel: '10 - Totalmente Satisfeito / Excelente',
+          },
+          {
+            id: 'oes_4',
+            type: 'vas',
+            title: '4. Forma e contorno dos dentes',
+            required: true,
+            minLabel: '0 - Muito Insatisfeito / Péssima',
+            maxLabel: '10 - Totalmente Satisfeito / Excelente',
+          },
+          {
+            id: 'oes_5',
+            type: 'vas',
+            title: '5. Aparência da gengiva',
+            required: true,
+            minLabel: '0 - Muito Insatisfeito / Péssima',
+            maxLabel: '10 - Totalmente Satisfeito / Excelente',
+          },
+          {
+            id: 'oes_6',
+            type: 'vas',
+            title: '6. Aparência dos lábios e perfil facial',
+            required: true,
+            minLabel: '0 - Muito Insatisfeito / Péssima',
+            maxLabel: '10 - Totalmente Satisfeito / Excelente',
+          },
+          {
+            id: 'oes_7',
+            type: 'vas',
+            title: '7. Aparência global do seu sorriso',
+            required: true,
+            minLabel: '0 - Muito Insatisfeito / Péssima',
+            maxLabel: '10 - Totalmente Satisfeito / Excelente',
+          },
+          {
+            id: 'oes_8',
+            type: 'vas',
+            title: '8. Impressão estética orofacial geral (Face & Sorriso)',
+            required: true,
+            minLabel: '0 - Muito Insatisfeito / Péssima',
+            maxLabel: '10 - Totalmente Satisfeito / Excelente',
           },
         ];
       }
@@ -1389,7 +1458,7 @@ function AnamnesisBuilderContent() {
                   </p>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                   {/* Preset 1: EVA */}
                   <div className="p-3.5 bg-slate-50/70 hover:bg-white border border-slate-200/90 hover:border-blue-300 rounded-xl transition flex flex-col justify-between gap-3">
                     <div>
@@ -1475,6 +1544,36 @@ function AnamnesisBuilderContent() {
                         <>
                           <Plus className="w-3 h-3" />
                           <span>Adicionar Satisfação</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  {/* Preset 4: OES (Orofacial Esthetic Scale) */}
+                  <div className="p-3.5 bg-slate-50/70 hover:bg-white border border-slate-200/90 hover:border-teal-300 rounded-xl transition flex flex-col justify-between gap-3">
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="w-2 h-2 rounded-full bg-teal-600 shrink-0" />
+                        <h5 className="font-bold text-slate-800 text-xs truncate">OES (Estética Orofacial)</h5>
+                      </div>
+                      <p className="text-[11px] text-slate-500 leading-snug">
+                        8 itens validados (Larsson et al., 2010) mensurando dentes, gengiva, lábios e estética global.
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => handleCreateFormPreset('oes')}
+                      disabled={creatingFormPreset !== null}
+                      className="w-full py-1.5 bg-teal-50 hover:bg-teal-100 text-teal-700 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1 disabled:opacity-50 cursor-pointer"
+                    >
+                      {creatingFormPreset === 'oes' ? (
+                        <>
+                          <Clock className="w-3 h-3 animate-spin" />
+                          <span>Adicionando...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="w-3 h-3" />
+                          <span>Adicionar OES</span>
                         </>
                       )}
                     </button>
