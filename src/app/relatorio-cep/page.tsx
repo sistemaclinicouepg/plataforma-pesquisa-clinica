@@ -21,6 +21,8 @@ import {
   AlertCircle,
   Folder,
   Clock,
+  X,
+  ExternalLink,
 } from 'lucide-react';
 
 function formatBytes(bytes?: number, decimals = 1) {
@@ -63,15 +65,34 @@ function RelatorioCepContent() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isDirty, setIsDirty] = useState(false);
 
-  // Metadados e Arquivos Éticos
-  const [ethics, setEthics] = useState<EthicsApprovalConfig>({
-    status: 'APROVADO',
-    approvalNumber: '',
-    caae: '',
-    institution: 'Comitê de Ética em Pesquisa - UEPG',
-    approvalDate: '',
-    notes: '',
+  // Metadados e Arquivos Éticos com cache instantâneo de inicialização (elimina delay visual)
+  const [ethics, setEthics] = useState<EthicsApprovalConfig>(() => {
+    if (typeof window !== 'undefined' && projectId) {
+      try {
+        const cached = sessionStorage.getItem(`uepg_ethics_${projectId}`);
+        if (cached) return JSON.parse(cached);
+      } catch {}
+    }
+    return {
+      status: 'APROVADO',
+      approvalNumber: '',
+      caae: '',
+      institution: 'Comitê de Ética em Pesquisa - UEPG',
+      approvalDate: '',
+      notes: '',
+    };
   });
+
+  // Modal de Visualização de Arquivo (Estilo WhatsApp / macOS Quick Look)
+  const [previewModal, setPreviewModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    url: string;
+    key?: string;
+    size?: number;
+    uploadedAt?: string;
+  } | null>(null);
+  const [openingPreview, setOpeningPreview] = useState(false);
 
   // Estados de Upload
   const [uploadingCep, setUploadingCep] = useState(false);
@@ -82,7 +103,18 @@ function RelatorioCepContent() {
   const cepFileInputRef = useRef<HTMLInputElement>(null);
   const projectFileInputRef = useRef<HTMLInputElement>(null);
 
-  // Carregar dados do projeto
+  // Fechar modal de visualização via tecla ESC
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setPreviewModal(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  // Carregar dados do projeto com busca otimizada e persistência em cache
   useEffect(() => {
     let isMounted = true;
     async function fetchProject() {
@@ -91,37 +123,48 @@ function RelatorioCepContent() {
         return;
       }
 
-      setLoading(true);
-      try {
-        const [projRes, allProjRes] = await Promise.all([
-          fetch(`/api/projects/${projectId}`),
-          fetch('/api/projects'),
-        ]);
+      // Se já temos os anexos no cache inicial, evitamos travar a UI
+      const hasInitialCache =
+        typeof window !== 'undefined' && !!sessionStorage.getItem(`uepg_ethics_${projectId}`);
+      if (!hasInitialCache) {
+        setLoading(true);
+      }
 
-        if (projRes.ok) {
-          const projData = await projRes.json();
-          if (isMounted && projData.project) {
-            setProject(projData.project);
-            const protocol = parseStudyProtocol(projData.project.anamnesisTemplate);
-            const eth = protocol.ethicsApproval;
-            if (eth) {
-              setEthics((prev) => ({
-                ...prev,
-                ...eth,
-                // fallback padrão
-                institution: eth.institution || 'Comitê de Ética em Pesquisa - UEPG',
-                status: eth.status || 'APROVADO',
-              }));
+      try {
+        // Carrega o projeto prioritariamente para renderizar os dados sem esperar a lista completa
+        const projPromise = fetch(`/api/projects/${projectId}`).then(async (res) => {
+          if (res.ok && isMounted) {
+            const projData = await res.json();
+            if (projData.project) {
+              setProject(projData.project);
+              const protocol = parseStudyProtocol(projData.project.anamnesisTemplate);
+              const eth = protocol.ethicsApproval;
+              if (eth) {
+                const mergedEthics: EthicsApprovalConfig = {
+                  ...eth,
+                  institution: eth.institution || 'Comitê de Ética em Pesquisa - UEPG',
+                  status: eth.status || 'APROVADO',
+                };
+                setEthics(mergedEthics);
+                try {
+                  sessionStorage.setItem(`uepg_ethics_${projectId}`, JSON.stringify(mergedEthics));
+                } catch {}
+              }
             }
           }
-        }
+        });
 
-        if (allProjRes.ok) {
-          const allData = await allProjRes.json();
-          if (isMounted && allData.projects) {
-            setAllProjects(allData.projects);
+        // Carrega a lista global de projetos em paralelo para a sidebar
+        const allProjPromise = fetch('/api/projects').then(async (res) => {
+          if (res.ok && isMounted) {
+            const allData = await res.json();
+            if (allData.projects) {
+              setAllProjects(allData.projects);
+            }
           }
-        }
+        });
+
+        await Promise.all([projPromise, allProjPromise]);
       } catch (err: any) {
         console.error('Erro ao buscar dados do projeto:', err);
         if (isMounted) setErrorMessage('Falha ao carregar dados do projeto.');
@@ -298,14 +341,23 @@ function RelatorioCepContent() {
     }
   };
 
-  // Visualizar arquivo em nova aba com suporte a Blob nativo e URLs assinadas
-  const handleOpenFile = async (url?: string, key?: string) => {
+  // Visualizar arquivo em popup modal (estilo WhatsApp / Quick Look) com opção de abrir em nova aba
+  const handleOpenFile = async (
+    url?: string,
+    key?: string,
+    fileName?: string,
+    fileSize?: number,
+    uploadedAt?: string
+  ) => {
     if (!url && !key) {
       alert('Arquivo não localizado.');
       return;
     }
 
-    // Se estiver em formato Base64 / Data URL: converte em Blob e abre via URL nativa do navegador
+    setOpeningPreview(true);
+    let previewUrl = url || '';
+
+    // Se estiver em formato Base64 / Data URL: converte em Blob Object URL nativo para exibição fluida no iframe
     if (url && url.startsWith('data:')) {
       try {
         const base64Data = url.split(',')[1] || url;
@@ -316,23 +368,18 @@ function RelatorioCepContent() {
           bytes[i] = binaryString.charCodeAt(i);
         }
         const blob = new Blob([bytes], { type: 'application/pdf' });
-        const blobUrl = URL.createObjectURL(blob);
-        window.open(blobUrl, '_blank');
-        return;
+        previewUrl = URL.createObjectURL(blob);
       } catch (e) {
-        console.error('Erro ao abrir PDF inline:', e);
+        console.error('Erro ao converter PDF inline para Blob:', e);
       }
-    }
-
-    // Se for chave externa (R2), busca URL assinada atualizada
-    if (key && !key.startsWith('inline:')) {
+    } else if (key && !key.startsWith('inline:')) {
+      // Se for chave externa (R2), busca URL assinada atualizada
       try {
         const res = await fetch(`/api/upload?key=${encodeURIComponent(key)}`);
         if (res.ok) {
           const data = await res.json();
           if (data.url) {
-            window.open(data.url, '_blank');
-            return;
+            previewUrl = data.url;
           }
         }
       } catch (e) {
@@ -340,11 +387,21 @@ function RelatorioCepContent() {
       }
     }
 
-    if (url) {
-      window.open(url, '_blank');
-    } else {
+    setOpeningPreview(false);
+
+    if (!previewUrl) {
       alert('Arquivo não localizado.');
+      return;
     }
+
+    setPreviewModal({
+      isOpen: true,
+      title: fileName || 'Documento_CEP.pdf',
+      url: previewUrl,
+      key,
+      size: fileSize,
+      uploadedAt,
+    });
   };
 
   // Download do arquivo PDF diretamente para o computador
@@ -618,16 +675,46 @@ function RelatorioCepContent() {
                 </div>
 
                 <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
-                  {hasCepPdf ? (
+                  {loading && !hasCepPdf ? (
+                    // Skeleton loader suave durante verificação (evita flash do dropzone)
+                    <div className="p-6 rounded-xl border border-slate-200 bg-slate-50/70 flex flex-col items-center justify-center space-y-2 text-slate-400 text-xs animate-pulse min-h-[110px]">
+                      <RefreshCw className="w-5 h-5 animate-spin text-emerald-600" />
+                      <span className="font-semibold text-slate-600">Verificando parecer anexado...</span>
+                    </div>
+                  ) : hasCepPdf ? (
                     // Card do Arquivo Anexado
                     <div className="p-4 rounded-xl border border-emerald-200/90 bg-emerald-50/40 flex flex-col gap-3">
                       {/* Cabeçalho do arquivo com espaço livre para o nome e detalhes */}
                       <div className="flex items-center space-x-3 min-w-0">
-                        <div className="w-10 h-10 rounded-xl bg-emerald-100 border border-emerald-200 text-emerald-700 flex items-center justify-center shrink-0 font-black text-xs shadow-2xs">
+                        <div
+                          onClick={() =>
+                            handleOpenFile(
+                              ethics.cepPdfUrl,
+                              ethics.cepPdfKey,
+                              ethics.cepPdfName,
+                              ethics.cepPdfSize,
+                              ethics.cepPdfUploadedAt
+                            )
+                          }
+                          className="w-10 h-10 rounded-xl bg-emerald-100 hover:bg-emerald-200 border border-emerald-200 text-emerald-700 flex items-center justify-center shrink-0 font-black text-xs shadow-2xs cursor-pointer transition"
+                          title="Clique para visualizar parecer no popup"
+                        >
                           PDF
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="text-xs font-bold text-slate-900 truncate" title={ethics.cepPdfName || 'Parecer_Consubstanciado_CEP.pdf'}>
+                          <p
+                            onClick={() =>
+                              handleOpenFile(
+                                ethics.cepPdfUrl,
+                                ethics.cepPdfKey,
+                                ethics.cepPdfName,
+                                ethics.cepPdfSize,
+                                ethics.cepPdfUploadedAt
+                              )
+                            }
+                            className="text-xs font-bold text-slate-900 hover:text-emerald-700 truncate cursor-pointer transition"
+                            title={ethics.cepPdfName || 'Parecer_Consubstanciado_CEP.pdf'}
+                          >
                             {ethics.cepPdfName || 'Parecer_Consubstanciado_CEP.pdf'}
                           </p>
                           <div className="flex items-center space-x-2 text-[11px] text-slate-500 mt-0.5">
@@ -646,9 +733,17 @@ function RelatorioCepContent() {
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <button
                             type="button"
-                            onClick={() => handleOpenFile(ethics.cepPdfUrl, ethics.cepPdfKey)}
+                            onClick={() =>
+                              handleOpenFile(
+                                ethics.cepPdfUrl,
+                                ethics.cepPdfKey,
+                                ethics.cepPdfName,
+                                ethics.cepPdfSize,
+                                ethics.cepPdfUploadedAt
+                              )
+                            }
                             className="px-2.5 py-1.5 rounded-lg text-xs font-bold text-emerald-800 bg-white hover:bg-emerald-100 border border-emerald-200 transition inline-flex items-center space-x-1 shadow-2xs cursor-pointer"
-                            title="Visualizar documento em nova aba"
+                            title="Visualizar documento em popup (estilo WhatsApp)"
                           >
                             <Eye className="w-3.5 h-3.5 text-emerald-600" />
                             <span>Visualizar</span>
@@ -772,16 +867,46 @@ function RelatorioCepContent() {
                 </div>
 
                 <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
-                  {hasProjectPdf ? (
+                  {loading && !hasProjectPdf ? (
+                    // Skeleton loader suave durante verificação (evita flash do dropzone)
+                    <div className="p-6 rounded-xl border border-slate-200 bg-slate-50/70 flex flex-col items-center justify-center space-y-2 text-slate-400 text-xs animate-pulse min-h-[110px]">
+                      <RefreshCw className="w-5 h-5 animate-spin text-blue-600" />
+                      <span className="font-semibold text-slate-600">Verificando projeto anexado...</span>
+                    </div>
+                  ) : hasProjectPdf ? (
                     // Card do Arquivo Anexado
                     <div className="p-4 rounded-xl border border-blue-200/90 bg-blue-50/40 flex flex-col gap-3">
                       {/* Cabeçalho do arquivo com espaço livre para o nome e detalhes */}
                       <div className="flex items-center space-x-3 min-w-0">
-                        <div className="w-10 h-10 rounded-xl bg-blue-100 border border-blue-200 text-blue-700 flex items-center justify-center shrink-0 font-black text-xs shadow-2xs">
+                        <div
+                          onClick={() =>
+                            handleOpenFile(
+                              ethics.projectPdfUrl,
+                              ethics.projectPdfKey,
+                              ethics.projectPdfName,
+                              ethics.projectPdfSize,
+                              ethics.projectPdfUploadedAt
+                            )
+                          }
+                          className="w-10 h-10 rounded-xl bg-blue-100 hover:bg-blue-200 border border-blue-200 text-blue-700 flex items-center justify-center shrink-0 font-black text-xs shadow-2xs cursor-pointer transition"
+                          title="Clique para visualizar projeto no popup"
+                        >
                           PDF
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="text-xs font-bold text-slate-900 truncate" title={ethics.projectPdfName || 'Projeto_de_Pesquisa_Completo.pdf'}>
+                          <p
+                            onClick={() =>
+                              handleOpenFile(
+                                ethics.projectPdfUrl,
+                                ethics.projectPdfKey,
+                                ethics.projectPdfName,
+                                ethics.projectPdfSize,
+                                ethics.projectPdfUploadedAt
+                              )
+                            }
+                            className="text-xs font-bold text-slate-900 hover:text-blue-700 truncate cursor-pointer transition"
+                            title={ethics.projectPdfName || 'Projeto_de_Pesquisa_Completo.pdf'}
+                          >
                             {ethics.projectPdfName || 'Projeto_de_Pesquisa_Completo.pdf'}
                           </p>
                           <div className="flex items-center space-x-2 text-[11px] text-slate-500 mt-0.5">
@@ -800,9 +925,17 @@ function RelatorioCepContent() {
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <button
                             type="button"
-                            onClick={() => handleOpenFile(ethics.projectPdfUrl, ethics.projectPdfKey)}
+                            onClick={() =>
+                              handleOpenFile(
+                                ethics.projectPdfUrl,
+                                ethics.projectPdfKey,
+                                ethics.projectPdfName,
+                                ethics.projectPdfSize,
+                                ethics.projectPdfUploadedAt
+                              )
+                            }
                             className="px-2.5 py-1.5 rounded-lg text-xs font-bold text-blue-800 bg-white hover:bg-blue-100 border border-blue-200 transition inline-flex items-center space-x-1 shadow-2xs cursor-pointer"
-                            title="Visualizar projeto em nova aba"
+                            title="Visualizar documento em popup (estilo WhatsApp)"
                           >
                             <Eye className="w-3.5 h-3.5 text-blue-600" />
                             <span>Visualizar</span>
@@ -905,6 +1038,85 @@ function RelatorioCepContent() {
           </main>
         </div>
       </div>
+
+      {/* Modal Popup de Visualização do Documento (Estilo WhatsApp / macOS Quick Look) */}
+      {previewModal && previewModal.isOpen && (
+        <div
+          className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 md:p-6 animate-in fade-in duration-150"
+          onClick={() => setPreviewModal(null)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl border border-slate-300 w-full max-w-5xl h-[92vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-150"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Barra de Título / Cabeçalho */}
+            <div className="px-4 sm:px-6 py-3 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800 shrink-0 gap-3">
+              <div className="flex items-center space-x-3 min-w-0">
+                <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs">
+                  PDF
+                </div>
+                <div className="min-w-0">
+                  <h3
+                    className="text-xs sm:text-sm font-bold text-white truncate max-w-[200px] sm:max-w-md md:max-w-xl"
+                    title={previewModal.title}
+                  >
+                    {previewModal.title}
+                  </h3>
+                  <div className="flex items-center space-x-2 text-[11px] text-slate-400">
+                    {previewModal.size && <span>{formatBytes(previewModal.size)}</span>}
+                    {previewModal.size && previewModal.uploadedAt && <span>•</span>}
+                    {previewModal.uploadedAt && (
+                      <span>{formatDateDisplay(previewModal.uploadedAt)}</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Botões de Ação do Popup */}
+              <div className="flex items-center space-x-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => window.open(previewModal.url, '_blank')}
+                  className="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-200 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 transition inline-flex items-center space-x-1.5 cursor-pointer shadow-2xs"
+                  title="Abrir arquivo em uma página separada do navegador"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Abrir em página separada</span>
+                  <span className="sm:hidden">Nova Aba</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleDownloadFile(previewModal.url, previewModal.title)}
+                  className="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-200 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 transition inline-flex items-center space-x-1.5 cursor-pointer shadow-2xs"
+                  title="Baixar arquivo para o computador"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Baixar</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setPreviewModal(null)}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+                  title="Fechar visualização (Esc)"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Visualizador de PDF Embutido */}
+            <div className="flex-1 w-full bg-slate-800 relative overflow-hidden flex flex-col">
+              <iframe
+                src={`${previewModal.url}#toolbar=1`}
+                className="w-full flex-1 border-0"
+                title={previewModal.title}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
