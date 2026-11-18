@@ -39,7 +39,10 @@ import {
   Shuffle,
   ArrowLeft,
   Layers,
+  ClipboardList,
 } from 'lucide-react';
+
+import type { AnamnesisQuestion, QuestionType } from '@/app/anamnese/page';
 
 import {
   DEFAULT_STUDY_SESSIONS,
@@ -87,6 +90,80 @@ type PendingUser = {
 
 type StatusFilterType = 'ALL' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
 
+const DEFAULT_PROJECT_ANAMNESIS_QUESTIONS: AnamnesisQuestion[] = [
+  {
+    id: 'crit_age',
+    title: 'Idade entre 18 e 35 anos?',
+    type: 'boolean',
+    required: true,
+    isCriterion: true,
+    disqualifyIf: 'nao',
+  },
+  {
+    id: 'crit_sound_teeth',
+    title: 'Incisivos e caninos hígidos (sem cárie ativa ou restaurações amplas)?',
+    type: 'boolean',
+    required: true,
+    isCriterion: true,
+    disqualifyIf: 'nao',
+  },
+  {
+    id: 'crit_baseline_color',
+    title: 'Cor inicial basal elegível (A2 ou mais escura na Escala Vita Classical)?',
+    type: 'boolean',
+    required: true,
+    isCriterion: true,
+    disqualifyIf: 'nao',
+  },
+  {
+    id: 'crit_allergy',
+    title: 'Alergia prévia a peróxido de hidrogênio ou componentes do gel?',
+    type: 'boolean',
+    required: true,
+    isCriterion: true,
+    disqualifyIf: 'sim',
+  },
+  {
+    id: 'crit_hypersensitivity',
+    title: 'Histórico de hipersensibilidade dentinária prévia moderada a severa?',
+    type: 'boolean',
+    required: true,
+    isCriterion: true,
+    disqualifyIf: 'sim',
+  },
+  {
+    id: 'crit_pregnant',
+    title: 'Gestante ou lactante?',
+    type: 'boolean',
+    required: true,
+    isCriterion: true,
+    disqualifyIf: 'sim',
+  },
+  {
+    id: 'crit_recent_bleaching',
+    title: 'Tratamento clareador dental prévio nos últimos 12 meses?',
+    type: 'boolean',
+    required: true,
+    isCriterion: true,
+    disqualifyIf: 'sim',
+  },
+  {
+    id: 'crit_smoking',
+    title: 'Hábito de tabagismo ativo (fumante crônico)?',
+    type: 'boolean',
+    required: true,
+    isCriterion: true,
+    disqualifyIf: 'sim',
+  },
+  {
+    id: 'hist_systemic',
+    title: 'Histórico de doenças sistêmicas crônicas ou uso contínuo de medicações:',
+    type: 'text',
+    required: false,
+    isCriterion: false,
+  },
+];
+
 export default function HomePage() {
   const router = useRouter();
   const [projects, setProjects] = useState<Project[]>([]);
@@ -132,13 +209,65 @@ export default function HomePage() {
     'Grupo 2: Experimental (HP 20%)',
   ]);
   const [newGroupInput, setNewGroupInput] = useState('');
+  const [newProjectTargetParticipants, setNewProjectTargetParticipants] = useState<string>('30');
   const [enableOdontogram, setEnableOdontogram] = useState(true);
   const [odontogramScope, setOdontogramScope] = useState<'anterior' | 'full'>('anterior');
   const [enablePeriodontogram, setEnablePeriodontogram] = useState(false);
   const [enableAnamnesis, setEnableAnamnesis] = useState(true);
+  const [newProjectQuestions, setNewProjectQuestions] = useState<AnamnesisQuestion[]>(DEFAULT_PROJECT_ANAMNESIS_QUESTIONS);
+  const [newQuestionTitle, setNewQuestionTitle] = useState('');
+  const [newQuestionType, setNewQuestionType] = useState<QuestionType>('boolean');
+  const [newQuestionIsCriterion, setNewQuestionIsCriterion] = useState(true);
+  const [newQuestionDisqualifyIf, setNewQuestionDisqualifyIf] = useState<'sim' | 'nao'>('sim');
+  const [newQuestionRequired, setNewQuestionRequired] = useState(true);
+  const [newCustomFormTitle, setNewCustomFormTitle] = useState('');
+  const [newCustomFormRespondent, setNewCustomFormRespondent] = useState<'PATIENT' | 'RESEARCHER'>('PATIENT');
   const [studySessions, setStudySessions] = useState<StudySessionProtocol[]>(DEFAULT_STUDY_SESSIONS);
   const [formTargets, setFormTargets] = useState<FormTargetProtocol[]>(DEFAULT_FORM_TARGETS);
   const [creating, setCreating] = useState(false);
+
+  // Manipulação de perguntas da Anamnese no Wizard
+  const handleAddQuestion = () => {
+    if (!newQuestionTitle.trim()) return;
+    const newQ: AnamnesisQuestion = {
+      id: `q_${Date.now()}`,
+      title: newQuestionTitle.trim(),
+      type: newQuestionType,
+      required: newQuestionRequired,
+      isCriterion: newQuestionIsCriterion,
+      disqualifyIf: newQuestionIsCriterion ? newQuestionDisqualifyIf : undefined,
+    };
+    setNewProjectQuestions((prev) => [...prev, newQ]);
+    setNewQuestionTitle('');
+    setNewQuestionType('boolean');
+    setNewQuestionIsCriterion(true);
+    setNewQuestionDisqualifyIf('sim');
+    setNewQuestionRequired(true);
+  };
+
+  const handleRemoveQuestion = (idx: number) => {
+    setNewProjectQuestions((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const handleRestoreDefaultQuestions = () => {
+    setNewProjectQuestions(DEFAULT_PROJECT_ANAMNESIS_QUESTIONS);
+  };
+
+  const handleAddCustomForm = () => {
+    if (!newCustomFormTitle.trim()) return;
+    const newForm: FormTargetProtocol = {
+      id: `custom_${Date.now()}`,
+      title: newCustomFormTitle.trim(),
+      description: 'Instrumento personalizado de avaliação cadastrado pelo pesquisador.',
+      enabled: true,
+      respondent: newCustomFormRespondent,
+      frequency: 'PER_SESSION',
+      frequencyDescription: 'A cada consulta clínica',
+      isPreset: false,
+    };
+    setFormTargets((prev) => [...prev, newForm]);
+    setNewCustomFormTitle('');
+  };
 
   // Modal de edição / configuração do estudo
   const [editingProject, setEditingProject] = useState<Project | null>(null);
@@ -1148,6 +1277,8 @@ export default function HomePage() {
       setCreateStep(3);
     } else if (createStep === 3) {
       setCreateStep(4);
+    } else if (createStep === 4) {
+      setCreateStep(5);
     }
   };
 
@@ -1171,7 +1302,10 @@ export default function HomePage() {
 
     try {
       setCreating(true);
+      const parsedN = parseInt(newProjectTargetParticipants) || 30;
       const initialTemplate = {
+        targetSampleSize: parsedN,
+        plannedParticipants: parsedN,
         enableOdontogram,
         odontogramScope,
         enablePeriodontogram,
@@ -1182,9 +1316,12 @@ export default function HomePage() {
           gingivalRecession: true,
           furcationOrMobility: false,
         },
-        questions: [],
+        enableAnamnesis,
+        questions: enableAnamnesis ? newProjectQuestions : [],
         studyProtocol: {
           specialty: newProjectSpecialty,
+          targetSampleSize: parsedN,
+          plannedParticipants: parsedN,
           totalSessions: studySessions.length,
           sessions: studySessions,
           forms: formTargets,
@@ -1217,6 +1354,12 @@ export default function HomePage() {
         setNewProjectDesc('');
         setNewProjectGroups(['Grupo 1: Convencional (HP 35%)', 'Grupo 2: Experimental (HP 20%)']);
         setNewGroupInput('');
+        setNewProjectTargetParticipants('30');
+        setNewProjectQuestions(DEFAULT_PROJECT_ANAMNESIS_QUESTIONS);
+        setNewQuestionTitle('');
+        setNewCustomFormTitle('');
+        setEnableOdontogram(true);
+        setOdontogramScope('anterior');
         setNewProjectStatus('ACTIVE');
         setNewProjectSpecialty('GENERAL');
         setStudySessions(DEFAULT_STUDY_SESSIONS);
@@ -1919,7 +2062,7 @@ export default function HomePage() {
       {/* Modal de Criação de Projeto por Etapas (Wizard) */}
       {isCreateModalOpen && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-150">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl border border-slate-200 max-h-[92vh] flex flex-col overflow-hidden">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl sm:max-w-4xl border border-slate-200 max-h-[92vh] flex flex-col overflow-hidden">
             {/* Header */}
             <div className="p-5 pb-3 border-b border-slate-100 flex items-start justify-between bg-white shrink-0">
               <div className="flex items-center gap-3">
@@ -1929,7 +2072,7 @@ export default function HomePage() {
                 <div>
                   <h2 className="text-lg font-bold text-slate-900 leading-snug">Novo Estudo Clínico por Etapas</h2>
                   <p className="text-xs text-slate-500">
-                    Preenchimento guiado em 4 etapas para não esquecer nenhum parâmetro do protocolo.
+                    Preenchimento guiado em 5 etapas para não esquecer nenhum parâmetro do protocolo.
                   </p>
                 </div>
               </div>
@@ -1946,13 +2089,14 @@ export default function HomePage() {
               </button>
             </div>
 
-            {/* Stepper / Indicador das 4 Etapas */}
-            <div className="grid grid-cols-4 border-b border-slate-200 bg-slate-50/80 shrink-0 text-xs">
+            {/* Stepper / Indicador das 5 Etapas */}
+            <div className="grid grid-cols-5 border-b border-slate-200 bg-slate-50/80 shrink-0 text-xs">
               {[
                 { num: 1, title: '1. Identificação', sub: 'Nome e código' },
                 { num: 2, title: '2. Desenho do Estudo', sub: 'Grupos do estudo' },
                 { num: 3, title: '3. Cronograma', sub: 'Consultas clínicas' },
-                { num: 4, title: '4. Formulários', sub: 'Instrumentos e revisão' },
+                { num: 4, title: '4. Ficha Clínica', sub: 'Anamnese & Odonto' },
+                { num: 5, title: '5. eCRF', sub: 'Questionários e revisão' },
               ].map((step) => {
                 const isCurrent = createStep === step.num;
                 const isPast = createStep > step.num;
@@ -2013,7 +2157,7 @@ export default function HomePage() {
                   <div className="p-3.5 bg-blue-50/70 border border-blue-200 rounded-xl text-xs text-blue-900 flex items-start gap-2.5">
                     <FileText className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
                     <div>
-                      <p className="font-bold">Etapa 1 de 4: Identificação do Estudo de Clareamento</p>
+                      <p className="font-bold">Etapa 1 de 5: Identificação do Estudo de Clareamento</p>
                       <p className="text-blue-800 text-[11px] mt-0.5">
                         Defina o título do ensaio clínico de clareamento dental e prefixo dos voluntários.
                       </p>
@@ -2064,7 +2208,7 @@ export default function HomePage() {
                   <div className="p-3.5 bg-indigo-50/70 border border-indigo-200 rounded-xl text-xs text-indigo-900 flex items-start gap-2.5">
                     <Shuffle className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
                     <div>
-                      <p className="font-bold">Etapa 2 de 4: Desenho do Estudo & Grupos Experimentais</p>
+                      <p className="font-bold">Etapa 2 de 5: Desenho do Estudo & Grupos Experimentais</p>
                       <p className="text-indigo-800 text-[11px] mt-0.5">
                         Defina os grupos ou braços de tratamento deste estudo. Eles ficarão salvos no protocolo e prontos para seleção rápida ao randomizar qualquer paciente.
                       </p>
@@ -2202,7 +2346,7 @@ export default function HomePage() {
                   <div className="p-3.5 bg-blue-50/70 border border-blue-200 rounded-xl text-xs text-blue-900 flex items-start gap-2.5">
                     <Calendar className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
                     <div>
-                      <p className="font-bold">Etapa 3 de 4: Cronograma de Consultas de Clareamento</p>
+                      <p className="font-bold">Etapa 3 de 5: Cronograma de Consultas de Clareamento</p>
                       <p className="text-blue-800 text-[11px] mt-0.5">
                         Defina as consultas presenciais de clareamento, os intervalos em dias e o que será avaliado no consultório e pelo paciente.
                       </p>
@@ -2283,43 +2427,343 @@ export default function HomePage() {
                 </div>
               )}
 
-              {/* ETAPA 4: FORMULÁRIOS & REVISÃO FINAL */}
+                            {/* ETAPA 4: FICHA CLÍNICA, ANAMNESE & ODONTOGRAMA */}
               {createStep === 4 && (
                 <div className="space-y-4 animate-in fade-in duration-150">
-                  <div className="p-3.5 bg-emerald-50/70 border border-emerald-200 rounded-xl text-xs text-emerald-900 flex items-start gap-2.5">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                  <div className="p-3.5 bg-indigo-50/70 border border-indigo-200 rounded-xl text-xs text-indigo-900 flex items-start gap-2.5">
+                    <Stethoscope className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
                     <div>
-                      <p className="font-bold">Etapa 4 de 4: Formulários do Estudo & Revisão Final</p>
-                      <p className="text-emerald-800 text-[11px] mt-0.5">
-                        Confira os instrumentos de coleta de dados e revise o resumo antes de criar o estudo clínico.
+                      <p className="font-bold">Etapa 4 de 5: Ficha Clínica, Anamnese & Odontograma</p>
+                      <p className="text-indigo-800 text-[11px] mt-0.5">
+                        Defina a meta de voluntários (tamanho amostral), configure o odontograma e personalize os critérios de inclusão/exclusão e perguntas da anamnese do projeto.
                       </p>
                     </div>
                   </div>
 
-                  {/* Formulários do Protocolo */}
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
-                      Instrumentos & Formulários Ativos
-                    </label>
-                    <div className="space-y-2 max-h-[220px] overflow-y-auto p-1">
+                  {/* 1. Meta Amostral / Participantes */}
+                  <div className="p-4 bg-white border border-slate-200 rounded-xl space-y-2 shadow-2xs">
+                    <div className="flex items-center justify-between">
+                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                        Número de Participantes do Projeto (Tamanho Amostral N) *
+                      </label>
+                      <span className="text-[10px] text-blue-600 font-semibold bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
+                        Meta Regulatória / Amostra
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="number"
+                        min="1"
+                        max="1000"
+                        value={newProjectTargetParticipants}
+                        onChange={(e) => setNewProjectTargetParticipants(e.target.value)}
+                        placeholder="Ex: 30"
+                        className="w-32 px-3 py-2 border border-slate-300 rounded-xl text-sm font-bold text-slate-900 focus:ring-2 focus:ring-blue-500 focus:outline-none shadow-2xs bg-white"
+                      />
+                      <span className="text-xs text-slate-500">
+                        voluntários planejados para inclusão no ensaio clínico
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-400">
+                      Orienta a taxa de recrutamento, balanceamento da alocação nos grupos de estudo e capacidade de atendimento clínico.
+                    </p>
+                  </div>
+
+                  {/* 2. Odontograma Clínico */}
+                  <div className="p-4 bg-white border border-slate-200 rounded-xl space-y-3 shadow-2xs">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id="enable-odontogram-toggle"
+                          checked={enableOdontogram}
+                          onChange={(e) => setEnableOdontogram(e.target.checked)}
+                          className="w-4 h-4 text-blue-600 rounded cursor-pointer"
+                        />
+                        <label htmlFor="enable-odontogram-toggle" className="text-xs font-bold text-slate-800 cursor-pointer">
+                          Deseja utilizar Odontograma Clínico neste estudo?
+                        </label>
+                      </div>
+                      <span className={'text-[10px] font-bold px-2 py-0.5 rounded-full ' + (enableOdontogram ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-500')}>
+                        {enableOdontogram ? 'Ativado' : 'Desativado'}
+                      </span>
+                    </div>
+
+                    {enableOdontogram && (
+                      <div className="space-y-2 pt-2 border-t border-slate-100">
+                        <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-600">
+                          Selecione o Modelo de Odontograma:
+                        </label>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                          <div
+                            onClick={() => setOdontogramScope('anterior')}
+                            className={'p-3 rounded-xl border-2 cursor-pointer transition text-xs flex flex-col justify-between ' + (
+                              odontogramScope === 'anterior'
+                                ? 'border-blue-600 bg-blue-50/50 shadow-2xs'
+                                : 'border-slate-200 bg-white hover:border-slate-300'
+                            )}
+                          >
+                            <div>
+                              <div className="flex items-center justify-between mb-1">
+                                <span className="font-bold text-slate-900">Setor Anterior (13-23 e 33-43)</span>
+                                <span className="text-[10px] font-semibold bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded">
+                                  Recomendado Clareamento
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-slate-500 leading-relaxed">
+                                12 dentes estéticos anteriores (incisivos e caninos). Ideal para ensaios de clareamento dental, facetas e dentística estética.
+                              </p>
+                            </div>
+                            <div className="mt-2.5 flex items-center gap-1.5 text-[11px] text-blue-700 font-semibold">
+                              <div className={'w-3.5 h-3.5 rounded-full border flex items-center justify-center ' + (odontogramScope === 'anterior' ? 'border-blue-600 bg-blue-600' : 'border-slate-300')}>
+                                {odontogramScope === 'anterior' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                              </div>
+                              <span>Modelo Setor Anterior</span>
+                            </div>
+                          </div>
+
+                          <div
+                            onClick={() => setOdontogramScope('full')}
+                            className={'p-3 rounded-xl border-2 cursor-pointer transition text-xs flex flex-col justify-between ' + (
+                              odontogramScope === 'full'
+                                ? 'border-blue-600 bg-blue-50/50 shadow-2xs'
+                                : 'border-slate-200 bg-white hover:border-slate-300'
+                            )}
+                          >
+                            <div>
+                              <div className="flex items-center justify-between mb-1">
+                                <span className="font-bold text-slate-900">Arcada Completa (18 a 48)</span>
+                                <span className="text-[10px] font-semibold bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded">
+                                  32 Dentes
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-slate-500 leading-relaxed">
+                                Mapeamento integral de todos os dentes superiores e inferiores, incluindo pré-molares e molares.
+                              </p>
+                            </div>
+                            <div className="mt-2.5 flex items-center gap-1.5 text-[11px] text-slate-600 font-semibold">
+                              <div className={'w-3.5 h-3.5 rounded-full border flex items-center justify-center ' + (odontogramScope === 'full' ? 'border-blue-600 bg-blue-600' : 'border-slate-300')}>
+                                {odontogramScope === 'full' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                              </div>
+                              <span>Modelo Arcada Completa</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 3. Ficha de Anamnese & Critérios Personalizáveis */}
+                  <div className="p-4 bg-white border border-slate-200 rounded-xl space-y-3 shadow-2xs">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id="enable-anamnesis-toggle"
+                          checked={enableAnamnesis}
+                          onChange={(e) => setEnableAnamnesis(e.target.checked)}
+                          className="w-4 h-4 text-blue-600 rounded cursor-pointer"
+                        />
+                        <label htmlFor="enable-anamnesis-toggle" className="text-xs font-bold text-slate-800 cursor-pointer">
+                          Ativar Ficha de Anamnese & Critérios de Elegibilidade
+                        </label>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleRestoreDefaultQuestions}
+                        className="text-[11px] text-blue-600 hover:text-blue-800 font-semibold cursor-pointer underline"
+                      >
+                        Restaurar Perguntas Padrão
+                      </button>
+                    </div>
+
+                    {enableAnamnesis && (
+                      <div className="space-y-3 pt-2 border-t border-slate-100">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600">
+                            Perguntas & Critérios do Estudo ({newProjectQuestions.length})
+                          </span>
+                          <span className="text-[10px] text-slate-400">
+                            Personalize perguntas e critérios para este projeto
+                          </span>
+                        </div>
+
+                        {/* Lista das Perguntas */}
+                        <div className="space-y-2 max-h-[220px] overflow-y-auto p-1">
+                          {newProjectQuestions.map((q, idx) => (
+                            <div
+                              key={q.id || idx}
+                              className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl flex items-start justify-between gap-2 shadow-2xs hover:bg-white transition text-xs"
+                            >
+                              <div className="flex items-start gap-2 min-w-0">
+                                <span className="w-5 h-5 rounded-md bg-white text-slate-600 font-bold text-[10px] flex items-center justify-center shrink-0 border border-slate-200 mt-0.5">
+                                  {idx + 1}
+                                </span>
+                                <div className="min-w-0">
+                                  <p className="font-semibold text-slate-800 text-xs leading-snug">{q.title}</p>
+                                  <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                                    {q.isCriterion ? (
+                                      <span className={'px-1.5 py-0.2 rounded text-[10px] font-bold ' + (
+                                        q.disqualifyIf === 'nao'
+                                          ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                                          : 'bg-red-100 text-red-800 border border-red-200'
+                                      )}>
+                                        {q.disqualifyIf === 'nao' ? 'Critério de Inclusão' : 'Critério de Exclusão'}
+                                      </span>
+                                    ) : (
+                                      <span className="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                                        Pergunta de Anamnese
+                                      </span>
+                                    )}
+                                    <span className="text-[10px] text-slate-400">
+                                      Tipo: {q.type === 'boolean' ? 'Sim / Não' : q.type === 'text' ? 'Texto Livre' : q.type === 'vita_shade' ? 'Escala VITA' : q.type === 'sensitivity_scale' ? 'Escala EVA (0-10)' : q.type}
+                                    </span>
+                                    {q.required && <span className="text-[10px] text-amber-600 font-bold">• Obrigatória</span>}
+                                  </div>
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveQuestion(idx)}
+                                className="text-slate-400 hover:text-red-600 p-1 rounded-lg hover:bg-slate-200/60 transition cursor-pointer shrink-0"
+                                title="Remover pergunta da anamnese"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Adicionar Pergunta Personalizada */}
+                        <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2.5">
+                          <span className="text-[11px] font-bold text-slate-700 block">
+                            + Adicionar Nova Pergunta / Critério Personalizado
+                          </span>
+                          <div className="space-y-2">
+                            <input
+                              type="text"
+                              value={newQuestionTitle}
+                              onChange={(e) => setNewQuestionTitle(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  handleAddQuestion();
+                                }
+                              }}
+                              placeholder="Ex: O voluntário possui histórico de dor com alimentos frios?"
+                              className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                            />
+
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                              <div>
+                                <label className="text-[10px] font-bold text-slate-500 block mb-0.5">Tipo de Campo</label>
+                                <select
+                                  value={newQuestionType}
+                                  onChange={(e) => setNewQuestionType(e.target.value as QuestionType)}
+                                  className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs bg-white focus:outline-none"
+                                >
+                                  <option value="boolean">Sim / Não (Booleano)</option>
+                                  <option value="text">Texto Livre</option>
+                                  <option value="sensitivity_scale">Escala de Sensibilidade (0-10)</option>
+                                  <option value="vita_shade">Cor Escala VITA Classical</option>
+                                  <option value="number">Numérico</option>
+                                </select>
+                              </div>
+
+                              <div>
+                                <label className="text-[10px] font-bold text-slate-500 block mb-0.5">Classificação</label>
+                                <select
+                                  value={newQuestionIsCriterion ? (newQuestionDisqualifyIf === 'nao' ? 'INC' : 'EXC') : 'NONE'}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    if (val === 'INC') {
+                                      setNewQuestionIsCriterion(true);
+                                      setNewQuestionDisqualifyIf('nao');
+                                    } else if (val === 'EXC') {
+                                      setNewQuestionIsCriterion(true);
+                                      setNewQuestionDisqualifyIf('sim');
+                                    } else {
+                                      setNewQuestionIsCriterion(false);
+                                    }
+                                  }}
+                                  className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs bg-white focus:outline-none"
+                                >
+                                  <option value="INC">Critério de Inclusão (Sim é obrigatório)</option>
+                                  <option value="EXC">Critério de Exclusão (Sim desqualifica)</option>
+                                  <option value="NONE">Pergunta Geral (Não elimina)</option>
+                                </select>
+                              </div>
+
+                              <div className="flex items-end">
+                                <button
+                                  type="button"
+                                  onClick={handleAddQuestion}
+                                  disabled={!newQuestionTitle.trim()}
+                                  className="w-full py-1.5 px-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold text-xs rounded-lg transition shadow-2xs flex items-center justify-center gap-1 cursor-pointer"
+                                >
+                                  <Plus className="w-3.5 h-3.5" />
+                                  <span>Adicionar</span>
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* ETAPA 5: eCRF, INSTRUMENTOS DE AVALIAÇÃO & REVISÃO FINAL */}
+              {createStep === 5 && (
+                <div className="space-y-4 animate-in fade-in duration-150">
+                  <div className="p-3.5 bg-emerald-50/70 border border-emerald-200 rounded-xl text-xs text-emerald-900 flex items-start gap-2.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-bold">Etapa 5 de 5: Construtor de eCRF, Questionários & Revisão Final</p>
+                      <p className="text-emerald-800 text-[11px] mt-0.5">
+                        Defina quais questionários, escalas clínicas (EVA, OES, OHIP) e diários serão preenchidos durante a pesquisa e revise o protocolo antes de finalizar.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Formulários e Questionários do Protocolo */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                        Questionários & Meios de Avaliação Clínicos (eCRF)
+                      </label>
+                      <span className="text-[10px] text-slate-400">
+                        Ative os instrumentos necessários para a pesquisa
+                      </span>
+                    </div>
+
+                    <div className="space-y-2 max-h-[240px] overflow-y-auto p-1">
                       {formTargets.map((f) => (
-                        <div key={f.id} className="p-2.5 bg-white border border-slate-200 rounded-xl space-y-2 shadow-2xs">
+                        <div key={f.id} className="p-3 bg-white border border-slate-200 rounded-xl space-y-2 shadow-2xs hover:border-slate-300 transition">
                           <div className="flex items-center justify-between">
-                            <label className="flex items-center gap-2 cursor-pointer font-bold text-slate-800 text-xs">
+                            <label className="flex items-center gap-2.5 cursor-pointer font-bold text-slate-800 text-xs">
                               <input
                                 type="checkbox"
                                 checked={f.enabled}
                                 onChange={(e) => handleUpdateFormTarget(f.id, 'enabled', e.target.checked, false)}
-                                className="w-4 h-4 text-blue-600 rounded"
+                                className="w-4 h-4 text-blue-600 rounded cursor-pointer"
                               />
                               <span>{f.title}</span>
                             </label>
-                            <span className="text-[10px] text-slate-500 font-semibold px-2 py-0.5 rounded-full bg-slate-100">
-                              {f.respondent === 'PATIENT' ? '👤 Paciente (Celular)' : '🩺 Pesquisador'}
+                            <span className={'text-[10px] font-semibold px-2 py-0.5 rounded-full ' + (
+                              f.respondent === 'PATIENT' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
+                            )}>
+                              {f.respondent === 'PATIENT' ? '👤 Paciente (Celular)' : '🩺 Pesquisador (eCRF)'}
                             </span>
                           </div>
+                          {f.description && (
+                            <p className="text-[11px] text-slate-500 pl-6 leading-relaxed">
+                              {f.description}
+                            </p>
+                          )}
                           {f.enabled && f.respondent === 'PATIENT' && (
-                            <div className="pt-1.5 border-t border-slate-100 flex flex-col gap-1 text-[11px]">
+                            <div className="pt-1.5 pl-6 border-t border-slate-100 flex flex-col gap-1 text-[11px]">
                               <div className="flex items-center justify-between">
                                 <span className="text-slate-600 font-bold">Frequência / Períodos em casa:</span>
                                 <span className="text-[10px] text-blue-600 font-medium">Personalizável</span>
@@ -2331,13 +2775,52 @@ export default function HomePage() {
                                   handleUpdateFormTarget(f.id, 'frequency', 'CUSTOM', false);
                                   handleUpdateFormTarget(f.id, 'frequencyDescription', e.target.value, false);
                                 }}
-                                placeholder="Ex: 24h, 48h, 7d, 14d e 21d (Clareamento Caseiro)"
-                                className="w-full px-2 py-1 border border-slate-300 rounded-lg text-xs bg-slate-50 text-slate-800 placeholder-slate-400 focus:bg-white focus:ring-1 focus:ring-blue-500"
+                                placeholder="Ex: Diário de Sensibilidade (0h a 48h) ou Na sessão final"
+                                className="w-full px-2.5 py-1 border border-slate-300 rounded-lg text-xs bg-slate-50 text-slate-800 placeholder-slate-400 focus:bg-white focus:ring-1 focus:ring-blue-500"
                               />
                             </div>
                           )}
                         </div>
                       ))}
+                    </div>
+
+                    {/* Adicionar Instrumento Personalizado ao eCRF */}
+                    <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                      <span className="text-[11px] font-bold text-slate-700 block">
+                        + Adicionar Instrumento / Questionário Personalizado ao eCRF
+                      </span>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={newCustomFormTitle}
+                          onChange={(e) => setNewCustomFormTitle(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              handleAddCustomForm();
+                            }
+                          }}
+                          placeholder="Ex: Escala de Ansiedade Dental (MDAS) ou Questionário Específico"
+                          className="flex-1 px-3 py-1.5 border border-slate-300 rounded-xl text-xs bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                        />
+                        <select
+                          value={newCustomFormRespondent}
+                          onChange={(e) => setNewCustomFormRespondent(e.target.value as 'PATIENT' | 'RESEARCHER')}
+                          className="px-2.5 py-1.5 border border-slate-300 rounded-xl text-xs bg-white focus:outline-none"
+                        >
+                          <option value="PATIENT">👤 Paciente</option>
+                          <option value="RESEARCHER">🩺 Pesquisador</option>
+                        </select>
+                        <button
+                          type="button"
+                          onClick={handleAddCustomForm}
+                          disabled={!newCustomFormTitle.trim()}
+                          className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-2xs transition cursor-pointer flex items-center gap-1"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>Adicionar</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
 
@@ -2345,40 +2828,51 @@ export default function HomePage() {
                   <div className="p-4 bg-slate-50 border-2 border-blue-200 rounded-2xl space-y-2.5 text-xs text-slate-800 shadow-2xs">
                     <h4 className="font-bold text-blue-900 text-sm flex items-center gap-2">
                       <FolderKanban className="w-4 h-4 text-blue-600" />
-                      <span>Resumo da Configuração do Estudo</span>
+                      <span>Resumo Executivo do Protocolo do Estudo</span>
                     </h4>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 border-t border-slate-200">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1 border-t border-slate-200">
                       <div>
                         <span className="text-slate-500 text-[11px] block">Nome da Pesquisa:</span>
                         <strong className="text-slate-900">{newProjectName || 'Não informado'}</strong>
                       </div>
                       <div>
+                        <span className="text-slate-500 text-[11px] block">Meta Amostral (N Voluntários):</span>
+                        <strong className="text-blue-700">{newProjectTargetParticipants || '30'} participantes planejados</strong>
+                      </div>
+                      <div>
                         <span className="text-slate-500 text-[11px] block">Linha de Pesquisa:</span>
                         <span className="inline-flex items-center gap-1 font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
-                          <Sparkles className="w-3 h-3 text-blue-600" />
+                          <Sparkles className="w-3.5 h-3.5 text-blue-600" />
                           <span>Clareamento Dental</span>
                         </span>
                       </div>
                       <div>
-                        <span className="text-slate-500 text-[11px] block">Códigos dos Voluntários:</span>
-                        <strong className="text-emerald-700 font-semibold">Automático do Estudo</strong>
-                      </div>
-                      <div>
                         <span className="text-slate-500 text-[11px] block">Desenho do Estudo / Grupos:</span>
                         <strong className="text-indigo-700">
-                          {newProjectGroups.length > 0 ? `${newProjectGroups.length} grupos (${newProjectGroups.join(', ')})` : 'Nenhum grupo pré-configurado'}
+                          {newProjectGroups.length > 0 ? (newProjectGroups.length + ' grupos (' + newProjectGroups.join(', ') + ')') : 'Nenhum grupo pré-configurado'}
+                        </strong>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 text-[11px] block">Cronograma Clínico:</span>
+                        <strong className="text-slate-900">{studySessions.length} consultas presenciais configuradas</strong>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 text-[11px] block">Ficha Clínica & Anamnese:</span>
+                        <strong className="text-slate-900">
+                          {enableAnamnesis ? (newProjectQuestions.length + ' critérios/perguntas') : 'Desativada'} • Odontograma: {enableOdontogram ? (odontogramScope === 'anterior' ? 'Setor Anterior (12 dentes)' : 'Arcada Completa (32 dentes)') : 'Não'}
                         </strong>
                       </div>
                       <div className="sm:col-span-2">
-                        <span className="text-slate-500 text-[11px] block">Cronograma Clínico:</span>
-                        <strong className="text-slate-900">{studySessions.length} consultas presenciais configuradas</strong>
+                        <span className="text-slate-500 text-[11px] block">Questionários Ativos (eCRF):</span>
+                        <strong className="text-emerald-700">
+                          {formTargets.filter((f) => f.enabled).length} instrumentos habilitados ({formTargets.filter((f) => f.enabled).map((f) => f.title).join(', ')})
+                        </strong>
                       </div>
                     </div>
                   </div>
                 </div>
               )}
             </div>
-
             {/* Rodapé de Navegação com Botões de Etapas */}
             <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between shrink-0">
               <div>
@@ -2408,10 +2902,10 @@ export default function HomePage() {
 
               <div className="flex items-center gap-2">
                 <span className="text-[11px] text-slate-400 font-semibold mr-1">
-                  Etapa {createStep} de 4
+                  Etapa {createStep} de 5
                 </span>
 
-                {createStep < 4 ? (
+                {createStep < 5 ? (
                   <button
                     type="button"
                     onClick={handleNextCreateStep}

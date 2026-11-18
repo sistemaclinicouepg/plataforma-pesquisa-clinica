@@ -341,6 +341,8 @@ export type StudyProtocolConfig = {
   specialty?: ResearchSpecialty; // Área/Linha de pesquisa clínica do estudo
   studyDesign?: 'PARALLEL' | 'SPLIT_MOUTH' | string; // Desenho metodológico (Paralelo vs Boca Dividida)
   projectPrefix?: string; // Prefixo personalizado do código dos participantes (ex: 'P01', 'EXP', 'CLAR')
+  targetSampleSize?: number; // Meta de voluntários/participantes planejados
+  plannedParticipants?: number; // Sinônimo para compatibilidade
   totalSessions: number;
   sessions: StudySessionProtocol[];
   forms: FormTargetProtocol[];
@@ -982,6 +984,26 @@ export const DEFAULT_FORM_TARGETS: FormTargetProtocol[] = [
     frequencyDescription: 'Semanalmente',
     isPreset: true,
   },
+  {
+    id: 'oes',
+    title: 'Escala de Estética Orofacial (OES)',
+    description: 'Avaliação estética com 8 itens validados (dentes, gengiva, lábios e estética global do sorriso).',
+    enabled: false,
+    respondent: 'PATIENT',
+    frequency: 'ONCE',
+    frequencyDescription: 'Na sessão basal e retorno final',
+    isPreset: true,
+  },
+  {
+    id: 'ohip',
+    title: 'Qualidade de Vida em Saúde Bucal (OHIP-14)',
+    description: 'Impacto na qualidade de vida bucal com 14 perguntas em escala Likert validada internacionalmente.',
+    enabled: false,
+    respondent: 'PATIENT',
+    frequency: 'ONCE',
+    frequencyDescription: 'Na sessão basal e retorno final',
+    isPreset: true,
+  },
 ];
 
 export const PRESET_FORM_QUESTIONS = {
@@ -1224,11 +1246,14 @@ export function parseStudyProtocol(templateStringOrObj: any): StudyProtocolConfi
   const studyDesign = studyProtocol.studyDesign || parsed.studyDesign || (groups.some((g: string) => g.toLowerCase().includes('direito') || g.toLowerCase().includes('boca')) ? 'SPLIT_MOUTH' : 'PARALLEL');
 
   const ethicsApproval: EthicsApprovalConfig = studyProtocol.ethicsApproval || parsed.ethicsApproval || {};
+  const targetSampleSize = Number(studyProtocol.targetSampleSize) || Number(parsed.targetSampleSize) || Number(studyProtocol.plannedParticipants) || Number(parsed.plannedParticipants) || undefined;
 
   return {
     specialty,
     studyDesign,
     projectPrefix: studyProtocol.projectPrefix ? String(studyProtocol.projectPrefix).trim().toUpperCase() : undefined,
+    targetSampleSize,
+    plannedParticipants: targetSampleSize,
     totalSessions: Number(studyProtocol.totalSessions) || sessions.length,
     sessions,
     forms,
