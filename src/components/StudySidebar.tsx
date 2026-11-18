@@ -11,8 +11,6 @@ import {
   Stethoscope,
   ClipboardList,
   Users,
-  FileSpreadsheet,
-  FileCode,
   FileText,
   Sliders,
   Download,
@@ -405,40 +403,6 @@ export function StudySidebar({
                   </span>
                 )}
               </button>
-
-              <Link
-                href={`/anamnese?projectId=${currentProjectId}`}
-                onClick={() => setMobileOpen(false)}
-                className={`w-full px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-2.5 text-left cursor-pointer group ${
-                  activeItem === 'anamnese'
-                    ? 'bg-blue-50 text-blue-700 border border-blue-200/80 shadow-2xs'
-                    : 'text-slate-600 hover:text-blue-700 hover:bg-blue-50/70 border border-transparent'
-                }`}
-              >
-                <FileSpreadsheet
-                  className={`w-4 h-4 shrink-0 transition-colors ${
-                    activeItem === 'anamnese' ? 'text-blue-600' : 'text-blue-500/80 group-hover:text-blue-600'
-                  }`}
-                />
-                <span className="truncate">Ficha Clínica & Critérios</span>
-              </Link>
-
-              <Link
-                href={`/construtor?projectId=${currentProjectId}`}
-                onClick={() => setMobileOpen(false)}
-                className={`w-full px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-2.5 text-left cursor-pointer group ${
-                  activeItem === 'construtor'
-                    ? 'bg-indigo-50 text-indigo-700 border border-indigo-200/80 shadow-2xs'
-                    : 'text-slate-600 hover:text-indigo-700 hover:bg-indigo-50/70 border border-transparent'
-                }`}
-              >
-                <FileCode
-                  className={`w-4 h-4 shrink-0 transition-colors ${
-                    activeItem === 'construtor' ? 'text-indigo-600' : 'text-indigo-500/80 group-hover:text-indigo-600'
-                  }`}
-                />
-                <span className="truncate">Construtor de eCRF</span>
-              </Link>
 
               <Link
                 href={`/tcle/editor?projectId=${currentProjectId}`}
