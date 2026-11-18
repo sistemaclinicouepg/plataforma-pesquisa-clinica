@@ -499,9 +499,9 @@ function ResultadosContent() {
     if (hasScore) {
       if (isCurrentBlinded) {
         return (
-          <div className="inline-flex items-center space-x-1 px-2 py-1 rounded bg-amber-50 text-amber-800 border border-amber-200 text-xs">
-            <Lock className="w-3 h-3 text-amber-600" />
-            <span className="font-semibold text-[11px]">Mascarado (Cego)</span>
+          <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200 text-[11px]">
+            <Lock className="w-3 h-3 text-amber-600 shrink-0" />
+            <span className="font-semibold">Mascarado</span>
           </div>
         );
       }
@@ -520,19 +520,19 @@ function ResultadosContent() {
       const painTypeToShow = details.painType || matchingFormResp?.painTypeVal;
 
       return (
-        <div className="space-y-1 min-w-[130px]">
-          <div className={`inline-flex items-center justify-between gap-2 px-2.5 py-1 rounded-lg border font-mono text-xs font-bold ${badgeColor}`}>
+        <div className="space-y-1 w-full max-w-[120px]">
+          <div className={`flex items-center justify-between gap-1.5 px-2 py-0.5 rounded-md border font-mono text-[11px] font-bold ${badgeColor}`}>
             <span>EVA {scoreNum.toFixed(1)}</span>
-            <span className="text-[10px] font-normal text-slate-500">/ 10</span>
+            <span className="text-[9px] font-normal opacity-70">/10</span>
           </div>
-          <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
+          <div className="w-full bg-slate-200 h-1 rounded-full overflow-hidden">
             <div
               className={`h-full ${barColor}`}
               style={{ width: `${Math.min(Math.max((scoreNum / 10) * 100, 0), 100)}%` }}
             />
           </div>
           {painTypeToShow && (
-            <p className="text-[10px] text-slate-600 truncate max-w-[140px]" title={painTypeToShow}>
+            <p className="text-[9px] text-slate-500 truncate max-w-[115px]" title={painTypeToShow}>
               {painTypeToShow}
             </p>
           )}
@@ -542,20 +542,20 @@ function ResultadosContent() {
 
     // Se pendente
     return (
-      <div className="space-y-1.5 min-w-[120px]">
+      <div className="space-y-1 w-full max-w-[110px]">
         {isUnlocked ? (
-          <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
-            <CheckCircle2 className="w-3 h-3 text-emerald-700" />
+          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+            <CheckCircle2 className="w-2.5 h-2.5 text-emerald-700 shrink-0" />
             <span>Liberado</span>
           </span>
         ) : unlockMeta.releaseMode === 'MANUAL' ? (
-          <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-800 border border-amber-200">
-            <Lock className="w-2.5 h-2.5 text-amber-600" />
+          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-semibold bg-amber-50 text-amber-800 border border-amber-200">
+            <Lock className="w-2.5 h-2.5 text-amber-600 shrink-0" />
             <span>Aguardando</span>
           </span>
         ) : (
-          <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[10px] text-slate-500 bg-slate-100 border border-slate-200">
-            <Clock className="w-2.5 h-2.5 text-slate-400" />
+          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] text-slate-500 bg-slate-100 border border-slate-200">
+            <Clock className="w-2.5 h-2.5 text-slate-400 shrink-0" />
             <span>Tempo (GCP)</span>
           </span>
         )}
@@ -566,7 +566,7 @@ function ResultadosContent() {
               type="button"
               disabled={isActionLoading}
               onClick={() => handleToggleUnlock(sess.sessionNumber, 'LOCK_MOMENT', m)}
-              className="text-[10px] text-slate-500 hover:text-slate-800 underline cursor-pointer"
+              className="text-[9px] text-slate-500 hover:text-slate-800 underline cursor-pointer"
             >
               Bloquear
             </button>
@@ -575,7 +575,7 @@ function ResultadosContent() {
               type="button"
               disabled={isActionLoading}
               onClick={() => handleToggleUnlock(sess.sessionNumber, 'UNLOCK_MOMENT', m)}
-              className="px-2 py-0.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[10px] font-bold transition cursor-pointer"
+              className="px-1.5 py-0.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[9px] font-bold transition cursor-pointer"
             >
               Liberar
             </button>
@@ -813,14 +813,14 @@ function ResultadosContent() {
                   <table className="w-full text-xs text-left">
                     <thead className="bg-slate-100/70 border-b border-slate-200 text-slate-600 font-bold text-[11px] uppercase tracking-wider">
                       <tr>
-                        <th className="px-4 py-3 whitespace-nowrap">Sessão / Procedimento</th>
-                        <th className="px-4 py-3 whitespace-nowrap">Data</th>
-                        <th className="px-4 py-3 whitespace-nowrap min-w-[140px]">Imediato (0h)</th>
-                        <th className="px-4 py-3 whitespace-nowrap min-w-[130px]">1 Hora Pós (1h)</th>
-                        <th className="px-4 py-3 whitespace-nowrap min-w-[130px]">24 Horas Pós (24h)</th>
-                        <th className="px-4 py-3 whitespace-nowrap min-w-[130px]">48 Horas Pós (48h)</th>
-                        <th className="px-4 py-3 whitespace-nowrap">Analgésico / Detalhes</th>
-                        <th className="px-4 py-3 whitespace-nowrap text-right">Controles</th>
+                        <th className="px-3 py-2.5">Sessão</th>
+                        <th className="px-3 py-2.5">Data</th>
+                        <th className="px-3 py-2.5">0h (Imediato)</th>
+                        <th className="px-3 py-2.5">1h Pós</th>
+                        <th className="px-3 py-2.5">24h Pós</th>
+                        <th className="px-3 py-2.5">48h Pós</th>
+                        <th className="px-3 py-2.5">Analgésico</th>
+                        <th className="px-3 py-2.5 text-right">Ações</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
@@ -840,17 +840,17 @@ function ResultadosContent() {
 
                         return (
                           <tr key={sess.id} className="hover:bg-slate-50/70 transition">
-                            <td className="px-4 py-3.5 whitespace-nowrap font-medium text-slate-900">
+                            <td className="px-3 py-2.5 font-medium text-slate-900">
                               <div className="flex items-center space-x-2">
-                                <span className="px-2 py-0.5 bg-indigo-600 text-white rounded text-[11px] font-mono font-bold">
+                                <span className="px-1.5 py-0.5 bg-indigo-600 text-white rounded text-[10px] font-mono font-bold shrink-0">
                                   S{sess.sessionNumber}
                                 </span>
-                                <div>
-                                  <span className="font-bold text-slate-900 block">
+                                <div className="min-w-0">
+                                  <span className="font-bold text-slate-900 block truncate max-w-[130px]" title={sess.sessionType || `Sessão ${sess.sessionNumber}`}>
                                     {sess.sessionType || `Sessão ${sess.sessionNumber}`}
                                   </span>
                                   {sess.operatorName && (
-                                    <span className="text-[10px] text-slate-400 block">
+                                    <span className="text-[9px] text-slate-400 block truncate max-w-[130px]">
                                       Op: {sess.operatorName}
                                     </span>
                                   )}
@@ -858,30 +858,30 @@ function ResultadosContent() {
                               </div>
                             </td>
 
-                            <td className="px-4 py-3.5 whitespace-nowrap text-slate-600">
+                            <td className="px-3 py-2.5 text-slate-600 text-[11px] whitespace-nowrap">
                               {new Date(sess.sessionDate).toLocaleDateString('pt-BR')}
                             </td>
 
                             {/* Células dos 4 Momentos */}
-                            <td className="px-4 py-3.5 whitespace-nowrap">
+                            <td className="px-3 py-2.5">
                               {renderMomentCell(sess, '0h', unlockMeta)}
                             </td>
-                            <td className="px-4 py-3.5 whitespace-nowrap">
+                            <td className="px-3 py-2.5">
                               {renderMomentCell(sess, '1h', unlockMeta)}
                             </td>
-                            <td className="px-4 py-3.5 whitespace-nowrap">
+                            <td className="px-3 py-2.5">
                               {renderMomentCell(sess, '24h', unlockMeta)}
                             </td>
-                            <td className="px-4 py-3.5 whitespace-nowrap">
+                            <td className="px-3 py-2.5">
                               {renderMomentCell(sess, '48h', unlockMeta)}
                             </td>
 
                             {/* Analgésico de Resgate */}
-                            <td className="px-4 py-3.5 whitespace-nowrap text-xs">
+                            <td className="px-3 py-2.5 text-xs">
                               {usedAnalgesic ? (
                                 <div>
                                   <span
-                                    className={`inline-block px-2 py-0.5 rounded text-[11px] font-bold ${
+                                    className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold ${
                                       usedAnalgesic === 'Sim'
                                         ? 'bg-red-100 text-red-800 border border-red-200'
                                         : 'bg-slate-100 text-slate-700'
@@ -890,7 +890,7 @@ function ResultadosContent() {
                                     {usedAnalgesic === 'Sim' ? 'Uso Declarado' : 'Sem Uso'}
                                   </span>
                                   {analgesicDetails && (
-                                    <p className="text-[10px] text-slate-500 mt-0.5 truncate max-w-[130px]">
+                                    <p className="text-[9px] text-slate-500 mt-0.5 truncate max-w-[110px]" title={analgesicDetails}>
                                       {analgesicDetails}
                                     </p>
                                   )}
@@ -901,13 +901,13 @@ function ResultadosContent() {
                             </td>
 
                             {/* Ações da Sessão */}
-                            <td className="px-4 py-3.5 whitespace-nowrap text-right">
-                              <div className="inline-flex items-center space-x-1.5">
+                            <td className="px-3 py-2.5 text-right whitespace-nowrap">
+                              <div className="inline-flex items-center justify-end gap-1.5">
                                 <button
                                   type="button"
                                   disabled={unlockingAction === `${sess.sessionNumber}-UNLOCK_ALL`}
                                   onClick={() => handleToggleUnlock(sess.sessionNumber, 'UNLOCK_ALL')}
-                                  className="px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded text-[11px] font-bold transition cursor-pointer inline-flex items-center space-x-1"
+                                  className="px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded text-[10px] font-bold transition cursor-pointer inline-flex items-center gap-1 shadow-2xs"
                                   title="Liberar todos os momentos desta sessão de uma vez"
                                 >
                                   <Unlock className="w-3 h-3" />
@@ -925,10 +925,10 @@ function ResultadosContent() {
                                       isManualMode ? 'AUTO' : 'MANUAL'
                                     )
                                   }
-                                  className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 rounded text-[10px] font-bold transition cursor-pointer"
+                                  className="px-1.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 rounded text-[9px] font-bold transition cursor-pointer"
                                   title="Alternar entre Liberação Automática (GCP) e Manual"
                                 >
-                                  {isManualMode ? 'Modo Manual' : 'GCP Automático'}
+                                  {isManualMode ? 'Manual' : 'GCP Auto'}
                                 </button>
                               </div>
                             </td>
@@ -1113,10 +1113,10 @@ function ResultadosContent() {
                           <table className="w-full text-xs text-left">
                             <thead className="bg-slate-100/60 border-b border-slate-200 text-slate-600 font-bold text-[11px] uppercase tracking-wider">
                               <tr>
-                                <th className="px-3.5 py-2.5 w-12 text-center">#</th>
-                                <th className="px-3.5 py-2.5 min-w-[280px]">Pergunta / Item Clínico</th>
-                                <th className="px-3.5 py-2.5 w-32">Tipo</th>
-                                <th className="px-3.5 py-2.5 min-w-[220px]">Resposta Registrada do Voluntário</th>
+                                <th className="px-3 py-2 w-10 text-center">#</th>
+                                <th className="px-3 py-2 w-1/2">Pergunta / Item Clínico</th>
+                                <th className="px-3 py-2 w-28">Tipo</th>
+                                <th className="px-3 py-2">Resposta Registrada do Voluntário</th>
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">

@@ -3063,11 +3063,11 @@ function DashboardContent() {
                   <table className="w-full text-left border-collapse text-xs">
                     <thead>
                       <tr className="border-b border-slate-200 bg-slate-50/90 text-[11px] font-bold uppercase tracking-wider text-slate-500 h-11">
-                        <th className="py-3 px-4 min-w-[240px]">Participante</th>
-                        <th className="py-3 px-3 min-w-[130px]">Grupo</th>
-                        <th className="py-3 px-3 min-w-[130px]">Sessões</th>
-                        <th className="py-3 px-3 min-w-[160px]">Status da Janela</th>
-                        <th className="py-3 px-4 text-right min-w-[320px]">Ações</th>
+                        <th className="py-2.5 px-3 min-w-[190px]">Participante</th>
+                        <th className="py-2.5 px-2 min-w-[110px]">Grupo</th>
+                        <th className="py-2.5 px-2 min-w-[80px]">Sessões</th>
+                        <th className="py-2.5 px-2 min-w-[130px]">Status da Janela</th>
+                        <th className="py-2.5 px-3 text-right min-w-[240px]">Ações</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
@@ -3086,7 +3086,7 @@ function DashboardContent() {
                           return (
                             <tr key={part.id} className="hover:bg-slate-50/80 transition-colors h-[68px]">
                               {/* 1. Identificação do Participante */}
-                              <td className="py-3 px-4 align-middle whitespace-nowrap">
+                              <td className="py-2.5 px-3 align-middle">
                                 <div className="flex items-center space-x-3">
                                   {/* Avatar com Iniciais */}
                                   <div
@@ -3144,7 +3144,7 @@ function DashboardContent() {
                               </td>
 
                               {/* 2. Grupo de Alocação */}
-                              <td className="py-3 px-3 align-middle whitespace-nowrap">
+                              <td className="py-2.5 px-2 align-middle">
                                 {isBlindedUser ? (
                                   <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 text-slate-500 text-[11px] font-medium border border-slate-200">
                                     <Lock className="w-3 h-3 text-slate-400" />
@@ -3187,7 +3187,7 @@ function DashboardContent() {
                               </td>
 
                               {/* 3. Indicadores de Sessões Clínicas */}
-                              <td className="py-3 px-3 align-middle whitespace-nowrap">
+                              <td className="py-2.5 px-2 align-middle">
                                 <div className="inline-flex items-center gap-1.5 p-1 bg-slate-100/70 rounded-xl border border-slate-200/80">
                                   {studyProtocol.sessions.map((sess) => {
                                     const num = sess.sessionNumber;
@@ -3221,7 +3221,7 @@ function DashboardContent() {
                               </td>
 
                               {/* 4. Status da Janela de Retorno */}
-                              <td className="py-3 px-3 align-middle whitespace-nowrap">
+                              <td className="py-2.5 px-2 align-middle">
                                 {windows.overallAlert === 'OVERDUE' && next && (
                                   <span className="h-8 px-2.5 bg-red-50 text-red-700 border border-red-200 rounded-lg text-xs font-bold inline-flex items-center gap-1.5 whitespace-nowrap">
                                     <AlertCircle className="w-3.5 h-3.5 text-red-600 shrink-0" />
@@ -3255,7 +3255,7 @@ function DashboardContent() {
                               </td>
 
                               {/* 5. Ações Clínicas Padronizadas & Alinhadas */}
-                              <td className="py-3 px-4 align-middle text-right whitespace-nowrap">
+                              <td className="py-2.5 px-3 align-middle text-right">
                                 <div className="inline-flex items-center justify-end gap-1.5">
                                   {/* Botão Primário: Iniciar/Registrar Atendimento ou Status de Concluído */}
                                   {windows.allCompleted ? (
