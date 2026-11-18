@@ -306,6 +306,18 @@ const getPainBadgeColor = (score: number) => {
   return 'bg-red-100 text-red-800 border-red-300';
 };
 
+const formatPhoneDisplay = (phone?: string | null) => {
+  if (!phone) return 'Sem telefone';
+  const clean = phone.replace(/\D/g, '');
+  if (clean.length === 11) {
+    return `(${clean.slice(0, 2)}) ${clean.slice(2, 7)}-${clean.slice(7)}`;
+  }
+  if (clean.length === 10) {
+    return `(${clean.slice(0, 2)}) ${clean.slice(2, 6)}-${clean.slice(6)}`;
+  }
+  return phone;
+};
+
 import {
   CLINICAL_WINDOWS,
   type ClinicalWindowConfig,
@@ -2933,11 +2945,14 @@ function DashboardContent() {
 
             {/* Alerta de Retornos que Demandam Ação */}
             {(overdueVisits.length > 0 || dueNowVisits.length > 0) && (
-              <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs">
+              <div className="p-3 bg-amber-50/80 border border-amber-200/80 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs shadow-xs">
                 <div className="flex items-center space-x-2.5">
-                  <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
-                  <span className="text-amber-900">
-                    <strong>Atenção de Janela Clínica:</strong> {overdueVisits.length > 0 && `${overdueVisits.length} consulta(s) com prazo estourado.`}{' '}
+                  <div className="w-7 h-7 rounded-lg bg-amber-100 flex items-center justify-center shrink-0">
+                    <AlertTriangle className="w-4 h-4 text-amber-600" />
+                  </div>
+                  <span className="text-amber-900 leading-snug">
+                    <strong className="font-semibold">Atenção de Janela Clínica:</strong>{' '}
+                    {overdueVisits.length > 0 && `${overdueVisits.length} consulta(s) com prazo estourado.`}{' '}
                     {dueNowVisits.length > 0 && `${dueNowVisits.length} consulta(s) dentro da janela regulatória de retorno.`}
                   </span>
                 </div>
@@ -2946,8 +2961,8 @@ function DashboardContent() {
                   onClick={() => setActiveFilter(activeFilter === 'PENDING' ? 'ALL' : 'PENDING')}
                   className={`px-3 py-1.5 rounded-lg text-xs font-bold transition shrink-0 ${
                     activeFilter === 'PENDING'
-                      ? 'bg-amber-600 text-white'
-                      : 'bg-white hover:bg-amber-100 text-amber-900 border border-amber-300 shadow-2xs'
+                      ? 'bg-amber-600 hover:bg-amber-700 text-white shadow-2xs'
+                      : 'bg-white hover:bg-amber-100/60 text-amber-900 border border-amber-300/80 shadow-2xs'
                   }`}
                 >
                   {activeFilter === 'PENDING' ? 'Mostrar Todos os Participantes' : 'Filtrar Apenas Retornos Pendentes'}
@@ -3047,12 +3062,12 @@ function DashboardContent() {
                 <div className="overflow-x-auto min-h-[320px]">
                   <table className="w-full text-left border-collapse text-xs">
                     <thead>
-                      <tr className="border-b border-slate-200 bg-slate-50/90 text-[11px] font-bold uppercase tracking-wider text-slate-500 h-10">
-                        <th className="py-2.5 px-4 min-w-[200px]">Participante</th>
-                        <th className="py-2.5 px-3 min-w-[110px]">Grupo</th>
-                        <th className="py-2.5 px-3 min-w-[120px]">Sessões</th>
-                        <th className="py-2.5 px-3 min-w-[150px]">Status da Janela</th>
-                        <th className="py-2.5 px-4 text-right min-w-[240px]">Ações</th>
+                      <tr className="border-b border-slate-200 bg-slate-50/90 text-[11px] font-bold uppercase tracking-wider text-slate-500 h-11">
+                        <th className="py-3 px-4 min-w-[240px]">Participante</th>
+                        <th className="py-3 px-3 min-w-[130px]">Grupo</th>
+                        <th className="py-3 px-3 min-w-[130px]">Sessões</th>
+                        <th className="py-3 px-3 min-w-[160px]">Status da Janela</th>
+                        <th className="py-3 px-4 text-right min-w-[320px]">Ações</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
@@ -3069,81 +3084,111 @@ function DashboardContent() {
                           const next = windows.nextStatus;
 
                           return (
-                            <tr key={part.id} className="hover:bg-slate-50/80 transition-colors h-[64px]">
+                            <tr key={part.id} className="hover:bg-slate-50/80 transition-colors h-[68px]">
                               {/* 1. Identificação do Participante */}
-                              <td className="py-2.5 px-4 align-middle whitespace-nowrap">
-                                <div className="flex items-center space-x-2">
-                                  <button
-                                    type="button"
+                              <td className="py-3 px-4 align-middle whitespace-nowrap">
+                                <div className="flex items-center space-x-3">
+                                  {/* Avatar com Iniciais */}
+                                  <div
                                     onClick={() => openPatientDossier(part)}
-                                    className="w-[72px] h-[22px] flex items-center justify-center px-1.5 bg-slate-900 hover:bg-blue-700 text-white text-[11px] font-mono font-bold rounded whitespace-nowrap shrink-0 shadow-2xs transition cursor-pointer"
-                                    title="Abrir Prontuário Clínico Completo"
+                                    className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-2xs cursor-pointer select-none tracking-tight hover:opacity-90 transition"
+                                    title="Abrir Prontuário Clínico"
                                   >
-                                    {part.researchCode}
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => openPatientDossier(part)}
-                                    className="font-bold text-slate-900 hover:text-blue-600 text-xs truncate max-w-[150px] inline-block text-left transition cursor-pointer"
-                                    title={`Abrir Prontuário / Ficha de ${part.patient.fullName}`}
-                                  >
-                                    {part.patient.fullName}
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleOpenEditPatient(part)}
-                                    className="p-1 text-slate-400 hover:text-blue-600 rounded hover:bg-blue-50 transition shrink-0"
-                                    title="Editar dados cadastrais do paciente"
-                                  >
-                                    <Edit className="w-3 h-3" />
-                                  </button>
-                                </div>
-                                <div className="text-[10px] text-slate-500 mt-0.5 flex items-center space-x-1.5 truncate max-w-[230px]">
-                                  <span>{part.patient.biologicalSex}</span>
-                                  <span>•</span>
-                                  <span>{part.patient.phoneWhatsApp}</span>
-                                </div>
-                              </td>
+                                    {(part.patient?.fullName || 'P')
+                                      .split(' ')
+                                      .filter(Boolean)
+                                      .slice(0, 2)
+                                      .map((n: string) => n[0].toUpperCase())
+                                      .join('') || 'P'}
+                                  </div>
 
-                              {/* 2. Grupo de Alocação (Tratamento para não quebrar linha) */}
-                              <td className="py-2.5 px-3 align-middle whitespace-nowrap">
-                                <div className="flex items-center space-x-1.5">
-                                  <span
-                                    className="text-[10px] font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200 truncate max-w-[125px] inline-block whitespace-nowrap"
-                                    title={part.group || 'Pendente'}
-                                  >
-                                    {isBlindedUser ? (
-                                      <span className="flex items-center gap-1">
-                                        <Lock className="w-2.5 h-2.5 text-slate-400" />
-                                        <span>Oculto</span>
+                                  <div className="min-w-0">
+                                    <div className="flex items-center space-x-2">
+                                      <button
+                                        type="button"
+                                        onClick={() => openPatientDossier(part)}
+                                        className="font-bold text-slate-900 hover:text-blue-600 text-xs truncate max-w-[160px] text-left transition cursor-pointer"
+                                        title={`Abrir Prontuário de ${part.patient.fullName}`}
+                                      >
+                                        {part.patient.fullName}
+                                      </button>
+                                      <span
+                                        className="px-1.5 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-mono font-bold rounded border border-slate-200 transition cursor-pointer shrink-0"
+                                        onClick={() => openPatientDossier(part)}
+                                        title="Código único regulatório do participante"
+                                      >
+                                        {part.researchCode}
                                       </span>
-                                    ) : part.group && part.group.includes('Direito:') ? (
-                                      <div className="flex flex-col gap-0.5 text-[9px] font-semibold leading-tight text-left">
-                                        <span className="text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200 truncate max-w-[150px]">
-                                          {part.group.split('|')[0]?.trim()}
-                                        </span>
-                                        <span className="text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 truncate max-w-[150px]">
-                                          {part.group.split('|')[1]?.trim()}
-                                        </span>
-                                      </div>
-                                    ) : (
-                                      part.group || 'Pendente'
-                                    )}
-                                  </span>
-                                  {!isBlindedUser && (
-                                    <button
-                                      onClick={() => handleOpenAllocation(part)}
-                                      className="text-[10px] text-blue-600 hover:text-blue-800 font-semibold underline shrink-0 whitespace-nowrap"
-                                    >
-                                      {part.group ? 'Alterar' : 'Alocar'}
-                                    </button>
-                                  )}
+                                      <button
+                                        type="button"
+                                        onClick={() => handleOpenEditPatient(part)}
+                                        className="p-1 text-slate-400 hover:text-blue-600 rounded-md hover:bg-slate-100 transition shrink-0"
+                                        title="Editar dados cadastrais"
+                                      >
+                                        <Edit className="w-3 h-3" />
+                                      </button>
+                                    </div>
+                                    <div className="text-[11px] text-slate-500 mt-0.5 flex items-center space-x-1.5">
+                                      {part.patient.biologicalSex && (
+                                        <>
+                                          <span>{part.patient.biologicalSex}</span>
+                                          <span className="text-slate-300">•</span>
+                                        </>
+                                      )}
+                                      <span className="font-mono text-slate-600">
+                                        {formatPhoneDisplay(part.patient.phoneWhatsApp)}
+                                      </span>
+                                    </div>
+                                  </div>
                                 </div>
                               </td>
 
-                              {/* 3. Indicadores de Sessões Clínicas (Todos 28x28px Perfeitos) */}
-                              <td className="py-2.5 px-3 align-middle whitespace-nowrap">
-                                <div className="inline-flex items-center gap-1">
+                              {/* 2. Grupo de Alocação */}
+                              <td className="py-3 px-3 align-middle whitespace-nowrap">
+                                {isBlindedUser ? (
+                                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 text-slate-500 text-[11px] font-medium border border-slate-200">
+                                    <Lock className="w-3 h-3 text-slate-400" />
+                                    <span>Mascarado</span>
+                                  </span>
+                                ) : part.group && part.group.includes('Direito:') ? (
+                                  <div className="flex flex-col gap-1 text-[10px] font-semibold leading-tight text-left">
+                                    <span className="text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200 truncate max-w-[150px]">
+                                      {part.group.split('|')[0]?.trim()}
+                                    </span>
+                                    <span className="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 truncate max-w-[150px]">
+                                      {part.group.split('|')[1]?.trim()}
+                                    </span>
+                                  </div>
+                                ) : part.group ? (
+                                  <div className="inline-flex items-center gap-1.5">
+                                    <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 text-[11px] font-bold border border-blue-200">
+                                      {part.group}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleOpenAllocation(part)}
+                                      className="p-1 text-slate-400 hover:text-blue-600 rounded-md hover:bg-slate-100 transition shrink-0"
+                                      title="Alterar alocação de grupo"
+                                    >
+                                      <Edit className="w-3 h-3" />
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenAllocation(part)}
+                                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 text-[11px] font-semibold border border-amber-200 transition cursor-pointer"
+                                    title="Alocar participante a um grupo de intervenção ou controle"
+                                  >
+                                    <Shuffle className="w-3 h-3 text-amber-600" />
+                                    <span>Alocar Grupo</span>
+                                  </button>
+                                )}
+                              </td>
+
+                              {/* 3. Indicadores de Sessões Clínicas */}
+                              <td className="py-3 px-3 align-middle whitespace-nowrap">
+                                <div className="inline-flex items-center gap-1.5 p-1 bg-slate-100/70 rounded-xl border border-slate-200/80">
                                   {studyProtocol.sessions.map((sess) => {
                                     const num = sess.sessionNumber;
                                     const done = part.sessions?.some((s) => s.sessionNumber === num);
@@ -3153,15 +3198,15 @@ function DashboardContent() {
                                         key={num}
                                         type="button"
                                         onClick={() => openSessionEditor(part, num)}
-                                        className={`w-7 h-7 rounded text-[10px] font-bold font-mono transition-all inline-flex items-center justify-center shrink-0 ${
+                                        className={`w-7 h-7 rounded-lg text-[10px] font-mono font-bold transition-all inline-flex items-center justify-center shrink-0 cursor-pointer ${
                                           done
-                                            ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-2xs'
+                                            ? 'bg-emerald-600 text-white shadow-2xs hover:bg-emerald-700'
                                             : isCurrent
-                                            ? 'bg-blue-50 text-blue-700 border-2 border-blue-500 hover:bg-blue-100'
-                                            : 'bg-slate-100 text-slate-400 border border-slate-200 hover:border-slate-300 hover:text-slate-600'
+                                            ? 'bg-blue-600 text-white shadow-2xs ring-2 ring-blue-500/30'
+                                            : 'bg-white text-slate-400 border border-slate-200 hover:border-slate-300 hover:text-slate-600'
                                         }`}
                                         title={`${sess.name} (${sess.durationMinutes} min) - ${
-                                          done ? 'Realizada (clique para ver/editar)' : 'Pendente (clique para registrar)'
+                                          done ? 'Realizada (clique para ver/editar)' : isCurrent ? 'Sessão Atual / Próxima' : 'Pendente'
                                         }`}
                                       >
                                         {done ? (
@@ -3175,44 +3220,44 @@ function DashboardContent() {
                                 </div>
                               </td>
 
-                              {/* 4. Status da Janela de Retorno (Badge de Altura Fixa h-7.5) */}
-                              <td className="py-2.5 px-3 align-middle whitespace-nowrap">
+                              {/* 4. Status da Janela de Retorno */}
+                              <td className="py-3 px-3 align-middle whitespace-nowrap">
                                 {windows.overallAlert === 'OVERDUE' && next && (
-                                  <span className="h-7.5 px-2.5 bg-red-50 text-red-700 border border-red-200 rounded-md text-[11px] font-bold inline-flex items-center gap-1.5 whitespace-nowrap">
+                                  <span className="h-8 px-2.5 bg-red-50 text-red-700 border border-red-200 rounded-lg text-xs font-bold inline-flex items-center gap-1.5 whitespace-nowrap">
                                     <AlertCircle className="w-3.5 h-3.5 text-red-600 shrink-0" />
                                     <span>{next.config.shortName} atrasada (+{next.daysDiff}d)</span>
                                   </span>
                                 )}
                                 {windows.overallAlert === 'DUE_NOW' && next && (
-                                  <span className="h-7.5 px-2.5 bg-amber-50 text-amber-800 border border-amber-200 rounded-md text-[11px] font-bold inline-flex items-center gap-1.5 whitespace-nowrap">
+                                  <span className="h-8 px-2.5 bg-amber-50 text-amber-800 border border-amber-200 rounded-lg text-xs font-bold inline-flex items-center gap-1.5 whitespace-nowrap">
                                     <Clock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
                                     <span>{next.config.shortName} na janela ({next.daysDiff}d)</span>
                                   </span>
                                 )}
                                 {windows.overallAlert === 'UPCOMING' && next && (
-                                  <span className="h-7.5 px-2.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-md text-[11px] font-medium inline-flex items-center gap-1.5 whitespace-nowrap">
+                                  <span className="h-8 px-2.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg text-xs font-medium inline-flex items-center gap-1.5 whitespace-nowrap">
                                     <Calendar className="w-3.5 h-3.5 text-blue-500 shrink-0" />
                                     <span>{next.config.shortName} em {next.daysDiff}d</span>
                                   </span>
                                 )}
                                 {windows.overallAlert === 'COMPLETED' && (
-                                  <span className="h-7.5 px-2.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-md text-[11px] font-bold inline-flex items-center gap-1.5 whitespace-nowrap">
+                                  <span className="h-8 px-2.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg text-xs font-bold inline-flex items-center gap-1.5 whitespace-nowrap">
                                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                                     <span>{studyProtocol.sessions.length}/{studyProtocol.sessions.length} Concluído</span>
                                   </span>
                                 )}
                                 {windows.overallAlert === 'WAITING_S1' && (
-                                  <span className="h-7.5 px-2.5 bg-slate-100 text-slate-600 border border-slate-200 rounded-md text-[11px] font-medium inline-flex items-center gap-1.5 whitespace-nowrap">
+                                  <span className="h-8 px-2.5 bg-slate-100 text-slate-600 border border-slate-200 rounded-lg text-xs font-medium inline-flex items-center gap-1.5 whitespace-nowrap">
                                     <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                                     <span>Aguardando S1</span>
                                   </span>
                                 )}
                               </td>
 
-                              {/* 5. Ações Clínicas Padronizadas & Compactas */}
-                              <td className="py-2.5 px-4 align-middle text-right whitespace-nowrap">
+                              {/* 5. Ações Clínicas Padronizadas & Alinhadas */}
+                              <td className="py-3 px-4 align-middle text-right whitespace-nowrap">
                                 <div className="inline-flex items-center justify-end gap-1.5">
-                                  {/* Botão Primário: Registrar Atendimento ou Concluído */}
+                                  {/* Botão Primário: Iniciar/Registrar Atendimento ou Status de Concluído */}
                                   {windows.allCompleted ? (
                                     <button
                                       type="button"
@@ -3220,7 +3265,7 @@ function DashboardContent() {
                                         setTimelineParticipant(part);
                                         setShowTimelineModal(true);
                                       }}
-                                      className="h-8 px-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-lg text-xs font-bold transition inline-flex items-center justify-center gap-1.5 whitespace-nowrap shadow-2xs shrink-0 cursor-pointer"
+                                      className="h-8.5 px-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold transition inline-flex items-center justify-center gap-1.5 whitespace-nowrap shadow-2xs shrink-0 cursor-pointer"
                                       title="Ver histórico completo das sessões clínicas concluídas"
                                     >
                                       <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
@@ -3230,44 +3275,43 @@ function DashboardContent() {
                                     <button
                                       type="button"
                                       onClick={() => openSessionEditor(part, next.sessionNumber)}
-                                      className="h-8 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition inline-flex items-center justify-center gap-1.5 shadow-2xs whitespace-nowrap shrink-0 cursor-pointer"
+                                      className="h-8.5 px-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition inline-flex items-center justify-center gap-1.5 shadow-2xs whitespace-nowrap shrink-0 cursor-pointer"
                                       title={`Iniciar atendimento clínico de ${next.config.name}`}
                                     >
                                       <Play className="w-3 h-3 fill-current" />
-                                      <span>Iniciar Atendimento ({next.config.shortName})</span>
+                                      <span>Atendimento ({next.config.shortName})</span>
                                     </button>
                                   ) : (
                                     <button
                                       type="button"
                                       onClick={() => openSessionEditor(part, 1)}
-                                      className="h-8 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition inline-flex items-center justify-center gap-1.5 shadow-2xs whitespace-nowrap shrink-0 cursor-pointer"
+                                      className="h-8.5 px-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition inline-flex items-center justify-center gap-1.5 shadow-2xs whitespace-nowrap shrink-0 cursor-pointer"
                                       title="Iniciar primeiro atendimento clínico (S1)"
                                     >
                                       <Play className="w-3 h-3 fill-current" />
-                                      <span>Iniciar Atendimento</span>
+                                      <span>Atendimento</span>
                                     </button>
                                   )}
 
-                                  {/* Prontuário / Ficha Completa */}
+                                  {/* Prontuário do Participante */}
                                   <button
                                     type="button"
                                     onClick={() => openPatientDossier(part)}
-                                    className="h-8 px-2.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg text-xs font-bold transition inline-flex items-center justify-center gap-1 shadow-2xs shrink-0 cursor-pointer"
-                                    title="Abrir Prontuário e Ficha Clínica Completa (Anamnese, Odontograma e Histórico)"
+                                    className="h-8.5 px-3 bg-white hover:bg-slate-50 text-slate-700 hover:text-blue-600 border border-slate-200 hover:border-blue-200 rounded-xl text-xs font-bold transition inline-flex items-center justify-center gap-1.5 shadow-2xs shrink-0 cursor-pointer"
+                                    title="Abrir Prontuário do Participante (Cadastro, Timeline, Questionários e Galeria)"
                                   >
                                     <FileSpreadsheet className="w-3.5 h-3.5 text-blue-600" />
-                                    <span>Ficha</span>
+                                    <span>Prontuário</span>
                                   </button>
 
                                   {/* Resultados das Escalas & Questionários */}
                                   <button
                                     type="button"
                                     onClick={() => handleOpenResponses(part)}
-                                    className="h-8 px-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg text-xs font-bold transition inline-flex items-center justify-center gap-1 shadow-2xs shrink-0 cursor-pointer"
-                                    title="Abrir página dedicada com todas as respostas de escalas de dor (EVA), diários, questionários e bioestatística"
+                                    className="h-8.5 w-8.5 bg-white hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 border border-slate-200 hover:border-indigo-200 rounded-xl transition inline-flex items-center justify-center shadow-2xs shrink-0 cursor-pointer"
+                                    title="Ver respostas de escalas clínicas, diários e questionários"
                                   >
                                     <BarChart3 className="w-3.5 h-3.5 text-indigo-600" />
-                                    <span>Resultados</span>
                                   </button>
 
                                   {/* WhatsApp / Agendamento */}
@@ -3284,7 +3328,7 @@ function DashboardContent() {
                                           next.windowEnd
                                         )
                                       }
-                                      className="h-8 px-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-bold transition inline-flex items-center justify-center gap-1 shadow-2xs shrink-0"
+                                      className="h-8.5 px-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold transition inline-flex items-center justify-center gap-1 shadow-2xs shrink-0 cursor-pointer"
                                       title={`Agendar retorno ${next.config.name} no WhatsApp`}
                                     >
                                       <MessageSquare className="w-3.5 h-3.5" />
@@ -3294,19 +3338,19 @@ function DashboardContent() {
                                     <button
                                       type="button"
                                       onClick={() => openWhatsApp(part.patient.phoneWhatsApp, part.researchCode)}
-                                      className="h-8 w-8 bg-white hover:bg-emerald-50 text-emerald-700 border border-slate-200 hover:border-emerald-300 rounded-lg transition inline-flex items-center justify-center shadow-2xs shrink-0 cursor-pointer"
+                                      className="h-8.5 w-8.5 bg-white hover:bg-emerald-50 text-slate-600 hover:text-emerald-600 border border-slate-200 hover:border-emerald-200 rounded-xl transition inline-flex items-center justify-center shadow-2xs shrink-0 cursor-pointer"
                                       title="Conversar no WhatsApp com o participante"
                                     >
                                       <MessageSquare className="w-3.5 h-3.5 text-emerald-600" />
                                     </button>
                                   )}
 
-                                  {/* Menu Dropdown de Mais Opções (eCRF, Portal, TCLE, Histórico, Edição) */}
+                                  {/* Menu Dropdown de Mais Opções */}
                                   <div className="relative row-actions-dropdown">
                                     <button
                                       type="button"
                                       onClick={() => setActiveRowMenu(activeRowMenu === part.id ? null : part.id)}
-                                      className={`h-8 w-8 rounded-lg border transition inline-flex items-center justify-center shadow-2xs shrink-0 cursor-pointer ${
+                                      className={`h-8.5 w-8.5 rounded-xl border transition inline-flex items-center justify-center shadow-2xs shrink-0 cursor-pointer ${
                                         activeRowMenu === part.id
                                           ? 'bg-slate-200 text-slate-800 border-slate-300'
                                           : 'bg-white hover:bg-slate-100 text-slate-600 border border-slate-200'
