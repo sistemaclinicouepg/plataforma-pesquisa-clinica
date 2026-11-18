@@ -169,6 +169,52 @@ export const PatientDossierModal: React.FC<PatientDossierModalProps> = ({
   }, [participant?.anamnesisData]);
 
   // Lista local de fotos para renderização e atualização imediata
+  // Estado local do Odontograma Clínico do Participante
+  const [odontogramStatus, setOdontogramStatus] = useState<Record<string, ToothStatus>>(
+    () => (parsedAnamnesis.odontogram || {}) as Record<string, ToothStatus>
+  );
+  const [isSavingOdontogram, setIsSavingOdontogram] = useState(false);
+  const [odontogramSaved, setOdontogramSaved] = useState(false);
+
+  React.useEffect(() => {
+    if (parsedAnamnesis.odontogram) {
+      setOdontogramStatus(parsedAnamnesis.odontogram as Record<string, ToothStatus>);
+    }
+  }, [parsedAnamnesis.odontogram]);
+
+  const handleOdontogramChange = (tooth: string, newStatus: ToothStatus) => {
+    setOdontogramStatus((prev) => ({
+      ...prev,
+      [tooth]: newStatus,
+    }));
+    setOdontogramSaved(false);
+  };
+
+  const handleSaveOdontogram = async () => {
+    try {
+      setIsSavingOdontogram(true);
+      let currentAnamnesisJson: any = {};
+      try {
+        currentAnamnesisJson = participant.anamnesisData ? JSON.parse(participant.anamnesisData) : {};
+      } catch {}
+      currentAnamnesisJson.odontogram = odontogramStatus;
+
+      await fetch(`/api/participants/${participant.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          anamnesisData: JSON.stringify(currentAnamnesisJson),
+        }),
+      });
+      setOdontogramSaved(true);
+      setTimeout(() => setOdontogramSaved(false), 3000);
+    } catch (err: any) {
+      alert(`Erro ao salvar odontograma: ${err?.message || 'Falha de conexão'}`);
+    } finally {
+      setIsSavingOdontogram(false);
+    }
+  };
+
   const [clinicalPhotosList, setClinicalPhotosList] = useState<ClinicalPhoto[]>([]);
   React.useEffect(() => {
     setClinicalPhotosList(parsedAnamnesis.clinicalPhotos);
@@ -427,7 +473,9 @@ export const PatientDossierModal: React.FC<PatientDossierModalProps> = ({
   })();
 
   // Formulários do estudo vinculados
-  const allProjectForms = Array.isArray(project?.forms) ? project.forms : [];
+  const allProjectForms = (Array.isArray(project?.forms) ? project.forms : []).filter(
+    (f: any) => f && f.id !== 'anamnesis' && f.id !== 'odontogram' && !f.id.startsWith('anamnesis_')
+  );
 
   // Fotos para o comparador lado a lado
   const leftSessionPhotos = clinicalPhotosList.filter(
@@ -933,6 +981,61 @@ export const PatientDossierModal: React.FC<PatientDossierModalProps> = ({
                   </div>
                 )}
               </div>
+
+              {/* Odontograma Clínico Anatômico (Exclusivo do Prontuário do Paciente) */}
+              {templateConfig?.enableOdontogram !== false && (
+                <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 shadow-2xs space-y-3.5">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                    <div>
+                      <h4 className="font-bold text-slate-900 text-xs flex items-center gap-2">
+                        <Smile className="w-4 h-4 text-blue-600" />
+                        <span>Odontograma Clínico Anatômico</span>
+                        <span className="px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-full text-[10px] font-bold">
+                          {templateConfig?.odontogramScope === 'anterior' ? 'Setor Anterior (12 Dentes)' : 'Arcada Completa'}
+                        </span>
+                      </h4>
+                      <p className="text-[11px] text-slate-500 mt-0.5">
+                        Mapeamento anatômico do estado dos dentes exclusivo do prontuário deste participante.
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2 self-end sm:self-center">
+                      {odontogramSaved && (
+                        <span className="text-[11px] font-bold text-emerald-600 flex items-center gap-1">
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          <span>Salvo!</span>
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={handleSaveOdontogram}
+                        disabled={isSavingOdontogram}
+                        className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition flex items-center gap-1 shadow-2xs cursor-pointer"
+                      >
+                        {isSavingOdontogram ? (
+                          <span>Salvando...</span>
+                        ) : (
+                          <>
+                            <Check className="w-3.5 h-3.5" />
+                            <span>Salvar Odontograma</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="pt-1">
+                    <OdontogramChart
+                      mode="clinical_status"
+                      statusMap={odontogramStatus}
+                      onChangeStatus={handleOdontogramChange}
+                      scope={templateConfig?.odontogramScope === 'anterior' ? 'anterior' : 'full'}
+                      readOnly={false}
+                      allowDeciduous={false}
+                    />
+                  </div>
+                </div>
+              )}
 
               {/* Status Ético do TCLE / TALE */}
               <div className="bg-indigo-50/60 border border-indigo-200 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xs">

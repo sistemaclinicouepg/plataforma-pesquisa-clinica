@@ -935,26 +935,6 @@ export function getSpecialtyDefaultSessions(specialty: ResearchSpecialty): Study
 
 export const DEFAULT_FORM_TARGETS: FormTargetProtocol[] = [
   {
-    id: 'anamnesis',
-    title: 'Ficha Clínica & Critérios de Inclusão/Exclusão',
-    description: 'Histórico médico/odontológico, critérios de elegibilidade e dados de admissão.',
-    enabled: true,
-    respondent: 'RESEARCHER',
-    frequency: 'ONCE',
-    frequencyDescription: 'Na triagem / admissão',
-    isPreset: true,
-  },
-  {
-    id: 'odontogram',
-    title: 'Odontograma Clínico Anatômico (Dentes Anteriores)',
-    description: 'Mapeamento dental com foco no setor estético anterior (13 a 23 e 33 a 43).',
-    enabled: true,
-    respondent: 'RESEARCHER',
-    frequency: 'PER_SESSION',
-    frequencyDescription: 'A cada consulta clínica',
-    isPreset: true,
-  },
-  {
     id: 'eva',
     title: 'Diário de Sensibilidade Dental (Escala EVA)',
     description: 'Avaliação da sensibilidade dentinária pelo voluntário no celular (0h a 48h pós-clareamento).',
@@ -962,6 +942,16 @@ export const DEFAULT_FORM_TARGETS: FormTargetProtocol[] = [
     respondent: 'PATIENT',
     frequency: 'DAILY',
     frequencyDescription: 'Diário de Sensibilidade (0h a 48h)',
+    isPreset: true,
+  },
+  {
+    id: 'oes',
+    title: 'Escala de Estética Orofacial (OES)',
+    description: 'Avaliação estética com 8 itens validados (dentes, gengiva, lábios e estética global do sorriso).',
+    enabled: true,
+    respondent: 'PATIENT',
+    frequency: 'ONCE',
+    frequencyDescription: 'Na sessão basal e retorno final',
     isPreset: true,
   },
   {
@@ -982,16 +972,6 @@ export const DEFAULT_FORM_TARGETS: FormTargetProtocol[] = [
     respondent: 'PATIENT',
     frequency: 'WEEKLY',
     frequencyDescription: 'Semanalmente',
-    isPreset: true,
-  },
-  {
-    id: 'oes',
-    title: 'Escala de Estética Orofacial (OES)',
-    description: 'Avaliação estética com 8 itens validados (dentes, gengiva, lábios e estética global do sorriso).',
-    enabled: false,
-    respondent: 'PATIENT',
-    frequency: 'ONCE',
-    frequencyDescription: 'Na sessão basal e retorno final',
     isPreset: true,
   },
   {
@@ -1232,9 +1212,10 @@ export function parseStudyProtocol(templateStringOrObj: any): StudyProtocolConfi
     };
   });
 
-  const forms = Array.isArray(studyProtocol.forms) && studyProtocol.forms.length > 0
+  const rawForms = Array.isArray(studyProtocol.forms) && studyProtocol.forms.length > 0
     ? studyProtocol.forms
     : DEFAULT_FORM_TARGETS;
+  const forms = rawForms.filter((f: any) => f && f.id !== 'anamnesis' && f.id !== 'odontogram');
 
   const rawGroups = Array.isArray(studyProtocol.groups)
     ? studyProtocol.groups

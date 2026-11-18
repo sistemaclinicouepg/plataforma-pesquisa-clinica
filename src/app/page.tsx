@@ -952,7 +952,7 @@ export default function HomePage() {
         projectPrefix: editProjectPrefix.trim().toUpperCase() || undefined,
         totalSessions: editStudySessions.length,
         sessions: editStudySessions,
-        forms: editFormTargets,
+        forms: editFormTargets.filter((f) => f.id !== 'anamnesis' && f.id !== 'odontogram'),
         groups: editProjectGroups.filter(Boolean),
       },
     };
@@ -1324,7 +1324,7 @@ export default function HomePage() {
           plannedParticipants: parsedN,
           totalSessions: studySessions.length,
           sessions: studySessions,
-          forms: formTargets,
+          forms: formTargets.filter((f) => f.id !== 'anamnesis' && f.id !== 'odontogram'),
           groups: newProjectGroups.map((g) => g.trim()).filter(Boolean),
         },
       };
@@ -2739,7 +2739,7 @@ export default function HomePage() {
                     </div>
 
                     <div className="space-y-2 max-h-[240px] overflow-y-auto p-1">
-                      {formTargets.map((f) => (
+                      {formTargets.filter((f) => f.id !== 'anamnesis' && f.id !== 'odontogram').map((f) => (
                         <div key={f.id} className="p-3 bg-white border border-slate-200 rounded-xl space-y-2 shadow-2xs hover:border-slate-300 transition">
                           <div className="flex items-center justify-between">
                             <label className="flex items-center gap-2.5 cursor-pointer font-bold text-slate-800 text-xs">
@@ -2865,7 +2865,7 @@ export default function HomePage() {
                       <div className="sm:col-span-2">
                         <span className="text-slate-500 text-[11px] block">Questionários Ativos (eCRF):</span>
                         <strong className="text-emerald-700">
-                          {formTargets.filter((f) => f.enabled).length} instrumentos habilitados ({formTargets.filter((f) => f.enabled).map((f) => f.title).join(', ')})
+                          {formTargets.filter((f) => f.enabled && f.id !== 'anamnesis' && f.id !== 'odontogram').length} instrumentos habilitados ({formTargets.filter((f) => f.enabled && f.id !== 'anamnesis' && f.id !== 'odontogram').map((f) => f.title).join(', ')})
                         </strong>
                       </div>
                     </div>
@@ -3413,7 +3413,7 @@ export default function HomePage() {
                     </h5>
 
                     <div className="space-y-3">
-                      {editFormTargets.map((f) => (
+                      {editFormTargets.filter((f) => f.id !== 'anamnesis' && f.id !== 'odontogram').map((f) => (
                         <div
                           key={f.id}
                           className={`p-3 rounded-xl border transition ${
