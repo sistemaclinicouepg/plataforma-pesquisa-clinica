@@ -319,9 +319,9 @@ export default function AppNav() {
 
             {pathname.startsWith('/relatorio-cep') && (
               <div className="hidden lg:flex items-center space-x-1.5 text-slate-400 pl-1 border-l border-slate-200 ml-1">
-                <span className="font-semibold text-purple-900 bg-purple-50 px-2.5 py-1 rounded-lg border border-purple-200/60 flex items-center space-x-1.5">
-                  <ShieldCheck className="w-3.5 h-3.5 text-purple-600" />
-                  <span>Relatório CEP / CONEP</span>
+                <span className="font-semibold text-blue-900 bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-200/60 flex items-center space-x-1.5">
+                  <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
+                  <span>Documentos CEP / CONEP</span>
                 </span>
               </div>
             )}

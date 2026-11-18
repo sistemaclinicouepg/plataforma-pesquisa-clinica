@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { uploadToR2, getR2SignedUrl } from '@/lib/storage';
+import { uploadToR2, getR2SignedUrl, deleteFromR2 } from '@/lib/storage';
 
 export async function POST(req: Request) {
   try {
@@ -33,6 +33,54 @@ export async function POST(req: Request) {
     console.error('Erro no upload para R2:', error);
     return NextResponse.json(
       { error: 'Falha ao processar upload para o storage.', details: error.message },
+      { status: 500 }
+    );
+  }
+}
+
+export async function GET(req: Request) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const key = searchParams.get('key');
+
+    if (!key) {
+      return NextResponse.json({ error: 'Chave do arquivo não informada.' }, { status: 400 });
+    }
+
+    const signedUrl = await getR2SignedUrl(key, 86400); // 24h
+
+    return NextResponse.json({
+      success: true,
+      url: signedUrl,
+    });
+  } catch (error: any) {
+    console.error('Erro ao gerar URL assinada no R2:', error);
+    return NextResponse.json(
+      { error: 'Falha ao buscar URL do arquivo.', details: error.message },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(req: Request) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const key = searchParams.get('key');
+
+    if (!key) {
+      return NextResponse.json({ error: 'Chave do arquivo não informada.' }, { status: 400 });
+    }
+
+    await deleteFromR2(key);
+
+    return NextResponse.json({
+      success: true,
+      message: 'Arquivo excluído com sucesso do storage.',
+    });
+  } catch (error: any) {
+    console.error('Erro ao excluir arquivo do R2:', error);
+    return NextResponse.json(
+      { error: 'Falha ao excluir arquivo do storage.', details: error.message },
       { status: 500 }
     );
   }

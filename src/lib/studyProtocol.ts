@@ -306,6 +306,28 @@ export const PRESET_QUESTIONNAIRES_CATALOG: AvailableQuestionnaireOption[] = [
   },
 ];
 
+export interface EthicsApprovalConfig {
+  approvalNumber?: string; // Número do Parecer Consubstanciado (ex: 5.123.456)
+  caae?: string; // Certificado de Apresentação de Apreciação Ética
+  institution?: string; // Ex: Comitê de Ética em Pesquisa - UEPG
+  approvalDate?: string; // Data da aprovação
+  status?: 'APROVADO' | 'EM_ANALISE' | 'PENDENCIA' | 'DISPENSADO' | string;
+  // Documento 1: Parecer / Aceite do CEP / CONEP
+  cepPdfUrl?: string;
+  cepPdfKey?: string;
+  cepPdfName?: string;
+  cepPdfSize?: number;
+  cepPdfUploadedAt?: string;
+  // Documento 2: Projeto de Pesquisa Completo
+  projectPdfUrl?: string;
+  projectPdfKey?: string;
+  projectPdfName?: string;
+  projectPdfSize?: number;
+  projectPdfUploadedAt?: string;
+  // Notas adicionais
+  notes?: string;
+}
+
 export type StudyProtocolConfig = {
   specialty?: ResearchSpecialty; // Área/Linha de pesquisa clínica do estudo
   studyDesign?: 'PARALLEL' | 'SPLIT_MOUTH' | string; // Desenho metodológico (Paralelo vs Boca Dividida)
@@ -314,6 +336,7 @@ export type StudyProtocolConfig = {
   sessions: StudySessionProtocol[];
   forms: FormTargetProtocol[];
   groups?: string[]; // Grupos de randomização / alocação do estudo
+  ethicsApproval?: EthicsApprovalConfig; // Documentos e aceite do CEP/CONEP
 };
 
 export const DEFAULT_STUDY_SESSIONS: StudySessionProtocol[] = [
@@ -1191,6 +1214,8 @@ export function parseStudyProtocol(templateStringOrObj: any): StudyProtocolConfi
 
   const studyDesign = studyProtocol.studyDesign || parsed.studyDesign || (groups.some((g: string) => g.toLowerCase().includes('direito') || g.toLowerCase().includes('boca')) ? 'SPLIT_MOUTH' : 'PARALLEL');
 
+  const ethicsApproval: EthicsApprovalConfig = studyProtocol.ethicsApproval || parsed.ethicsApproval || {};
+
   return {
     specialty,
     studyDesign,
@@ -1199,6 +1224,7 @@ export function parseStudyProtocol(templateStringOrObj: any): StudyProtocolConfi
     sessions,
     forms,
     groups,
+    ethicsApproval,
   };
 }
 

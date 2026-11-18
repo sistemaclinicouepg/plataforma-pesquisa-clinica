@@ -534,29 +534,27 @@ export function StudySidebar({
 
         {/* Rodapé do Sidebar */}
         <div className="p-3 border-t border-slate-100 bg-slate-50/60 shrink-0">
-          {userIsAdmin ? (
-            <Link
-              href={`/relatorio-cep?projectId=${currentProjectId}`}
-              className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl bg-white hover:bg-blue-50/80 border border-slate-200/80 hover:border-blue-200 text-slate-700 hover:text-blue-700 shadow-2xs transition group cursor-pointer"
-              title="Acessar Relatório para Comitê de Ética em Pesquisa (CEP / CONEP)"
-            >
-              <div className="flex items-center space-x-2 truncate">
-                <ShieldCheck className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                <span className="text-xs font-bold truncate">Relatório CEP / CONEP</span>
-              </div>
-              <span className="text-[10px] font-bold text-blue-600 bg-blue-50 group-hover:bg-blue-100 px-1.5 py-0.5 rounded-md transition shrink-0 ml-1">
-                Abrir
-              </span>
-            </Link>
-          ) : (
-            <div className="text-[11px] text-slate-500 px-1.5 py-1 flex items-center justify-between">
-              <span className="flex items-center gap-1.5 truncate">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
-                <span className="font-semibold text-slate-600 truncate">Protocolo GCP / ICH</span>
-              </span>
-              <span className="text-[10px] font-bold text-slate-400 shrink-0">UEPG</span>
+          <Link
+            href={`/relatorio-cep?projectId=${currentProjectId}`}
+            className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl transition group cursor-pointer ${
+              activeItem === 'cep'
+                ? 'bg-blue-600 text-white shadow-xs border border-blue-600'
+                : 'bg-white hover:bg-blue-50/80 border border-slate-200/80 hover:border-blue-200 text-slate-700 hover:text-blue-700 shadow-2xs'
+            }`}
+            title="Acessar e Anexar Documentos de Aprovação Ética (CEP/CONEP) e Projeto de Pesquisa Completo"
+          >
+            <div className="flex items-center space-x-2 truncate">
+              <ShieldCheck className={`w-3.5 h-3.5 shrink-0 ${activeItem === 'cep' ? 'text-white' : 'text-blue-600'}`} />
+              <span className="text-xs font-bold truncate">Documentos CEP / CONEP</span>
             </div>
-          )}
+            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md transition shrink-0 ml-1 ${
+              activeItem === 'cep'
+                ? 'text-white bg-blue-700'
+                : 'text-blue-600 bg-blue-50 group-hover:bg-blue-100'
+            }`}>
+              {activeItem === 'cep' ? 'Ativo' : 'Abrir'}
+            </span>
+          </Link>
         </div>
       </aside>
     </>
