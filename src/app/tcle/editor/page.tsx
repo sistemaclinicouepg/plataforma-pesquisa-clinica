@@ -3,7 +3,18 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, CheckCircle2, Eye, Save, Clock, Sparkles, FileText, Phone, Mail } from 'lucide-react';
+import {
+  ArrowLeft,
+  CheckCircle2,
+  Eye,
+  Save,
+  Clock,
+  Sparkles,
+  FileText,
+  Phone,
+  Mail,
+  RefreshCw,
+} from 'lucide-react';
 import { OFFICIAL_UEPG_TCLE } from '@/lib/tcleDefault';
 import { StudySidebar, StudyMobileBar } from '@/components/StudySidebar';
 
@@ -12,64 +23,132 @@ function TcleEditorContent() {
   const projectIdParam = searchParams.get('projectId');
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [projectId, setProjectId] = useState<string>('');
-  const [loading, setLoading] = useState(true);
+  const [projectId, setProjectId] = useState<string>(() => {
+    if (projectIdParam) return projectIdParam;
+    if (typeof window !== 'undefined') {
+      return (
+        localStorage.getItem('app_active_project_id') ||
+        localStorage.getItem('uepg_cached_last_project') ||
+        ''
+      );
+    }
+    return '';
+  });
+
+  const [currentProject, setCurrentProject] = useState<any>(null);
+  const [allProjects, setAllProjects] = useState<any[]>([]);
+
+  // Inicialização síncrona via cache para eliminar o "piscar" e a desconfiguração visual
+  const [formData, setFormData] = useState(() => {
+    const pId =
+      projectIdParam ||
+      (typeof window !== 'undefined'
+        ? localStorage.getItem('app_active_project_id') || localStorage.getItem('uepg_cached_last_project')
+        : '');
+    if (typeof window !== 'undefined' && pId) {
+      try {
+        const cached = sessionStorage.getItem(`uepg_tcle_${pId}`);
+        if (cached) return JSON.parse(cached);
+      } catch {}
+    }
+    return {
+      title: '',
+      responsibleResearcher: '',
+      advisor: '',
+      institution: 'Universidade Estadual de Ponta Grossa - UEPG',
+      ethicsNumber: '',
+      ethicsContacts: '',
+      contentMarkdown: '',
+      assentContentMarkdown: OFFICIAL_UEPG_TCLE.assentContentMarkdown,
+    };
+  });
+
+  const [loading, setLoading] = useState(() => {
+    const pId =
+      projectIdParam ||
+      (typeof window !== 'undefined'
+        ? localStorage.getItem('app_active_project_id') || localStorage.getItem('uepg_cached_last_project')
+        : '');
+    if (typeof window !== 'undefined' && pId) {
+      return !sessionStorage.getItem(`uepg_tcle_${pId}`);
+    }
+    return true;
+  });
+
   const [saving, setSaving] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [activeTab, setActiveTab] = useState<'tcle' | 'tale'>('tcle');
 
-  const [formData, setFormData] = useState({
-    title: '',
-    responsibleResearcher: '',
-    advisor: '',
-    institution: '',
-    ethicsNumber: '',
-    ethicsContacts: '',
-    contentMarkdown: '',
-    assentContentMarkdown: '',
-  });
-
   useEffect(() => {
+    let isMounted = true;
     const fetchTcle = async () => {
       try {
-        setLoading(true);
-        let pId = projectIdParam;
+        let pId = projectIdParam || projectId;
 
+        // Se não tiver ID explícito, carrega projetos
         if (!pId) {
           const listRes = await fetch('/api/projects');
           if (listRes.ok) {
             const listData = await listRes.json();
             pId = listData.projects?.[0]?.id;
+            if (isMounted && listData.projects) {
+              setAllProjects(listData.projects);
+            }
           }
         }
 
         if (pId) {
-          setProjectId(pId);
-          const res = await fetch(`/api/projects/${pId}/tcle`);
-          if (res.ok) {
-            const data = await res.json();
+          if (isMounted) setProjectId(pId);
+
+          // Busca dados do TCLE e do projeto em paralelo
+          const [tcleRes, projRes, allRes] = await Promise.all([
+            fetch(`/api/projects/${pId}/tcle`),
+            fetch(`/api/projects/${pId}`),
+            fetch('/api/projects'),
+          ]);
+
+          if (projRes.ok && isMounted) {
+            const projData = await projRes.json();
+            if (projData.project) setCurrentProject(projData.project);
+          }
+
+          if (allRes.ok && isMounted) {
+            const allData = await allRes.json();
+            if (allData.projects) setAllProjects(allData.projects);
+          }
+
+          if (tcleRes.ok && isMounted) {
+            const data = await tcleRes.json();
             if (data.consentForm) {
-              setFormData({
+              const updatedData = {
                 title: data.consentForm.title || '',
                 responsibleResearcher: data.consentForm.responsibleResearcher || '',
                 advisor: data.consentForm.advisor || '',
-                institution: data.consentForm.institution || '',
+                institution: data.consentForm.institution || 'Universidade Estadual de Ponta Grossa - UEPG',
                 ethicsNumber: data.consentForm.ethicsNumber || '',
                 ethicsContacts: data.consentForm.ethicsContacts || '',
                 contentMarkdown: data.consentForm.contentMarkdown || '',
-                assentContentMarkdown: data.consentForm.assentContentMarkdown || OFFICIAL_UEPG_TCLE.assentContentMarkdown,
-              });
+                assentContentMarkdown:
+                  data.consentForm.assentContentMarkdown || OFFICIAL_UEPG_TCLE.assentContentMarkdown,
+              };
+              setFormData(updatedData);
+              try {
+                sessionStorage.setItem(`uepg_tcle_${pId}`, JSON.stringify(updatedData));
+              } catch {}
             }
           }
         }
       } catch (err) {
         console.error('Erro ao carregar TCLE:', err);
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     };
 
     fetchTcle();
+    return () => {
+      isMounted = false;
+    };
   }, [projectIdParam]);
 
   const handleLoadOfficialTemplate = () => {
@@ -107,6 +186,9 @@ function TcleEditorContent() {
 
       if (res.ok) {
         setSavedSuccess(true);
+        try {
+          sessionStorage.setItem(`uepg_tcle_${projectId}`, JSON.stringify(formData));
+        } catch {}
         setTimeout(() => setSavedSuccess(false), 4000);
       }
     } catch (err) {
@@ -116,19 +198,13 @@ function TcleEditorContent() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex-1 bg-slate-50 flex items-center justify-center text-slate-400">
-        <p className="animate-pulse">Carregando configurações do TCLE...</p>
-      </div>
-    );
-  }
-
   return (
-    <div className="flex-1 bg-slate-50 font-sans text-slate-800 flex flex-col">
+    <div className="flex-1 bg-slate-50 font-sans text-slate-800 flex flex-col min-h-screen">
       <div className="flex-1 flex w-full relative">
         <StudySidebar
           projectId={projectId}
+          project={currentProject}
+          allProjects={allProjects}
           activeItem="tcle"
           mobileMenuOpen={mobileMenuOpen}
           setMobileMenuOpen={setMobileMenuOpen}
@@ -137,7 +213,7 @@ function TcleEditorContent() {
         <div className="flex-1 min-w-0 flex flex-col pb-8 sm:pb-12">
           {/* Barra Superior Mobile para Abrir Sidebar */}
           <StudyMobileBar
-            projectName={formData.title || 'Termo de Aceite (TCLE)'}
+            projectName={formData.title || currentProject?.name || 'Termo de Aceite (TCLE)'}
             onOpenMenu={() => setMobileMenuOpen(true)}
           />
 
@@ -185,8 +261,14 @@ function TcleEditorContent() {
             </div>
           </div>
 
-      <div className="max-w-5xl mx-auto mt-8 px-4 sm:px-6 lg:px-8">
-        <form onSubmit={handleSave} className="space-y-6">
+          <div className="max-w-5xl mx-auto mt-8 px-4 sm:px-6 lg:px-8 w-full">
+            {loading && !formData.title ? (
+              <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center flex flex-col items-center justify-center space-y-3 shadow-2xs">
+                <RefreshCw className="w-8 h-8 text-blue-600 animate-spin" />
+                <p className="text-xs font-semibold text-slate-600">Carregando termos éticos do estudo...</p>
+              </div>
+            ) : (
+              <form onSubmit={handleSave} className="space-y-6">
           
           {/* Card: Metadados Institucionais e Pesquisadores */}
           <div className="bg-white rounded-2xl shadow-xs border border-slate-200 p-6 space-y-4">
@@ -355,6 +437,7 @@ function TcleEditorContent() {
           </div>
 
         </form>
+      )}
       </div>
         </div>
       </div>

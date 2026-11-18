@@ -41,11 +41,11 @@ export default function AppNav() {
   const [activeParticipantCode, setActiveParticipantCode] = useState<string>('P001');
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
 
-  // Não exibir cabeçalho de pesquisador em telas públicas/paciente ou tela de login dedicada
+  // Não exibir cabeçalho de pesquisador em telas públicas/paciente ou tela de login dedicada (mantém no personalizador /tcle/editor)
   const isPublicOrPatientScreen =
     pathname === '/login' ||
     pathname === '/paciente' ||
-    pathname.startsWith('/tcle/');
+    (pathname.startsWith('/tcle') && !pathname.startsWith('/tcle/editor'));
 
   const fetchAuthUser = async () => {
     // 1. Carregamento instantâneo a partir do cache local
@@ -169,7 +169,8 @@ export default function AppNav() {
     pathname.startsWith('/construtor') ||
     pathname.startsWith('/anamnese') ||
     pathname.startsWith('/perfil') ||
-    pathname.startsWith('/relatorio-cep');
+    pathname.startsWith('/relatorio-cep') ||
+    pathname.startsWith('/tcle/editor');
 
   if (!loading && !currentUser && isProtectedPath) {
     return (
