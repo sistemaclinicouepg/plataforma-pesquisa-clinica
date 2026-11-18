@@ -9,24 +9,18 @@ import {
   ArrowLeft,
   Save,
   Upload,
-  FileText,
   CheckCircle2,
   AlertTriangle,
   ShieldCheck,
   Download,
   Trash2,
-  ExternalLink,
   RefreshCw,
   FileCheck2,
   BookOpen,
   Eye,
   AlertCircle,
   Folder,
-  Calendar,
-  Building2,
-  Hash,
   Clock,
-  Sparkles,
 } from 'lucide-react';
 
 function formatBytes(bytes?: number, decimals = 1) {
@@ -485,21 +479,9 @@ function RelatorioCepContent() {
     );
   }
 
-  // Cálculos de conformidade regulatória
+  // Status dos arquivos anexados
   const hasCepPdf = !!ethics.cepPdfUrl || !!ethics.cepPdfKey;
   const hasProjectPdf = !!ethics.projectPdfUrl || !!ethics.projectPdfKey;
-  const hasApprovalNumber = !!ethics.approvalNumber?.trim();
-  const hasCaae = !!ethics.caae?.trim();
-  const hasApprovalDate = !!ethics.approvalDate?.trim();
-
-  const complianceScore =
-    (hasCepPdf ? 1 : 0) +
-    (hasProjectPdf ? 1 : 0) +
-    (hasApprovalNumber ? 1 : 0) +
-    (hasCaae ? 1 : 0) +
-    (hasApprovalDate ? 1 : 0);
-
-  const isCompliant = complianceScore >= 4;
 
   return (
     <div className="flex-1 bg-slate-50 font-sans text-slate-800 flex flex-col min-h-screen">
@@ -535,7 +517,7 @@ function RelatorioCepContent() {
               <div className="flex items-center space-x-2">
                 <ShieldCheck className="w-4 h-4 text-blue-600" />
                 <span className="font-extrabold text-sm text-slate-800">
-                  Documentos e Aceite do CEP / CONEP
+                  Documentos CEP / CONEP
                 </span>
                 <span className="text-xs text-slate-400">•</span>
                 <span className="text-xs font-bold text-slate-600 truncate max-w-[200px] sm:max-w-[320px]">
@@ -599,72 +581,19 @@ function RelatorioCepContent() {
           )}
 
           {/* Conteúdo Central */}
-          <main className="max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 mt-6 space-y-6">
-            {/* Banner de Orientação Regulatória CNS / GCP */}
-            <div className="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white p-5 sm:p-6 rounded-2xl shadow-sm relative overflow-hidden">
-              <div className="absolute right-0 top-0 bottom-0 w-80 bg-radial from-blue-500/10 via-transparent to-transparent pointer-events-none" />
-              <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="space-y-1.5 max-w-3xl">
-                  <div className="flex items-center space-x-2">
-                    <span className="bg-blue-500/30 text-blue-200 text-[10px] font-bold px-2 py-0.5 rounded-full border border-blue-400/30 uppercase tracking-wider flex items-center gap-1">
-                      <Sparkles className="w-3 h-3 text-blue-300" />
-                      Boas Práticas Clínicas (GCP / ICH) • CNS 466/2012
-                    </span>
-                    <span className="text-slate-400 text-xs">|</span>
-                    <span className="text-xs text-blue-200 font-semibold">
-                      Comitê de Ética em Pesquisa (CEP / CONEP)
-                    </span>
-                  </div>
-                  <h1 className="text-lg sm:text-xl font-black tracking-tight text-white">
-                    Arquivo Ético & Protocolo Oficial do Estudo
-                  </h1>
-                  <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-                    Mantenha arquivados os documentos comprobatórios de aprovação ética. O Parecer
-                    Consubstanciado e o Projeto Integral Aprovado são exigências regulatórias mandatórias
-                    para publicação em periódicos e auditorias de ensaios clínicos.
-                  </p>
-                </div>
-
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2.5 shrink-0">
-                  <a
-                    href="https://plataformabrasil.saude.gov.br"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center space-x-1.5 bg-white/10 hover:bg-white/20 active:bg-white/30 text-white text-xs font-bold px-3.5 py-2 rounded-xl transition border border-white/20 shadow-xs"
-                    title="Acessar Plataforma Brasil (Ministério da Saúde)"
-                  >
-                    <span>Plataforma Brasil</span>
-                    <ExternalLink className="w-3 h-3 opacity-70" />
-                  </a>
-                </div>
-              </div>
-
-              {/* Status de Conformidade */}
-              <div className="mt-4 pt-4 border-t border-white/10 flex flex-wrap items-center justify-between gap-3 text-xs">
-                <div className="flex items-center space-x-2">
-                  <span className="text-slate-300 font-semibold">Status de Conformidade:</span>
-                  {isCompliant ? (
-                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-300 bg-emerald-950/60 px-2.5 py-0.5 rounded-full border border-emerald-500/40">
-                      <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-                      Conformidade Regulamentar Atendida ({complianceScore}/5 requisitos)
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-300 bg-amber-950/60 px-2.5 py-0.5 rounded-full border border-amber-500/40">
-                      <AlertTriangle className="w-3 h-3 text-amber-400" />
-                      Documentação Parcial ({complianceScore}/5 requisitos preenchidos)
-                    </span>
-                  )}
-                </div>
-
-                <div className="text-[11px] text-slate-300 font-medium">
-                  {ethics.approvalNumber ? `Parecer nº ${ethics.approvalNumber}` : 'Parecer não informado'} •{' '}
-                  {ethics.caae ? `CAAE ${ethics.caae}` : 'CAAE não informado'}
-                </div>
-              </div>
+          <main className="max-w-5xl w-full mx-auto px-4 sm:px-6 lg:px-8 mt-6 sm:mt-8 space-y-6">
+            <div className="bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-6 shadow-2xs">
+              <h1 className="text-base sm:text-lg font-black tracking-tight text-slate-900 flex items-center gap-2">
+                <ShieldCheck className="w-5 h-5 text-blue-600" />
+                <span>Anexos do Comitê de Ética em Pesquisa (CEP / CONEP)</span>
+              </h1>
+              <p className="text-xs sm:text-sm text-slate-500 mt-1">
+                Anexe abaixo o Parecer Consubstanciado e o Projeto de Pesquisa Completo em PDF para arquivamento e consulta da equipe.
+              </p>
             </div>
 
             {/* Grid dos Documentos Principais (Uploads de PDF) */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* DOCUMENTO 1: Parecer Consubstanciado do CEP / CONEP */}
               <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden flex flex-col">
                 <div className="p-4 sm:p-5 border-b border-slate-100 bg-slate-50/50 flex items-start justify-between gap-3">
@@ -682,7 +611,7 @@ function RelatorioCepContent() {
                         )}
                       </h2>
                       <p className="text-[11px] text-slate-500">
-                        Parecer Consubstanciado oficial emitido pelo Comitê de Ética ou CONEP (PDF).
+                        Parecer Consubstanciado emitido pelo CEP ou CONEP (PDF).
                       </p>
                     </div>
                   </div>
@@ -784,11 +713,11 @@ function RelatorioCepContent() {
                       <div className="space-y-1">
                         <p className="text-xs font-bold text-slate-800">
                           {uploadingCep
-                            ? 'Enviando arquivo do parecer para o storage seguro...'
+                            ? 'Anexando arquivo do parecer ao estudo...'
                             : 'Clique para selecionar ou arraste o Parecer Consubstanciado (PDF)'}
                         </p>
                         <p className="text-[11px] text-slate-400">
-                          Arquivo oficial emitido pela Plataforma Brasil • Formato PDF (até 100 MB)
+                          Documento de aprovação ética emitido pelo CEP/CONEP • Formato PDF (até 50 MB)
                         </p>
                       </div>
                     </div>
@@ -809,7 +738,7 @@ function RelatorioCepContent() {
                   <div className="text-[11px] text-slate-500 flex items-center gap-1.5 pt-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
                     <span>
-                      O arquivo fica criptografado em nuvem e disponível para consulta dos membros do estudo.
+                      O arquivo fica disponível de forma permanente para visualização e download de toda a equipe.
                     </span>
                   </div>
                 </div>
@@ -934,11 +863,11 @@ function RelatorioCepContent() {
                       <div className="space-y-1">
                         <p className="text-xs font-bold text-slate-800">
                           {uploadingProject
-                            ? 'Enviando projeto de pesquisa para o storage...'
+                            ? 'Anexando projeto de pesquisa ao estudo...'
                             : 'Clique para selecionar ou arraste o Projeto de Pesquisa Completo (PDF)'}
                         </p>
                         <p className="text-[11px] text-slate-400">
-                          Texto integral, metodologia, termo TCLE e cronograma • PDF (até 100 MB)
+                          Metodologia integral e protocolo aprovado • Formato PDF (até 50 MB)
                         </p>
                       </div>
                     </div>
@@ -959,239 +888,7 @@ function RelatorioCepContent() {
                   <div className="text-[11px] text-slate-500 flex items-center gap-1.5 pt-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
                     <span>
-                      Permite que qualquer pesquisador do estudo consulte a metodologia exata na cadeira clínica.
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Metadados Regulatórios e Detalhes da Tramitação Ética */}
-            <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-5 sm:p-6 space-y-5">
-              <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-                <div className="flex items-center space-x-2.5">
-                  <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
-                    <ShieldCheck className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <h2 className="text-sm font-extrabold text-slate-900">
-                      Identificação & Tramitação na Plataforma Brasil
-                    </h2>
-                    <p className="text-xs text-slate-500">
-                      Dados oficiais registrados junto ao CEP / CONEP para emissão de relatórios e auditorias.
-                    </p>
-                  </div>
-                </div>
-
-                <span
-                  className={`text-[11px] font-bold px-2.5 py-1 rounded-full border ${
-                    ethics.status === 'APROVADO'
-                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                      : ethics.status === 'EM_ANALISE'
-                      ? 'bg-amber-50 text-amber-700 border-amber-200'
-                      : ethics.status === 'PENDENCIA'
-                      ? 'bg-rose-50 text-rose-700 border-rose-200'
-                      : 'bg-slate-100 text-slate-700 border-slate-200'
-                  }`}
-                >
-                  {ethics.status === 'APROVADO'
-                    ? 'Aprovado pelo CEP'
-                    : ethics.status === 'EM_ANALISE'
-                    ? 'Em Apreciação Ética'
-                    : ethics.status === 'PENDENCIA'
-                    ? 'Com Pendência'
-                    : 'Dispensado / Isento'}
-                </span>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {/* 1. Situação da Aprovação */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                    <span>Situação da Aprovação Ética</span>
-                  </label>
-                  <select
-                    value={ethics.status || 'APROVADO'}
-                    onChange={(e) => {
-                      setEthics({ ...ethics, status: e.target.value });
-                      setIsDirty(true);
-                    }}
-                    className="w-full text-xs font-semibold px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition"
-                  >
-                    <option value="APROVADO">Aprovado pelo CEP / CONEP</option>
-                    <option value="EM_ANALISE">Em Análise / Tramitação Ética</option>
-                    <option value="PENDENCIA">Com Pendência Documental</option>
-                    <option value="DISPENSADO">Isento / Dispensado de Apreciação</option>
-                  </select>
-                </div>
-
-                {/* 2. Número do Parecer Consubstanciado */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                    <Hash className="w-3.5 h-3.5 text-slate-400" />
-                    <span>Número do Parecer Consubstanciado</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={ethics.approvalNumber || ''}
-                    onChange={(e) => {
-                      setEthics({ ...ethics, approvalNumber: e.target.value });
-                      setIsDirty(true);
-                    }}
-                    placeholder="Ex: 5.842.193 ou 6.104.220"
-                    className="w-full text-xs font-semibold px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition"
-                  />
-                </div>
-
-                {/* 3. CAAE */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                    <Hash className="w-3.5 h-3.5 text-slate-400" />
-                    <span>CAAE (Certificado Ético)</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={ethics.caae || ''}
-                    onChange={(e) => {
-                      setEthics({ ...ethics, caae: e.target.value });
-                      setIsDirty(true);
-                    }}
-                    placeholder="Ex: 71234523.4.0000.0105"
-                    className="w-full text-xs font-semibold px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition"
-                  />
-                </div>
-
-                {/* 4. Comitê de Ética / Instituição */}
-                <div className="space-y-1.5 sm:col-span-2">
-                  <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                    <Building2 className="w-3.5 h-3.5 text-slate-400" />
-                    <span>Comitê de Ética em Pesquisa (CEP) / Instituição</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={ethics.institution || ''}
-                    onChange={(e) => {
-                      setEthics({ ...ethics, institution: e.target.value });
-                      setIsDirty(true);
-                    }}
-                    placeholder="Ex: Comitê de Ética em Pesquisa - UEPG (Universidade Estadual de Ponta Grossa)"
-                    className="w-full text-xs font-semibold px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition"
-                  />
-                </div>
-
-                {/* 5. Data de Aprovação */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                    <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                    <span>Data de Aprovação do Parecer</span>
-                  </label>
-                  <input
-                    type="date"
-                    value={ethics.approvalDate || ''}
-                    onChange={(e) => {
-                      setEthics({ ...ethics, approvalDate: e.target.value });
-                      setIsDirty(true);
-                    }}
-                    className="w-full text-xs font-semibold px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition"
-                  />
-                </div>
-              </div>
-
-              {/* 6. Observações e Condicionantes */}
-              <div className="space-y-1.5 pt-2">
-                <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                  <FileText className="w-3.5 h-3.5 text-slate-400" />
-                  <span>Condicionantes, Emendas ou Observações Regulatórias</span>
-                </label>
-                <textarea
-                  rows={3}
-                  value={ethics.notes || ''}
-                  onChange={(e) => {
-                    setEthics({ ...ethics, notes: e.target.value });
-                    setIsDirty(true);
-                  }}
-                  placeholder="Registre aqui eventuais emendas ao protocolo aprovadas pelo CEP, condicionantes específicas, data prevista para envio do relatório semestral/final..."
-                  className="w-full text-xs font-medium p-3 rounded-xl border border-slate-200 bg-white text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition"
-                />
-              </div>
-
-              {/* Botão de Salvar no Fundo do Formulário */}
-              <div className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3">
-                <div className="text-xs text-slate-500">
-                  <p>
-                    Última sincronização ética realizada com segurança no banco de dados da UEPG.
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => handleSave()}
-                  disabled={saving}
-                  className="w-full sm:w-auto inline-flex items-center justify-center space-x-1.5 px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 transition shadow-xs hover:shadow-sm disabled:opacity-60 cursor-pointer"
-                >
-                  {saving ? (
-                    <>
-                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                      <span>Salvando alterações...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Save className="w-3.5 h-3.5" />
-                      <span>Salvar Informações do CEP</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-
-            {/* Checklist de Conformidade GCP & Rastreabilidade */}
-            <div className="bg-slate-100/80 rounded-2xl border border-slate-200 p-5 space-y-3">
-              <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-600 flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4 text-slate-500" />
-                <span>Checklist de Boas Práticas Clínicas (GCP / ICH E6 R2)</span>
-              </h3>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-xs">
-                <div className="p-3 bg-white rounded-xl border border-slate-200/80 flex items-start space-x-2.5">
-                  {hasCepPdf ? (
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                  ) : (
-                    <AlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-                  )}
-                  <div>
-                    <span className="font-bold text-slate-800 block">Parecer do CEP em PDF</span>
-                    <span className="text-[11px] text-slate-500">
-                      {hasCepPdf ? 'Documento anexado no sistema' : 'Pendente de anexação'}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="p-3 bg-white rounded-xl border border-slate-200/80 flex items-start space-x-2.5">
-                  {hasProjectPdf ? (
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                  ) : (
-                    <AlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-                  )}
-                  <div>
-                    <span className="font-bold text-slate-800 block">Projeto Integral em PDF</span>
-                    <span className="text-[11px] text-slate-500">
-                      {hasProjectPdf ? 'Protocolo arquivado com sucesso' : 'Pendente de anexação'}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="p-3 bg-white rounded-xl border border-slate-200/80 flex items-start space-x-2.5">
-                  {hasApprovalNumber && hasCaae ? (
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                  ) : (
-                    <AlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-                  )}
-                  <div>
-                    <span className="font-bold text-slate-800 block">CAAE e Parecer</span>
-                    <span className="text-[11px] text-slate-500">
-                      {hasApprovalNumber && hasCaae
-                        ? 'Registrados e rastreáveis'
-                        : 'Preenchimento incompleto'}
+                      Permite que qualquer pesquisador do estudo consulte a metodologia e critérios na cadeira clínica.
                     </span>
                   </div>
                 </div>
