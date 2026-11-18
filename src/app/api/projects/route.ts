@@ -112,8 +112,35 @@ export async function POST(req: Request) {
       members = [coordinator];
     }
 
-    // Formulários eCRF são gerenciados exclusivamente pelo Construtor de Fichas do projeto.
-    // Preservamos o protocolo no template de anamnese sem criar formulários genéricos duplicados no banco.
+    // Instancia imediatamente os formulários configurados no protocolo do estudo
+    if (anamnesisTemplate) {
+      try {
+        const parsedTpl = typeof anamnesisTemplate === 'string' ? JSON.parse(anamnesisTemplate) : anamnesisTemplate;
+        const protocolForms = parsedTpl?.studyProtocol?.forms;
+        if (Array.isArray(protocolForms)) {
+          for (const pf of protocolForms) {
+            if (pf && pf.enabled && pf.title && pf.id !== 'anamnesis' && pf.id !== 'odontogram') {
+              const questionsList = Array.isArray(pf.questions) && pf.questions.length > 0
+                ? pf.questions
+                : ((PRESET_FORM_QUESTIONS as any)[pf.id] || []);
+
+              await prisma.form.create({
+                data: {
+                  projectId: newProject.id,
+                  title: String(pf.title).trim(),
+                  description: pf.description ? String(pf.description).trim() : null,
+                  questionsJson: JSON.stringify(questionsList),
+                  expirationHours: 24,
+                  allowLate: true,
+                },
+              });
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Erro ao auto-instanciar formulários do protocolo:', err);
+      }
+    }
 
     return NextResponse.json({ success: true, project: { ...newProject, members } });
   } catch (error) {

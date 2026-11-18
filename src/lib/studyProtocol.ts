@@ -246,8 +246,20 @@ export type FormFrequencyType =
   | 'ONCE' // Única vez / Pontual
   | 'CUSTOM'; // Cronograma Domiciliar Personalizado (ex: clareamento caseiro, dias pré-definidos)
 
+export type FormQuestionProtocol = {
+  id: string;
+  type: 'vas' | 'likert' | 'choice' | 'boolean' | 'text' | 'number' | 'instruction' | 'matrix';
+  title: string;
+  required: boolean;
+  description?: string;
+  options?: Array<{ label: string; value: string }>;
+  minLabel?: string;
+  maxLabel?: string;
+  observation?: string;
+};
+
 export type FormTargetProtocol = {
-  id: string; // 'anamnesis' | 'odontogram' | 'periodontogram' | 'eva' | 'ohip' | 'satisfaction' | custom
+  id: string;
   title: string;
   description: string;
   enabled: boolean;
@@ -255,6 +267,7 @@ export type FormTargetProtocol = {
   frequency: FormFrequencyType;
   frequencyDescription?: string;
   isPreset?: boolean;
+  questions?: FormQuestionProtocol[];
 };
 
 export interface AvailableQuestionnaireOption {
@@ -312,6 +325,15 @@ export const PRESET_QUESTIONNAIRES_CATALOG: AvailableQuestionnaireOption[] = [
     category: 'Percepção Estética do Sorriso',
     description: '8 itens validados (escala 0 a 10) para mensurar a percepção de dentes, gengiva, lábios e estética global do sorriso.',
     defaultRespondent: 'PATIENT',
+  },
+  {
+    id: 'fdi',
+    title: 'Critérios FDI de Avaliação de Restaurações',
+    badge: 'FDI / Dentística',
+    icon: '🦷',
+    category: 'Dentística Restauradora',
+    description: 'Avaliação clínica padronizada de fratura/retenção, adaptação marginal, mancha marginal, sensibilidade e cárie secundária.',
+    defaultRespondent: 'RESEARCHER',
   },
 ];
 
@@ -933,60 +955,7 @@ export function getSpecialtyDefaultSessions(specialty: ResearchSpecialty): Study
   }
 }
 
-export const DEFAULT_FORM_TARGETS: FormTargetProtocol[] = [
-  {
-    id: 'eva',
-    title: 'Diário de Sensibilidade Dental (Escala EVA)',
-    description: 'Avaliação da sensibilidade dentinária pelo voluntário no celular (0h a 48h pós-clareamento).',
-    enabled: true,
-    respondent: 'PATIENT',
-    frequency: 'DAILY',
-    frequencyDescription: 'Diário de Sensibilidade (0h a 48h)',
-    isPreset: true,
-  },
-  {
-    id: 'oes',
-    title: 'Escala de Estética Orofacial (OES)',
-    description: 'Avaliação estética com 8 itens validados (dentes, gengiva, lábios e estética global do sorriso).',
-    enabled: true,
-    respondent: 'PATIENT',
-    frequency: 'ONCE',
-    frequencyDescription: 'Na sessão basal e retorno final',
-    isPreset: true,
-  },
-  {
-    id: 'satisfaction',
-    title: 'Questionário de Satisfação com o Clareamento',
-    description: 'Percepção do voluntário quanto ao resultado estético do clareamento e satisfação.',
-    enabled: true,
-    respondent: 'PATIENT',
-    frequency: 'ONCE',
-    frequencyDescription: 'Na sessão final de retorno',
-    isPreset: true,
-  },
-  {
-    id: 'habits',
-    title: 'Mapeamento de Hábitos e Alimentos Corantes',
-    description: 'Registro de ingestão de café, chimarrão, alimentos corantes e fumo durante o estudo.',
-    enabled: false,
-    respondent: 'PATIENT',
-    frequency: 'WEEKLY',
-    frequencyDescription: 'Semanalmente',
-    isPreset: true,
-  },
-  {
-    id: 'ohip',
-    title: 'Qualidade de Vida em Saúde Bucal (OHIP-14)',
-    description: 'Impacto na qualidade de vida bucal com 14 perguntas em escala Likert validada internacionalmente.',
-    enabled: false,
-    respondent: 'PATIENT',
-    frequency: 'ONCE',
-    frequencyDescription: 'Na sessão basal e retorno final',
-    isPreset: true,
-  },
-];
-
-export const PRESET_FORM_QUESTIONS = {
+export const PRESET_FORM_QUESTIONS: Record<string, FormQuestionProtocol[]> = {
   eva: [
     {
       id: 'q_sens_vas',
@@ -995,6 +964,7 @@ export const PRESET_FORM_QUESTIONS = {
       minLabel: '0 - Sem Dor',
       maxLabel: '10 - Dor Severa',
       required: true,
+      observation: 'Deslize a barra contínua de 0 a 10 de acordo com sua percepção.',
     },
     {
       id: 'q_sens_desc',
@@ -1002,8 +972,9 @@ export const PRESET_FORM_QUESTIONS = {
       title: 'Qual a principal sensação observada?',
       required: false,
       options: [
-        { label: 'Dor rápida em pontada', value: 'pontada' },
-        { label: 'Latejamento persistente', value: 'latejamento' },
+        { label: 'Nenhuma sensibilidade', value: 'nenhuma' },
+        { label: 'Dor rápida em pontada com estímulo frio', value: 'pontada' },
+        { label: 'Latejamento persistente e espontâneo', value: 'latejamento' },
         { label: 'Sensibilidade com água/vento frio', value: 'frio' },
         { label: 'Ardência ou queimação gengival', value: 'gengival' },
       ],
@@ -1011,25 +982,94 @@ export const PRESET_FORM_QUESTIONS = {
     {
       id: 'q_medication',
       type: 'boolean',
-      title: 'Precisou tomar algum analgésico nas últimas 12 horas?',
+      title: 'Precisou tomar algum analgésico ou anti-inflamatório nas últimas 12 horas?',
       required: true,
+      options: [
+        { label: 'Sim', value: 'sim' },
+        { label: 'Não', value: 'nao' },
+      ],
+    },
+    {
+      id: 'q_medication_details',
+      type: 'text',
+      title: 'Caso tenha tomado medicação, qual foi o remédio e a dosagem?',
+      required: false,
+      observation: 'Ex: Paracetamol 750mg ou Dipirona 500mg.',
     },
   ],
-  ohip: [
-    { id: 'ohip_1', type: 'likert', title: '1. Teve problemas para pronunciar palavras por causa dos dentes ou da boca?', required: true, options: [{ label: 'Nunca', value: '0' }, { label: 'Raramente', value: '1' }, { label: 'Às vezes', value: '2' }, { label: 'Repetidamente', value: '3' }, { label: 'Sempre', value: '4' }] },
-    { id: 'ohip_2', type: 'likert', title: '2. Sentiu que o sabor dos alimentos piorou por causa de seus dentes ou boca?', required: true, options: [{ label: 'Nunca', value: '0' }, { label: 'Raramente', value: '1' }, { label: 'Às vezes', value: '2' }, { label: 'Repetidamente', value: '3' }, { label: 'Sempre', value: '4' }] },
-    { id: 'ohip_3', type: 'likert', title: '3. Já sentiu dores agudas ou dolorimentos em sua boca ou dentes?', required: true, options: [{ label: 'Nunca', value: '0' }, { label: 'Raramente', value: '1' }, { label: 'Às vezes', value: '2' }, { label: 'Repetidamente', value: '3' }, { label: 'Sempre', value: '4' }] },
-    { id: 'ohip_4', type: 'likert', title: '4. Achou desconfortável comer algum alimento por causa de seus dentes ou boca?', required: true, options: [{ label: 'Nunca', value: '0' }, { label: 'Raramente', value: '1' }, { label: 'Às vezes', value: '2' }, { label: 'Repetidamente', value: '3' }, { label: 'Sempre', value: '4' }] },
-    { id: 'ohip_5', type: 'likert', title: '5. Já se sentiu preocupado(a) por causa de problemas em seus dentes ou boca?', required: true, options: [{ label: 'Nunca', value: '0' }, { label: 'Raramente', value: '1' }, { label: 'Às vezes', value: '2' }, { label: 'Repetidamente', value: '3' }, { label: 'Sempre', value: '4' }] },
-    { id: 'ohip_6', type: 'likert', title: '6. Já se sentiu tenso(a) ou estressado(a) por causa de dentes ou boca?', required: true, options: [{ label: 'Nunca', value: '0' }, { label: 'Raramente', value: '1' }, { label: 'Às vezes', value: '2' }, { label: 'Repetidamente', value: '3' }, { label: 'Sempre', value: '4' }] },
-    { id: 'ohip_7', type: 'likert', title: '7. Sua alimentação ficou prejudicada por causa de seus dentes ou boca?', required: true, options: [{ label: 'Nunca', value: '0' }, { label: 'Raramente', value: '1' }, { label: 'Às vezes', value: '2' }, { label: 'Repetidamente', value: '3' }, { label: 'Sempre', value: '4' }] },
-    { id: 'ohip_8', type: 'likert', title: '8. Teve que interromper suas refeições por causa de problemas bucais?', required: true, options: [{ label: 'Nunca', value: '0' }, { label: 'Raramente', value: '1' }, { label: 'Às vezes', value: '2' }, { label: 'Repetidamente', value: '3' }, { label: 'Sempre', value: '4' }] },
-    { id: 'ohip_9', type: 'likert', title: '9. Achou difícil relaxar por causa de desconforto em dentes ou boca?', required: true, options: [{ label: 'Nunca', value: '0' }, { label: 'Raramente', value: '1' }, { label: 'Às vezes', value: '2' }, { label: 'Repetidamente', value: '3' }, { label: 'Sempre', value: '4' }] },
-    { id: 'ohip_10', type: 'likert', title: '10. Já se sentiu envergonhado(a) ao sorrir ou falar por causa de seus dentes?', required: true, options: [{ label: 'Nunca', value: '0' }, { label: 'Raramente', value: '1' }, { label: 'Às vezes', value: '2' }, { label: 'Repetidamente', value: '3' }, { label: 'Sempre', value: '4' }] },
-    { id: 'ohip_11', type: 'likert', title: '11. Foi um pouco intolerante com familiares ou amigos por causa de incômodo bucal?', required: true, options: [{ label: 'Nunca', value: '0' }, { label: 'Raramente', value: '1' }, { label: 'Às vezes', value: '2' }, { label: 'Repetidamente', value: '3' }, { label: 'Sempre', value: '4' }] },
-    { id: 'ohip_12', type: 'likert', title: '12. Teve dificuldades para realizar seu trabalho ou estudos por causa de dentes?', required: true, options: [{ label: 'Nunca', value: '0' }, { label: 'Raramente', value: '1' }, { label: 'Às vezes', value: '2' }, { label: 'Repetidamente', value: '3' }, { label: 'Sempre', value: '4' }] },
-    { id: 'ohip_13', type: 'likert', title: '13. Sentiu que a vida em geral ficou menos satisfatória por causa dos dentes?', required: true, options: [{ label: 'Nunca', value: '0' }, { label: 'Raramente', value: '1' }, { label: 'Às vezes', value: '2' }, { label: 'Repetidamente', value: '3' }, { label: 'Sempre', value: '4' }] },
-    { id: 'ohip_14', type: 'likert', title: '14. Ficou totalmente incapaz de exercer suas funções diárias normais?', required: true, options: [{ label: 'Nunca', value: '0' }, { label: 'Raramente', value: '1' }, { label: 'Às vezes', value: '2' }, { label: 'Repetidamente', value: '3' }, { label: 'Sempre', value: '4' }] },
+  oes: [
+    {
+      id: 'oes_1',
+      type: 'vas',
+      title: '1. Aparência dos dentes anteriores (dentes da frente)',
+      required: true,
+      minLabel: '0 - Muito Insatisfeito / Péssima',
+      maxLabel: '10 - Totalmente Satisfeito / Excelente',
+      observation: 'Como você avalia a estética e harmonia dos seus dentes anteriores? (Larsson et al., 2010)',
+    },
+    {
+      id: 'oes_2',
+      type: 'vas',
+      title: '2. Alinhamento dos dentes',
+      required: true,
+      minLabel: '0 - Muito Insatisfeito / Péssima',
+      maxLabel: '10 - Totalmente Satisfeito / Excelente',
+      observation: 'Como você avalia o alinhamento e nivelamento dos seus dentes?',
+    },
+    {
+      id: 'oes_3',
+      type: 'vas',
+      title: '3. Cor dos dentes',
+      required: true,
+      minLabel: '0 - Muito Insatisfeito / Péssima',
+      maxLabel: '10 - Totalmente Satisfeito / Excelente',
+      observation: 'Como você avalia a cor, tonalidade e brilho dos seus dentes?',
+    },
+    {
+      id: 'oes_4',
+      type: 'vas',
+      title: '4. Forma e contorno dos dentes',
+      required: true,
+      minLabel: '0 - Muito Insatisfeito / Péssima',
+      maxLabel: '10 - Totalmente Satisfeito / Excelente',
+      observation: 'Como você avalia a anatomia, proporção e formato dos seus dentes?',
+    },
+    {
+      id: 'oes_5',
+      type: 'vas',
+      title: '5. Aparência da gengiva',
+      required: true,
+      minLabel: '0 - Muito Insatisfeito / Péssima',
+      maxLabel: '10 - Totalmente Satisfeito / Excelente',
+      observation: 'Como você avalia a cor, contorno e exposição da sua gengiva ao sorrir?',
+    },
+    {
+      id: 'oes_6',
+      type: 'vas',
+      title: '6. Aparência dos lábios e perfil facial',
+      required: true,
+      minLabel: '0 - Muito Insatisfeito / Péssima',
+      maxLabel: '10 - Totalmente Satisfeito / Excelente',
+      observation: 'Como você avalia a harmonia dos seus lábios com o sorriso e o perfil do rosto?',
+    },
+    {
+      id: 'oes_7',
+      type: 'vas',
+      title: '7. Aparência global do seu sorriso',
+      required: true,
+      minLabel: '0 - Muito Insatisfeito / Péssima',
+      maxLabel: '10 - Totalmente Satisfeito / Excelente',
+      observation: 'Como você avalia o conjunto estético geral do seu sorriso?',
+    },
+    {
+      id: 'oes_8',
+      type: 'vas',
+      title: '8. Impressão estética orofacial geral (Face & Sorriso)',
+      required: true,
+      minLabel: '0 - Muito Insatisfeito / Péssima',
+      maxLabel: '10 - Totalmente Satisfeito / Excelente',
+      observation: 'Escore Global OES: Avaliação geral da estética orofacial completa da sua face.',
+    },
   ],
   satisfaction: [
     {
@@ -1061,6 +1101,10 @@ export const PRESET_FORM_QUESTIONS = {
       type: 'boolean',
       title: 'Você recomendaria este procedimento clínico para amigos ou familiares?',
       required: true,
+      options: [
+        { label: 'Sim', value: 'sim' },
+        { label: 'Não', value: 'nao' },
+      ],
     },
     {
       id: 'q_sat_com',
@@ -1133,9 +1177,170 @@ export const PRESET_FORM_QUESTIONS = {
       type: 'boolean',
       title: 'Você utiliza fio dental diariamente?',
       required: true,
+      options: [
+        { label: 'Sim', value: 'sim' },
+        { label: 'Não', value: 'nao' },
+      ],
+    },
+  ],
+  ohip: [
+    { id: 'ohip_1', type: 'likert', title: '1. Teve problemas para pronunciar palavras por causa dos dentes ou da boca?', required: true, options: [{ label: 'Nunca', value: '0' }, { label: 'Raramente', value: '1' }, { label: 'Às vezes', value: '2' }, { label: 'Repetidamente', value: '3' }, { label: 'Sempre', value: '4' }] },
+    { id: 'ohip_2', type: 'likert', title: '2. Sentiu que o sabor dos alimentos piorou por causa de seus dentes ou boca?', required: true, options: [{ label: 'Nunca', value: '0' }, { label: 'Raramente', value: '1' }, { label: 'Às vezes', value: '2' }, { label: 'Repetidamente', value: '3' }, { label: 'Sempre', value: '4' }] },
+    { id: 'ohip_3', type: 'likert', title: '3. Já sentiu dores agudas ou dolorimentos em sua boca ou dentes?', required: true, options: [{ label: 'Nunca', value: '0' }, { label: 'Raramente', value: '1' }, { label: 'Às vezes', value: '2' }, { label: 'Repetidamente', value: '3' }, { label: 'Sempre', value: '4' }] },
+    { id: 'ohip_4', type: 'likert', title: '4. Achou desconfortável comer algum alimento por causa de seus dentes ou boca?', required: true, options: [{ label: 'Nunca', value: '0' }, { label: 'Raramente', value: '1' }, { label: 'Às vezes', value: '2' }, { label: 'Repetidamente', value: '3' }, { label: 'Sempre', value: '4' }] },
+    { id: 'ohip_5', type: 'likert', title: '5. Já se sentiu preocupado(a) por causa de problemas em seus dentes ou boca?', required: true, options: [{ label: 'Nunca', value: '0' }, { label: 'Raramente', value: '1' }, { label: 'Às vezes', value: '2' }, { label: 'Repetidamente', value: '3' }, { label: 'Sempre', value: '4' }] },
+    { id: 'ohip_6', type: 'likert', title: '6. Já se sentiu tenso(a) ou estressado(a) por causa de dentes ou boca?', required: true, options: [{ label: 'Nunca', value: '0' }, { label: 'Raramente', value: '1' }, { label: 'Às vezes', value: '2' }, { label: 'Repetidamente', value: '3' }, { label: 'Sempre', value: '4' }] },
+    { id: 'ohip_7', type: 'likert', title: '7. Sua alimentação ficou prejudicada por causa de seus dentes ou boca?', required: true, options: [{ label: 'Nunca', value: '0' }, { label: 'Raramente', value: '1' }, { label: 'Às vezes', value: '2' }, { label: 'Repetidamente', value: '3' }, { label: 'Sempre', value: '4' }] },
+    { id: 'ohip_8', type: 'likert', title: '8. Teve que interromper suas refeições por causa de problemas bucais?', required: true, options: [{ label: 'Nunca', value: '0' }, { label: 'Raramente', value: '1' }, { label: 'Às vezes', value: '2' }, { label: 'Repetidamente', value: '3' }, { label: 'Sempre', value: '4' }] },
+    { id: 'ohip_9', type: 'likert', title: '9. Achou difícil relaxar por causa de desconforto em dentes ou boca?', required: true, options: [{ label: 'Nunca', value: '0' }, { label: 'Raramente', value: '1' }, { label: 'Às vezes', value: '2' }, { label: 'Repetidamente', value: '3' }, { label: 'Sempre', value: '4' }] },
+    { id: 'ohip_10', type: 'likert', title: '10. Já se sentiu envergonhado(a) ao sorrir ou falar por causa de seus dentes?', required: true, options: [{ label: 'Nunca', value: '0' }, { label: 'Raramente', value: '1' }, { label: 'Às vezes', value: '2' }, { label: 'Repetidamente', value: '3' }, { label: 'Sempre', value: '4' }] },
+    { id: 'ohip_11', type: 'likert', title: '11. Foi um pouco intolerante com familiares ou amigos por causa de incômodo bucal?', required: true, options: [{ label: 'Nunca', value: '0' }, { label: 'Raramente', value: '1' }, { label: 'Às vezes', value: '2' }, { label: 'Repetidamente', value: '3' }, { label: 'Sempre', value: '4' }] },
+    { id: 'ohip_12', type: 'likert', title: '12. Teve dificuldades para realizar seu trabalho ou estudos por causa de dentes?', required: true, options: [{ label: 'Nunca', value: '0' }, { label: 'Raramente', value: '1' }, { label: 'Às vezes', value: '2' }, { label: 'Repetidamente', value: '3' }, { label: 'Sempre', value: '4' }] },
+    { id: 'ohip_13', type: 'likert', title: '13. Sentiu que a vida em geral ficou menos satisfatória por causa dos dentes?', required: true, options: [{ label: 'Nunca', value: '0' }, { label: 'Raramente', value: '1' }, { label: 'Às vezes', value: '2' }, { label: 'Repetidamente', value: '3' }, { label: 'Sempre', value: '4' }] },
+    { id: 'ohip_14', type: 'likert', title: '14. Ficou totalmente incapaz de exercer suas funções diárias normais?', required: true, options: [{ label: 'Nunca', value: '0' }, { label: 'Raramente', value: '1' }, { label: 'Às vezes', value: '2' }, { label: 'Repetidamente', value: '3' }, { label: 'Sempre', value: '4' }] },
+  ],
+  fdi: [
+    {
+      id: 'fdi_1',
+      type: 'choice',
+      title: '1. Fratura do Material Restaurador e Retenção',
+      required: true,
+      options: [
+        { label: 'Restauração totalmente íntegra e retida', value: 'integra' },
+        { label: 'Pequena lasca marginal sem perda da função', value: 'lasca_pequena' },
+        { label: 'Fratura parcial com necessidade de reparo', value: 'fratura_parcial' },
+        { label: 'Perda total da restauração', value: 'perda_total' },
+      ],
+    },
+    {
+      id: 'fdi_2',
+      type: 'choice',
+      title: '2. Adaptação Marginal na Interface Dente-Restauração',
+      required: true,
+      options: [
+        { label: 'Margem contínua, imperceptível e sem fenda', value: 'excelente' },
+        { label: 'Pequeno degrau explorável sem pigmentação', value: 'degrau_leve' },
+        { label: 'Degrau com acúmulo de biofilme / pigmentação', value: 'degrau_pigmentado' },
+        { label: 'Infiltração ou desadaptação evidente', value: 'desadaptada' },
+      ],
+    },
+    {
+      id: 'fdi_3',
+      type: 'choice',
+      title: '3. Descoloração Marginal',
+      required: true,
+      options: [
+        { label: 'Ausente (cor homogênea)', value: 'ausente' },
+        { label: 'Pigmentação superficial polível', value: 'superficial' },
+        { label: 'Pigmentação profunda que penetra a interface', value: 'profunda' },
+      ],
+    },
+    {
+      id: 'fdi_4',
+      type: 'choice',
+      title: '4. Sensibilidade Pós-Operatória do Dente Restaurado',
+      required: true,
+      options: [
+        { label: 'Nenhuma sensibilidade', value: 'ausente' },
+        { label: 'Leve e transitória aos estímulos', value: 'leve' },
+        { label: 'Moderada à mastigação', value: 'moderada' },
+        { label: 'Dor aguda espontânea', value: 'aguda' },
+      ],
+    },
+    {
+      id: 'fdi_5',
+      type: 'boolean',
+      title: '5. Evidência clínica ou radiográfica de Cárie Secundária adjacente?',
+      required: true,
+      options: [
+        { label: 'Sim', value: 'sim' },
+        { label: 'Não', value: 'nao' },
+      ],
     },
   ],
 };
+
+export function getPresetQuestionsForMethod(methodId: string): FormQuestionProtocol[] {
+  const clean = String(methodId || '').toLowerCase().trim();
+  if (clean === 'eva' || clean.includes('sensibilidade') || clean.includes('dor')) {
+    return JSON.parse(JSON.stringify(PRESET_FORM_QUESTIONS.eva));
+  }
+  if (clean === 'oes' || clean.includes('estética') || clean.includes('estetica') || clean.includes('orofacial')) {
+    return JSON.parse(JSON.stringify(PRESET_FORM_QUESTIONS.oes));
+  }
+  if (clean === 'satisfaction' || clean.includes('satisfaç') || clean.includes('satisfacao')) {
+    return JSON.parse(JSON.stringify(PRESET_FORM_QUESTIONS.satisfaction));
+  }
+  if (clean === 'habits' || clean.includes('hábito') || clean.includes('habito') || clean.includes('corante')) {
+    return JSON.parse(JSON.stringify(PRESET_FORM_QUESTIONS.habits));
+  }
+  if (clean === 'ohip' || clean.includes('ohip-14') || clean.includes('qualidade de vida')) {
+    return JSON.parse(JSON.stringify(PRESET_FORM_QUESTIONS.ohip));
+  }
+  if (clean === 'fdi' || clean.includes('restauraç') || clean.includes('restaurac')) {
+    return JSON.parse(JSON.stringify(PRESET_FORM_QUESTIONS.fdi));
+  }
+  return [];
+}
+
+export const DEFAULT_FORM_TARGETS: FormTargetProtocol[] = [
+  {
+    id: 'eva',
+    title: 'Diário de Sensibilidade Dental (Escala EVA)',
+    description: 'Avaliação da sensibilidade dentinária pelo voluntário no celular (0h a 48h pós-clareamento).',
+    enabled: true,
+    respondent: 'PATIENT',
+    frequency: 'DAILY',
+    frequencyDescription: 'Diário de Sensibilidade (0h a 48h)',
+    isPreset: true,
+    questions: JSON.parse(JSON.stringify(PRESET_FORM_QUESTIONS.eva)),
+  },
+  {
+    id: 'oes',
+    title: 'Escala de Estética Orofacial (OES)',
+    description: 'Avaliação estética com 8 itens validados (dentes, gengiva, lábios e estética global do sorriso).',
+    enabled: true,
+    respondent: 'PATIENT',
+    frequency: 'ONCE',
+    frequencyDescription: 'Na sessão basal e retorno final',
+    isPreset: true,
+    questions: JSON.parse(JSON.stringify(PRESET_FORM_QUESTIONS.oes)),
+  },
+  {
+    id: 'satisfaction',
+    title: 'Questionário de Satisfação com o Clareamento',
+    description: 'Percepção do voluntário quanto ao resultado estético do clareamento e satisfação.',
+    enabled: true,
+    respondent: 'PATIENT',
+    frequency: 'ONCE',
+    frequencyDescription: 'Na sessão final de retorno',
+    isPreset: true,
+    questions: JSON.parse(JSON.stringify(PRESET_FORM_QUESTIONS.satisfaction)),
+  },
+  {
+    id: 'habits',
+    title: 'Mapeamento de Hábitos e Alimentos Corantes',
+    description: 'Registro de ingestão de café, chimarrão, alimentos corantes e fumo durante o estudo.',
+    enabled: false,
+    respondent: 'PATIENT',
+    frequency: 'WEEKLY',
+    frequencyDescription: 'Semanalmente',
+    isPreset: true,
+    questions: JSON.parse(JSON.stringify(PRESET_FORM_QUESTIONS.habits)),
+  },
+  {
+    id: 'ohip',
+    title: 'Qualidade de Vida em Saúde Bucal (OHIP-14)',
+    description: 'Impacto na qualidade de vida bucal com 14 perguntas em escala Likert validada internacionalmente.',
+    enabled: false,
+    respondent: 'PATIENT',
+    frequency: 'ONCE',
+    frequencyDescription: 'Na sessão basal e retorno final',
+    isPreset: true,
+    questions: JSON.parse(JSON.stringify(PRESET_FORM_QUESTIONS.ohip)),
+  },
+];
+
 
 /**
  * Lê com segurança o protocolo configurado em um template de anamnese
@@ -1215,7 +1420,14 @@ export function parseStudyProtocol(templateStringOrObj: any): StudyProtocolConfi
   const rawForms = Array.isArray(studyProtocol.forms) && studyProtocol.forms.length > 0
     ? studyProtocol.forms
     : DEFAULT_FORM_TARGETS;
-  const forms = rawForms.filter((f: any) => f && f.id !== 'anamnesis' && f.id !== 'odontogram');
+  const forms = rawForms
+    .filter((f: any) => f && f.id !== 'anamnesis' && f.id !== 'odontogram')
+    .map((f: any) => ({
+      ...f,
+      questions: Array.isArray(f.questions) && f.questions.length > 0
+        ? f.questions
+        : getPresetQuestionsForMethod(f.id),
+    }));
 
   const rawGroups = Array.isArray(studyProtocol.groups)
     ? studyProtocol.groups

@@ -40,6 +40,10 @@ import {
   ArrowLeft,
   Layers,
   ClipboardList,
+  BookmarkPlus,
+  Bookmark,
+  Edit3,
+  RotateCcw,
 } from 'lucide-react';
 
 import type { AnamnesisQuestion, QuestionType } from '@/app/anamnese/page';
@@ -55,6 +59,9 @@ import {
   SessionClinicalModules,
   ColorAssessmentModel,
   COLOR_MODEL_OPTIONS,
+  PRESET_FORM_QUESTIONS,
+  getPresetQuestionsForMethod,
+  FormQuestionProtocol,
 } from '@/lib/studyProtocol';
 
 type Project = {
@@ -225,6 +232,317 @@ export default function HomePage() {
   const [studySessions, setStudySessions] = useState<StudySessionProtocol[]>(DEFAULT_STUDY_SESSIONS);
   const [formTargets, setFormTargets] = useState<FormTargetProtocol[]>(DEFAULT_FORM_TARGETS);
   const [creating, setCreating] = useState(false);
+
+  // Estados para Gestão de Perguntas, Métodos de Avaliação e Modelos no eCRF
+  const [expandedFormQuestions, setExpandedFormQuestions] = useState<Record<string, boolean>>({});
+  const [showAddMethodModal, setShowAddMethodModal] = useState(false);
+  const [addMethodTab, setAddMethodTab] = useState<'presets' | 'saved' | 'custom'>('presets');
+  const [newCustomMethodTitle, setNewCustomMethodTitle] = useState('');
+  const [newCustomMethodDesc, setNewCustomMethodDesc] = useState('');
+  const [newCustomMethodRespondent, setNewCustomMethodRespondent] = useState<'PATIENT' | 'RESEARCHER'>('PATIENT');
+  const [newCustomMethodFreq, setNewCustomMethodFreq] = useState('A cada consulta clínica');
+  const [showSaveTemplateModal, setShowSaveTemplateModal] = useState(false);
+  const [templateToSave, setTemplateToSave] = useState<{
+    formId?: string;
+    name: string;
+    description: string;
+    category: string;
+    questions: any[];
+  } | null>(null);
+  const [templateToast, setTemplateToast] = useState<string | null>(null);
+  const [customTemplatesList, setCustomTemplatesList] = useState<any[]>([]);
+
+  // Sincroniza modelos salvos no localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('uepg_custom_questionnaire_templates');
+      if (saved) {
+        setCustomTemplatesList(JSON.parse(saved));
+      }
+    } catch {}
+  }, [showAddMethodModal, showSaveTemplateModal]);
+
+  const handleToggleFormQuestions = (formId: string) => {
+    setExpandedFormQuestions((prev) => ({
+      ...prev,
+      [formId]: !prev[formId],
+    }));
+  };
+
+  const handleUpdateQuestionInForm = (
+    formId: string,
+    qIdx: number,
+    field: string,
+    value: any,
+    isEdit: boolean = false
+  ) => {
+    const list = isEdit ? editFormTargets : formTargets;
+    const updated = list.map((f) => {
+      if (f.id !== formId) return f;
+      const currentQuestions = Array.isArray(f.questions)
+        ? [...f.questions]
+        : getPresetQuestionsForMethod(f.id);
+      if (!currentQuestions[qIdx]) return f;
+      currentQuestions[qIdx] = {
+        ...currentQuestions[qIdx],
+        [field]: value,
+      };
+      return { ...f, questions: currentQuestions };
+    });
+    if (isEdit) setEditFormTargets(updated);
+    else setFormTargets(updated);
+  };
+
+  const handleAddQuestionToForm = (formId: string, isEdit: boolean = false) => {
+    const list = isEdit ? editFormTargets : formTargets;
+    const updated = list.map((f) => {
+      if (f.id !== formId) return f;
+      const currentQuestions = Array.isArray(f.questions)
+        ? [...f.questions]
+        : getPresetQuestionsForMethod(f.id);
+      const newQuestion: any = {
+        id: `q_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+        type: 'choice',
+        title: 'Nova pergunta de avaliação',
+        required: true,
+        options: [
+          { label: 'Opção 1', value: '1' },
+          { label: 'Opção 2', value: '2' },
+        ],
+      };
+      return { ...f, questions: [...currentQuestions, newQuestion] };
+    });
+    if (isEdit) setEditFormTargets(updated);
+    else setFormTargets(updated);
+  };
+
+  const handleRemoveQuestionFromForm = (
+    formId: string,
+    qIdx: number,
+    isEdit: boolean = false
+  ) => {
+    const list = isEdit ? editFormTargets : formTargets;
+    const updated = list.map((f) => {
+      if (f.id !== formId) return f;
+      const currentQuestions = Array.isArray(f.questions)
+        ? [...f.questions]
+        : getPresetQuestionsForMethod(f.id);
+      return { ...f, questions: currentQuestions.filter((_, i) => i !== qIdx) };
+    });
+    if (isEdit) setEditFormTargets(updated);
+    else setFormTargets(updated);
+  };
+
+  const handleRestoreFormQuestions = (formId: string, isEdit: boolean = false) => {
+    const defaultQs = getPresetQuestionsForMethod(formId);
+    if (!defaultQs || defaultQs.length === 0) return;
+    const list = isEdit ? editFormTargets : formTargets;
+    const updated = list.map((f) => {
+      if (f.id !== formId) return f;
+      return { ...f, questions: JSON.parse(JSON.stringify(defaultQs)) };
+    });
+    if (isEdit) setEditFormTargets(updated);
+    else setFormTargets(updated);
+  };
+
+  const handleAddOptionToQuestion = (
+    formId: string,
+    qIdx: number,
+    isEdit: boolean = false
+  ) => {
+    const list = isEdit ? editFormTargets : formTargets;
+    const updated = list.map((f) => {
+      if (f.id !== formId) return f;
+      const currentQuestions = Array.isArray(f.questions)
+        ? [...f.questions]
+        : getPresetQuestionsForMethod(f.id);
+      const targetQ = currentQuestions[qIdx];
+      if (!targetQ) return f;
+      const currentOptions = Array.isArray(targetQ.options) ? [...targetQ.options] : [];
+      const nextNum = currentOptions.length + 1;
+      currentOptions.push({ label: `Opção ${nextNum}`, value: String(nextNum) });
+      currentQuestions[qIdx] = { ...targetQ, options: currentOptions };
+      return { ...f, questions: currentQuestions };
+    });
+    if (isEdit) setEditFormTargets(updated);
+    else setFormTargets(updated);
+  };
+
+  const handleUpdateOptionInQuestion = (
+    formId: string,
+    qIdx: number,
+    optIdx: number,
+    field: 'label' | 'value',
+    val: string,
+    isEdit: boolean = false
+  ) => {
+    const list = isEdit ? editFormTargets : formTargets;
+    const updated = list.map((f) => {
+      if (f.id !== formId) return f;
+      const currentQuestions = Array.isArray(f.questions)
+        ? [...f.questions]
+        : getPresetQuestionsForMethod(f.id);
+      const targetQ = currentQuestions[qIdx];
+      if (!targetQ || !Array.isArray(targetQ.options)) return f;
+      const currentOptions = [...targetQ.options];
+      if (!currentOptions[optIdx]) return f;
+      currentOptions[optIdx] = { ...currentOptions[optIdx], [field]: val };
+      currentQuestions[qIdx] = { ...targetQ, options: currentOptions };
+      return { ...f, questions: currentQuestions };
+    });
+    if (isEdit) setEditFormTargets(updated);
+    else setFormTargets(updated);
+  };
+
+  const handleRemoveOptionFromQuestion = (
+    formId: string,
+    qIdx: number,
+    optIdx: number,
+    isEdit: boolean = false
+  ) => {
+    const list = isEdit ? editFormTargets : formTargets;
+    const updated = list.map((f) => {
+      if (f.id !== formId) return f;
+      const currentQuestions = Array.isArray(f.questions)
+        ? [...f.questions]
+        : getPresetQuestionsForMethod(f.id);
+      const targetQ = currentQuestions[qIdx];
+      if (!targetQ || !Array.isArray(targetQ.options)) return f;
+      const currentOptions = targetQ.options.filter((_, i) => i !== optIdx);
+      currentQuestions[qIdx] = { ...targetQ, options: currentOptions };
+      return { ...f, questions: currentQuestions };
+    });
+    if (isEdit) setEditFormTargets(updated);
+    else setFormTargets(updated);
+  };
+
+  const handleSelectPresetMethod = (methodId: string) => {
+    const existingIndex = formTargets.findIndex((f) => f.id === methodId);
+    if (existingIndex !== -1) {
+      setFormTargets((prev) =>
+        prev.map((f, i) => (i === existingIndex ? { ...f, enabled: true } : f))
+      );
+      setExpandedFormQuestions((prev) => ({ ...prev, [methodId]: true }));
+      setShowAddMethodModal(false);
+      return;
+    }
+
+    const catalogItem = PRESET_QUESTIONNAIRES_CATALOG.find((c) => c.id === methodId);
+    const newForm: FormTargetProtocol = {
+      id: methodId,
+      title: catalogItem?.title || methodId,
+      description: catalogItem?.description || 'Método de avaliação clínica do protocolo.',
+      enabled: true,
+      respondent: catalogItem?.defaultRespondent || 'PATIENT',
+      frequency: 'ONCE',
+      frequencyDescription: 'Conforme cronograma',
+      isPreset: true,
+      questions: getPresetQuestionsForMethod(methodId),
+    };
+
+    setFormTargets((prev) => [...prev, newForm]);
+    setExpandedFormQuestions((prev) => ({ ...prev, [methodId]: true }));
+    setShowAddMethodModal(false);
+  };
+
+  const handleApplySavedTemplateAsMethod = (tpl: any) => {
+    const newForm: FormTargetProtocol = {
+      id: `saved_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      title: tpl.name || tpl.title,
+      description: tpl.description || 'Modelo reutilizado de pesquisa anterior.',
+      enabled: true,
+      respondent: 'PATIENT',
+      frequency: 'ONCE',
+      frequencyDescription: 'Conforme cronograma',
+      isPreset: false,
+      questions: JSON.parse(JSON.stringify(tpl.questions || [])),
+    };
+    setFormTargets((prev) => [...prev, newForm]);
+    setExpandedFormQuestions((prev) => ({ ...prev, [newForm.id]: true }));
+    setShowAddMethodModal(false);
+    setTemplateToast(`Modelo "${newForm.title}" adicionado aos métodos de avaliação!`);
+    setTimeout(() => setTemplateToast(null), 4000);
+  };
+
+  const handleCreateCustomMethodSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCustomMethodTitle.trim()) return;
+
+    const newForm: FormTargetProtocol = {
+      id: `custom_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      title: newCustomMethodTitle.trim(),
+      description: newCustomMethodDesc.trim() || 'Instrumento personalizado de avaliação cadastrado pelo pesquisador.',
+      enabled: true,
+      respondent: newCustomMethodRespondent,
+      frequency: 'PER_SESSION',
+      frequencyDescription: newCustomMethodFreq.trim() || 'A cada consulta clínica',
+      isPreset: false,
+      questions: [
+        {
+          id: `q_${Date.now()}_1`,
+          type: 'text',
+          title: 'Primeira pergunta de avaliação',
+          required: true,
+        },
+      ],
+    };
+
+    setFormTargets((prev) => [...prev, newForm]);
+    setExpandedFormQuestions((prev) => ({ ...prev, [newForm.id]: true }));
+    setNewCustomMethodTitle('');
+    setNewCustomMethodDesc('');
+    setShowAddMethodModal(false);
+    setTemplateToast(`Instrumento "${newForm.title}" adicionado com sucesso! Personalize as perguntas abaixo.`);
+    setTimeout(() => setTemplateToast(null), 4000);
+  };
+
+  const handleOpenSaveTemplateModal = (formId: string) => {
+    const target = formTargets.find((f) => f.id === formId);
+    if (!target) return;
+    const questionsToSave = Array.isArray(target.questions) && target.questions.length > 0
+      ? target.questions
+      : getPresetQuestionsForMethod(target.id);
+
+    setTemplateToSave({
+      formId: target.id,
+      name: target.title,
+      description: target.description || '',
+      category: target.respondent === 'PATIENT' ? 'Questionário Paciente (PROMs)' : 'Avaliação Pesquisador',
+      questions: JSON.parse(JSON.stringify(questionsToSave)),
+    });
+    setShowSaveTemplateModal(true);
+  };
+
+  const handleConfirmSaveTemplate = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!templateToSave || !templateToSave.name.trim()) return;
+
+    try {
+      const savedRaw = localStorage.getItem('uepg_custom_questionnaire_templates');
+      const existing = savedRaw ? JSON.parse(savedRaw) : [];
+      const newTpl = {
+        id: `tpl_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+        name: templateToSave.name.trim(),
+        description: templateToSave.description.trim(),
+        category: templateToSave.category || 'Geral',
+        questions: templateToSave.questions,
+        createdAt: new Date().toISOString(),
+      };
+      const updated = [newTpl, ...existing];
+      localStorage.setItem('uepg_custom_questionnaire_templates', JSON.stringify(updated));
+      setCustomTemplatesList(updated);
+      setShowSaveTemplateModal(false);
+      setTemplateToast(`Modelo "${newTpl.name}" salvo com sucesso! Já está disponível na aba "Meus Modelos Salvos".`);
+      setTimeout(() => setTemplateToast(null), 5000);
+    } catch {
+      alert('Erro ao salvar modelo no navegador.');
+    }
+  };
+
+  const handleRemoveFormTarget = (formId: string) => {
+    if (!confirm('Deseja remover este método de avaliação do estudo?')) return;
+    setFormTargets((prev) => prev.filter((f) => f.id !== formId));
+  };
 
   // Manipulação de perguntas da Anamnese no Wizard
   const handleAddQuestion = () => {
@@ -2728,99 +3046,333 @@ export default function HomePage() {
                   </div>
 
                   {/* Formulários e Questionários do Protocolo */}
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
-                        Questionários & Meios de Avaliação Clínicos (eCRF)
-                      </label>
-                      <span className="text-[10px] text-slate-400">
-                        Ative os instrumentos necessários para a pesquisa
-                      </span>
-                    </div>
-
-                    <div className="space-y-2 max-h-[240px] overflow-y-auto p-1">
-                      {formTargets.filter((f) => f.id !== 'anamnesis' && f.id !== 'odontogram').map((f) => (
-                        <div key={f.id} className="p-3 bg-white border border-slate-200 rounded-xl space-y-2 shadow-2xs hover:border-slate-300 transition">
-                          <div className="flex items-center justify-between">
-                            <label className="flex items-center gap-2.5 cursor-pointer font-bold text-slate-800 text-xs">
-                              <input
-                                type="checkbox"
-                                checked={f.enabled}
-                                onChange={(e) => handleUpdateFormTarget(f.id, 'enabled', e.target.checked, false)}
-                                className="w-4 h-4 text-blue-600 rounded cursor-pointer"
-                              />
-                              <span>{f.title}</span>
-                            </label>
-                            <span className={'text-[10px] font-semibold px-2 py-0.5 rounded-full ' + (
-                              f.respondent === 'PATIENT' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
-                            )}>
-                              {f.respondent === 'PATIENT' ? '👤 Paciente (Celular)' : '🩺 Pesquisador (eCRF)'}
-                            </span>
-                          </div>
-                          {f.description && (
-                            <p className="text-[11px] text-slate-500 pl-6 leading-relaxed">
-                              {f.description}
-                            </p>
-                          )}
-                          {f.enabled && f.respondent === 'PATIENT' && (
-                            <div className="pt-1.5 pl-6 border-t border-slate-100 flex flex-col gap-1 text-[11px]">
-                              <div className="flex items-center justify-between">
-                                <span className="text-slate-600 font-bold">Frequência / Períodos em casa:</span>
-                                <span className="text-[10px] text-blue-600 font-medium">Personalizável</span>
-                              </div>
-                              <input
-                                type="text"
-                                value={f.frequencyDescription || ''}
-                                onChange={(e) => {
-                                  handleUpdateFormTarget(f.id, 'frequency', 'CUSTOM', false);
-                                  handleUpdateFormTarget(f.id, 'frequencyDescription', e.target.value, false);
-                                }}
-                                placeholder="Ex: Diário de Sensibilidade (0h a 48h) ou Na sessão final"
-                                className="w-full px-2.5 py-1 border border-slate-300 rounded-lg text-xs bg-slate-50 text-slate-800 placeholder-slate-400 focus:bg-white focus:ring-1 focus:ring-blue-500"
-                              />
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Adicionar Instrumento Personalizado ao eCRF */}
-                    <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
-                      <span className="text-[11px] font-bold text-slate-700 block">
-                        + Adicionar Instrumento / Questionário Personalizado ao eCRF
-                      </span>
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          value={newCustomFormTitle}
-                          onChange={(e) => setNewCustomFormTitle(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              e.preventDefault();
-                              handleAddCustomForm();
-                            }
-                          }}
-                          placeholder="Ex: Escala de Ansiedade Dental (MDAS) ou Questionário Específico"
-                          className="flex-1 px-3 py-1.5 border border-slate-300 rounded-xl text-xs bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                        />
-                        <select
-                          value={newCustomFormRespondent}
-                          onChange={(e) => setNewCustomFormRespondent(e.target.value as 'PATIENT' | 'RESEARCHER')}
-                          className="px-2.5 py-1.5 border border-slate-300 rounded-xl text-xs bg-white focus:outline-none"
-                        >
-                          <option value="PATIENT">👤 Paciente</option>
-                          <option value="RESEARCHER">🩺 Pesquisador</option>
-                        </select>
+                  <div className="space-y-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 pb-2.5">
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
+                          <Sliders className="w-4 h-4 text-blue-600" />
+                          <span>Questionários & Meios de Avaliação Clínicos (eCRF)</span>
+                        </label>
+                        <span className="text-[11px] text-slate-500">
+                          Personalize as perguntas e itens de cada escala diretamente aqui antes de criar o estudo.
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 self-start sm:self-auto">
                         <button
                           type="button"
-                          onClick={handleAddCustomForm}
-                          disabled={!newCustomFormTitle.trim()}
-                          className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-2xs transition cursor-pointer flex items-center gap-1"
+                          onClick={() => {
+                            setAddMethodTab('presets');
+                            setShowAddMethodModal(true);
+                          }}
+                          className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-2xs cursor-pointer"
                         >
                           <Plus className="w-3.5 h-3.5" />
-                          <span>Adicionar</span>
+                          <span>Adicionar Método de Avaliação</span>
                         </button>
                       </div>
+                    </div>
+
+                    {/* Toast de Feedback de Modelos Salvos */}
+                    {templateToast && (
+                      <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800 font-bold flex items-center gap-2 animate-fade-in shadow-2xs">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                        <span>{templateToast}</span>
+                      </div>
+                    )}
+
+                    {/* Lista de Instrumentos / Questionários do eCRF */}
+                    <div className="space-y-2.5 max-h-[460px] overflow-y-auto p-1">
+                      {formTargets.filter((f) => f.id !== 'anamnesis' && f.id !== 'odontogram').map((f) => {
+                        const qList = Array.isArray(f.questions) && f.questions.length > 0
+                          ? f.questions
+                          : getPresetQuestionsForMethod(f.id);
+                        const isExpanded = Boolean(expandedFormQuestions[f.id]);
+
+                        return (
+                          <div
+                            key={f.id}
+                            className={`border rounded-2xl transition-all shadow-2xs space-y-2.5 p-3.5 ${
+                              f.enabled
+                                ? 'bg-white border-blue-200 hover:border-blue-300'
+                                : 'bg-slate-50/70 border-slate-200 opacity-75'
+                            }`}
+                          >
+                            {/* Cabeçalho do Card do Instrumento */}
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                              <div className="flex items-center gap-2.5">
+                                <input
+                                  type="checkbox"
+                                  id={`chk_${f.id}`}
+                                  checked={f.enabled}
+                                  onChange={(e) => handleUpdateFormTarget(f.id, 'enabled', e.target.checked, false)}
+                                  className="w-4 h-4 text-blue-600 rounded cursor-pointer shrink-0"
+                                />
+                                <label
+                                  htmlFor={`chk_${f.id}`}
+                                  className="font-bold text-slate-900 text-xs cursor-pointer hover:text-blue-600 transition flex items-center gap-2 flex-wrap"
+                                >
+                                  <span>{f.title}</span>
+                                  <span className="text-[10px] text-blue-600 font-bold bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
+                                    {qList.length} {qList.length === 1 ? 'pergunta' : 'perguntas'}
+                                  </span>
+                                </label>
+                              </div>
+
+                              <div className="flex items-center gap-1.5 self-end sm:self-auto flex-wrap">
+                                <span className={'text-[10px] font-semibold px-2 py-0.5 rounded-full ' + (
+                                  f.respondent === 'PATIENT' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
+                                )}>
+                                  {f.respondent === 'PATIENT' ? '👤 Paciente (Celular)' : '🩺 Pesquisador (eCRF)'}
+                                </span>
+
+                                {/* Botão Personalizar Perguntas */}
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleFormQuestions(f.id)}
+                                  className={`px-2.5 py-1 text-xs font-bold rounded-lg border transition flex items-center gap-1 cursor-pointer ${
+                                    isExpanded
+                                      ? 'bg-blue-50 text-blue-700 border-blue-300'
+                                      : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                                  }`}
+                                  title="Ver e personalizar perguntas deste questionário"
+                                >
+                                  <Edit3 className="w-3 h-3 text-blue-600" />
+                                  <span>{isExpanded ? 'Ocultar Perguntas' : 'Personalizar Perguntas'}</span>
+                                  {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                                </button>
+
+                                {/* Botão Salvar como Modelo */}
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenSaveTemplateModal(f.id)}
+                                  className="p-1 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 border border-slate-200 rounded-lg transition cursor-pointer"
+                                  title="Salvar este questionário como modelo reutilizável"
+                                >
+                                  <BookmarkPlus className="w-3.5 h-3.5" />
+                                </button>
+
+                                {/* Botão Excluir (apenas para customizados ou adicionados) */}
+                                {!f.isPreset && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveFormTarget(f.id)}
+                                    className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 border border-slate-200 rounded-lg transition cursor-pointer"
+                                    title="Remover este instrumento do estudo"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Descrição e Frequência */}
+                            {f.description && (
+                              <p className="text-[11px] text-slate-500 pl-6 leading-relaxed">
+                                {f.description}
+                              </p>
+                            )}
+
+                            {f.enabled && f.respondent === 'PATIENT' && (
+                              <div className="pt-1.5 pl-6 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-[11px]">
+                                <span className="text-slate-600 font-bold shrink-0">Frequência no celular:</span>
+                                <input
+                                  type="text"
+                                  value={f.frequencyDescription || ''}
+                                  onChange={(e) => {
+                                    handleUpdateFormTarget(f.id, 'frequency', 'CUSTOM', false);
+                                    handleUpdateFormTarget(f.id, 'frequencyDescription', e.target.value, false);
+                                  }}
+                                  placeholder="Ex: Diário de Sensibilidade (0h a 48h) ou Na sessão final"
+                                  className="flex-1 px-2.5 py-1 border border-slate-300 rounded-lg text-xs bg-slate-50 text-slate-800 placeholder-slate-400 focus:bg-white focus:ring-1 focus:ring-blue-500"
+                                />
+                              </div>
+                            )}
+
+                            {/* ========================================================
+                                EDITOR EXPANSÍVEL DE PERGUNTAS DO INSTRUMENTO
+                                ======================================================== */}
+                            {isExpanded && (
+                              <div className="mt-2.5 pt-3 border-t border-blue-100 bg-slate-50/70 -mx-3.5 -mb-3.5 p-3.5 rounded-b-2xl space-y-3 animate-in fade-in duration-150">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 pb-2">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xs font-bold text-slate-800">
+                                      Perguntas e Itens de Avaliação ({qList.length})
+                                    </span>
+                                    <span className="text-[10px] text-slate-400 italic">
+                                      (Perguntas configuradas para este estudo)
+                                    </span>
+                                  </div>
+
+                                  <div className="flex items-center gap-1.5 self-end sm:self-auto">
+                                    {f.isPreset && (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleRestoreFormQuestions(f.id)}
+                                        className="text-[10px] text-slate-600 hover:text-slate-900 font-bold flex items-center gap-1 px-2 py-0.5 rounded border border-slate-200 bg-white hover:bg-slate-50 transition cursor-pointer"
+                                        title="Restaurar as perguntas padrão validadas da literatura"
+                                      >
+                                        <RotateCcw className="w-3 h-3 text-slate-500" />
+                                        <span>Restaurar Padrão</span>
+                                      </button>
+                                    )}
+
+                                    <button
+                                      type="button"
+                                      onClick={() => handleAddQuestionToForm(f.id)}
+                                      className="text-[11px] bg-blue-600 hover:bg-blue-700 text-white font-bold px-2.5 py-1 rounded-lg transition flex items-center gap-1 shadow-2xs cursor-pointer"
+                                    >
+                                      <Plus className="w-3.5 h-3.5" />
+                                      <span>Nova Pergunta</span>
+                                    </button>
+                                  </div>
+                                </div>
+
+                                {/* Lista de Perguntas */}
+                                {qList.length === 0 ? (
+                                  <div className="p-4 bg-white border border-dashed border-slate-300 rounded-xl text-center text-xs text-slate-500">
+                                    Nenhuma pergunta cadastrada neste questionário. Clique em <strong>Nova Pergunta</strong> para começar.
+                                  </div>
+                                ) : (
+                                  <div className="space-y-2.5 max-h-[300px] overflow-y-auto p-0.5">
+                                    {qList.map((q: any, qIdx: number) => (
+                                      <div
+                                        key={q.id || qIdx}
+                                        className="p-3 bg-white border border-slate-200 rounded-xl space-y-2 shadow-2xs"
+                                      >
+                                        <div className="flex items-start gap-2">
+                                          <span className="w-6 h-6 rounded-lg bg-blue-50 text-blue-700 font-bold text-[11px] flex items-center justify-center shrink-0 border border-blue-200 mt-1">
+                                            {qIdx + 1}
+                                          </span>
+
+                                          <div className="flex-1 space-y-2">
+                                            {/* Enunciado da Pergunta */}
+                                            <input
+                                              type="text"
+                                              value={q.title || ''}
+                                              onChange={(e) => handleUpdateQuestionInForm(f.id, qIdx, 'title', e.target.value)}
+                                              placeholder="Enunciado da pergunta ou escala..."
+                                              className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs font-medium text-slate-900 focus:ring-1 focus:ring-blue-500 focus:outline-none bg-slate-50/50 focus:bg-white"
+                                            />
+
+                                            <div className="flex flex-wrap items-center gap-2 text-xs">
+                                              {/* Tipo da Pergunta */}
+                                              <div className="flex items-center gap-1">
+                                                <span className="text-[10px] text-slate-500 font-bold">Tipo:</span>
+                                                <select
+                                                  value={q.type || 'text'}
+                                                  onChange={(e) => handleUpdateQuestionInForm(f.id, qIdx, 'type', e.target.value)}
+                                                  className="px-2 py-1 border border-slate-300 rounded-lg text-xs bg-white text-slate-800 focus:outline-none"
+                                                >
+                                                  <option value="vas">⚡ Escala EVA (0.0 a 10.0)</option>
+                                                  <option value="likert">📊 Escala Likert (5 pontos)</option>
+                                                  <option value="choice">🔘 Múltipla Escolha</option>
+                                                  <option value="boolean">✅ Sim / Não (Booleana)</option>
+                                                  <option value="text">📝 Resposta em Texto</option>
+                                                  <option value="number">🔢 Numérico</option>
+                                                </select>
+                                              </div>
+
+                                              {/* Checkbox Obrigatória */}
+                                              <label className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-700 cursor-pointer ml-auto">
+                                                <input
+                                                  type="checkbox"
+                                                  checked={Boolean(q.required)}
+                                                  onChange={(e) => handleUpdateQuestionInForm(f.id, qIdx, 'required', e.target.checked)}
+                                                  className="w-3.5 h-3.5 text-blue-600 rounded"
+                                                />
+                                                <span>Obrigatória</span>
+                                              </label>
+
+                                              {/* Excluir Pergunta */}
+                                              <button
+                                                type="button"
+                                                onClick={() => handleRemoveQuestionFromForm(f.id, qIdx)}
+                                                className="text-slate-400 hover:text-red-600 p-1 rounded-lg hover:bg-slate-100 transition cursor-pointer"
+                                                title="Excluir pergunta"
+                                              >
+                                                <Trash2 className="w-3.5 h-3.5" />
+                                              </button>
+                                            </div>
+
+                                            {/* Configurações Específicas: Escala EVA / VAS */}
+                                            {q.type === 'vas' && (
+                                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 border-t border-slate-100 text-[11px]">
+                                                <div className="flex items-center gap-1.5">
+                                                  <span className="text-slate-500 font-semibold shrink-0">Rótulo Mínimo (0):</span>
+                                                  <input
+                                                    type="text"
+                                                    value={q.minLabel || ''}
+                                                    onChange={(e) => handleUpdateQuestionInForm(f.id, qIdx, 'minLabel', e.target.value)}
+                                                    placeholder="Ex: 0 - Sem Dor"
+                                                    className="w-full px-2 py-0.5 border border-slate-200 rounded text-[11px] bg-slate-50"
+                                                  />
+                                                </div>
+                                                <div className="flex items-center gap-1.5">
+                                                  <span className="text-slate-500 font-semibold shrink-0">Rótulo Máximo (10):</span>
+                                                  <input
+                                                    type="text"
+                                                    value={q.maxLabel || ''}
+                                                    onChange={(e) => handleUpdateQuestionInForm(f.id, qIdx, 'maxLabel', e.target.value)}
+                                                    placeholder="Ex: 10 - Pior Dor"
+                                                    className="w-full px-2 py-0.5 border border-slate-200 rounded text-[11px] bg-slate-50"
+                                                  />
+                                                </div>
+                                              </div>
+                                            )}
+
+                                            {/* Configurações Específicas: Múltipla Escolha / Likert */}
+                                            {(q.type === 'choice' || q.type === 'likert') && (
+                                              <div className="pt-1.5 border-t border-slate-100 space-y-1.5">
+                                                <div className="flex items-center justify-between">
+                                                  <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
+                                                    Alternativas de Resposta:
+                                                  </span>
+                                                  <button
+                                                    type="button"
+                                                    onClick={() => handleAddOptionToQuestion(f.id, qIdx)}
+                                                    className="text-[10px] text-blue-600 font-bold hover:text-blue-800 cursor-pointer"
+                                                  >
+                                                    + Adicionar Opção
+                                                  </button>
+                                                </div>
+
+                                                <div className="space-y-1">
+                                                  {(Array.isArray(q.options) ? q.options : []).map((opt: any, optIdx: number) => (
+                                                    <div key={optIdx} className="flex items-center gap-1.5">
+                                                      <span className="text-[10px] text-slate-400 font-mono w-4 shrink-0">
+                                                        {optIdx + 1}.
+                                                      </span>
+                                                      <input
+                                                        type="text"
+                                                        value={opt.label || ''}
+                                                        onChange={(e) => handleUpdateOptionInQuestion(f.id, qIdx, optIdx, 'label', e.target.value)}
+                                                        placeholder="Rótulo da opção..."
+                                                        className="flex-1 px-2 py-0.5 border border-slate-200 rounded text-[11px] bg-slate-50"
+                                                      />
+                                                      <button
+                                                        type="button"
+                                                        onClick={() => handleRemoveOptionFromQuestion(f.id, qIdx, optIdx)}
+                                                        className="text-slate-300 hover:text-red-500 p-0.5 transition cursor-pointer"
+                                                        title="Remover opção"
+                                                      >
+                                                        <X className="w-3 h-3" />
+                                                      </button>
+                                                    </div>
+                                                  ))}
+                                                </div>
+                                              </div>
+                                            )}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
 
@@ -2936,6 +3488,350 @@ export default function HomePage() {
                 )}
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      
+      {/* ========================================================
+          MODAL: ADICIONAR MÉTODO DE AVALIAÇÃO / INSTRUMENTO
+          Exibe escalas validadas, modelos salvos e opção "Outro..."
+          ======================================================== */}
+      {showAddMethodModal && (
+        <div className="fixed inset-0 z-60 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-2xl w-full max-h-[85vh] flex flex-col overflow-hidden animate-in zoom-in-95">
+            {/* Cabeçalho */}
+            <div className="p-4 sm:p-5 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+              <div>
+                <h3 className="font-bold text-slate-900 text-sm sm:text-base flex items-center gap-2">
+                  <Sliders className="w-4 h-4 text-blue-600" />
+                  <span>Adicionar Método ou Instrumento de Avaliação</span>
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Selecione uma escala validada, reutilize um modelo salvo ou cadastre um novo instrumento personalizado.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAddMethodModal(false)}
+                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-xl hover:bg-slate-200 transition cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Abas do Seletor */}
+            <div className="px-5 pt-3 border-b border-slate-200 flex gap-2 bg-white">
+              <button
+                type="button"
+                onClick={() => setAddMethodTab('presets')}
+                className={`pb-2.5 px-3 font-bold text-xs border-b-2 transition flex items-center gap-1.5 cursor-pointer ${
+                  addMethodTab === 'presets'
+                    ? 'border-blue-600 text-blue-600'
+                    : 'border-transparent text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Escalas Validadas</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setAddMethodTab('saved')}
+                className={`pb-2.5 px-3 font-bold text-xs border-b-2 transition flex items-center gap-1.5 cursor-pointer ${
+                  addMethodTab === 'saved'
+                    ? 'border-blue-600 text-blue-600'
+                    : 'border-transparent text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                <Bookmark className="w-3.5 h-3.5" />
+                <span>Meus Modelos Salvos ({customTemplatesList.length})</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setAddMethodTab('custom')}
+                className={`pb-2.5 px-3 font-bold text-xs border-b-2 transition flex items-center gap-1.5 cursor-pointer ${
+                  addMethodTab === 'custom'
+                    ? 'border-blue-600 text-blue-600'
+                    : 'border-transparent text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Outro... (Personalizado)</span>
+              </button>
+            </div>
+
+            {/* Conteúdo das Abas */}
+            <div className="p-5 overflow-y-auto flex-1 space-y-4">
+              {/* ABA 1: ESCALAS VALIDADAS */}
+              {addMethodTab === 'presets' && (
+                <div className="grid grid-cols-1 gap-2.5">
+                  {PRESET_QUESTIONNAIRES_CATALOG.map((cat) => {
+                    const alreadyAdded = formTargets.some((f) => f.id === cat.id && f.enabled);
+
+                    return (
+                      <div
+                        key={cat.id}
+                        className="p-3.5 bg-white border border-slate-200 rounded-xl hover:border-blue-300 transition shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                      >
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-base">{cat.icon}</span>
+                            <span className="font-bold text-slate-900 text-xs">{cat.title}</span>
+                            <span className="text-[10px] font-semibold px-2 py-0.2 rounded-full bg-slate-100 text-slate-700">
+                              {cat.badge}
+                            </span>
+                            <span className={'text-[10px] font-semibold px-2 py-0.2 rounded-full ' + (
+                              cat.defaultRespondent === 'PATIENT' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
+                            )}>
+                              {cat.defaultRespondent === 'PATIENT' ? '👤 Paciente' : '🩺 Pesquisador'}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-slate-500 leading-relaxed">
+                            {cat.description}
+                          </p>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleSelectPresetMethod(cat.id)}
+                          className={`px-3.5 py-1.5 rounded-xl font-bold text-xs transition shrink-0 cursor-pointer flex items-center gap-1 shadow-2xs ${
+                            alreadyAdded
+                              ? 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                              : 'bg-blue-600 hover:bg-blue-700 text-white'
+                          }`}
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>{alreadyAdded ? 'Já Adicionado (Abrir)' : 'Adicionar ao Estudo'}</span>
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* ABA 2: MEUS MODELOS SALVOS */}
+              {addMethodTab === 'saved' && (
+                <div className="space-y-3">
+                  {customTemplatesList.length === 0 ? (
+                    <div className="p-8 text-center bg-slate-50 border border-dashed border-slate-300 rounded-2xl text-slate-500 space-y-2">
+                      <Bookmark className="w-8 h-8 text-slate-400 mx-auto" />
+                      <h4 className="font-bold text-slate-800 text-xs">Nenhum modelo salvo ainda</h4>
+                      <p className="text-[11px] max-w-sm mx-auto">
+                        Ao personalizar qualquer questionário, clique no ícone de <strong>Salvar como Modelo</strong> para que ele fique registrado e reutilizável aqui.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 gap-2.5">
+                      {customTemplatesList.map((tpl: any, idx: number) => (
+                        <div
+                          key={tpl.id || idx}
+                          className="p-3.5 bg-white border border-slate-200 rounded-xl hover:border-blue-300 transition shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                        >
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-bold text-slate-900 text-xs">{tpl.name}</span>
+                              <span className="text-[10px] font-semibold px-2 py-0.2 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                {tpl.category || 'Modelo Salvo'}
+                              </span>
+                              <span className="text-[10px] text-blue-600 font-bold bg-blue-50 px-2 py-0.2 rounded-full">
+                                {Array.isArray(tpl.questions) ? tpl.questions.length : 0} perguntas
+                              </span>
+                            </div>
+                            {tpl.description && (
+                              <p className="text-[11px] text-slate-500 leading-relaxed">
+                                {tpl.description}
+                              </p>
+                            )}
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => handleApplySavedTemplateAsMethod(tpl)}
+                            className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-xs transition shrink-0 cursor-pointer flex items-center gap-1 shadow-2xs"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                            <span>Adicionar ao Estudo</span>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ABA 3: OUTRO... (PERSONALIZADO) */}
+              {addMethodTab === 'custom' && (
+                <form onSubmit={handleCreateCustomMethodSubmit} className="space-y-3.5">
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-900">
+                    <p className="font-bold">Cadastrar Novo Instrumento de Avaliação</p>
+                    <p className="text-[11px] text-blue-700 mt-0.5">
+                      Crie um questionário ou método específico para o seu protocolo de pesquisa. Você poderá personalizar todas as perguntas e escalas em seguida.
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Nome do Instrumento / Questionário *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={newCustomMethodTitle}
+                      onChange={(e) => setNewCustomMethodTitle(e.target.value)}
+                      placeholder="Ex: Escala de Ansiedade Dental (MDAS) ou Questionário de Hábitos Alimentares"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs bg-white text-slate-900 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Descrição ou Objetivo Clínico
+                    </label>
+                    <input
+                      type="text"
+                      value={newCustomMethodDesc}
+                      onChange={(e) => setNewCustomMethodDesc(e.target.value)}
+                      placeholder="Ex: Avaliação de ansiedade pré-operatória antes do clareamento de consultório."
+                      className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs bg-white text-slate-900 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                        Quem deve responder?
+                      </label>
+                      <select
+                        value={newCustomMethodRespondent}
+                        onChange={(e) => setNewCustomMethodRespondent(e.target.value as 'PATIENT' | 'RESEARCHER')}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs bg-white text-slate-800 focus:outline-none"
+                      >
+                        <option value="PATIENT">👤 Paciente (Pelo Celular / WhatsApp)</option>
+                        <option value="RESEARCHER">🩺 Pesquisador (Durante o Atendimento Clínico)</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                        Frequência / Momento da Coleta
+                      </label>
+                      <input
+                        type="text"
+                        value={newCustomMethodFreq}
+                        onChange={(e) => setNewCustomMethodFreq(e.target.value)}
+                        placeholder="Ex: Na sessão inicial e aos 30 dias"
+                        className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs bg-white text-slate-900 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="pt-2 flex justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowAddMethodModal(false)}
+                      className="px-3 py-1.5 border border-slate-300 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-50 transition"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={!newCustomMethodTitle.trim()}
+                      className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition flex items-center gap-1 shadow-2xs"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Criar Instrumento e Personalizar</span>
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================
+          MODAL: SALVAR QUESTIONÁRIO COMO MODELO REUTILIZÁVEL
+          ======================================================== */}
+      {showSaveTemplateModal && templateToSave && (
+        <div className="fixed inset-0 z-60 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-md w-full overflow-hidden animate-in zoom-in-95">
+            <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+              <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2">
+                <BookmarkPlus className="w-4 h-4 text-indigo-600" />
+                <span>Salvar como Modelo Reutilizável</span>
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowSaveTemplateModal(false)}
+                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-xl hover:bg-slate-200 transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleConfirmSaveTemplate} className="p-5 space-y-3.5">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Nome do Modelo *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={templateToSave.name}
+                  onChange={(e) => setTemplateToSave({ ...templateToSave, name: e.target.value })}
+                  placeholder="Ex: Escala EVA Sensibilidade UEPG"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs bg-white text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Categoria
+                </label>
+                <input
+                  type="text"
+                  value={templateToSave.category}
+                  onChange={(e) => setTemplateToSave({ ...templateToSave, category: e.target.value })}
+                  placeholder="Ex: Clareamento Dental ou Dentística"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs bg-white text-slate-900 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Descrição
+                </label>
+                <textarea
+                  rows={2}
+                  value={templateToSave.description}
+                  onChange={(e) => setTemplateToSave({ ...templateToSave, description: e.target.value })}
+                  placeholder="Descreva quando este modelo deve ser reutilizado..."
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs bg-white text-slate-900 focus:outline-none"
+                />
+              </div>
+
+              <div className="p-3 bg-indigo-50 border border-indigo-200 rounded-xl text-xs text-indigo-800">
+                <span>Contém <strong>{templateToSave.questions.length} perguntas/itens</strong> configurados que serão salvos no modelo.</span>
+              </div>
+
+              <div className="pt-2 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowSaveTemplateModal(false)}
+                  className="px-3 py-1.5 border border-slate-300 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-50 transition"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={!templateToSave.name.trim()}
+                  className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition flex items-center gap-1 shadow-2xs"
+                >
+                  <Bookmark className="w-3.5 h-3.5" />
+                  <span>Salvar Modelo</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
