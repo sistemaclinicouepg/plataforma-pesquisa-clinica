@@ -1464,7 +1464,7 @@ function AnamnesisBuilderContent() {
                     <div>
                       <div className="flex items-center gap-2 mb-1">
                         <span className="w-2 h-2 rounded-full bg-blue-600 shrink-0" />
-                        <h5 className="font-bold text-slate-800 text-xs truncate">Escala EVA (Sensibilidade)</h5>
+                        <h5 className="font-bold text-slate-800 text-xs truncate">Escala EVA</h5>
                       </div>
                       <p className="text-[11px] text-slate-500 leading-snug">
                         Dor e sensibilidade (0 a 10) e uso de analgésicos nos tempos 0h, 1h, 24h e 48h.

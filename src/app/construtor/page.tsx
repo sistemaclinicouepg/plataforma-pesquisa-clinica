@@ -679,7 +679,7 @@ function FormBuilderContent() {
     setRecentlyAddedId(id);
 
     const typeLabels: Record<string, string> = {
-      vas: 'Escala EVA (Dor)',
+      vas: 'Escala EVA',
       likert: 'Escala Likert',
       boolean: 'Sim / Não',
       choice: 'Múltipla Escolha',
@@ -1525,7 +1525,7 @@ function FormBuilderContent() {
                       className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center space-x-1.5"
                     >
                       <Zap className="w-3.5 h-3.5" />
-                      <span>Adicionar Escala EVA (Dor)</span>
+                      <span>Adicionar Escala EVA</span>
                     </button>
                   </div>
                 </div>
@@ -1553,7 +1553,7 @@ function FormBuilderContent() {
                           onChange={(e) => updateQuestionType(q.id, e.target.value as QuestionType)}
                           className="px-2.5 py-1 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-700 focus:ring-1 focus:ring-blue-500 focus:outline-none cursor-pointer"
                         >
-                          <option value="vas">Escala EVA (Dor / Sensibilidade)</option>
+                          <option value="vas">Escala EVA</option>
                           <option value="matrix">Tabela de Avaliação (1 a 10 + NA)</option>
                           <option value="likert">Escala Likert (Frequência / Acordo)</option>
                           <option value="boolean">Sim ou Não (Binário)</option>
