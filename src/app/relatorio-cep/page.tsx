@@ -212,15 +212,15 @@ function RelatorioCepContent() {
     }
   };
 
-  // Upload genérico de arquivo PDF para o R2
+  // Upload resiliente de arquivo PDF (com conversão local imediata e tentativa de storage)
   const uploadPdfFile = async (file: File, type: 'cep' | 'project') => {
     if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
       alert('Atenção: Por favor, selecione exclusivamente um arquivo no formato PDF.');
       return;
     }
 
-    if (file.size > 100 * 1024 * 1024) {
-      alert('Atenção: O arquivo excede o limite máximo permitido de 100 MB.');
+    if (file.size > 50 * 1024 * 1024) {
+      alert('Atenção: O arquivo excede o limite máximo permitido de 50 MB para documentos do CEP.');
       return;
     }
 
@@ -229,40 +229,58 @@ function RelatorioCepContent() {
     else setUploadingProject(true);
 
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('folder', `estudos/${projectId || 'geral'}/cep`);
-
-      const res = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
+      // 1. Converter localmente para Base64 (garantia absoluta de disponibilidade sem falhas de rede)
+      const readerPromise = new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = () => reject(reader.error);
+        reader.readAsDataURL(file);
       });
 
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || 'Falha no upload do arquivo.');
+      const localDataUrl = await readerPromise;
+
+      let fileKey = `inline:${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+      let finalUrl = localDataUrl;
+
+      // 2. Tentar salvar no servidor (tenta Cloudflare R2 se configurado)
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('folder', `estudos/${projectId || 'geral'}/cep`);
+
+        const res = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (res.ok) {
+          const result = await res.json();
+          if (result.key) fileKey = result.key;
+          if (result.url && !result.url.startsWith('inline:')) {
+            finalUrl = result.url;
+          }
+        }
+      } catch (uploadErr) {
+        console.warn('Aviso no upload para storage externo, utilizando persistência segura em banco:', uploadErr);
       }
 
-      const result = await res.json();
-
       let nextEthics: EthicsApprovalConfig;
-
       if (isCep) {
         nextEthics = {
           ...ethics,
-          cepPdfKey: result.key,
-          cepPdfUrl: result.url,
-          cepPdfName: result.fileName || file.name,
-          cepPdfSize: result.size || file.size,
+          cepPdfKey: fileKey,
+          cepPdfUrl: finalUrl,
+          cepPdfName: file.name,
+          cepPdfSize: file.size,
           cepPdfUploadedAt: new Date().toISOString(),
         };
       } else {
         nextEthics = {
           ...ethics,
-          projectPdfKey: result.key,
-          projectPdfUrl: result.url,
-          projectPdfName: result.fileName || file.name,
-          projectPdfSize: result.size || file.size,
+          projectPdfKey: fileKey,
+          projectPdfUrl: finalUrl,
+          projectPdfName: file.name,
+          projectPdfSize: file.size,
           projectPdfUploadedAt: new Date().toISOString(),
         };
       }
@@ -270,7 +288,7 @@ function RelatorioCepContent() {
       setEthics(nextEthics);
       setIsDirty(true);
 
-      // Auto-salva para garantir que o upload persista no projeto imediatamente
+      // Auto-salva no banco para que o documento persista imediatamente no prontuário
       await handleSave(nextEthics);
       setToastMessage(
         isCep
@@ -278,17 +296,42 @@ function RelatorioCepContent() {
           : 'Projeto de Pesquisa anexado e salvo com sucesso!'
       );
     } catch (err: any) {
-      console.error('Erro no upload:', err);
-      alert(`Falha ao anexar arquivo: ${err.message}`);
+      console.error('Erro no upload do arquivo:', err);
+      alert(`Falha ao anexar arquivo: ${err.message || 'Erro desconhecido'}`);
     } finally {
       if (isCep) setUploadingCep(false);
       else setUploadingProject(false);
     }
   };
 
-  // Visualizar arquivo em nova aba com URL atualizada
+  // Visualizar arquivo em nova aba com suporte a Blob nativo e URLs assinadas
   const handleOpenFile = async (url?: string, key?: string) => {
-    if (key) {
+    if (!url && !key) {
+      alert('Arquivo não localizado.');
+      return;
+    }
+
+    // Se estiver em formato Base64 / Data URL: converte em Blob e abre via URL nativa do navegador
+    if (url && url.startsWith('data:')) {
+      try {
+        const base64Data = url.split(',')[1] || url;
+        const binaryString = atob(base64Data);
+        const len = binaryString.length;
+        const bytes = new Uint8Array(len);
+        for (let i = 0; i < len; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        const blob = new Blob([bytes], { type: 'application/pdf' });
+        const blobUrl = URL.createObjectURL(blob);
+        window.open(blobUrl, '_blank');
+        return;
+      } catch (e) {
+        console.error('Erro ao abrir PDF inline:', e);
+      }
+    }
+
+    // Se for chave externa (R2), busca URL assinada atualizada
+    if (key && !key.startsWith('inline:')) {
       try {
         const res = await fetch(`/api/upload?key=${encodeURIComponent(key)}`);
         if (res.ok) {
@@ -308,6 +351,46 @@ function RelatorioCepContent() {
     } else {
       alert('Arquivo não localizado.');
     }
+  };
+
+  // Download do arquivo PDF diretamente para o computador
+  const handleDownloadFile = (url?: string, fileName?: string) => {
+    if (!url) {
+      alert('Arquivo não localizado para download.');
+      return;
+    }
+
+    if (url.startsWith('data:')) {
+      try {
+        const base64Data = url.split(',')[1] || url;
+        const binaryString = atob(base64Data);
+        const len = binaryString.length;
+        const bytes = new Uint8Array(len);
+        for (let i = 0; i < len; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        const blob = new Blob([bytes], { type: 'application/pdf' });
+        const blobUrl = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = blobUrl;
+        a.download = fileName || 'documento.pdf';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+        return;
+      } catch (e) {
+        console.error('Erro ao realizar download do PDF:', e);
+      }
+    }
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName || 'documento.pdf';
+    a.target = '_blank';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   };
 
   // Remover arquivo anexado
@@ -641,6 +724,16 @@ function RelatorioCepContent() {
 
                         <button
                           type="button"
+                          onClick={() => handleDownloadFile(ethics.cepPdfUrl, ethics.cepPdfName)}
+                          className="px-2.5 py-1.5 rounded-lg text-xs font-bold text-slate-700 bg-white hover:bg-slate-100 border border-slate-200 transition inline-flex items-center space-x-1 shadow-2xs cursor-pointer"
+                          title="Baixar arquivo PDF do parecer"
+                        >
+                          <Download className="w-3.5 h-3.5 text-slate-600" />
+                          <span>Baixar</span>
+                        </button>
+
+                        <button
+                          type="button"
                           onClick={() => cepFileInputRef.current?.click()}
                           disabled={uploadingCep}
                           className="px-2.5 py-1.5 rounded-lg text-xs font-bold text-slate-700 bg-white hover:bg-slate-100 border border-slate-200 transition inline-flex items-center space-x-1 shadow-2xs cursor-pointer disabled:opacity-50"
@@ -777,6 +870,16 @@ function RelatorioCepContent() {
                         >
                           <Eye className="w-3.5 h-3.5 text-blue-600" />
                           <span>Visualizar</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleDownloadFile(ethics.projectPdfUrl, ethics.projectPdfName)}
+                          className="px-2.5 py-1.5 rounded-lg text-xs font-bold text-slate-700 bg-white hover:bg-slate-100 border border-slate-200 transition inline-flex items-center space-x-1 shadow-2xs cursor-pointer"
+                          title="Baixar arquivo PDF do projeto"
+                        >
+                          <Download className="w-3.5 h-3.5 text-slate-600" />
+                          <span>Baixar</span>
                         </button>
 
                         <button
