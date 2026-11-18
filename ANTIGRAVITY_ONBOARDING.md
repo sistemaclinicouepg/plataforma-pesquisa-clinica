@@ -103,11 +103,17 @@ O sistema possui acesso restrito configurado tanto em banco quanto em memória i
 
 ## 🔄 7. Resumo das Últimas Atualizações Realizadas
 
-1. **Página Dedicada de Resultados (`/resultados`):**
+1. **Visualizador de Documentos CEP (`/relatorio-cep`):**
+   - Modal interativo integrado para visualização de PDFs (estilo WhatsApp) com botão para abrir em aba separada.
+   - Cache otimizado para eliminar o delay visual de carregamento de arquivos.
+2. **Editor de Termo de Consentimento / TCLE (`/tcle/editor`):**
+   - Restauração da barra superior institucional (`AppNav`) com logotipo da UEPG, identificação do usuário e menu principal.
+   - Eliminação da "piscada" (layout shift) através da persistência do shell da página, sidebar contínua e renderização instantânea com cache local.
+3. **Página Dedicada de Resultados (`/resultados`):**
    - Substituição do antigo modal sobrecarregado por uma página dedicada em formato tabular compacto.
    - Sincronização automática entre questionários submetidos pelo paciente e o escore de dor EVA imediato (0h).
    - Tabela organizada das respostas com títulos completos, opções Likert, matrizes e booleanos.
-2. **Simplificação da Tela de Login (`/login`):**
+4. **Simplificação da Tela de Login (`/login`):**
    - Remoção dos atalhos de preenchimento automático (1-Click Demo) e painéis decorativos excessivos.
    - Remoção de listas de nomes da tela pública para manter a privacidade institucional.
    - Restrição estrita de autenticação aos 3 perfis autorizados (Administrador Geral, Dra. Alessandra e Dra. Roberta).
