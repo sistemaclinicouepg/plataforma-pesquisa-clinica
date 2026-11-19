@@ -121,6 +121,8 @@ O sistema possui acesso restrito configurado tanto em banco quanto em memória i
    - **Alinhamento do Modal de Edição (`editTab`):** Abas reorganizadas na mesma sequência (`GENERAL` -> `GROUPS` -> `FORMS` -> `SESSIONS`) com navegação fluida pelos botões de rodapé.
 
 2. **Portal do Paciente Simplificado e Wizard Passo a Passo (`/paciente`):**
+   - **Exclusividade da Ficha de Anamnese na Cadeira Clínica:** A Anamnese e critérios de elegibilidade são respondidos exclusivamente pelo clínico/pesquisador na cadeira odontológica (`/dashboard` e `/anamnese`). Foi removida qualquer injeção de anamnese no portal do paciente.
+   - **Apenas eCRFs Selecionados:** Para o voluntário no celular são enviados estritamente os questionários eCRFs habilitados para o paciente e atribuídos às sessões do estudo.
    - **Nomenclatura Amigável:** Títulos, descrições e ocorrências científicas foram convertidos para linguagem simples e humana (ex: *OHIP-14* virou *"Qualidade de Vida e Saúde Bucal"*, *Linha de Base* virou *"Avaliação Inicial"*, e descrições acadêmicas foram simplificadas para evitar intimidação do voluntário).
    - **Bloqueio Estrito de Edição após Envio (GCP / ICH E6):** Respostas anteriores não podem ser editadas após envio. O questionário concluído passa a modo de consulta (somente leitura com inputs desabilitados). Alterações só são autorizadas quando o pesquisador clicar em "Liberar Agora" no painel (`/resultados` ou `/dashboard`), com bloqueio também em nível de API (`POST /api/responses`).
    - **Página Inicial Limpa:** Destaque único no questionário ativo disponível e botão proeminente "Iniciar Questionário".

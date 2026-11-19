@@ -362,14 +362,21 @@ export async function GET(req: Request) {
 
     if (Array.isArray(protocol.forms)) {
       for (const pf of protocol.forms) {
-        if (!pf.enabled || pf.respondent === 'RESEARCHER') continue;
+        if (!pf.enabled || pf.respondent === 'RESEARCHER' || pf.id === 'anamnesis' || pf.id === 'odontogram') continue;
         const presetDef = getStandardPreset(pf.id || pf.title);
-        if (!presetDef) continue;
+        const questionsToUse = Array.isArray(pf.questions) && pf.questions.length > 0
+          ? pf.questions
+          : presetDef?.questions;
+        if (!questionsToUse || questionsToUse.length === 0) continue;
+
+        const formTitle = pf.title || presetDef?.title || 'Questionário';
+        const formDesc = pf.description || presetDef?.description || 'Questionário eCRF';
+        const frequencyStr = pf.frequency || presetDef?.frequency || 'Conforme protocolo';
 
         const alreadyExists =
-          existingTitles.has(presetDef.title.toLowerCase().trim()) ||
-          existingTitles.has(pf.title.toLowerCase().trim()) ||
-          existingDesc.some((d: string) => d.includes(presetDef.title.toLowerCase()) || d.includes(pf.id.toLowerCase()));
+          existingTitles.has(formTitle.toLowerCase().trim()) ||
+          (presetDef && existingTitles.has(presetDef.title.toLowerCase().trim())) ||
+          existingDesc.some((d: string) => d.includes(formTitle.toLowerCase()) || d.includes((pf.id || '').toLowerCase()));
 
         if (!alreadyExists) {
           try {
@@ -377,24 +384,36 @@ export async function GET(req: Request) {
             const created = await prisma.form.create({
               data: {
                 projectId: participant.project.id,
-                title: presetDef.title,
-                description: `${presetDef.description} | Preenchido por: Paciente | Frequência: ${presetDef.frequency}`,
-                questionsJson: JSON.stringify(presetDef.questions),
+                title: formTitle,
+                description: `${formDesc} | Preenchido por: Paciente | Frequência: ${frequencyStr}`,
+                questionsJson: JSON.stringify(questionsToUse),
                 expirationHours: 48,
                 allowLate: true,
               },
             });
             participant.project.forms.push(created);
-            existingTitles.add(presetDef.title.toLowerCase().trim());
+            existingTitles.add(formTitle.toLowerCase().trim());
           } catch (createErr) {
-            console.warn(`Erro ao materializar questionário padrão ${presetDef.title}:`, createErr);
+            console.warn(`Erro ao materializar questionário ${formTitle}:`, createErr);
           }
         }
       }
     }
 
+    // Questionários habilitados para o paciente configurados no eCRF do protocolo
+    const enabledPatientFormIds = new Set(
+      (protocol.forms || [])
+        .filter((pf) => pf.enabled && pf.respondent !== 'RESEARCHER' && pf.id !== 'anamnesis' && pf.id !== 'odontogram')
+        .map((pf) => pf.id.toLowerCase().trim())
+    );
+    const enabledPatientTitles = new Set(
+      (protocol.forms || [])
+        .filter((pf) => pf.enabled && pf.respondent !== 'RESEARCHER' && pf.id !== 'anamnesis' && pf.id !== 'odontogram')
+        .map((pf) => pf.title.toLowerCase().trim())
+    );
+
     // Processar formulários do projeto destinados ao paciente (PROMs)
-    // Regra GCP: Exibir exclusivamente os questionários e perguntas criadas no eCRF deste projeto de pesquisa
+    // Regra GCP: Exibir exclusivamente os questionários eCRFs selecionados previamente para o paciente
     const patientForms = participant.project.forms.filter(
       (f: { id: string; title: string; description: string | null }) => {
         // Se foi liberado expressamente pelo pesquisador, torna visível imediatamente
@@ -402,16 +421,40 @@ export async function GET(req: Request) {
           return true;
         }
 
-        // 1. Desconsiderar formulários de preenchimento exclusivo pelo pesquisador
+        const lowerTitle = f.title.toLowerCase().trim();
+        const lowerDesc = (f.description || '').toLowerCase().trim();
+
+        // 1. A Anamnese NUNCA deve ir para o portal do paciente (exclusiva da cadeira clínica do pesquisador)
+        if (
+          lowerTitle.includes('anamnese') ||
+          lowerDesc.includes('anamnese') ||
+          lowerTitle.includes('critérios de participação') ||
+          lowerTitle.includes('criterios de participacao')
+        ) {
+          return false;
+        }
+
+        // 2. Desconsiderar formulários de preenchimento exclusivo pelo pesquisador
         if (f.description?.includes('Preenchido por: Pesquisador')) return false;
 
-        const lowerTitle = f.title.toLowerCase();
-        const lowerDesc = (f.description || '').toLowerCase();
+        // 3. Se houver formulários configurados no protocolo eCRF, apenas os selecionados/habilitados para o paciente são exibidos
+        if (enabledPatientFormIds.size > 0 || enabledPatientTitles.size > 0) {
+          const isMatchingEnabled =
+            enabledPatientTitles.has(lowerTitle) ||
+            Array.from(enabledPatientFormIds).some((id) => lowerDesc.includes(id) || lowerTitle.includes(id)) ||
+            (enabledPatientFormIds.has('eva') && (lowerTitle.includes('eva') || lowerTitle.includes('sensibil'))) ||
+            (enabledPatientFormIds.has('ohip') && lowerTitle.includes('ohip')) ||
+            (enabledPatientFormIds.has('satisfaction') && lowerTitle.includes('satisfa')) ||
+            (enabledPatientFormIds.has('habits') && lowerTitle.includes('hábito'));
+
+          if (!isMatchingEnabled) {
+            return false;
+          }
+        }
+
         const combined = `${lowerTitle} ${lowerDesc}`;
 
-        // 2. Questionários vinculados à consulta vs. Acompanhamento Domiciliar por tempo pré-definido:
-        // Questionários domiciliares por tempo pré-definido (ex: Clareamento Caseiro: 24h, 48h, 7 dias, etc.)
-        // NUNCA devem ser bloqueados por falta de sessões clínicas presenciais registradas!
+        // 4. Questionários vinculados à consulta vs. Acompanhamento Domiciliar por tempo pré-definido:
         const isTimeBased =
           combined.includes('modalidade: tempo') ||
           combined.includes('domiciliar') ||
@@ -534,66 +577,9 @@ export async function GET(req: Request) {
       };
     });
 
-    // Se o protocolo do estudo tiver perguntas de anamnese / elegibilidade configuradas pelo pesquisador
-    let anamnesisQuestions: any[] = [];
-    if (participant.project.anamnesisTemplate) {
-      try {
-        const parsedTmpl = JSON.parse(participant.project.anamnesisTemplate);
-        if (Array.isArray(parsedTmpl.questions) && parsedTmpl.questions.length > 0) {
-          anamnesisQuestions = parsedTmpl.questions;
-        }
-      } catch (err) {
-        console.warn('Erro ao ler perguntas de anamnese para o paciente:', err);
-      }
-    }
-
+    // No portal do paciente são disponibilizados exclusivamente os questionários eCRFs destinados ao participante
+    // A Ficha de Anamnese & Critérios de Elegibilidade é de preenchimento exclusivo pelo clínico/pesquisador na cadeira
     const allFormsWithStatus = [...formsWithStatus];
-
-    if (anamnesisQuestions.length > 0) {
-      let parsedAnamnesisAnswers: Record<string, any> = {};
-      if (participant.anamnesisData) {
-        try {
-          const d = JSON.parse(participant.anamnesisData);
-          parsedAnamnesisAnswers = d.answers || (typeof d === 'object' ? d : {});
-        } catch {}
-      }
-
-      // O questionário de anamnese só deve constar como concluído se o paciente de fato já tiver gravado respostas
-      const hasAnsweredAnamnesis = Boolean(
-        parsedAnamnesisAnswers &&
-        Object.keys(parsedAnamnesisAnswers).length > 0 &&
-        Object.values(parsedAnamnesisAnswers).some((v) => v !== undefined && v !== null && v !== '')
-      );
-      const isCompleted = hasAnsweredAnamnesis;
-      const isUnlockedAnamnesis =
-        allUnlockedForms.includes(`anamnesis_${participant.project.id}`) ||
-        allUnlockedForms.includes('anamnesis');
-
-      allFormsWithStatus.unshift({
-        id: `anamnesis_${participant.project.id}`,
-        title: 'Ficha de Anamnese & Critérios de Participação',
-        description: 'Questionário inicial com perguntas e critérios específicos deste estudo clínico.',
-        occurrence: 'Linha de Base / Admissão',
-        modality: 'SESSION' as const,
-        questions: anamnesisQuestions.map((q: any, qIdx: number) => ({
-          id: q.id || `q_an_${qIdx}`,
-          type: q.type === 'vita_shade' ? 'choice' : q.type === 'sensitivity_scale' ? 'vas' : q.type || 'text',
-          title: q.title,
-          required: Boolean(q.required),
-          options: q.options || (q.type === 'boolean' ? [{ label: 'Sim', value: 'sim' }, { label: 'Não', value: 'nao' }] : undefined),
-          minLabel: q.minLabel,
-          maxLabel: q.maxLabel,
-          observation: q.observation,
-        })),
-        expirationHours: 72,
-        allowLate: true,
-        createdAt: participant.createdAt,
-        isCompleted,
-        isUnlocked: Boolean(isUnlockedAnamnesis),
-        submittedAt: isCompleted ? new Date(participant.createdAt).toLocaleString('pt-BR') : null,
-        myAnswers: parsedAnamnesisAnswers,
-      });
-    }
 
     // Buscar se o mesmo paciente participa de outros estudos na plataforma (isolamento completo de dados)
     const otherParticipations = await prisma.participant.findMany({
