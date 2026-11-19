@@ -1356,12 +1356,12 @@ function PacienteContent() {
                           </div>
                         )}
 
-                        {/* Alerta de confirmação quando responder "Não" (sem dor) -> nota 0.0 */}
+                        {/* Alerta de confirmação quando responder "Não" (sem dor) */}
                         {isBlockedNoPain && (
                           <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center gap-2.5 text-emerald-800 text-xs animate-fadeIn">
                             <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
                             <div className="leading-snug">
-                              <span className="font-bold block text-xs">Ausência de dor registrada (Nota 0.0)</span>
+                              <span className="font-bold block text-xs">Ausência de dor registrada</span>
                               <span className="text-emerald-700 text-[11px]">
                                 {isReadOnly
                                   ? 'Você informou ausência de dor nesta etapa.'
@@ -1371,33 +1371,17 @@ function PacienteContent() {
                           </div>
                         )}
 
-                        {/* Régua Contínua EVA */}
+                        {/* Régua Contínua EVA (Metodologia Científica: Apenas a escala visual, sem números ou notas visíveis para o paciente) */}
                         {(!isGateEnabled || hasPain) && (
-                          <div className="space-y-4 pt-1">
-                            <div className="text-center p-3 bg-slate-50 rounded-2xl border border-slate-200">
-                              <span className="text-2xl font-black text-slate-900 font-mono">
-                                {vasVal.toFixed(1)}
-                              </span>
-                              <span className="text-xs text-slate-400 font-bold ml-1">/ 10</span>
-                              <p className="text-xs font-bold text-blue-600 mt-0.5">
-                                {vasVal === 0
-                                  ? 'Sem dor / Ausente'
-                                  : vasVal < 3
-                                  ? 'Dor leve'
-                                  : vasVal < 7
-                                  ? 'Dor moderada'
-                                  : 'Dor intensa / severa'}
-                              </p>
-                            </div>
-
-                            <p className="text-[11px] text-slate-500 italic text-center">
+                          <div className="space-y-4 pt-2">
+                            <p className="text-xs text-slate-500 italic text-center">
                               {isReadOnly
-                                ? 'Intensidade registrada na escala:'
-                                : 'Arraste a barra para marcar a intensidade do que você sentiu:'}
+                                ? 'Posição assinalada na escala visual contínua:'
+                                : 'Deslize o marcador na linha até o ponto que melhor representa o que você sentiu:'}
                             </p>
 
-                            <div className="relative flex items-center py-2 px-1">
-                              <div className="w-1.5 h-7 bg-slate-400 rounded-full shrink-0 -mr-1 z-10" />
+                            <div className="relative flex items-center py-4 px-1">
+                              <div className="w-1.5 h-8 bg-slate-400 rounded-full shrink-0 -mr-1 z-10" />
                               <input
                                 type="range"
                                 min="0"
@@ -1418,7 +1402,7 @@ function PacienteContent() {
                                   isReadOnly ? 'cursor-default opacity-80' : 'cursor-pointer'
                                 }`}
                               />
-                              <div className="w-1.5 h-7 bg-slate-400 rounded-full shrink-0 -ml-1 z-10" />
+                              <div className="w-1.5 h-8 bg-slate-400 rounded-full shrink-0 -ml-1 z-10" />
                             </div>
 
                             <div className="flex justify-between items-start text-xs font-bold text-slate-700 px-1">
