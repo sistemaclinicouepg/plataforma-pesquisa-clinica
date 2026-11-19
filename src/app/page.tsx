@@ -1138,8 +1138,58 @@ export default function HomePage() {
           )}
         </div>
 
+        {/* Formulários eCRF Aplicados na Consulta pelo Pesquisador (se houver instrumentos configurados para o pesquisador) */}
+        {(() => {
+          const allForms = isEdit ? editFormTargets : formTargets;
+          const researcherForms = allForms.filter(
+            (f) => f.enabled && f.id !== 'anamnesis' && f.id !== 'odontogram' && f.respondent === 'RESEARCHER'
+          );
+          if (researcherForms.length === 0) return null;
+          const sessionForms = s.forms || [];
+          return (
+            <div className="p-3 bg-blue-50/50 rounded-xl border border-blue-200/80 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold text-blue-950 flex items-center gap-1.5">
+                  <ClipboardList className="w-3.5 h-3.5 text-blue-600" />
+                  <span>Formulários eCRF Aplicados nesta Consulta (Pesquisador):</span>
+                </span>
+                <span className="text-[10px] text-blue-800 bg-blue-100/70 px-2 py-0.5 rounded-full font-semibold">
+                  {sessionForms.length} vinculados
+                </span>
+              </div>
+              <p className="text-[10px] text-blue-900/80 leading-snug">
+                Selecione quais instrumentos criados no eCRF serão preenchidos pela equipe durante esta consulta:
+              </p>
+              <div className="flex flex-wrap gap-1.5 pt-0.5">
+                {researcherForms.map((rf) => {
+                  const isChecked = sessionForms.includes(rf.id);
+                  return (
+                    <button
+                      key={rf.id}
+                      type="button"
+                      onClick={() => {
+                        const next = isChecked ? sessionForms.filter((id) => id !== rf.id) : [...sessionForms, rf.id];
+                        handleUpdateSession(idx, 'forms', next, isEdit);
+                      }}
+                      className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                        isChecked
+                          ? 'bg-blue-600 text-white shadow-2xs'
+                          : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'
+                      }`}
+                    >
+                      <span>{rf.icon || '📋'}</span>
+                      <span>{rf.title}</span>
+                      {isChecked && <Check className="w-3 h-3 stroke-[3]" />}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })()}
+
         {/* Questionário / Diário do Paciente no Celular */}
-        <div className="p-3 bg-indigo-50/40 rounded-xl border border-indigo-100 space-y-2">
+        <div className="p-3 bg-indigo-50/40 rounded-xl border border-indigo-100 space-y-3">
           <div className="flex items-center justify-between">
             <label className="flex items-center gap-2 cursor-pointer font-bold text-[11px] text-indigo-900">
               <input
@@ -1158,30 +1208,131 @@ export default function HomePage() {
           </div>
 
           {requiresProms && (
-            <div className="flex flex-wrap gap-1.5 pt-1.5 border-t border-indigo-100">
-              {[
-                { id: 'eva', label: 'Diário de Sensibilidade (EVA)', icon: '⚡' },
-                { id: 'satisfaction', label: 'Satisfação com o Clareamento', icon: '⭐' },
-                { id: 'habits', label: 'Hábitos & Alimentos Corantes', icon: '☕' },
-              ].map((cat) => {
-                const isChecked = activeQIds.includes(cat.id);
-                return (
-                  <button
-                    key={cat.id}
-                    type="button"
-                    onClick={() => handleToggleSessionQuestionnaire(idx, cat.id, isEdit)}
-                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition flex items-center gap-1.5 cursor-pointer ${
-                      isChecked
-                        ? 'bg-indigo-600 text-white shadow-2xs'
-                        : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'
-                    }`}
-                  >
-                    <span>{cat.icon}</span>
-                    <span>{cat.label}</span>
-                    {isChecked && <Check className="w-3 h-3 stroke-[3]" />}
-                  </button>
-                );
-              })}
+            <div className="space-y-3 pt-2 border-t border-indigo-100">
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[11px] font-bold text-indigo-950 flex items-center gap-1.5">
+                    <Sliders className="w-3.5 h-3.5 text-indigo-600" />
+                    <span>Questionários do eCRF Encaminhados ao Celular:</span>
+                  </span>
+                  <span className="text-[10px] text-indigo-700 bg-indigo-100/70 px-2 py-0.5 rounded-full font-semibold">
+                    {activeQIds.length} selecionados
+                  </span>
+                </div>
+                <p className="text-[10px] text-indigo-900/80 mb-2 leading-snug">
+                  Selecione quais questionários personalizados no Passo 3 (eCRF) serão disponibilizados para o paciente responder no celular:
+                </p>
+
+                {(() => {
+                  const allForms = isEdit ? editFormTargets : formTargets;
+                  const patientForms = allForms.filter(
+                    (f) => f.enabled && f.id !== 'anamnesis' && f.id !== 'odontogram' && f.respondent !== 'RESEARCHER'
+                  );
+                  const displayForms = patientForms.length > 0
+                    ? patientForms
+                    : allForms.filter((f) => f.enabled && f.id !== 'anamnesis' && f.id !== 'odontogram');
+
+                  if (displayForms.length === 0) {
+                    return (
+                      <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800">
+                        Nenhum questionário está habilitado no eCRF. Volte à etapa do Construtor de eCRF para habilitar instrumentos (como Sensibilidade EVA, Satisfação, etc.).
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="flex flex-wrap gap-1.5">
+                      {displayForms.map((cat) => {
+                        const isChecked = activeQIds.includes(cat.id);
+                        return (
+                          <button
+                            key={cat.id}
+                            type="button"
+                            onClick={() => handleToggleSessionQuestionnaire(idx, cat.id, isEdit)}
+                            className={`px-3 py-1.5 rounded-xl text-[11px] font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                              isChecked
+                                ? 'bg-indigo-600 text-white shadow-2xs ring-1 ring-indigo-700'
+                                : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'
+                            }`}
+                          >
+                            <span>{cat.icon || '📝'}</span>
+                            <span>{cat.title}</span>
+                            {isChecked && <Check className="w-3 h-3 stroke-[3]" />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* Seletor de Periodicidade Domiciliar */}
+              <div className="p-2.5 bg-white/80 rounded-xl border border-indigo-200/70 space-y-2">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                  <label className="text-[11px] font-bold text-indigo-950 flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-indigo-600" />
+                    <span>Periodicidade com que o paciente responde em casa (entre consultas):</span>
+                  </label>
+                  <span className="text-[10px] text-indigo-700 bg-indigo-100/70 px-2 py-0.5 rounded-full font-medium">
+                    Intervalo domiciliar
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                  {[
+                    { id: 'GCP_HOURS', label: 'Padrão GCP', desc: '0h, 1h, 24h e 48h', icon: '⏱️' },
+                    { id: 'DAILY', label: 'Diário (24h)', desc: 'A cada 24 horas', icon: '📅' },
+                    { id: 'EVERY_48H', label: 'A cada 48h', desc: 'Dia sim / dia não', icon: '⏳' },
+                    { id: 'WEEKLY', label: 'Semanal (7d)', desc: 'A cada 7 dias', icon: '📆' },
+                    { id: 'BIWEEKLY', label: 'Quinzenal (14d)', desc: 'A cada 14 dias', icon: '🗓️' },
+                    { id: 'ONCE', label: 'Única Vez', desc: 'Pontual pós-sessão', icon: '🎯' },
+                    { id: 'CUSTOM', label: 'Personalizado', desc: 'Configurar dias', icon: '⚙️' },
+                  ].map((freq) => {
+                    const isSelected = (s.responseFrequency || 'GCP_HOURS') === freq.id;
+                    return (
+                      <button
+                        key={freq.id}
+                        type="button"
+                        onClick={() => handleUpdateSession(idx, 'responseFrequency', freq.id, isEdit)}
+                        className={`p-2 rounded-lg border text-left transition cursor-pointer flex flex-col justify-between ${
+                          isSelected
+                            ? 'bg-indigo-600 text-white border-indigo-600 shadow-2xs font-bold'
+                            : 'bg-white border-slate-200 text-slate-700 hover:bg-indigo-50/50'
+                        }`}
+                      >
+                        <span className="text-xs flex items-center gap-1">
+                          <span>{freq.icon}</span>
+                          <span>{freq.label}</span>
+                        </span>
+                        <span className={`text-[10px] mt-0.5 ${isSelected ? 'text-indigo-100' : 'text-slate-500'}`}>
+                          {freq.desc}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {s.responseFrequency === 'CUSTOM' && (
+                  <div className="flex flex-wrap items-center gap-2 pt-1 animate-in fade-in">
+                    <label className="text-[11px] font-semibold text-slate-700">Responder a cada:</label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={180}
+                      value={s.responseIntervalDays || 3}
+                      onChange={(e) => handleUpdateSession(idx, 'responseIntervalDays', Math.max(1, Number(e.target.value)), isEdit)}
+                      className="w-16 px-2 py-1 border border-slate-300 rounded-lg text-xs bg-white font-bold text-center"
+                    />
+                    <span className="text-[11px] text-slate-600 font-medium">dias até o próximo retorno</span>
+                    <input
+                      type="text"
+                      value={s.responseIntervalDescription || ''}
+                      onChange={(e) => handleUpdateSession(idx, 'responseIntervalDescription', e.target.value, isEdit)}
+                      placeholder="Observação (ex: nos dias pares de uso do gel caseiro)"
+                      className="flex-1 min-w-[200px] px-2.5 py-1 border border-slate-300 rounded-lg text-xs bg-white"
+                    />
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -2412,9 +2563,9 @@ export default function HomePage() {
               {[
                 { num: 1, title: '1. Identificação', sub: 'Nome e código' },
                 { num: 2, title: '2. Desenho do Estudo', sub: 'Grupos do estudo' },
-                { num: 3, title: '3. Cronograma', sub: 'Consultas clínicas' },
+                { num: 3, title: '3. Construtor de eCRF', sub: 'Questionários e escalas' },
                 { num: 4, title: '4. Ficha Clínica', sub: 'Anamnese & Odonto' },
-                { num: 5, title: '5. eCRF', sub: 'Questionários e revisão' },
+                { num: 5, title: '5. Cronograma', sub: 'Consultas & diários' },
               ].map((step) => {
                 const isCurrent = createStep === step.num;
                 const isPast = createStep > step.num;
@@ -2658,389 +2809,15 @@ export default function HomePage() {
                 </div>
               )}
 
-              {/* ETAPA 3: CRONOGRAMA DE CONSULTAS CLÍNICAS */}
+              {/* ETAPA 3: CONSTRUTOR DE eCRF & QUESTIONÁRIOS */}
               {createStep === 3 && (
-                <div className="space-y-4 animate-in fade-in duration-150">
-                  <div className="p-3.5 bg-blue-50/70 border border-blue-200 rounded-xl text-xs text-blue-900 flex items-start gap-2.5">
-                    <Calendar className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
-                    <div>
-                      <p className="font-bold">Etapa 3 de 5: Cronograma de Consultas de Clareamento</p>
-                      <p className="text-blue-800 text-[11px] mt-0.5">
-                        Defina as consultas presenciais de clareamento, os intervalos em dias e o que será avaliado no consultório e pelo paciente.
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Modelos Rápidos de Protocolo de Clareamento */}
-                  <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                        <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-                        <span>Modelos Prontos de Clareamento (Clique para carregar):</span>
-                      </span>
-                      <span className="text-[10px] text-slate-400">Preenchimento com 1 toque</span>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                      <button
-                        type="button"
-                        onClick={() => handleApplyBleachingPreset('office_standard', false)}
-                        className="p-2.5 bg-white border border-slate-200 hover:border-blue-500 hover:bg-blue-50/50 rounded-xl text-left transition cursor-pointer shadow-2xs group"
-                      >
-                        <p className="font-bold text-slate-800 text-xs group-hover:text-blue-700 flex items-center gap-1">
-                          <span>🔵 Consultório Padrão</span>
-                        </p>
-                        <p className="text-[10px] text-slate-500 mt-0.5">
-                          3 consultas: 1ª Aplicação (Dia 0) → 2ª Aplicação (7d) → Retorno de Cor (14d)
-                        </p>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => handleApplyBleachingPreset('home_supervised', false)}
-                        className="p-2.5 bg-white border border-slate-200 hover:border-purple-500 hover:bg-purple-50/50 rounded-xl text-left transition cursor-pointer shadow-2xs group"
-                      >
-                        <p className="font-bold text-slate-800 text-xs group-hover:text-purple-700 flex items-center gap-1">
-                          <span>🟣 Caseiro Supervisionado</span>
-                        </p>
-                        <p className="text-[10px] text-slate-500 mt-0.5">
-                          3 consultas: Moldagem/Géis (Dia 0) → Acompanhamento (7d) → Retorno Final (21d)
-                        </p>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => handleApplyBleachingPreset('office_single', false)}
-                        className="p-2.5 bg-white border border-slate-200 hover:border-amber-500 hover:bg-amber-50/50 rounded-xl text-left transition cursor-pointer shadow-2xs group"
-                      >
-                        <p className="font-bold text-slate-800 text-xs group-hover:text-amber-700 flex items-center gap-1">
-                          <span>⚡ Consultório Sessão Única</span>
-                        </p>
-                        <p className="text-[10px] text-slate-500 mt-0.5">
-                          2 consultas: Aplicação Única (Dia 0) → Avaliação de Cor (7d)
-                        </p>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Lista de Consultas Clínicas */}
-                  <div className="space-y-3 pt-1">
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                        Consultas Programadas ({studySessions.length})
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => handleAddSession(false)}
-                        className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold cursor-pointer transition shadow-2xs flex items-center gap-1"
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                        <span>Adicionar Consulta</span>
-                      </button>
-                    </div>
-                    <div className="space-y-3 max-h-[380px] overflow-y-auto p-1">
-                      {studySessions.map((s, idx) => renderSessionCard(s, idx, false))}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-                            {/* ETAPA 4: FICHA CLÍNICA, ANAMNESE & ODONTOGRAMA */}
-              {createStep === 4 && (
-                <div className="space-y-4 animate-in fade-in duration-150">
-                  <div className="p-3.5 bg-indigo-50/70 border border-indigo-200 rounded-xl text-xs text-indigo-900 flex items-start gap-2.5">
-                    <Stethoscope className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
-                    <div>
-                      <p className="font-bold">Etapa 4 de 5: Ficha Clínica, Anamnese & Odontograma</p>
-                      <p className="text-indigo-800 text-[11px] mt-0.5">
-                        Defina a meta de voluntários (tamanho amostral), configure o odontograma e personalize os critérios de inclusão/exclusão e perguntas da anamnese do projeto.
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* 1. Meta Amostral / Participantes */}
-                  <div className="p-4 bg-white border border-slate-200 rounded-xl space-y-2 shadow-2xs">
-                    <div className="flex items-center justify-between">
-                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
-                        Número de Participantes do Projeto (Tamanho Amostral N) *
-                      </label>
-                      <span className="text-[10px] text-blue-600 font-semibold bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
-                        Meta Regulatória / Amostra
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="number"
-                        min="1"
-                        max="1000"
-                        value={newProjectTargetParticipants}
-                        onChange={(e) => setNewProjectTargetParticipants(e.target.value)}
-                        placeholder="Ex: 30"
-                        className="w-32 px-3 py-2 border border-slate-300 rounded-xl text-sm font-bold text-slate-900 focus:ring-2 focus:ring-blue-500 focus:outline-none shadow-2xs bg-white"
-                      />
-                      <span className="text-xs text-slate-500">
-                        voluntários planejados para inclusão no ensaio clínico
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-slate-400">
-                      Orienta a taxa de recrutamento, balanceamento da alocação nos grupos de estudo e capacidade de atendimento clínico.
-                    </p>
-                  </div>
-
-                  {/* 2. Odontograma Clínico */}
-                  <div className="p-4 bg-white border border-slate-200 rounded-xl space-y-3 shadow-2xs">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          id="enable-odontogram-toggle"
-                          checked={enableOdontogram}
-                          onChange={(e) => setEnableOdontogram(e.target.checked)}
-                          className="w-4 h-4 text-blue-600 rounded cursor-pointer"
-                        />
-                        <label htmlFor="enable-odontogram-toggle" className="text-xs font-bold text-slate-800 cursor-pointer">
-                          Deseja utilizar Odontograma Clínico neste estudo?
-                        </label>
-                      </div>
-                      <span className={'text-[10px] font-bold px-2 py-0.5 rounded-full ' + (enableOdontogram ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-500')}>
-                        {enableOdontogram ? 'Ativado' : 'Desativado'}
-                      </span>
-                    </div>
-
-                    {enableOdontogram && (
-                      <div className="space-y-2 pt-2 border-t border-slate-100">
-                        <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-600">
-                          Selecione o Modelo de Odontograma:
-                        </label>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                          <div
-                            onClick={() => setOdontogramScope('anterior')}
-                            className={'p-3 rounded-xl border-2 cursor-pointer transition text-xs flex flex-col justify-between ' + (
-                              odontogramScope === 'anterior'
-                                ? 'border-blue-600 bg-blue-50/50 shadow-2xs'
-                                : 'border-slate-200 bg-white hover:border-slate-300'
-                            )}
-                          >
-                            <div>
-                              <div className="flex items-center justify-between mb-1">
-                                <span className="font-bold text-slate-900">Setor Anterior (13-23 e 33-43)</span>
-                                <span className="text-[10px] font-semibold bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded">
-                                  Recomendado Clareamento
-                                </span>
-                              </div>
-                              <p className="text-[11px] text-slate-500 leading-relaxed">
-                                12 dentes estéticos anteriores (incisivos e caninos). Ideal para ensaios de clareamento dental, facetas e dentística estética.
-                              </p>
-                            </div>
-                            <div className="mt-2.5 flex items-center gap-1.5 text-[11px] text-blue-700 font-semibold">
-                              <div className={'w-3.5 h-3.5 rounded-full border flex items-center justify-center ' + (odontogramScope === 'anterior' ? 'border-blue-600 bg-blue-600' : 'border-slate-300')}>
-                                {odontogramScope === 'anterior' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
-                              </div>
-                              <span>Modelo Setor Anterior</span>
-                            </div>
-                          </div>
-
-                          <div
-                            onClick={() => setOdontogramScope('full')}
-                            className={'p-3 rounded-xl border-2 cursor-pointer transition text-xs flex flex-col justify-between ' + (
-                              odontogramScope === 'full'
-                                ? 'border-blue-600 bg-blue-50/50 shadow-2xs'
-                                : 'border-slate-200 bg-white hover:border-slate-300'
-                            )}
-                          >
-                            <div>
-                              <div className="flex items-center justify-between mb-1">
-                                <span className="font-bold text-slate-900">Arcada Completa (18 a 48)</span>
-                                <span className="text-[10px] font-semibold bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded">
-                                  32 Dentes
-                                </span>
-                              </div>
-                              <p className="text-[11px] text-slate-500 leading-relaxed">
-                                Mapeamento integral de todos os dentes superiores e inferiores, incluindo pré-molares e molares.
-                              </p>
-                            </div>
-                            <div className="mt-2.5 flex items-center gap-1.5 text-[11px] text-slate-600 font-semibold">
-                              <div className={'w-3.5 h-3.5 rounded-full border flex items-center justify-center ' + (odontogramScope === 'full' ? 'border-blue-600 bg-blue-600' : 'border-slate-300')}>
-                                {odontogramScope === 'full' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
-                              </div>
-                              <span>Modelo Arcada Completa</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* 3. Ficha de Anamnese & Critérios Personalizáveis */}
-                  <div className="p-4 bg-white border border-slate-200 rounded-xl space-y-3 shadow-2xs">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          id="enable-anamnesis-toggle"
-                          checked={enableAnamnesis}
-                          onChange={(e) => setEnableAnamnesis(e.target.checked)}
-                          className="w-4 h-4 text-blue-600 rounded cursor-pointer"
-                        />
-                        <label htmlFor="enable-anamnesis-toggle" className="text-xs font-bold text-slate-800 cursor-pointer">
-                          Ativar Ficha de Anamnese & Critérios de Elegibilidade
-                        </label>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={handleRestoreDefaultQuestions}
-                        className="text-[11px] text-blue-600 hover:text-blue-800 font-semibold cursor-pointer underline"
-                      >
-                        Restaurar Perguntas Padrão
-                      </button>
-                    </div>
-
-                    {enableAnamnesis && (
-                      <div className="space-y-3 pt-2 border-t border-slate-100">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600">
-                            Perguntas & Critérios do Estudo ({newProjectQuestions.length})
-                          </span>
-                          <span className="text-[10px] text-slate-400">
-                            Personalize perguntas e critérios para este projeto
-                          </span>
-                        </div>
-
-                        {/* Lista das Perguntas */}
-                        <div className="space-y-2 max-h-[220px] overflow-y-auto p-1">
-                          {newProjectQuestions.map((q, idx) => (
-                            <div
-                              key={q.id || idx}
-                              className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl flex items-start justify-between gap-2 shadow-2xs hover:bg-white transition text-xs"
-                            >
-                              <div className="flex items-start gap-2 min-w-0">
-                                <span className="w-5 h-5 rounded-md bg-white text-slate-600 font-bold text-[10px] flex items-center justify-center shrink-0 border border-slate-200 mt-0.5">
-                                  {idx + 1}
-                                </span>
-                                <div className="min-w-0">
-                                  <p className="font-semibold text-slate-800 text-xs leading-snug">{q.title}</p>
-                                  <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                                    {q.isCriterion ? (
-                                      <span className={'px-1.5 py-0.2 rounded text-[10px] font-bold ' + (
-                                        q.disqualifyIf === 'nao'
-                                          ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
-                                          : 'bg-red-100 text-red-800 border border-red-200'
-                                      )}>
-                                        {q.disqualifyIf === 'nao' ? 'Critério de Inclusão' : 'Critério de Exclusão'}
-                                      </span>
-                                    ) : (
-                                      <span className="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">
-                                        Pergunta de Anamnese
-                                      </span>
-                                    )}
-                                    <span className="text-[10px] text-slate-400">
-                                      Tipo: {q.type === 'boolean' ? 'Sim / Não' : q.type === 'text' ? 'Texto Livre' : q.type === 'vita_shade' ? 'Escala VITA' : q.type === 'sensitivity_scale' ? 'Escala EVA (0-10)' : q.type}
-                                    </span>
-                                    {q.required && <span className="text-[10px] text-amber-600 font-bold">• Obrigatória</span>}
-                                  </div>
-                                </div>
-                              </div>
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveQuestion(idx)}
-                                className="text-slate-400 hover:text-red-600 p-1 rounded-lg hover:bg-slate-200/60 transition cursor-pointer shrink-0"
-                                title="Remover pergunta da anamnese"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-
-                        {/* Adicionar Pergunta Personalizada */}
-                        <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2.5">
-                          <span className="text-[11px] font-bold text-slate-700 block">
-                            + Adicionar Nova Pergunta / Critério Personalizado
-                          </span>
-                          <div className="space-y-2">
-                            <input
-                              type="text"
-                              value={newQuestionTitle}
-                              onChange={(e) => setNewQuestionTitle(e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                  e.preventDefault();
-                                  handleAddQuestion();
-                                }
-                              }}
-                              placeholder="Ex: O voluntário possui histórico de dor com alimentos frios?"
-                              className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                            />
-
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                              <div>
-                                <label className="text-[10px] font-bold text-slate-500 block mb-0.5">Tipo de Campo</label>
-                                <select
-                                  value={newQuestionType}
-                                  onChange={(e) => setNewQuestionType(e.target.value as QuestionType)}
-                                  className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs bg-white focus:outline-none"
-                                >
-                                  <option value="boolean">Sim / Não (Booleano)</option>
-                                  <option value="text">Texto Livre</option>
-                                  <option value="sensitivity_scale">Escala de Sensibilidade (0-10)</option>
-                                  <option value="vita_shade">Cor Escala VITA Classical</option>
-                                  <option value="number">Numérico</option>
-                                </select>
-                              </div>
-
-                              <div>
-                                <label className="text-[10px] font-bold text-slate-500 block mb-0.5">Classificação</label>
-                                <select
-                                  value={newQuestionIsCriterion ? (newQuestionDisqualifyIf === 'nao' ? 'INC' : 'EXC') : 'NONE'}
-                                  onChange={(e) => {
-                                    const val = e.target.value;
-                                    if (val === 'INC') {
-                                      setNewQuestionIsCriterion(true);
-                                      setNewQuestionDisqualifyIf('nao');
-                                    } else if (val === 'EXC') {
-                                      setNewQuestionIsCriterion(true);
-                                      setNewQuestionDisqualifyIf('sim');
-                                    } else {
-                                      setNewQuestionIsCriterion(false);
-                                    }
-                                  }}
-                                  className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs bg-white focus:outline-none"
-                                >
-                                  <option value="INC">Critério de Inclusão (Sim é obrigatório)</option>
-                                  <option value="EXC">Critério de Exclusão (Sim desqualifica)</option>
-                                  <option value="NONE">Pergunta Geral (Não elimina)</option>
-                                </select>
-                              </div>
-
-                              <div className="flex items-end">
-                                <button
-                                  type="button"
-                                  onClick={handleAddQuestion}
-                                  disabled={!newQuestionTitle.trim()}
-                                  className="w-full py-1.5 px-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold text-xs rounded-lg transition shadow-2xs flex items-center justify-center gap-1 cursor-pointer"
-                                >
-                                  <Plus className="w-3.5 h-3.5" />
-                                  <span>Adicionar</span>
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* ETAPA 5: eCRF, INSTRUMENTOS DE AVALIAÇÃO & REVISÃO FINAL */}
-              {createStep === 5 && (
                 <div className="space-y-4 animate-in fade-in duration-150">
                   <div className="p-3.5 bg-emerald-50/70 border border-emerald-200 rounded-xl text-xs text-emerald-900 flex items-start gap-2.5">
                     <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                     <div>
-                      <p className="font-bold">Etapa 5 de 5: Construtor de eCRF, Questionários & Revisão Final</p>
+                      <p className="font-bold">Etapa 3 de 5: Construtor de eCRF, Questionários & Meios de Avaliação</p>
                       <p className="text-emerald-800 text-[11px] mt-0.5">
-                        Defina quais questionários, escalas clínicas (EVA, OES, OHIP) e diários serão preenchidos durante a pesquisa e revise o protocolo antes de finalizar.
+                        Defina quais questionários, escalas clínicas (EVA, OES, OHIP) e diários serão preenchidos durante a pesquisa e personalize as perguntas e quem responde (paciente ou pesquisador).
                       </p>
                     </div>
                   </div>
@@ -3413,6 +3190,380 @@ export default function HomePage() {
                       })}
                     </div>
                   </div>
+                </div>
+              )}
+
+              {/* ETAPA 4: FICHA CLÍNICA, ANAMNESE & ODONTOGRAMA */}
+              {createStep === 4 && (
+                <div className="space-y-4 animate-in fade-in duration-150">
+                  <div className="p-3.5 bg-indigo-50/70 border border-indigo-200 rounded-xl text-xs text-indigo-900 flex items-start gap-2.5">
+                    <Stethoscope className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-bold">Etapa 4 de 5: Ficha Clínica, Anamnese & Critérios de Inclusão</p>
+                      <p className="text-indigo-800 text-[11px] mt-0.5">
+                        Defina a meta de voluntários (tamanho amostral), configure o odontograma e personalize os critérios de inclusão/exclusão e perguntas da anamnese do projeto.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* 1. Meta Amostral / Participantes */}
+                  <div className="p-4 bg-white border border-slate-200 rounded-xl space-y-2 shadow-2xs">
+                    <div className="flex items-center justify-between">
+                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                        Número de Participantes do Projeto (Tamanho Amostral N) *
+                      </label>
+                      <span className="text-[10px] text-blue-600 font-semibold bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
+                        Meta Regulatória / Amostra
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="number"
+                        min="1"
+                        max="1000"
+                        value={newProjectTargetParticipants}
+                        onChange={(e) => setNewProjectTargetParticipants(e.target.value)}
+                        placeholder="Ex: 30"
+                        className="w-32 px-3 py-2 border border-slate-300 rounded-xl text-sm font-bold text-slate-900 focus:ring-2 focus:ring-blue-500 focus:outline-none shadow-2xs bg-white"
+                      />
+                      <span className="text-xs text-slate-500">
+                        voluntários planejados para inclusão no ensaio clínico
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-400">
+                      Orienta a taxa de recrutamento, balanceamento da alocação nos grupos de estudo e capacidade de atendimento clínico.
+                    </p>
+                  </div>
+
+                  {/* 2. Odontograma Clínico */}
+                  <div className="p-4 bg-white border border-slate-200 rounded-xl space-y-3 shadow-2xs">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id="enable-odontogram-toggle"
+                          checked={enableOdontogram}
+                          onChange={(e) => setEnableOdontogram(e.target.checked)}
+                          className="w-4 h-4 text-blue-600 rounded cursor-pointer"
+                        />
+                        <label htmlFor="enable-odontogram-toggle" className="text-xs font-bold text-slate-800 cursor-pointer">
+                          Deseja utilizar Odontograma Clínico neste estudo?
+                        </label>
+                      </div>
+                      <span className={'text-[10px] font-bold px-2 py-0.5 rounded-full ' + (enableOdontogram ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-500')}>
+                        {enableOdontogram ? 'Ativado' : 'Desativado'}
+                      </span>
+                    </div>
+
+                    {enableOdontogram && (
+                      <div className="space-y-2 pt-2 border-t border-slate-100">
+                        <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-600">
+                          Selecione o Modelo de Odontograma:
+                        </label>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                          <div
+                            onClick={() => setOdontogramScope('anterior')}
+                            className={'p-3 rounded-xl border-2 cursor-pointer transition text-xs flex flex-col justify-between ' + (
+                              odontogramScope === 'anterior'
+                                ? 'border-blue-600 bg-blue-50/50 shadow-2xs'
+                                : 'border-slate-200 bg-white hover:border-slate-300'
+                            )}
+                          >
+                            <div>
+                              <div className="flex items-center justify-between mb-1">
+                                <span className="font-bold text-slate-900">Setor Anterior (13-23 e 33-43)</span>
+                                <span className="text-[10px] font-semibold bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded">
+                                  Recomendado Clareamento
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-slate-500 leading-relaxed">
+                                12 dentes estéticos anteriores (incisivos e caninos). Ideal para ensaios de clareamento dental, facetas e dentística estética.
+                              </p>
+                            </div>
+                            <div className="mt-2.5 flex items-center gap-1.5 text-[11px] text-blue-700 font-semibold">
+                              <div className={'w-3.5 h-3.5 rounded-full border flex items-center justify-center ' + (odontogramScope === 'anterior' ? 'border-blue-600 bg-blue-600' : 'border-slate-300')}>
+                                {odontogramScope === 'anterior' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                              </div>
+                              <span>Modelo Setor Anterior</span>
+                            </div>
+                          </div>
+
+                          <div
+                            onClick={() => setOdontogramScope('full')}
+                            className={'p-3 rounded-xl border-2 cursor-pointer transition text-xs flex flex-col justify-between ' + (
+                              odontogramScope === 'full'
+                                ? 'border-blue-600 bg-blue-50/50 shadow-2xs'
+                                : 'border-slate-200 bg-white hover:border-slate-300'
+                            )}
+                          >
+                            <div>
+                              <div className="flex items-center justify-between mb-1">
+                                <span className="font-bold text-slate-900">Arcada Completa (18 a 48)</span>
+                                <span className="text-[10px] font-semibold bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded">
+                                  32 Dentes
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-slate-500 leading-relaxed">
+                                Mapeamento integral de todos os dentes superiores e inferiores, incluindo pré-molares e molares.
+                              </p>
+                            </div>
+                            <div className="mt-2.5 flex items-center gap-1.5 text-[11px] text-slate-600 font-semibold">
+                              <div className={'w-3.5 h-3.5 rounded-full border flex items-center justify-center ' + (odontogramScope === 'full' ? 'border-blue-600 bg-blue-600' : 'border-slate-300')}>
+                                {odontogramScope === 'full' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                              </div>
+                              <span>Modelo Arcada Completa</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 3. Ficha de Anamnese & Critérios Personalizáveis */}
+                  <div className="p-4 bg-white border border-slate-200 rounded-xl space-y-3 shadow-2xs">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id="enable-anamnesis-toggle"
+                          checked={enableAnamnesis}
+                          onChange={(e) => setEnableAnamnesis(e.target.checked)}
+                          className="w-4 h-4 text-blue-600 rounded cursor-pointer"
+                        />
+                        <label htmlFor="enable-anamnesis-toggle" className="text-xs font-bold text-slate-800 cursor-pointer">
+                          Ativar Ficha de Anamnese & Critérios de Elegibilidade
+                        </label>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleRestoreDefaultQuestions}
+                        className="text-[11px] text-blue-600 hover:text-blue-800 font-semibold cursor-pointer underline"
+                      >
+                        Restaurar Perguntas Padrão
+                      </button>
+                    </div>
+
+                    {enableAnamnesis && (
+                      <div className="space-y-3 pt-2 border-t border-slate-100">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600">
+                            Perguntas & Critérios do Estudo ({newProjectQuestions.length})
+                          </span>
+                          <span className="text-[10px] text-slate-400">
+                            Personalize perguntas e critérios para este projeto
+                          </span>
+                        </div>
+
+                        {/* Lista das Perguntas */}
+                        <div className="space-y-2 max-h-[220px] overflow-y-auto p-1">
+                          {newProjectQuestions.map((q, idx) => (
+                            <div
+                              key={q.id || idx}
+                              className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl flex items-start justify-between gap-2 shadow-2xs hover:bg-white transition text-xs"
+                            >
+                              <div className="flex items-start gap-2 min-w-0">
+                                <span className="w-5 h-5 rounded-md bg-white text-slate-600 font-bold text-[10px] flex items-center justify-center shrink-0 border border-slate-200 mt-0.5">
+                                  {idx + 1}
+                                </span>
+                                <div className="min-w-0">
+                                  <p className="font-semibold text-slate-800 text-xs leading-snug">{q.title}</p>
+                                  <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                                    {q.isCriterion ? (
+                                      <span className={'px-1.5 py-0.2 rounded text-[10px] font-bold ' + (
+                                        q.disqualifyIf === 'nao'
+                                          ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                                          : 'bg-red-100 text-red-800 border border-red-200'
+                                      )}>
+                                        {q.disqualifyIf === 'nao' ? 'Critério de Inclusão' : 'Critério de Exclusão'}
+                                      </span>
+                                    ) : (
+                                      <span className="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                                        Pergunta de Anamnese
+                                      </span>
+                                    )}
+                                    <span className="text-[10px] text-slate-400">
+                                      Tipo: {q.type === 'boolean' ? 'Sim / Não' : q.type === 'text' ? 'Texto Livre' : q.type === 'vita_shade' ? 'Escala VITA' : q.type === 'sensitivity_scale' ? 'Escala EVA (0-10)' : q.type}
+                                    </span>
+                                    {q.required && <span className="text-[10px] text-amber-600 font-bold">• Obrigatória</span>}
+                                  </div>
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveQuestion(idx)}
+                                className="text-slate-400 hover:text-red-600 p-1 rounded-lg hover:bg-slate-200/60 transition cursor-pointer shrink-0"
+                                title="Remover pergunta da anamnese"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Adicionar Pergunta Personalizada */}
+                        <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2.5">
+                          <span className="text-[11px] font-bold text-slate-700 block">
+                            + Adicionar Nova Pergunta / Critério Personalizado
+                          </span>
+                          <div className="space-y-2">
+                            <input
+                              type="text"
+                              value={newQuestionTitle}
+                              onChange={(e) => setNewQuestionTitle(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  handleAddQuestion();
+                                }
+                              }}
+                              placeholder="Ex: O voluntário possui histórico de dor com alimentos frios?"
+                              className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                            />
+
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                              <div>
+                                <label className="text-[10px] font-bold text-slate-500 block mb-0.5">Tipo de Campo</label>
+                                <select
+                                  value={newQuestionType}
+                                  onChange={(e) => setNewQuestionType(e.target.value as QuestionType)}
+                                  className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs bg-white focus:outline-none"
+                                >
+                                  <option value="boolean">Sim / Não (Booleano)</option>
+                                  <option value="text">Texto Livre</option>
+                                  <option value="sensitivity_scale">Escala de Sensibilidade (0-10)</option>
+                                  <option value="vita_shade">Cor Escala VITA Classical</option>
+                                  <option value="number">Numérico</option>
+                                </select>
+                              </div>
+
+                              <div>
+                                <label className="text-[10px] font-bold text-slate-500 block mb-0.5">Classificação</label>
+                                <select
+                                  value={newQuestionIsCriterion ? (newQuestionDisqualifyIf === 'nao' ? 'INC' : 'EXC') : 'NONE'}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    if (val === 'INC') {
+                                      setNewQuestionIsCriterion(true);
+                                      setNewQuestionDisqualifyIf('nao');
+                                    } else if (val === 'EXC') {
+                                      setNewQuestionIsCriterion(true);
+                                      setNewQuestionDisqualifyIf('sim');
+                                    } else {
+                                      setNewQuestionIsCriterion(false);
+                                    }
+                                  }}
+                                  className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs bg-white focus:outline-none"
+                                >
+                                  <option value="INC">Critério de Inclusão (Sim é obrigatório)</option>
+                                  <option value="EXC">Critério de Exclusão (Sim desqualifica)</option>
+                                  <option value="NONE">Pergunta Geral (Não elimina)</option>
+                                </select>
+                              </div>
+
+                              <div className="flex items-end">
+                                <button
+                                  type="button"
+                                  onClick={handleAddQuestion}
+                                  disabled={!newQuestionTitle.trim()}
+                                  className="w-full py-1.5 px-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold text-xs rounded-lg transition shadow-2xs flex items-center justify-center gap-1 cursor-pointer"
+                                >
+                                  <Plus className="w-3.5 h-3.5" />
+                                  <span>Adicionar</span>
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* ETAPA 5: CRONOGRAMA DE CONSULTAS CLÍNICAS & REVISÃO FINAL */}
+              {createStep === 5 && (
+                <div className="space-y-4 animate-in fade-in duration-150">
+                  <div className="p-3.5 bg-blue-50/70 border border-blue-200 rounded-xl text-xs text-blue-900 flex items-start gap-2.5">
+                    <Calendar className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-bold">Etapa 5 de 5: Cronograma de Consultas Clínicas & Revisão Final</p>
+                      <p className="text-blue-800 text-[11px] mt-0.5">
+                        Defina as consultas presenciais de clareamento, os exames clínicos da consulta e os questionários do eCRF que o paciente responderá no celular com a periodicidade entre consultas.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Modelos Rápidos de Protocolo de Clareamento */}
+                  <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+                        <span>Modelos Prontos de Clareamento (Clique para carregar):</span>
+                      </span>
+                      <span className="text-[10px] text-slate-400">Preenchimento com 1 toque</span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleApplyBleachingPreset('office_standard', false)}
+                        className="p-2.5 bg-white border border-slate-200 hover:border-blue-500 hover:bg-blue-50/50 rounded-xl text-left transition cursor-pointer shadow-2xs group"
+                      >
+                        <p className="font-bold text-slate-800 text-xs group-hover:text-blue-700 flex items-center gap-1">
+                          <span>🔵 Consultório Padrão</span>
+                        </p>
+                        <p className="text-[10px] text-slate-500 mt-0.5">
+                          3 consultas: 1ª Aplicação (Dia 0) → 2ª Aplicação (7d) → Retorno de Cor (14d)
+                        </p>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleApplyBleachingPreset('home_supervised', false)}
+                        className="p-2.5 bg-white border border-slate-200 hover:border-purple-500 hover:bg-purple-50/50 rounded-xl text-left transition cursor-pointer shadow-2xs group"
+                      >
+                        <p className="font-bold text-slate-800 text-xs group-hover:text-purple-700 flex items-center gap-1">
+                          <span>🟣 Caseiro Supervisionado</span>
+                        </p>
+                        <p className="text-[10px] text-slate-500 mt-0.5">
+                          3 consultas: Moldagem/Géis (Dia 0) → Acompanhamento (7d) → Retorno Final (21d)
+                        </p>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleApplyBleachingPreset('office_single', false)}
+                        className="p-2.5 bg-white border border-slate-200 hover:border-amber-500 hover:bg-amber-50/50 rounded-xl text-left transition cursor-pointer shadow-2xs group"
+                      >
+                        <p className="font-bold text-slate-800 text-xs group-hover:text-amber-700 flex items-center gap-1">
+                          <span>⚡ Consultório Sessão Única</span>
+                        </p>
+                        <p className="text-[10px] text-slate-500 mt-0.5">
+                          2 consultas: Aplicação Única (Dia 0) → Avaliação de Cor (7d)
+                        </p>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Lista de Consultas Clínicas */}
+                  <div className="space-y-3 pt-1">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                        Consultas Programadas ({studySessions.length})
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleAddSession(false)}
+                        className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold cursor-pointer transition shadow-2xs flex items-center gap-1"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Adicionar Consulta</span>
+                      </button>
+                    </div>
+                    <div className="space-y-3 max-h-[380px] overflow-y-auto p-1">
+                      {studySessions.map((s, idx) => renderSessionCard(s, idx, false))}
+                    </div>
+                  </div>
 
                   {/* Resumo Geral de Revisão */}
                   <div className="p-4 bg-slate-50 border-2 border-blue-200 rounded-2xl space-y-2.5 text-xs text-slate-800 shadow-2xs">
@@ -3463,6 +3614,7 @@ export default function HomePage() {
                 </div>
               )}
             </div>
+
             {/* Rodapé de Navegação com Botões de Etapas */}
             <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between shrink-0">
               <div>
@@ -3905,7 +4057,7 @@ export default function HomePage() {
                     : 'border-transparent text-slate-500 hover:text-slate-800'
                 }`}
               >
-                <span>📋 1. Dados do Estudo</span>
+                <span>📋 1. Identificação</span>
               </button>
               <button
                 type="button"
@@ -3920,17 +4072,6 @@ export default function HomePage() {
               </button>
               <button
                 type="button"
-                onClick={() => setEditTab('SESSIONS')}
-                className={`py-2 px-3 text-xs font-bold border-b-2 transition flex items-center gap-1.5 cursor-pointer ${
-                  editTab === 'SESSIONS'
-                    ? 'border-blue-600 text-blue-700 bg-blue-50/50 rounded-t-lg'
-                    : 'border-transparent text-slate-500 hover:text-slate-800'
-                }`}
-              >
-                <span>⏱️ 3. Sessões & Consultas ({editStudySessions.length})</span>
-              </button>
-              <button
-                type="button"
                 onClick={() => setEditTab('FORMS')}
                 className={`py-2 px-3 text-xs font-bold border-b-2 transition flex items-center gap-1.5 cursor-pointer ${
                   editTab === 'FORMS'
@@ -3938,7 +4079,18 @@ export default function HomePage() {
                     : 'border-transparent text-slate-500 hover:text-slate-800'
                 }`}
               >
-                <span>📝 4. Formulários & Quem Preenche</span>
+                <span>📝 3. Construtor de eCRF ({editFormTargets.filter(f => f.enabled && f.id !== 'anamnesis' && f.id !== 'odontogram').length})</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditTab('SESSIONS')}
+                className={`py-2 px-3 text-xs font-bold border-b-2 transition flex items-center gap-1.5 cursor-pointer ${
+                  editTab === 'SESSIONS'
+                    ? 'border-blue-600 text-blue-700 bg-blue-50/50 rounded-t-lg'
+                    : 'border-transparent text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                <span>⏱️ 4. Cronograma de Consultas ({editStudySessions.length})</span>
               </button>
             </div>
 
@@ -4204,65 +4356,7 @@ export default function HomePage() {
                 </div>
               )}
 
-              {/* ABA 3: SESSÕES & AVALIAÇÕES CLÍNICAS */}
-              {editTab === 'SESSIONS' && (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between bg-blue-50/70 p-3 rounded-xl border border-blue-200">
-                    <div>
-                      <h4 className="text-xs font-bold text-blue-950 flex items-center gap-1.5">
-                        <Clock className="w-3.5 h-3.5 text-blue-600" />
-                        <span>Cronograma de Consultas de Clareamento</span>
-                      </h4>
-                      <p className="text-[11px] text-blue-800 mt-0.5">
-                        Defina as consultas presenciais de clareamento, os intervalos em dias e o que será avaliado no consultório e pelo paciente.
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleAddSession(true)}
-                      className="px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold flex items-center gap-1 transition shadow-xs cursor-pointer shrink-0"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      <span>Nova Consulta</span>
-                    </button>
-                  </div>
-
-                  {/* Modelos Rápidos de Clareamento */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleApplyBleachingPreset('office_standard', true)}
-                      className="p-2.5 border border-slate-200 rounded-xl text-left bg-white hover:bg-blue-50/60 transition text-xs cursor-pointer shadow-2xs"
-                    >
-                      <p className="font-bold text-slate-800 text-xs">🔵 Consultório Padrão</p>
-                      <p className="text-[10px] text-slate-500 mt-0.5">3 sessões (0d, 7d, 14d)</p>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleApplyBleachingPreset('home_supervised', true)}
-                      className="p-2.5 border border-slate-200 rounded-xl text-left bg-white hover:bg-purple-50/60 transition text-xs cursor-pointer shadow-2xs"
-                    >
-                      <p className="font-bold text-slate-800 text-xs">🟣 Caseiro Supervisionado</p>
-                      <p className="text-[10px] text-slate-500 mt-0.5">3 sessões (0d, 7d, 21d)</p>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleApplyBleachingPreset('office_single', true)}
-                      className="p-2.5 border border-slate-200 rounded-xl text-left bg-white hover:bg-amber-50/60 transition text-xs cursor-pointer shadow-2xs"
-                    >
-                      <p className="font-bold text-slate-800 text-xs">⚡ Consultório Única</p>
-                      <p className="text-[10px] text-slate-500 mt-0.5">2 sessões (0d, 7d)</p>
-                    </button>
-                  </div>
-
-                  {/* Lista de cards de cada sessão */}
-                  <div className="space-y-3">
-                    {editStudySessions.map((s, idx) => renderSessionCard(s, idx, true))}
-                  </div>
-                </div>
-              )}
-
-              {/* ABA 3: FORMULÁRIOS & QUEM PREENCHE */}
+              {/* ABA 3: CONSTRUTOR DE eCRF & QUESTIONÁRIOS */}
               {editTab === 'FORMS' && (
                 <div className="space-y-4">
                   <div className="bg-emerald-50/70 p-3 rounded-xl border border-emerald-200 text-xs text-emerald-950">
@@ -4494,6 +4588,64 @@ export default function HomePage() {
                 </div>
               )}
 
+              {/* ABA 4: CRONOGRAMA DE CONSULTAS CLÍNICAS */}
+              {editTab === 'SESSIONS' && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between bg-blue-50/70 p-3 rounded-xl border border-blue-200">
+                    <div>
+                      <h4 className="text-xs font-bold text-blue-950 flex items-center gap-1.5">
+                        <Clock className="w-3.5 h-3.5 text-blue-600" />
+                        <span>Cronograma de Consultas de Clareamento</span>
+                      </h4>
+                      <p className="text-[11px] text-blue-800 mt-0.5">
+                        Defina as consultas presenciais de clareamento, os intervalos em dias e o que será avaliado no consultório e pelo paciente.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleAddSession(true)}
+                      className="px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold flex items-center gap-1 transition shadow-xs cursor-pointer shrink-0"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Nova Consulta</span>
+                    </button>
+                  </div>
+
+                  {/* Modelos Rápidos de Clareamento */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleApplyBleachingPreset('office_standard', true)}
+                      className="p-2.5 border border-slate-200 rounded-xl text-left bg-white hover:bg-blue-50/60 transition text-xs cursor-pointer shadow-2xs"
+                    >
+                      <p className="font-bold text-slate-800 text-xs">🔵 Consultório Padrão</p>
+                      <p className="text-[10px] text-slate-500 mt-0.5">3 sessões (0d, 7d, 14d)</p>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleApplyBleachingPreset('home_supervised', true)}
+                      className="p-2.5 border border-slate-200 rounded-xl text-left bg-white hover:bg-purple-50/60 transition text-xs cursor-pointer shadow-2xs"
+                    >
+                      <p className="font-bold text-slate-800 text-xs">🟣 Caseiro Supervisionado</p>
+                      <p className="text-[10px] text-slate-500 mt-0.5">3 sessões (0d, 7d, 21d)</p>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleApplyBleachingPreset('office_single', true)}
+                      className="p-2.5 border border-slate-200 rounded-xl text-left bg-white hover:bg-amber-50/60 transition text-xs cursor-pointer shadow-2xs"
+                    >
+                      <p className="font-bold text-slate-800 text-xs">⚡ Consultório Única</p>
+                      <p className="text-[10px] text-slate-500 mt-0.5">2 sessões (0d, 7d)</p>
+                    </button>
+                  </div>
+
+                  {/* Lista de cards de cada sessão */}
+                  <div className="space-y-3">
+                    {editStudySessions.map((s, idx) => renderSessionCard(s, idx, true))}
+                  </div>
+                </div>
+              )}
+
               {/* RODAPÉ DO MODAL */}
               <div className="flex items-center justify-between pt-4 border-t border-slate-100">
                 <button
@@ -4508,15 +4660,15 @@ export default function HomePage() {
                   {editTab === 'GENERAL' && (
                     <button
                       type="button"
-                      onClick={() => setEditTab('SESSIONS')}
+                      onClick={() => setEditTab('GROUPS')}
                       className="px-4 py-2 text-sm font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition cursor-pointer flex items-center gap-1"
                     >
-                      <span>Avançar: Sessões Clínicas</span>
+                      <span>Avançar: Grupos</span>
                       <ArrowRight className="w-4 h-4" />
                     </button>
                   )}
 
-                  {editTab === 'SESSIONS' && (
+                  {editTab === 'GROUPS' && (
                     <>
                       <button
                         type="button"
@@ -4530,16 +4682,36 @@ export default function HomePage() {
                         onClick={() => setEditTab('FORMS')}
                         className="px-4 py-2 text-sm font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition cursor-pointer flex items-center gap-1"
                       >
-                        <span>Avançar: Formulários</span>
+                        <span>Avançar: eCRF</span>
                         <ArrowRight className="w-4 h-4" />
                       </button>
                     </>
                   )}
 
                   {editTab === 'FORMS' && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setEditTab('GROUPS')}
+                        className="px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition cursor-pointer"
+                      >
+                        ← Voltar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditTab('SESSIONS')}
+                        className="px-4 py-2 text-sm font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition cursor-pointer flex items-center gap-1"
+                      >
+                        <span>Avançar: Cronograma</span>
+                        <ArrowRight className="w-4 h-4" />
+                      </button>
+                    </>
+                  )}
+
+                  {editTab === 'SESSIONS' && (
                     <button
                       type="button"
-                      onClick={() => setEditTab('SESSIONS')}
+                      onClick={() => setEditTab('FORMS')}
                       className="px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition cursor-pointer"
                     >
                       ← Voltar

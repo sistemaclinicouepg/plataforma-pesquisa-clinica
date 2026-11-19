@@ -230,6 +230,9 @@ export type StudySessionProtocol = {
   requiresPatientQuestionnaire?: boolean; // Se o paciente precisa responder questionários nesta sessão (default: true)
   patientQuestionnaireIds?: string[]; // IDs dos questionários atribuídos a esta sessão (ex: ['eva', 'ohip', 'satisfaction'])
   patientInstructions?: string; // Orientações personalizadas da sessão enviadas ao paciente
+  responseFrequency?: string; // Periodicidade de resposta domiciliar (ex: 'GCP_HOURS', 'DAILY', 'EVERY_48H', 'WEEKLY', 'BIWEEKLY', 'ONCE', 'CUSTOM')
+  responseIntervalDays?: number; // Se personalizado, intervalo em dias
+  responseIntervalDescription?: string; // Observação ou detalhe do intervalo domiciliar
   // Configurações por sessão para o Pesquisador
   clinicalModules?: SessionClinicalModules;
   clinicalChecklist?: string[]; // Etapas clínicas padronizadas desta sessão
@@ -269,6 +272,7 @@ export type FormTargetProtocol = {
   frequency: FormFrequencyType;
   frequencyDescription?: string;
   isPreset?: boolean;
+  icon?: string;
   questions?: FormQuestionProtocol[];
 };
 
@@ -1398,6 +1402,9 @@ export function parseStudyProtocol(templateStringOrObj: any): StudyProtocolConfi
         ? s.patientQuestionnaireIds
         : (s.requiresPatientQuestionnaire === false ? [] : ['eva']),
       patientInstructions: s.patientInstructions || '',
+      responseFrequency: s.responseFrequency || 'GCP_HOURS',
+      responseIntervalDays: typeof s.responseIntervalDays === 'number' ? s.responseIntervalDays : undefined,
+      responseIntervalDescription: s.responseIntervalDescription || '',
       clinicalModules: s.clinicalModules ? {
         ...s.clinicalModules,
         colorModels: Array.isArray(s.clinicalModules.colorModels) && s.clinicalModules.colorModels.length > 0

@@ -103,7 +103,22 @@ O sistema possui acesso restrito configurado tanto em banco quanto em memória i
 
 ## 🔄 7. Resumo das Últimas Atualizações Realizadas
 
-1. **Portal do Paciente Simplificado e Wizard Passo a Passo (`/paciente`):**
+1. **Reestruturação do Fluxo de Criação de Estudo (Passo a Passo) e Cronograma Personalizado:**
+   - **Nova Ordem Metodológica do Wizard:**
+     - **Passo 1:** 1. Identificação (Nome, Código/Prefixo, Especialidade)
+     - **Passo 2:** 2. Desenho do Estudo (Grupos, Intervenção/Controle, Alocação)
+     - **Passo 3:** 3. Construtor de eCRF (Questionários, Escalas Clínicas EVA/OES/OHIP, Diários, Personalização de Perguntas e definição de quem responde: Paciente no celular ou Pesquisador na clínica)
+     - **Passo 4:** 4. Ficha Clínica (Tamanho Amostral N, Anamnese, Critérios de Inclusão/Exclusão, Odontograma, Periodontograma)
+     - **Passo 5:** 5. Cronograma de Consultas Clínicas (Consultas Programadas por último + Resumo Executivo do Protocolo + Conclusão e Criação do Estudo)
+   - **Sincronização Dinâmica do eCRF nas Consultas:**
+     - Substituição dos botões estáticos/hardcoded no card de cada consulta programada.
+     - **Na Consulta (Pesquisador):** Módulos clínicos (tomada de cor VITA Classical/Bleachedguide/Easyshade, sensibilidade EVA, dentes, tecidos moles) + lista dinâmica dos formulários criados no eCRF para o pesquisador (`respondent === 'RESEARCHER'`).
+     - **No Celular do Paciente:** Lista dinâmica dos questionários habilitados no eCRF (Sensibilidade EVA, Satisfação, Hábitos, OHIP-14 ou qualquer escala personalizada criada no Passo 3).
+   - **Configuração de Periodicidade de Resposta Domiciliar entre Consultas:**
+     - Seletor integrado por consulta com opções: *Padrão GCP (0h, 1h, 24h, 48h)*, *Diário (24h)*, *A cada 48h*, *Semanal (7d)*, *Quinzenal (14d)*, *Única Vez* e *Personalizado (dias configuráveis + observação)*.
+   - **Alinhamento do Modal de Edição (`editTab`):** Abas reorganizadas na mesma sequência (`GENERAL` -> `GROUPS` -> `FORMS` -> `SESSIONS`) com navegação fluida pelos botões de rodapé.
+
+2. **Portal do Paciente Simplificado e Wizard Passo a Passo (`/paciente`):**
    - **Nomenclatura Amigável:** Títulos, descrições e ocorrências científicas foram convertidos para linguagem simples e humana (ex: *OHIP-14* virou *"Qualidade de Vida e Saúde Bucal"*, *Linha de Base* virou *"Avaliação Inicial"*, e descrições acadêmicas foram simplificadas para evitar intimidação do voluntário).
    - **Bloqueio Estrito de Edição após Envio (GCP / ICH E6):** Respostas anteriores não podem ser editadas após envio. O questionário concluído passa a modo de consulta (somente leitura com inputs desabilitados). Alterações só são autorizadas quando o pesquisador clicar em "Liberar Agora" no painel (`/resultados` ou `/dashboard`), com bloqueio também em nível de API (`POST /api/responses`).
    - **Página Inicial Limpa:** Destaque único no questionário ativo disponível e botão proeminente "Iniciar Questionário".
