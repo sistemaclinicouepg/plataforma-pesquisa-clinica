@@ -16,6 +16,12 @@ import {
   Phone,
   Sparkles,
   Stethoscope,
+  ChevronLeft,
+  ChevronRight,
+  ChevronDown,
+  ChevronUp,
+  Check,
+  X,
 } from 'lucide-react';
 import {
   StudyProtocolConfig,
@@ -100,6 +106,17 @@ type CollisionOption = {
   birthYear: number | null;
 };
 
+function cleanFormDescription(desc: string | null | undefined) {
+  if (!desc) return '';
+  return desc
+    .replace(/^modalidade:\s*[^|]+\|\s*/i, '')
+    .replace(/^frequência:\s*[^|]+\|\s*/i, '')
+    .replace(/^frequencia:\s*[^|]+\|\s*/i, '')
+    .replace(/^preenchido por:\s*[^|]+\|\s*/i, '')
+    .replace(/^ocorrência:\s*[^|]+\|\s*/i, '')
+    .trim();
+}
+
 function PacienteContent() {
   const searchParams = useSearchParams();
   const codeParam = searchParams.get('code');
@@ -117,8 +134,11 @@ function PacienteContent() {
   const [disambigCpf, setDisambigCpf] = useState('');
   const [disambigBirth, setDisambigBirth] = useState('');
 
-  // Estados do Questionário Selecionado
+  // Estados do Questionário Selecionado e Modo Passo a Passo (Wizard)
   const [selectedForm, setSelectedForm] = useState<FormItem | null>(null);
+  const [currentStepIndex, setCurrentStepIndex] = useState(0);
+  const [stepHint, setStepHint] = useState<string | null>(null);
+  const [showCompletedHistory, setShowCompletedHistory] = useState(false);
   const [formAnswers, setFormAnswers] = useState<Record<string, FormAnswerValue>>({});
   const [submittingForm, setSubmittingForm] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -131,6 +151,12 @@ function PacienteContent() {
 
   const activateForm = (form: FormItem) => {
     setSelectedForm(form);
+    setCurrentStepIndex(0);
+    setStepHint(null);
+    setFormError(null);
+    setFormSuccessMessage(null);
+    setFormRedAlert(null);
+
     const initialAnswers: Record<string, FormAnswerValue> = { ...(form.myAnswers || {}) };
 
     // Inicializa perguntas VAS caso não haja resposta prévia, respeitando perguntas-filtro (gate questions)
@@ -161,8 +187,6 @@ function PacienteContent() {
     });
 
     setFormAnswers(initialAnswers);
-    setFormError(null);
-    setFormSuccessMessage(null);
   };
 
   const getWhatsAppTarget = () => {
@@ -275,36 +299,79 @@ function PacienteContent() {
   const handleFormAnswerChange = (questionId: string | number, value: FormAnswerValue) => {
     const key = String(questionId);
     setFormAnswers((prev) => ({ ...prev, [key]: value, [questionId]: value }));
+    setStepHint(null);
+    setFormError(null);
   };
 
-  const handleSubmitCustomForm = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // Verifica se a pergunta especificada está respondida de forma válida
+  const isStepAnswered = (q: FormQuestionItem | undefined): boolean => {
+    if (!q) return true;
+    if (q.type === 'instruction') return true;
+    if (!q.required) return true;
+
+    const key = String(q.id);
+    const val = formAnswers[key] ?? formAnswers[q.id];
+
+    if (q.type === 'vas') {
+      if (q.enableGateQuestion) {
+        const gateVal = formAnswers[`${key}_gate`] ?? formAnswers[`${q.id}_gate`];
+        if (!gateVal) return false;
+        if (gateVal === 'sim') {
+          return val !== undefined && val !== null && val !== '';
+        }
+        return true; // 'nao' registrou 0.0 de dor, totalmente válido
+      }
+      return val !== undefined && val !== null && val !== '';
+    }
+
+    if (q.type === 'text') {
+      return typeof val === 'string' && val.trim().length > 0;
+    }
+
+    if (q.type === 'number') {
+      return val !== undefined && val !== null && val !== '';
+    }
+
+    return val !== undefined && val !== null && val !== '';
+  };
+
+  const handleNextStep = () => {
+    if (!selectedForm) return;
+    const currentQ = selectedForm.questions[currentStepIndex];
+    if (currentQ && !isStepAnswered(currentQ)) {
+      setStepHint('Por favor, selecione sua resposta para continuar.');
+      return;
+    }
+    setStepHint(null);
+    if (currentStepIndex < selectedForm.questions.length - 1) {
+      setCurrentStepIndex((prev) => prev + 1);
+    }
+  };
+
+  const handlePrevStep = () => {
+    setStepHint(null);
+    if (currentStepIndex > 0) {
+      setCurrentStepIndex((prev) => prev - 1);
+    }
+  };
+
+  const handleSubmitCustomForm = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (!selectedForm || !participant) return;
 
-    // Validação de campos obrigatórios (instruções informativas nunca bloqueiam envio)
+    // Validação preventiva de todas as perguntas obrigatórias
     const missing = selectedForm.questions.filter((q) => {
       if (q.type === 'instruction') return false;
       if (!q.required) return false;
-      if (q.type === 'vas' && q.enableGateQuestion) {
-        const gateVal = formAnswers[`${String(q.id)}_gate`] ?? formAnswers[`${q.id}_gate`];
-        if (!gateVal) return true; // Pergunta preliminar Sim / Não não respondida
-        if (gateVal === 'sim') {
-          const val = formAnswers[String(q.id)] ?? formAnswers[q.id];
-          return val === undefined || val === null || val === '';
-        }
-        return false; // Respondeu 'Não', bloqueado em 0.0 (válido)
-      }
-      const val = formAnswers[String(q.id)] ?? formAnswers[q.id];
-      return val === undefined || val === null || val === '';
+      return !isStepAnswered(q);
     });
 
     if (missing.length > 0) {
-      setFormError(`Por favor, responda a todas as perguntas obrigatórias antes de enviar (${missing.length} pendente${missing.length > 1 ? 's' : ''}).`);
-      const firstMissing = missing[0];
-      if (typeof window !== 'undefined') {
-        const el = document.getElementById(`question-card-${firstMissing.id}`);
-        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      const firstMissingIndex = selectedForm.questions.findIndex((q) => q.id === missing[0].id);
+      if (firstMissingIndex !== -1) {
+        setCurrentStepIndex(firstMissingIndex);
       }
+      setStepHint('Por favor, responda a esta pergunta obrigatória antes de finalizar.');
       return;
     }
 
@@ -507,108 +574,139 @@ function PacienteContent() {
     );
   }
 
-  // TELA 3: PORTAL EXCLUSIVO DE QUESTIONÁRIOS DO ESTUDO
-  const pendingFormsCount = participant.forms?.filter((f) => !f.isCompleted).length || 0;
+  // TELA 3: PORTAL PRINCIPAL DO ESTUDO OU QUESTIONÁRIO PASSO A PASSO
+  const pendingForms = (participant.forms || []).filter((f) => !f.isCompleted);
+  const completedForms = (participant.forms || []).filter((f) => f.isCompleted);
+  const primaryPendingForm = pendingForms[0];
+  const otherPendingForms = pendingForms.slice(1);
+
+  // Variáveis para o Wizard Passo a Passo
+  const questions = selectedForm?.questions || [];
+  const totalSteps = questions.length;
+  const currentQuestion = questions[currentStepIndex];
+  const isLastStep = currentStepIndex === totalSteps - 1;
+
+  // Numeração de perguntas reais (excluindo telas de orientação do contador)
+  const nonInstructionQuestions = questions.filter((q) => q.type !== 'instruction');
+  const totalQuestionsCount = nonInstructionQuestions.length;
+  const currentQuestionNumber = currentQuestion?.type === 'instruction'
+    ? null
+    : questions.slice(0, currentStepIndex + 1).filter((q) => q.type !== 'instruction').length;
+
+  const progressPercent = totalSteps > 0
+    ? Math.round(((currentStepIndex + 1) / totalSteps) * 100)
+    : 100;
 
   return (
     <div className="min-h-screen bg-slate-100 font-sans text-slate-800 flex justify-center">
-      {/* Contêiner Mobile Responsivo */}
+      {/* Contêiner Mobile Responsivo (Estilo App Nativo) */}
       <div className="w-full max-w-md bg-white min-h-screen shadow-2xl flex flex-col justify-between">
         
-        {/* Cabeçalho do Participante */}
-        <header className="bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 text-white p-6 rounded-b-3xl shadow-lg shrink-0 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-48 h-48 bg-white/10 rounded-full blur-2xl pointer-events-none" />
-          
-          <div className="relative z-10 flex justify-between items-start">
-            <div>
-              <div className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-white/20 text-white text-[10px] font-bold uppercase tracking-wider mb-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-300 animate-pulse" />
-                <span>UEPG • Pesquisa Clínica</span>
+        {/* ========================================== */}
+        {/* CABEÇALHO CONDICIONAL                      */}
+        {/* ========================================== */}
+        {!selectedForm ? (
+          // Cabeçalho da Página Inicial do Participante
+          <header className="bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 text-white p-6 rounded-b-3xl shadow-lg shrink-0 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-48 h-48 bg-white/10 rounded-full blur-2xl pointer-events-none" />
+            
+            <div className="relative z-10 flex justify-between items-start">
+              <div>
+                <div className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-white/20 text-white text-[10px] font-bold uppercase tracking-wider mb-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-300 animate-pulse" />
+                  <span>UEPG • Pesquisa Clínica</span>
+                </div>
+                <h1 className="text-xl font-black mt-0.5 leading-snug tracking-tight">
+                  Olá, {participant.patientName.split(' ')[0]}!
+                </h1>
+                <p className="text-blue-100 text-xs mt-0.5 truncate max-w-[220px]">
+                  {participant.projectName}
+                </p>
               </div>
-              <h1 className="text-lg font-extrabold mt-0.5 leading-snug tracking-tight">
-                {selectedForm ? selectedForm.title : 'Questionários do Estudo'}
-              </h1>
-            </div>
-            <span className="px-3 py-1 bg-white/20 backdrop-blur-md border border-white/25 text-white rounded-full text-xs font-mono font-bold tracking-wider">
-              {participant.researchCode}
-            </span>
-          </div>
 
-          <div className="relative z-10 mt-4 p-3.5 bg-white/15 rounded-2xl text-xs border border-white/20 backdrop-blur-md flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-            <div className="min-w-0">
-              <p className="font-bold text-white truncate text-xs">{participant.patientName}</p>
-              <p className="text-blue-100 text-[11px] truncate mt-0.5">{participant.projectName}</p>
+              <div className="flex flex-col items-end gap-1.5">
+                <span className="px-3 py-1 bg-white/20 backdrop-blur-md border border-white/25 text-white rounded-full text-xs font-mono font-bold tracking-wider">
+                  {participant.researchCode}
+                </span>
+                {participant.id && (
+                  <a
+                    href={`/tcle/${participant.id}/pdf`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-2.5 py-1 bg-white/15 hover:bg-white/25 border border-white/20 text-white rounded-lg text-[10px] font-bold transition flex items-center space-x-1 cursor-pointer"
+                    title="Visualizar documento oficial do TCLE assinado em PDF"
+                  >
+                    <FileText className="w-3 h-3" />
+                    <span>TCLE (PDF)</span>
+                  </a>
+                )}
+              </div>
             </div>
-            <div className="flex items-center gap-2 shrink-0">
-              {participant.id && (
-                <a
-                  href={`/tcle/${participant.id}/pdf`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-2.5 py-1 bg-white/20 hover:bg-white/30 border border-white/25 text-white rounded-lg text-[10px] font-bold transition flex items-center space-x-1 cursor-pointer"
-                  title="Visualizar ou imprimir documento oficial do TCLE assinado em PDF"
-                >
-                  <FileText className="w-3 h-3" />
-                  <span>TCLE (PDF)</span>
-                </a>
-              )}
-            </div>
-          </div>
-        </header>
+          </header>
+        ) : (
+          // Cabeçalho Focado do Modo Passo a Passo (Wizard Stepper)
+          <header className="bg-white border-b border-slate-200 px-5 pt-4 pb-3 shrink-0 sticky top-0 z-20 shadow-2xs">
+            <div className="flex items-center justify-between gap-3 mb-2.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedForm(null);
+                  setCurrentStepIndex(0);
+                  setStepHint(null);
+                }}
+                className="py-1 px-2.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                title="Sair do questionário e voltar ao portal"
+              >
+                <X className="w-4 h-4" />
+                <span>Sair</span>
+              </button>
 
-        {/* Barra de Status e Ocorrência */}
-        <div className="px-4 py-2.5 bg-slate-100/90 border-b border-slate-200 flex items-center justify-between text-xs shrink-0">
-          <div className="flex items-center gap-2 font-bold text-slate-700">
-            <ClipboardList className="w-4 h-4 text-blue-600" />
-            <span>Formulários Atribuídos ao seu Estudo</span>
-          </div>
-          <span className="text-[11px] font-semibold text-slate-600 bg-white px-2.5 py-0.5 rounded-full border border-slate-200 shadow-2xs">
-            {participant.forms?.length || 0} {(participant.forms?.length === 1) ? 'questionário' : 'questionários'}
-          </span>
-        </div>
+              <div className="text-center min-w-0">
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                  {currentQuestion?.type === 'instruction'
+                    ? 'Orientações'
+                    : `Pergunta ${currentQuestionNumber} de ${totalQuestionsCount}`}
+                </span>
+                <span className="text-xs font-extrabold text-slate-800 truncate block max-w-[200px]">
+                  {selectedForm.title}
+                </span>
+              </div>
 
-        {/* Corpo do Conteúdo */}
-        <main className="p-5 flex-1 space-y-5 overflow-y-auto">
-          
-          {/* Saudação Amigável e Contexto */}
-          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 flex items-center justify-between gap-2 shadow-xs">
-            <div>
-              <p className="font-bold text-slate-800 text-xs">
-                Olá, {participant.patientName.split(' ')[0]}!
-              </p>
-              <p className="text-[11px] text-slate-500 mt-0.5">
-                Responda com atenção aos questionários formatados para o seu acompanhamento clínico.
-              </p>
-            </div>
-
-            {pendingFormsCount > 0 && selectedForm && (
-              <span className="px-2.5 py-1 bg-amber-100 text-amber-800 rounded-xl text-[10px] font-bold shrink-0 border border-amber-200">
-                {pendingFormsCount} pendente{pendingFormsCount > 1 ? 's' : ''}
+              <span className="text-xs font-mono font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200 shrink-0">
+                {progressPercent}%
               </span>
-            )}
-          </div>
-
-          {errorMsg && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700">
-              {errorMsg}
             </div>
-          )}
 
-          {/* VISTA 1: FEEDBACK DE SUCESSO APÓS GRAVAR QUESTIONÁRIO */}
-          {formSuccessMessage && (
-            <div className="p-6 bg-white rounded-2xl border border-emerald-200 text-center space-y-4 shadow-sm animate-fadeIn">
+            {/* Barra de Progresso Animada */}
+            <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
               <div
-                className={`w-14 h-14 ${
+                className="bg-blue-600 h-full transition-all duration-300 ease-out rounded-full"
+                style={{ width: `${progressPercent}%` }}
+              />
+            </div>
+          </header>
+        )}
+
+        {/* ========================================== */}
+        {/* CORPO DO CONTEÚDO                          */}
+        {/* ========================================== */}
+        <main className="p-5 flex-1 flex flex-col justify-between overflow-y-auto">
+
+          {/* VISTA 1: FEEDBACK DE SUCESSO APÓS GRAVAR */}
+          {formSuccessMessage && (
+            <div className="my-auto p-6 bg-white rounded-3xl border border-emerald-200 text-center space-y-4 shadow-sm animate-fadeIn">
+              <div
+                className={`w-16 h-16 ${
                   formRedAlert ? 'bg-red-100 text-red-600 animate-pulse' : 'bg-emerald-100 text-emerald-600'
                 } rounded-full flex items-center justify-center mx-auto`}
               >
-                {formRedAlert ? <AlertTriangle className="w-8 h-8" /> : <CheckCircle2 className="w-8 h-8" />}
+                {formRedAlert ? <AlertTriangle className="w-9 h-9" /> : <CheckCircle2 className="w-9 h-9" />}
               </div>
               <div>
                 <h3 className="text-lg font-black text-slate-900">
                   {formRedAlert ? 'Questionário Gravado com Alerta Prioritário!' : 'Questionário Gravado com Sucesso!'}
                 </h3>
-                <p className="text-xs text-slate-500 mt-1">
+                <p className="text-xs text-slate-500 mt-1 leading-relaxed">
                   {formSuccessMessage}
                 </p>
               </div>
@@ -645,594 +743,636 @@ function PacienteContent() {
                 type="button"
                 onClick={() => {
                   setSelectedForm(null);
+                  setCurrentStepIndex(0);
                   setFormSuccessMessage(null);
                   setFormRedAlert(null);
                 }}
-                className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md transition cursor-pointer"
+                className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-xl shadow-md transition cursor-pointer"
               >
-                ← Voltar à Lista de Questionários
+                ← Voltar à Página Inicial
               </button>
             </div>
           )}
 
-          {/* VISTA 2: LISTA DE QUESTIONÁRIOS FORMATADOS DO ESTUDO */}
+          {/* VISTA 2: PÁGINA INICIAL SIMPLIFICADA DO PORTAL */}
           {!formSuccessMessage && !selectedForm && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900">Questionários Formatados</h3>
-                  <p className="text-[11px] text-slate-500">
-                    Selecione o instrumento correspondente à ocorrência desta etapa do estudo.
-                  </p>
-                </div>
-              </div>
+            <div className="space-y-5 flex-1 flex flex-col justify-between">
+              
+              <div className="space-y-4">
+                {/* 1. SE HOUVER QUESTIONÁRIO PENDENTE: CARTÃO DE DESTAQUE COM BOTÃO INICIAR */}
+                {primaryPendingForm ? (
+                  <div className="bg-gradient-to-br from-blue-50/90 via-indigo-50/50 to-white rounded-3xl p-6 border-2 border-blue-200/90 shadow-md space-y-4 animate-fadeIn">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold bg-blue-100 text-blue-800 border border-blue-200">
+                        <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
+                        Disponível para Preenchimento
+                      </span>
+                      {primaryPendingForm.occurrence && (
+                        <span className="text-[11px] font-bold text-slate-600 bg-white px-2.5 py-0.5 rounded-full border border-slate-200 shadow-2xs">
+                          {primaryPendingForm.occurrence}
+                        </span>
+                      )}
+                    </div>
 
-              {(!participant.forms || participant.forms.length === 0) ? (
-                <div className="p-8 bg-slate-50 border border-slate-200 rounded-3xl text-center space-y-3 shadow-2xs">
-                  <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center mx-auto shadow-2xs">
-                    <CheckCircle2 className="w-6 h-6 text-emerald-600" />
+                    <div>
+                      <h3 className="text-lg font-black text-slate-900 tracking-tight leading-snug">
+                        {primaryPendingForm.title}
+                      </h3>
+                      <p className="text-xs text-slate-600 mt-1.5 leading-relaxed">
+                        {cleanFormDescription(primaryPendingForm.description) ||
+                          'Responda como você está se sentindo nesta etapa. Suas respostas auxiliam diretamente no acompanhamento da sua saúde.'}
+                      </p>
+                      
+                      <div className="flex items-center gap-3 mt-3 text-[11px] text-slate-500 font-semibold">
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-3.5 h-3.5 text-blue-600" />
+                          Leva cerca de 2 minutos
+                        </span>
+                        <span>•</span>
+                        <span>
+                          {primaryPendingForm.questions.filter((q) => q.type !== 'instruction').length} perguntas focadas
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* BOTÃO PRINCIPAL DE INÍCIO */}
+                    <button
+                      type="button"
+                      onClick={() => activateForm(primaryPendingForm)}
+                      className="w-full py-4 bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white font-black text-base rounded-2xl shadow-lg shadow-blue-500/25 transition-all transform active:scale-[0.99] flex items-center justify-center gap-2.5 cursor-pointer"
+                    >
+                      <span>Iniciar Questionário</span>
+                      <ArrowRight className="w-5 h-5" />
+                    </button>
                   </div>
-                  <h3 className="font-bold text-slate-800 text-sm">Nenhum Questionário Pendente</h3>
-                  <p className="text-xs text-slate-500 max-w-sm mx-auto leading-relaxed">
-                    Você está cadastrado(a) no estudo <strong>{participant.projectName}</strong>. No momento, não há questionários pendentes de resposta para o seu perfil. Sua participação está regularizada!
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {participant.forms.map((f) => {
-                    const isHome =
-                      f.modality === 'TIME_BASED' ||
-                      (f.occurrence || '').toLowerCase().includes('tempo') ||
-                      (f.occurrence || '').toLowerCase().includes('domiciliar') ||
-                      (f.description || '').toLowerCase().includes('domiciliar');
+                ) : (
+                  // SE NÃO HOUVER NENHUM PENDENTE
+                  <div className="p-8 bg-white rounded-3xl border border-slate-200 text-center space-y-3 shadow-xs">
+                    <div className="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto border border-emerald-200 shadow-2xs">
+                      <CheckCircle2 className="w-7 h-7 text-emerald-600" />
+                    </div>
+                    <h3 className="font-extrabold text-slate-900 text-base">Tudo em dia!</h3>
+                    <p className="text-xs text-slate-500 max-w-xs mx-auto leading-relaxed">
+                      Você não possui questionários pendentes de resposta no momento. Sua participação no estudo <strong>{participant.projectName}</strong> está regularizada.
+                    </p>
+                  </div>
+                )}
 
-                    const cleanDesc = (f.description || '')
-                      .replace(/^modalidade:\s*[^|]+\|\s*/i, '')
-                      .replace(/^frequência:\s*[^|]+\|\s*/i, '')
-                      .replace(/^frequencia:\s*[^|]+\|\s*/i, '')
-                      .replace(/^preenchido por:\s*[^|]+\|\s*/i, '')
-                      .replace(/^ocorrência:\s*[^|]+\|\s*/i, '')
-                      .trim();
-
-                    return (
+                {/* 2. OUTROS QUESTIONÁRIOS PENDENTES (CASO O ESTUDO TENHA MAIS DE UM SIMULTÂNEO) */}
+                {otherPendingForms.length > 0 && (
+                  <div className="space-y-2 pt-1">
+                    <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider px-1">
+                      Outros questionários aguardando resposta:
+                    </p>
+                    {otherPendingForms.map((f) => (
                       <div
                         key={f.id}
-                        className={`p-4 rounded-2xl border transition space-y-3 ${
-                          f.isCompleted
-                            ? 'bg-emerald-50/40 border-emerald-200'
-                            : 'bg-white border-slate-200 hover:border-slate-300 shadow-xs'
-                        }`}
+                        className="p-4 bg-white rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between gap-3"
                       >
-                        <div className="flex justify-between items-start gap-2">
-                          <div>
-                            <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
-                              {isHome ? (
-                                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200 inline-flex items-center gap-1 shadow-2xs">
-                                  <Clock className="w-3 h-3 text-amber-600" />
-                                  <span>⏱️ Acompanhamento Domiciliar por Tempo</span>
-                                </span>
-                              ) : (
-                                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-800 border border-blue-200 inline-flex items-center gap-1 shadow-2xs">
-                                  <Stethoscope className="w-3 h-3 text-blue-600" />
-                                  <span>🩺 Consulta Clínica Presencial</span>
-                                </span>
-                              )}
-                              {f.occurrence && (
-                                <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-700 border border-slate-200 inline-flex items-center gap-1">
-                                  <Calendar className="w-3 h-3 text-slate-500" />
-                                  <span>{f.occurrence}</span>
-                                </span>
-                              )}
-                            </div>
-                            <h4 className="font-bold text-slate-900 text-xs leading-snug">{f.title}</h4>
-                            {cleanDesc && (
-                              <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">
-                                {cleanDesc}
-                              </p>
-                            )}
-                            <span className="inline-block mt-1 text-[10px] text-slate-400 font-mono">
-                              {f.questions.length} perguntas formatadas
-                            </span>
-                          </div>
-                          <span
-                            className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 flex items-center space-x-1 ${
-                              f.isCompleted
-                                ? 'bg-emerald-100 text-emerald-800'
-                                : 'bg-amber-100 text-amber-800'
-                            }`}
-                          >
-                            {f.isCompleted ? (
-                              <>
-                                <CheckCircle2 className="w-3 h-3 text-emerald-700" />
-                                <span>Concluído</span>
-                              </>
-                            ) : (
-                              <>
-                                <Clock className="w-3 h-3 text-amber-700" />
-                                <span>Pendente</span>
-                              </>
-                            )}
-                          </span>
+                        <div className="min-w-0">
+                          <h4 className="font-bold text-slate-900 text-xs truncate">{f.title}</h4>
+                          <p className="text-[10px] text-slate-400 mt-0.5">{f.occurrence || 'Aguardando preenchimento'}</p>
                         </div>
-
-                        <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
-                          <span className="text-[10px] text-slate-400">
-                            {f.isCompleted && f.submittedAt ? `Enviado em ${f.submittedAt}` : 'Aguardando preenchimento'}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => handleSelectForm(f)}
-                            className={`px-3.5 py-1.5 rounded-xl font-bold text-xs transition cursor-pointer ${
-                              f.isCompleted
-                                ? 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-300'
-                                : 'bg-blue-600 hover:bg-blue-700 text-white shadow-xs'
-                            }`}
-                          >
-                            {f.isCompleted ? 'Revisar Respostas' : 'Responder Questionário →'}
-                          </button>
-                        </div>
+                        <button
+                          type="button"
+                          onClick={() => activateForm(f)}
+                          className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl text-xs font-bold transition cursor-pointer shrink-0"
+                        >
+                          Iniciar →
+                        </button>
                       </div>
-                    );
-                  })}
-                </div>
-              )}
+                    ))}
+                  </div>
+                )}
+
+                {/* 3. HISTÓRICO DE QUESTIONÁRIOS JÁ RESPONDIDOS (DISCRETO / RECOLHÍVEL) */}
+                {completedForms.length > 0 && (
+                  <div className="pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowCompletedHistory(!showCompletedHistory)}
+                      className="w-full py-2.5 px-4 bg-slate-50 hover:bg-slate-100 rounded-2xl border border-slate-200 text-xs font-bold text-slate-600 flex items-center justify-between transition cursor-pointer"
+                    >
+                      <span className="flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                        Questionários já respondidos ({completedForms.length})
+                      </span>
+                      <span className="text-slate-400 text-[11px]">
+                        {showCompletedHistory ? 'Ocultar ▲' : 'Ver histórico ▼'}
+                      </span>
+                    </button>
+
+                    {showCompletedHistory && (
+                      <div className="mt-2.5 space-y-2 animate-fadeIn">
+                        {completedForms.map((f) => (
+                          <div
+                            key={f.id}
+                            className="p-3.5 bg-white rounded-2xl border border-slate-200 flex items-center justify-between gap-3 text-xs"
+                          >
+                            <div className="min-w-0">
+                              <p className="font-bold text-slate-800 truncate text-xs">{f.title}</p>
+                              <p className="text-[10px] text-slate-400 mt-0.5">
+                                {f.submittedAt ? `Enviado em ${f.submittedAt}` : 'Concluído'}
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => activateForm(f)}
+                              className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-[11px] font-semibold shrink-0 cursor-pointer"
+                            >
+                              Revisar
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* RODAPÉ INFORMATIVO */}
+              <div className="pt-6 border-t border-slate-200 text-center text-[11px] text-slate-400">
+                Seus dados estão protegidos conforme as diretrizes éticas da UEPG e a LGPD.
+              </div>
             </div>
           )}
 
-          {/* VISTA 3: RESPOSTA AO QUESTIONÁRIO SELECIONADO COM TODAS AS PERGUNTAS FORMATADAS */}
-          {!formSuccessMessage && selectedForm && (
-            <form onSubmit={handleSubmitCustomForm} className="space-y-6 pb-6">
-              <div className="flex items-center justify-between border-b border-slate-200 pb-3">
-                <button
-                  type="button"
-                  onClick={() => setSelectedForm(null)}
-                  className="text-xs font-bold text-blue-600 hover:text-blue-800 flex items-center space-x-1 cursor-pointer"
-                >
-                  <span>←</span>
-                  <span>Voltar aos Questionários</span>
-                </button>
-                <div className="flex items-center space-x-2">
-                  <span className="text-[10px] text-slate-400 font-mono font-bold">
-                    {selectedForm.questions.filter((q) => q.type !== 'instruction').length} perguntas
-                  </span>
-                </div>
-              </div>
+          {/* VISTA 3: RESPOSTA AO QUESTIONÁRIO SELECIONADO - 1 QUESTÃO POR TELA (WIZARD) */}
+          {!formSuccessMessage && selectedForm && currentQuestion && (
+            <div className="flex-1 flex flex-col justify-between space-y-4">
+              
+              {/* CARTÃO DA QUESTÃO ATUAL */}
+              <div className="bg-white rounded-3xl border border-slate-200 p-5 sm:p-6 shadow-xs flex-1 flex flex-col justify-between space-y-4 animate-fadeIn">
+                
+                {/* TOPO DA PERGUNTA: TÍTULO E ORIENTAÇÕES */}
+                <div className="space-y-2.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-200">
+                      {currentQuestion.type === 'instruction'
+                        ? 'Orientações'
+                        : `Etapa ${currentStepIndex + 1} de ${totalSteps}`}
+                    </span>
+                    {currentQuestion.required && (
+                      <span className="text-[10px] font-bold text-slate-400 uppercase">
+                        Obrigatória
+                      </span>
+                    )}
+                  </div>
 
-              <div>
-                <div className="flex flex-wrap items-center gap-1.5 mb-2">
-                  {selectedForm.modality === 'TIME_BASED' ||
-                  (selectedForm.occurrence || '').toLowerCase().includes('tempo') ||
-                  (selectedForm.occurrence || '').toLowerCase().includes('domiciliar') ||
-                  (selectedForm.description || '').toLowerCase().includes('domiciliar') ? (
-                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200 inline-flex items-center gap-1 shadow-2xs">
-                      <Clock className="w-3 h-3 text-amber-600" />
-                      <span>⏱️ Acompanhamento Domiciliar por Tempo</span>
-                    </span>
-                  ) : (
-                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-800 border border-blue-200 inline-flex items-center gap-1 shadow-2xs">
-                      <Stethoscope className="w-3 h-3 text-blue-600" />
-                      <span>🩺 Consulta Clínica Presencial</span>
-                    </span>
-                  )}
-                  {selectedForm.occurrence && (
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-700 border border-slate-200 inline-flex items-center gap-1">
-                      <Calendar className="w-3 h-3 text-slate-500" />
-                      <span>{selectedForm.occurrence}</span>
-                    </span>
+                  <h3 className="text-base sm:text-lg font-black text-slate-900 leading-snug">
+                    {currentQuestion.title}
+                  </h3>
+
+                  {currentQuestion.observation && (
+                    <div className="p-3 bg-blue-50/70 border border-blue-200/80 rounded-2xl text-xs text-blue-900 flex items-start gap-2">
+                      <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                      <span className="leading-relaxed">{currentQuestion.observation}</span>
+                    </div>
                   )}
                 </div>
-                <h3 className="text-base font-bold text-slate-900 leading-snug">{selectedForm.title}</h3>
-                {selectedForm.description && (
-                  <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                    {selectedForm.description
-                      .replace(/^modalidade:\s*[^|]+\|\s*/i, '')
-                      .replace(/^frequência:\s*[^|]+\|\s*/i, '')
-                      .replace(/^frequencia:\s*[^|]+\|\s*/i, '')
-                      .replace(/^preenchido por:\s*[^|]+\|\s*/i, '')
-                      .replace(/^ocorrência:\s*[^|]+\|\s*/i, '')
-                      .trim()}
-                  </p>
-                )}
-              </div>
 
-              <div className="space-y-5">
-                {(() => {
-                  let questionCounter = 0;
-                  return selectedForm.questions.map((q) => {
-                    const isInstruction = q.type === 'instruction';
-                    const qNumber = !isInstruction ? ++questionCounter : null;
-                    const answerKey = String(q.id);
-                    const currentAnswer = formAnswers[answerKey] ?? formAnswers[q.id];
-
-                    // 1. INSTRUÇÃO / ORIENTAÇÃO CLÍNICA
-                    if (isInstruction) {
-                      return (
-                        <div
-                          key={q.id}
-                          className="p-4 bg-blue-50/70 border border-blue-200 rounded-2xl space-y-2 shadow-2xs"
-                        >
-                          <div className="flex items-center space-x-2 text-blue-900 font-bold text-xs">
-                            <Info className="w-4 h-4 text-blue-600 shrink-0" />
-                            <span>{q.title || 'Orientações do Estudo'}</span>
-                          </div>
-                          <p className="text-[11px] text-blue-800 leading-relaxed">
-                            {q.description ||
-                              q.observation ||
-                              'Leia com atenção as perguntas a seguir e selecione as opções que melhor descrevem suas observações.'}
-                          </p>
-                        </div>
-                      );
-                    }
-
-                    const isMissing = Boolean(
-                      formError &&
-                      q.required &&
-                      (currentAnswer === undefined || currentAnswer === null || currentAnswer === '')
-                    );
+                {/* ÁREA DE RESPOSTA INTERATIVA (ESPECÍFICA DO TIPO) */}
+                <div className="my-auto py-2">
+                  {/* 1. LIKERT */}
+                  {currentQuestion.type === 'likert' && (() => {
+                    const options =
+                      currentQuestion.options && currentQuestion.options.length > 0
+                        ? currentQuestion.options
+                        : [
+                            { label: 'Nunca', value: '0' },
+                            { label: 'Raramente', value: '1' },
+                            { label: 'Às vezes', value: '2' },
+                            { label: 'Frequentemente', value: '3' },
+                            { label: 'Sempre', value: '4' },
+                          ];
+                    const currentAnswer = formAnswers[String(currentQuestion.id)] ?? formAnswers[currentQuestion.id];
 
                     return (
-                      <div
-                        key={q.id}
-                        id={`question-card-${q.id}`}
-                        className={`p-4 rounded-2xl space-y-3 transition ${
-                          isMissing
-                            ? 'bg-red-50/60 border-2 border-red-400 ring-2 ring-red-100'
-                            : 'bg-slate-50 border border-slate-200'
-                        }`}
-                      >
-                        <div>
-                          <h4 className="font-bold text-slate-900 text-xs leading-snug">
-                            {qNumber}. {q.title} {q.required && <span className="text-red-500 font-bold">*</span>}
-                          </h4>
-                          {q.observation && (
-                            <p className="text-[11px] text-slate-600 mt-1.5 bg-white p-2.5 rounded-lg border border-slate-200 leading-relaxed flex items-start space-x-1.5">
-                              <Info className="w-3.5 h-3.5 text-blue-600 shrink-0 mt-0.5" />
-                              <span>
-                                <strong>Orientação:</strong> {q.observation}
+                      <div className="space-y-2.5">
+                        {options.map((opt) => {
+                          const isSelected = String(currentAnswer) === String(opt.value);
+                          const cleanLabel = opt.label.replace(/\s*\(\d+\)/g, '').trim();
+                          return (
+                            <button
+                              key={opt.value}
+                              type="button"
+                              onClick={() => handleFormAnswerChange(currentQuestion.id, opt.value)}
+                              className={`w-full p-4 rounded-2xl border-2 text-left transition flex items-center justify-between cursor-pointer ${
+                                isSelected
+                                  ? 'bg-blue-600 border-blue-600 text-white font-bold shadow-md ring-2 ring-blue-300 scale-[1.01]'
+                                  : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50'
+                              }`}
+                            >
+                              <span className="text-sm font-semibold">{cleanLabel}</span>
+                              <div
+                                className={`w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 ${
+                                  isSelected ? 'border-white bg-white text-blue-600' : 'border-slate-300'
+                                }`}
+                              >
+                                {isSelected && <Check className="w-4 h-4 stroke-[3]" />}
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
+
+                  {/* 2. MÚLTIPLA ESCOLHA (CHOICE) */}
+                  {currentQuestion.type === 'choice' && (() => {
+                    const options =
+                      currentQuestion.options && currentQuestion.options.length > 0
+                        ? currentQuestion.options
+                        : [
+                            { label: 'Opção 1', value: '1' },
+                            { label: 'Opção 2', value: '2' },
+                          ];
+                    const currentAnswer = formAnswers[String(currentQuestion.id)] ?? formAnswers[currentQuestion.id];
+
+                    return (
+                      <div className="space-y-2.5">
+                        {options.map((opt) => {
+                          const isSelected = String(currentAnswer) === String(opt.value);
+                          return (
+                            <button
+                              key={opt.value}
+                              type="button"
+                              onClick={() => handleFormAnswerChange(currentQuestion.id, opt.value)}
+                              className={`w-full p-4 rounded-2xl border-2 text-left transition flex items-center justify-between cursor-pointer ${
+                                isSelected
+                                  ? 'bg-blue-600 border-blue-600 text-white font-bold shadow-md ring-2 ring-blue-300 scale-[1.01]'
+                                  : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50'
+                              }`}
+                            >
+                              <span className="text-sm font-semibold">{opt.label}</span>
+                              <div
+                                className={`w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 ${
+                                  isSelected ? 'border-white bg-white text-blue-600' : 'border-slate-300'
+                                }`}
+                              >
+                                {isSelected && <Check className="w-4 h-4 stroke-[3]" />}
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
+
+                  {/* 3. BINÁRIO (SIM / NÃO) */}
+                  {currentQuestion.type === 'boolean' && (() => {
+                    const currentAnswer = formAnswers[String(currentQuestion.id)] ?? formAnswers[currentQuestion.id];
+                    return (
+                      <div className="grid grid-cols-2 gap-3 pt-2">
+                        {[
+                          { label: 'Sim', val: 'Sim', bgActive: 'bg-emerald-600 border-emerald-600 text-white ring-2 ring-emerald-300' },
+                          { label: 'Não', val: 'Não', bgActive: 'bg-slate-700 border-slate-700 text-white ring-2 ring-slate-300' },
+                        ].map((item) => {
+                          const isSelected = currentAnswer === item.val;
+                          return (
+                            <button
+                              key={item.val}
+                              type="button"
+                              onClick={() => handleFormAnswerChange(currentQuestion.id, item.val)}
+                              className={`py-4 px-3 rounded-2xl border-2 text-center text-sm font-black transition cursor-pointer flex items-center justify-center gap-2 ${
+                                isSelected
+                                  ? `${item.bgActive} shadow-md scale-[1.02]`
+                                  : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50'
+                              }`}
+                            >
+                              {isSelected && <Check className="w-4 h-4 stroke-[3]" />}
+                              <span>{item.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
+
+                  {/* 4. ESCALA VISUAL ANALÓGICA (EVA / VAS) */}
+                  {currentQuestion.type === 'vas' && (() => {
+                    const qIdStr = String(currentQuestion.id);
+                    const gateKey = `${qIdStr}_gate`;
+                    const gateVal = formAnswers[gateKey] ?? formAnswers[`${currentQuestion.id}_gate`];
+                    const isGateEnabled = Boolean(currentQuestion.enableGateQuestion);
+                    const hasPain = gateVal === 'sim';
+                    const isBlockedNoPain = isGateEnabled && gateVal === 'nao';
+
+                    const currentAnswer = formAnswers[qIdStr] ?? formAnswers[currentQuestion.id];
+                    const vasVal =
+                      typeof currentAnswer === 'number'
+                        ? currentAnswer
+                        : typeof currentAnswer === 'string' && !isNaN(Number(currentAnswer))
+                        ? Number(currentAnswer)
+                        : 0;
+
+                    const cleanMinLabel =
+                      (currentQuestion.minLabel || 'Ausente / Mínimo')
+                        .replace(/^[0-9\s=.:-]+/g, '')
+                        .trim() || 'Ausente / Mínimo';
+                    const cleanMaxLabel =
+                      (currentQuestion.maxLabel || 'Severo / Máximo')
+                        .replace(/^[0-9\s=.:-]+/g, '')
+                        .trim() || 'Severo / Máximo';
+
+                    return (
+                      <div className="py-2 space-y-4">
+                        {/* Pergunta preliminar Sim / Não condicional */}
+                        {isGateEnabled && (
+                          <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl space-y-3">
+                            <div className="flex items-center gap-2">
+                              <span className="w-2.5 h-2.5 rounded-full bg-blue-600 shrink-0" />
+                              <span className="text-xs sm:text-sm font-black text-slate-800">
+                                {currentQuestion.gateQuestionTitle || 'Você sentiu dor ou sensibilidade?'}
                               </span>
-                            </p>
-                          )}
-                        </div>
-
-                        {/* Matriz 1 a 10 + NA */}
-                        {(q.type === 'matrix' || q.type === ('matrix' as any)) && (() => {
-                          const options =
-                            q.options && q.options.length > 0
-                              ? q.options
-                              : [
-                                  { label: '1', value: '1' },
-                                  { label: '2', value: '2' },
-                                  { label: '3', value: '3' },
-                                  { label: '4', value: '4' },
-                                  { label: '5', value: '5' },
-                                  { label: '6', value: '6' },
-                                  { label: '7', value: '7' },
-                                  { label: '8', value: '8' },
-                                  { label: '9', value: '9' },
-                                  { label: '10', value: '10' },
-                                  { label: 'NA', value: 'NA' },
-                                ];
-
-                          return (
-                            <div className="pt-2 space-y-2.5">
-                              <div className="flex justify-between items-center text-[10px] text-slate-500 font-semibold px-0.5">
-                                <span>1 = Pior / Mínimo</span>
-                                <span>10 = Excelente / Máximo</span>
-                              </div>
-                              <div className="grid grid-cols-6 sm:grid-cols-11 gap-1.5">
-                                {options.map((opt) => {
-                                  const isSelected = String(currentAnswer) === String(opt.value);
-                                  const isNA = opt.value === 'NA';
-                                  return (
-                                    <button
-                                      key={opt.value}
-                                      type="button"
-                                      onClick={() => handleFormAnswerChange(q.id, opt.value)}
-                                      className={`h-11 rounded-xl text-xs font-bold transition flex items-center justify-center cursor-pointer ${
-                                        isSelected
-                                          ? 'bg-blue-600 text-white border-2 border-blue-600 shadow-md ring-2 ring-blue-300 scale-[1.03]'
-                                          : isNA
-                                          ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300'
-                                          : 'bg-white hover:bg-slate-100 text-slate-800 border border-slate-200'
-                                      } ${isNA ? 'col-span-2 sm:col-span-1 text-[11px]' : ''}`}
-                                    >
-                                      {opt.label}
-                                    </button>
-                                  );
-                                })}
-                              </div>
-                              {currentAnswer !== undefined && currentAnswer !== null && currentAnswer !== '' && (
-                                <div className="flex justify-end items-center text-[11px] font-semibold text-emerald-700 pt-0.5">
-                                  <span>
-                                    {currentAnswer === 'NA' ? '✓ NA (Não se aplica)' : '✓ Opção selecionada'}
-                                  </span>
-                                </div>
-                              )}
                             </div>
-                          );
-                        })()}
-
-                        {/* Escala Likert */}
-                        {(q.type === 'likert' || q.type === ('likert' as any)) && (() => {
-                          const options =
-                            q.options && q.options.length > 0
-                              ? q.options
-                              : [
-                                  { label: 'Nunca', value: '0' },
-                                  { label: 'Raramente', value: '1' },
-                                  { label: 'Às vezes', value: '2' },
-                                  { label: 'Frequentemente', value: '3' },
-                                  { label: 'Sempre', value: '4' },
-                                ];
-
-                          return (
-                            <div className="grid grid-cols-1 gap-1.5 pt-1">
-                              {options.map((opt) => {
-                                const isSelected = String(currentAnswer) === String(opt.value);
-                                const cleanLabel = opt.label.replace(/\s*\(\d+\)/g, '').trim();
-                                return (
-                                  <button
-                                    key={opt.value}
-                                    type="button"
-                                    onClick={() => handleFormAnswerChange(q.id, opt.value)}
-                                    className={`p-2.5 rounded-xl border text-left text-xs transition flex justify-between items-center cursor-pointer ${
-                                      isSelected
-                                        ? 'bg-blue-600 text-white border-blue-600 font-bold shadow-xs'
-                                        : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
-                                    }`}
-                                  >
-                                    <span>{cleanLabel}</span>
-                                    {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-white" />}
-                                  </button>
-                                );
-                              })}
+                            <div className="grid grid-cols-2 gap-2.5 pt-1">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  handleFormAnswerChange(gateKey, 'sim');
+                                  handleFormAnswerChange(`${currentQuestion.id}_gate`, 'sim');
+                                  if (currentAnswer === undefined || currentAnswer === null) {
+                                    handleFormAnswerChange(currentQuestion.id, 0);
+                                  }
+                                }}
+                                className={`py-3 px-3 rounded-xl text-xs sm:text-sm font-bold transition flex items-center justify-center gap-1.5 border-2 cursor-pointer ${
+                                  hasPain
+                                    ? 'bg-blue-600 text-white border-blue-600 shadow-sm ring-2 ring-blue-300'
+                                    : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                                }`}
+                              >
+                                {hasPain && <Check className="w-4 h-4 stroke-[3]" />}
+                                <span>Sim (Tive dor)</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  handleFormAnswerChange(gateKey, 'nao');
+                                  handleFormAnswerChange(`${currentQuestion.id}_gate`, 'nao');
+                                  handleFormAnswerChange(currentQuestion.id, 0);
+                                }}
+                                className={`py-3 px-3 rounded-xl text-xs sm:text-sm font-bold transition flex items-center justify-center gap-1.5 border-2 cursor-pointer ${
+                                  isBlockedNoPain
+                                    ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm ring-2 ring-emerald-300'
+                                    : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                                }`}
+                              >
+                                {isBlockedNoPain && <Check className="w-4 h-4 stroke-[3]" />}
+                                <span>Não (Sem dor)</span>
+                              </button>
                             </div>
-                          );
-                        })()}
-
-                        {/* Múltipla Escolha */}
-                        {(q.type === 'choice' || q.type === ('choice' as any)) && (() => {
-                          const options =
-                            q.options && q.options.length > 0
-                              ? q.options
-                              : [
-                                  { label: 'Opção 1', value: '1' },
-                                  { label: 'Opção 2', value: '2' },
-                                ];
-
-                          return (
-                            <div className="space-y-1.5 pt-1">
-                              {options.map((opt) => {
-                                const isSelected = String(currentAnswer) === String(opt.value);
-                                return (
-                                  <button
-                                    key={opt.value}
-                                    type="button"
-                                    onClick={() => handleFormAnswerChange(q.id, opt.value)}
-                                    className={`w-full p-2.5 rounded-xl border text-left text-xs transition flex justify-between items-center cursor-pointer ${
-                                      isSelected
-                                        ? 'bg-blue-600 text-white border-blue-600 font-bold shadow-xs'
-                                        : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
-                                    }`}
-                                  >
-                                    <span>{opt.label}</span>
-                                    {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-white" />}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          );
-                        })()}
-
-                        {/* Binário (Sim / Não) */}
-                        {q.type === 'boolean' && (
-                          <div className="grid grid-cols-2 gap-2 pt-1">
-                            {['Sim', 'Não'].map((val) => {
-                              const isSelected = currentAnswer === val;
-                              return (
-                                <button
-                                  key={val}
-                                  type="button"
-                                  onClick={() => handleFormAnswerChange(q.id, val)}
-                                  className={`py-2.5 rounded-xl border text-center text-xs font-bold transition cursor-pointer ${
-                                    isSelected
-                                      ? val === 'Sim'
-                                        ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
-                                        : 'bg-slate-700 text-white border-slate-700 shadow-xs'
-                                      : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
-                                  }`}
-                                >
-                                  {val}
-                                </button>
-                              );
-                            })}
                           </div>
                         )}
 
-                        {/* Escala Visual Analógica (EVA) */}
-                        {q.type === 'vas' && (() => {
-                          const gateKey = `${String(q.id)}_gate`;
-                          const gateVal = formAnswers[gateKey] ?? formAnswers[`${q.id}_gate`];
-                          const isGateEnabled = Boolean(q.enableGateQuestion);
-                          const isGateAnswered = Boolean(gateVal);
-                          const hasPain = gateVal === 'sim';
-                          const isBlockedNoPain = isGateEnabled && gateVal === 'nao';
-
-                          const vasVal =
-                            typeof currentAnswer === 'number'
-                              ? currentAnswer
-                              : typeof currentAnswer === 'string' && !isNaN(Number(currentAnswer))
-                              ? Number(currentAnswer)
-                              : 0;
-                          const cleanMinLabel = (q.minLabel || 'Ausente / Mínimo')
-                            .replace(/^[0-9\s=.:-]+/g, '')
-                            .trim() || 'Ausente / Mínimo';
-                          const cleanMaxLabel = (q.maxLabel || 'Severo / Máximo')
-                            .replace(/^[0-9\s=.:-]+/g, '')
-                            .trim() || 'Severo / Máximo';
-
-                          return (
-                            <div className="py-2 px-1 space-y-3">
-                              {/* Pergunta preliminar Sim / Não condicional (se habilitada no CRF) */}
-                              {isGateEnabled && (
-                                <div className="p-3.5 bg-gradient-to-r from-blue-50/80 to-indigo-50/60 border border-blue-200/90 rounded-2xl space-y-2.5 shadow-2xs">
-                                  <div className="flex items-center gap-2">
-                                    <span className="w-2.5 h-2.5 rounded-full bg-blue-600 shrink-0" />
-                                    <span className="text-xs sm:text-sm font-bold text-slate-800">
-                                      {q.gateQuestionTitle || 'Você teve dor ou sensibilidade?'}
-                                    </span>
-                                  </div>
-                                  <p className="text-[11px] text-slate-500 pl-4 leading-tight">
-                                    Indique abaixo se sentiu qualquer grau de dor ou sensibilidade para liberar a régua de intensidade:
-                                  </p>
-                                  <div className="grid grid-cols-2 gap-2.5 pt-1 pl-4">
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        handleFormAnswerChange(gateKey, 'sim');
-                                        handleFormAnswerChange(`${q.id}_gate`, 'sim');
-                                        if (currentAnswer === undefined || currentAnswer === null) {
-                                          handleFormAnswerChange(q.id, 0);
-                                        }
-                                      }}
-                                      className={`py-2 px-3 rounded-xl text-xs sm:text-sm font-bold transition flex items-center justify-center gap-2 border cursor-pointer ${
-                                        hasPain
-                                          ? 'bg-blue-600 text-white border-blue-600 shadow-sm ring-2 ring-blue-300'
-                                          : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
-                                      }`}
-                                    >
-                                      <span>Sim (Tive dor)</span>
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        handleFormAnswerChange(gateKey, 'nao');
-                                        handleFormAnswerChange(`${q.id}_gate`, 'nao');
-                                        handleFormAnswerChange(q.id, 0);
-                                      }}
-                                      className={`py-2 px-3 rounded-xl text-xs sm:text-sm font-bold transition flex items-center justify-center gap-2 border cursor-pointer ${
-                                        isBlockedNoPain
-                                          ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm ring-2 ring-emerald-300'
-                                          : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
-                                      }`}
-                                    >
-                                      <span>Não (Sem dor)</span>
-                                    </button>
-                                  </div>
-                                </div>
-                              )}
-
-                              {/* Alerta de bloqueio enquanto o paciente não responder a pergunta preliminar */}
-                              {isGateEnabled && !isGateAnswered && (
-                                <div className="p-3 bg-slate-50 border border-dashed border-slate-300 rounded-xl text-center text-xs text-slate-500">
-                                  Responda &quot;Sim&quot; ou &quot;Não&quot; acima para liberar a escala de intensidade da dor.
-                                </div>
-                              )}
-
-                              {/* Alerta de confirmação quando responder "Não" (sem dor) -> nota 0.0 */}
-                              {isBlockedNoPain && (
-                                <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center gap-2.5 text-emerald-800 text-xs">
-                                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                                  <div className="leading-snug">
-                                    <span className="font-bold">Ausência de dor registrada (Nota 0.0).</span>
-                                    <span className="text-emerald-700 block text-[11px]">A escala permanece bloqueada pois você informou que não sentiu dor.</span>
-                                  </div>
-                                </div>
-                              )}
-
-                              {/* Régua Contínua EVA: Exibida se a pergunta preliminar não estiver ativa OU se o voluntário respondeu "Sim" */}
-                              {(!isGateEnabled || hasPain) && (
-                                <div className="space-y-3 pt-1">
-                                  <p className="text-[11px] text-slate-500 italic px-1">
-                                    Deslize o marcador na linha contínua até o ponto que melhor representa o que você sente:
-                                  </p>
-                                  <div className="relative flex items-center py-1">
-                                    <div className="w-1 h-6 bg-slate-400 rounded-full shrink-0 -mr-1 z-10" />
-                                    <input
-                                      type="range"
-                                      min="0"
-                                      max="10"
-                                      step="0.1"
-                                      value={vasVal}
-                                      onTouchStart={() => handleFormAnswerChange(q.id, vasVal)}
-                                      onMouseDown={() => handleFormAnswerChange(q.id, vasVal)}
-                                      onChange={(e) =>
-                                        handleFormAnswerChange(
-                                          q.id,
-                                          parseFloat(parseFloat(e.target.value).toFixed(1))
-                                        )
-                                      }
-                                      className="w-full h-3 bg-slate-200 border border-slate-300 rounded-lg appearance-none cursor-pointer accent-blue-600 focus:outline-none shadow-inner"
-                                    />
-                                    <div className="w-1 h-6 bg-slate-400 rounded-full shrink-0 -ml-1 z-10" />
-                                  </div>
-                                  <div className="flex justify-between items-start text-xs pt-0.5 px-1">
-                                    <span className="font-bold text-slate-800 max-w-[48%] text-left leading-snug">
-                                      {cleanMinLabel}
-                                    </span>
-                                    <span className="font-bold text-slate-800 max-w-[48%] text-right leading-snug">
-                                      {cleanMaxLabel}
-                                    </span>
-                                  </div>
-                                </div>
-                              )}
+                        {/* Alerta de confirmação quando responder "Não" (sem dor) -> nota 0.0 */}
+                        {isBlockedNoPain && (
+                          <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center gap-2.5 text-emerald-800 text-xs animate-fadeIn">
+                            <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                            <div className="leading-snug">
+                              <span className="font-bold block text-xs">Ausência de dor registrada (Nota 0.0)</span>
+                              <span className="text-emerald-700 text-[11px]">Você informou que não sentiu dor. Clique em &quot;Próxima&quot; para continuar.</span>
                             </div>
-                          );
-                        })()}
-
-                        {/* Texto Aberto */}
-                        {q.type === 'text' && (
-                          <textarea
-                            rows={3}
-                            value={(currentAnswer as string | undefined) ?? ''}
-                            onChange={(e) => handleFormAnswerChange(q.id, e.target.value)}
-                            placeholder="Digite sua resposta aqui..."
-                            className="w-full p-2.5 border border-slate-300 rounded-xl text-xs bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                          />
+                          </div>
                         )}
 
-                        {/* Número */}
-                        {q.type === 'number' && (
-                          <input
-                            type="number"
-                            value={(currentAnswer as string | number | undefined) ?? ''}
-                            onChange={(e) => handleFormAnswerChange(q.id, e.target.value)}
-                            placeholder="Informe um número..."
-                            className="w-full p-2.5 border border-slate-300 rounded-xl text-xs bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                          />
+                        {/* Régua Contínua EVA */}
+                        {(!isGateEnabled || hasPain) && (
+                          <div className="space-y-4 pt-1">
+                            <div className="text-center p-3 bg-slate-50 rounded-2xl border border-slate-200">
+                              <span className="text-2xl font-black text-slate-900 font-mono">
+                                {vasVal.toFixed(1)}
+                              </span>
+                              <span className="text-xs text-slate-400 font-bold ml-1">/ 10</span>
+                              <p className="text-xs font-bold text-blue-600 mt-0.5">
+                                {vasVal === 0
+                                  ? 'Sem dor / Ausente'
+                                  : vasVal < 3
+                                  ? 'Dor leve'
+                                  : vasVal < 7
+                                  ? 'Dor moderada'
+                                  : 'Dor intensa / severa'}
+                              </p>
+                            </div>
+
+                            <p className="text-[11px] text-slate-500 italic text-center">
+                              Arraste a barra para marcar a intensidade do que você sentiu:
+                            </p>
+
+                            <div className="relative flex items-center py-2 px-1">
+                              <div className="w-1.5 h-7 bg-slate-400 rounded-full shrink-0 -mr-1 z-10" />
+                              <input
+                                type="range"
+                                min="0"
+                                max="10"
+                                step="0.1"
+                                value={vasVal}
+                                onTouchStart={() => handleFormAnswerChange(currentQuestion.id, vasVal)}
+                                onMouseDown={() => handleFormAnswerChange(currentQuestion.id, vasVal)}
+                                onChange={(e) =>
+                                  handleFormAnswerChange(
+                                    currentQuestion.id,
+                                    parseFloat(parseFloat(e.target.value).toFixed(1))
+                                  )
+                                }
+                                className="w-full h-3.5 bg-slate-200 border border-slate-300 rounded-lg appearance-none cursor-pointer accent-blue-600 focus:outline-none"
+                              />
+                              <div className="w-1.5 h-7 bg-slate-400 rounded-full shrink-0 -ml-1 z-10" />
+                            </div>
+
+                            <div className="flex justify-between items-start text-xs font-bold text-slate-700 px-1">
+                              <span className="max-w-[48%] text-left">{cleanMinLabel}</span>
+                              <span className="max-w-[48%] text-right">{cleanMaxLabel}</span>
+                            </div>
+                          </div>
                         )}
                       </div>
                     );
-                  });
-                })()}
-              </div>
+                  })()}
 
-              <div className="pt-2">
-                {formError && (
-                  <div className="mb-3.5 p-3.5 bg-red-50 border-2 border-red-300 rounded-xl text-xs text-red-800 flex items-center space-x-2 shadow-xs">
+                  {/* 5. MATRIZ 1 A 10 + NA */}
+                  {currentQuestion.type === 'matrix' && (() => {
+                    const options =
+                      currentQuestion.options && currentQuestion.options.length > 0
+                        ? currentQuestion.options
+                        : [
+                            { label: '1', value: '1' },
+                            { label: '2', value: '2' },
+                            { label: '3', value: '3' },
+                            { label: '4', value: '4' },
+                            { label: '5', value: '5' },
+                            { label: '6', value: '6' },
+                            { label: '7', value: '7' },
+                            { label: '8', value: '8' },
+                            { label: '9', value: '9' },
+                            { label: '10', value: '10' },
+                            { label: 'NA', value: 'NA' },
+                          ];
+                    const currentAnswer = formAnswers[String(currentQuestion.id)] ?? formAnswers[currentQuestion.id];
+
+                    return (
+                      <div className="pt-2 space-y-3">
+                        <div className="flex justify-between items-center text-[10px] text-slate-500 font-semibold px-0.5">
+                          <span>1 = Pior / Mínimo</span>
+                          <span>10 = Excelente / Máximo</span>
+                        </div>
+                        <div className="grid grid-cols-6 sm:grid-cols-11 gap-1.5">
+                          {options.map((opt) => {
+                            const isSelected = String(currentAnswer) === String(opt.value);
+                            const isNA = opt.value === 'NA';
+                            return (
+                              <button
+                                key={opt.value}
+                                type="button"
+                                onClick={() => handleFormAnswerChange(currentQuestion.id, opt.value)}
+                                className={`h-12 rounded-xl text-xs font-bold transition flex items-center justify-center cursor-pointer ${
+                                  isSelected
+                                    ? 'bg-blue-600 text-white border-2 border-blue-600 shadow-md ring-2 ring-blue-300 scale-[1.05]'
+                                    : isNA
+                                    ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300'
+                                    : 'bg-white hover:bg-slate-100 text-slate-800 border border-slate-200'
+                                } ${isNA ? 'col-span-2 sm:col-span-1 text-[11px]' : ''}`}
+                              >
+                                {opt.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        {currentAnswer !== undefined && currentAnswer !== null && currentAnswer !== '' && (
+                          <div className="flex justify-end items-center text-xs font-bold text-emerald-700 pt-0.5">
+                            <span>
+                              {currentAnswer === 'NA' ? '✓ NA (Não se aplica)' : `✓ Opção ${currentAnswer} selecionada`}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+
+                  {/* 6. TEXTO ABERTO */}
+                  {currentQuestion.type === 'text' && (() => {
+                    const currentAnswer = formAnswers[String(currentQuestion.id)] ?? formAnswers[currentQuestion.id];
+                    return (
+                      <div className="pt-2">
+                        <textarea
+                          rows={4}
+                          value={(currentAnswer as string | undefined) ?? ''}
+                          onChange={(e) => handleFormAnswerChange(currentQuestion.id, e.target.value)}
+                          placeholder="Digite sua resposta aqui..."
+                          className="w-full p-4 border-2 border-slate-200 rounded-2xl text-xs sm:text-sm bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 focus:outline-none transition"
+                        />
+                      </div>
+                    );
+                  })()}
+
+                  {/* 7. NÚMERO */}
+                  {currentQuestion.type === 'number' && (() => {
+                    const currentAnswer = formAnswers[String(currentQuestion.id)] ?? formAnswers[currentQuestion.id];
+                    return (
+                      <div className="pt-2">
+                        <input
+                          type="number"
+                          inputMode="numeric"
+                          value={(currentAnswer as string | number | undefined) ?? ''}
+                          onChange={(e) => handleFormAnswerChange(currentQuestion.id, e.target.value)}
+                          placeholder="Informe um número..."
+                          className="w-full p-4 border-2 border-slate-200 rounded-2xl text-base font-mono font-bold bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 focus:outline-none transition text-center"
+                        />
+                      </div>
+                    );
+                  })()}
+
+                  {/* 8. INSTRUÇÃO / ORIENTAÇÃO */}
+                  {currentQuestion.type === 'instruction' && (
+                    <div className="p-6 bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-3xl space-y-3 text-center my-auto">
+                      <div className="w-12 h-12 bg-blue-600 text-white rounded-2xl flex items-center justify-center mx-auto shadow-md">
+                        <Info className="w-6 h-6" />
+                      </div>
+                      <h4 className="text-base font-black text-blue-950">
+                        {currentQuestion.title || 'Orientações do Estudo'}
+                      </h4>
+                      <p className="text-xs text-blue-800 leading-relaxed max-w-sm mx-auto">
+                        {currentQuestion.description ||
+                          currentQuestion.observation ||
+                          'Leia com atenção as perguntas a seguir e selecione as opções que melhor descrevem o que você observou.'}
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* ALERTA INLINE CASO TENTE AVANÇAR SEM RESPONDER */}
+                {stepHint && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 font-bold flex items-center gap-2 animate-fadeIn">
                     <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
-                    <span className="font-semibold">{formError}</span>
+                    <span>{stepHint}</span>
                   </div>
                 )}
-                <button
-                  type="submit"
-                  disabled={submittingForm}
-                  className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-xl shadow-lg transition disabled:opacity-50 flex items-center justify-center space-x-2 cursor-pointer"
-                >
-                  {submittingForm ? (
-                    <span>Gravando Respostas...</span>
+
+                {/* NAVEGAÇÃO DO WIZARD: ANTERIOR / PRÓXIMA / FINALIZAR */}
+                <div className="pt-4 border-t border-slate-100 flex items-center justify-between gap-3">
+                  {currentStepIndex > 0 ? (
+                    <button
+                      type="button"
+                      onClick={handlePrevStep}
+                      className="py-3 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs sm:text-sm rounded-xl transition flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                      <span>Anterior</span>
+                    </button>
                   ) : (
-                    <>
-                      <CheckCircle2 className="w-4 h-4" />
-                      <span>Enviar Respostas do Questionário</span>
-                    </>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedForm(null)}
+                      className="py-3 px-3.5 text-slate-400 hover:text-slate-700 font-semibold text-xs flex items-center gap-1 cursor-pointer"
+                    >
+                      <X className="w-4 h-4" />
+                      <span>Sair</span>
+                    </button>
                   )}
-                </button>
-                <p className="text-[10px] text-slate-400 text-center mt-2">
-                  Dados integrados diretamente ao banco de pesquisa clínica da UEPG.
-                </p>
+
+                  {!isLastStep ? (
+                    <button
+                      type="button"
+                      onClick={handleNextStep}
+                      disabled={!isStepAnswered(currentQuestion)}
+                      className="py-3 px-5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 text-white font-extrabold text-xs sm:text-sm rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer disabled:cursor-not-allowed ml-auto"
+                    >
+                      <span>{currentQuestion.type === 'instruction' ? 'Continuar' : 'Próxima'}</span>
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  ) : selectedForm.isCompleted ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedForm(null);
+                        setCurrentStepIndex(0);
+                      }}
+                      className="py-3 px-5 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs sm:text-sm rounded-xl transition cursor-pointer ml-auto"
+                    >
+                      <span>Voltar ao Início</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => handleSubmitCustomForm()}
+                      disabled={submittingForm || !isStepAnswered(currentQuestion)}
+                      className="py-3 px-5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 disabled:bg-slate-200 disabled:text-slate-400 text-white font-extrabold text-xs sm:text-sm rounded-xl shadow-lg shadow-emerald-600/20 transition-all flex items-center gap-1.5 cursor-pointer disabled:cursor-not-allowed ml-auto"
+                    >
+                      {submittingForm ? (
+                        <span>Gravando...</span>
+                      ) : (
+                        <>
+                          <CheckCircle2 className="w-4 h-4" />
+                          <span>Finalizar e Enviar</span>
+                        </>
+                      )}
+                    </button>
+                  )}
+                </div>
+
               </div>
-            </form>
+
+            </div>
           )}
 
         </main>
