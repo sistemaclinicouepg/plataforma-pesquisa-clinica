@@ -678,10 +678,86 @@ export default function HomePage() {
     isEdit: boolean
   ) => {
     const list = isEdit ? editStudySessions : studySessions;
-    const current = list[index]?.patientQuestionnaireIds || ['eva'];
+    const currentSession = list[index];
+    const current = currentSession?.patientQuestionnaireIds || ['eva'];
     const exists = current.includes(qId);
     const updatedIds = exists ? current.filter((id) => id !== qId) : [...current, qId];
-    handleUpdateSession(index, 'patientQuestionnaireIds', updatedIds, isEdit);
+
+    const currentFreqs = currentSession?.questionnaireFrequencies || {};
+    let updatedFreqs = { ...currentFreqs };
+    if (!exists && !updatedFreqs[qId]) {
+      if (qId === 'eva' || qId.includes('dor') || qId.includes('sensibil')) {
+        updatedFreqs[qId] = currentSession?.responseFrequency || 'DAILY';
+      } else {
+        updatedFreqs[qId] = 'ONCE';
+      }
+    } else if (exists) {
+      delete updatedFreqs[qId];
+    }
+
+    const updatedSession = {
+      ...currentSession,
+      patientQuestionnaireIds: updatedIds,
+      questionnaireFrequencies: updatedFreqs,
+    };
+
+    const updatedList = list.map((s, idx) => (idx === index ? updatedSession : s));
+    if (isEdit) {
+      setEditStudySessions(updatedList);
+    } else {
+      setStudySessions(updatedList);
+    }
+  };
+
+  const getQuestionnaireFreq = (s: StudySessionProtocol, qId: string) => {
+    if (s.questionnaireFrequencies && s.questionnaireFrequencies[qId]) {
+      return s.questionnaireFrequencies[qId];
+    }
+    if (qId === 'eva' || qId.includes('dor') || qId.includes('sensibil')) {
+      return s.responseFrequency || 'DAILY';
+    }
+    return 'ONCE';
+  };
+
+  const getQuestionnaireCustom = (s: StudySessionProtocol, qId: string) => {
+    if (s.questionnaireCustomIntervals && s.questionnaireCustomIntervals[qId]) {
+      return s.questionnaireCustomIntervals[qId];
+    }
+    return {
+      days: s.responseIntervalDays || 3,
+      description: s.responseIntervalDescription || '',
+    };
+  };
+
+  const handleUpdateQuestionnaireFrequency = (
+    sessionIndex: number,
+    qId: string,
+    freq: string,
+    isEdit: boolean
+  ) => {
+    const list = isEdit ? editStudySessions : studySessions;
+    const currentSession = list[sessionIndex];
+    if (!currentSession) return;
+    const currentFreqs = currentSession.questionnaireFrequencies || {};
+    const updatedFreqs = { ...currentFreqs, [qId]: freq };
+    handleUpdateSession(sessionIndex, 'questionnaireFrequencies', updatedFreqs, isEdit);
+  };
+
+  const handleUpdateQuestionnaireCustomInterval = (
+    sessionIndex: number,
+    qId: string,
+    field: 'days' | 'description',
+    value: any,
+    isEdit: boolean
+  ) => {
+    const list = isEdit ? editStudySessions : studySessions;
+    const currentSession = list[sessionIndex];
+    if (!currentSession) return;
+    const currentCustom = currentSession.questionnaireCustomIntervals || {};
+    const itemCustom = currentCustom[qId] || {};
+    const updatedItem = { ...itemCustom, [field]: value };
+    const updatedCustom = { ...currentCustom, [qId]: updatedItem };
+    handleUpdateSession(sessionIndex, 'questionnaireCustomIntervals', updatedCustom, isEdit);
   };
 
   const handleToggleSessionClinicalModule = (
@@ -1266,73 +1342,146 @@ export default function HomePage() {
                 })()}
               </div>
 
-              {/* Seletor de Periodicidade Domiciliar */}
-              <div className="p-2.5 bg-white/80 rounded-xl border border-indigo-200/70 space-y-2">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-                  <label className="text-[11px] font-bold text-indigo-950 flex items-center gap-1.5">
-                    <Clock className="w-3.5 h-3.5 text-indigo-600" />
-                    <span>Periodicidade com que o paciente responde em casa (entre consultas):</span>
-                  </label>
-                  <span className="text-[10px] text-indigo-700 bg-indigo-100/70 px-2 py-0.5 rounded-full font-medium">
-                    Intervalo domiciliar
-                  </span>
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
-                  {[
-                    { id: 'GCP_HOURS', label: 'Padrão GCP', desc: '0h, 1h, 24h e 48h', icon: '⏱️' },
-                    { id: 'DAILY', label: 'Diário (24h)', desc: 'A cada 24 horas', icon: '📅' },
-                    { id: 'EVERY_48H', label: 'A cada 48h', desc: 'Dia sim / dia não', icon: '⏳' },
-                    { id: 'WEEKLY', label: 'Semanal (7d)', desc: 'A cada 7 dias', icon: '📆' },
-                    { id: 'BIWEEKLY', label: 'Quinzenal (14d)', desc: 'A cada 14 dias', icon: '🗓️' },
-                    { id: 'ONCE', label: 'Única Vez', desc: 'Pontual pós-sessão', icon: '🎯' },
-                    { id: 'CUSTOM', label: 'Personalizado', desc: 'Configurar dias', icon: '⚙️' },
-                  ].map((freq) => {
-                    const isSelected = (s.responseFrequency || 'GCP_HOURS') === freq.id;
-                    return (
-                      <button
-                        key={freq.id}
-                        type="button"
-                        onClick={() => handleUpdateSession(idx, 'responseFrequency', freq.id, isEdit)}
-                        className={`p-2 rounded-lg border text-left transition cursor-pointer flex flex-col justify-between ${
-                          isSelected
-                            ? 'bg-indigo-600 text-white border-indigo-600 shadow-2xs font-bold'
-                            : 'bg-white border-slate-200 text-slate-700 hover:bg-indigo-50/50'
-                        }`}
-                      >
-                        <span className="text-xs flex items-center gap-1">
-                          <span>{freq.icon}</span>
-                          <span>{freq.label}</span>
-                        </span>
-                        <span className={`text-[10px] mt-0.5 ${isSelected ? 'text-indigo-100' : 'text-slate-500'}`}>
-                          {freq.desc}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {s.responseFrequency === 'CUSTOM' && (
-                  <div className="flex flex-wrap items-center gap-2 pt-1 animate-in fade-in">
-                    <label className="text-[11px] font-semibold text-slate-700">Responder a cada:</label>
-                    <input
-                      type="number"
-                      min={1}
-                      max={180}
-                      value={s.responseIntervalDays || 3}
-                      onChange={(e) => handleUpdateSession(idx, 'responseIntervalDays', Math.max(1, Number(e.target.value)), isEdit)}
-                      className="w-16 px-2 py-1 border border-slate-300 rounded-lg text-xs bg-white font-bold text-center"
-                    />
-                    <span className="text-[11px] text-slate-600 font-medium">dias até o próximo retorno</span>
-                    <input
-                      type="text"
-                      value={s.responseIntervalDescription || ''}
-                      onChange={(e) => handleUpdateSession(idx, 'responseIntervalDescription', e.target.value, isEdit)}
-                      placeholder="Observação (ex: nos dias pares de uso do gel caseiro)"
-                      className="flex-1 min-w-[200px] px-2.5 py-1 border border-slate-300 rounded-lg text-xs bg-white"
-                    />
+              {/* Seletor de Periodicidade Domiciliar Individual por Questionário */}
+              {activeQIds.length > 0 && (
+                <div className="space-y-3 pt-2.5 border-t border-indigo-100">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                    <label className="text-[11px] font-bold text-indigo-950 flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5 text-indigo-600" />
+                      <span>Periodicidade de Resposta no Celular (Individual por Questionário):</span>
+                    </label>
+                    <span className="text-[10px] text-indigo-700 bg-indigo-100/70 px-2 py-0.5 rounded-full font-medium">
+                      {activeQIds.length} {activeQIds.length === 1 ? 'questionário configurado' : 'questionários configurados'}
+                    </span>
                   </div>
-                )}
-              </div>
+                  <p className="text-[10px] text-slate-500 leading-snug">
+                    Personalize a frequência com que o paciente responderá cada questionário entre esta consulta e a próxima (ex: Diário de Sensibilidade a cada 24h e OHIP-14 uma única vez):
+                  </p>
+
+                  <div className="space-y-2.5">
+                    {(() => {
+                      const allForms = isEdit ? editFormTargets : formTargets;
+                      const selectedForms = allForms.filter((f) => activeQIds.includes(f.id));
+
+                      return selectedForms.map((qForm) => {
+                        const qFreq = getQuestionnaireFreq(s, qForm.id);
+                        const qCustom = getQuestionnaireCustom(s, qForm.id);
+                        const isCustom = qFreq === 'CUSTOM';
+
+                        return (
+                          <div
+                            key={qForm.id}
+                            className="p-3 bg-white rounded-xl border border-indigo-200/80 shadow-2xs space-y-2 transition"
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span className="text-base shrink-0">{qForm.icon || '📝'}</span>
+                                <div className="min-w-0">
+                                  <span className="text-xs font-bold text-slate-900 block truncate">
+                                    {qForm.title}
+                                  </span>
+                                  <span className="text-[10px] text-slate-400">
+                                    {qForm.questions?.length || 0} {qForm.questions?.length === 1 ? 'pergunta' : 'perguntas'}
+                                  </span>
+                                </div>
+                              </div>
+                              <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 shrink-0">
+                                {qFreq === 'GCP_HOURS'
+                                  ? '⏱️ Padrão GCP'
+                                  : qFreq === 'DAILY'
+                                  ? '📅 Diário (24h)'
+                                  : qFreq === 'EVERY_48H'
+                                  ? '⏳ A cada 48h'
+                                  : qFreq === 'WEEKLY'
+                                  ? '📆 Semanal (7d)'
+                                  : qFreq === 'BIWEEKLY'
+                                  ? '🗓️ Quinzenal (14d)'
+                                  : qFreq === 'ONCE'
+                                  ? '🎯 Única Vez'
+                                  : '⚙️ Personalizado'}
+                              </span>
+                            </div>
+
+                            {/* Grade de Frequências para este questionário específico */}
+                            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-1.5 pt-0.5">
+                              {[
+                                { id: 'GCP_HOURS', label: 'Padrão GCP', desc: '0h, 1h, 24h e 48h', icon: '⏱️' },
+                                { id: 'DAILY', label: 'Diário (24h)', desc: 'A cada 24 horas', icon: '📅' },
+                                { id: 'EVERY_48H', label: 'A cada 48h', desc: 'Dia sim / não', icon: '⏳' },
+                                { id: 'WEEKLY', label: 'Semanal (7d)', desc: 'A cada 7 dias', icon: '📆' },
+                                { id: 'BIWEEKLY', label: 'Quinzenal', desc: 'A cada 14 dias', icon: '🗓️' },
+                                { id: 'ONCE', label: 'Única Vez', desc: 'Pontual pós-sessão', icon: '🎯' },
+                                { id: 'CUSTOM', label: 'Personalizado', desc: 'Configurar dias', icon: '⚙️' },
+                              ].map((freq) => {
+                                const isSelected = qFreq === freq.id;
+                                return (
+                                  <button
+                                    key={freq.id}
+                                    type="button"
+                                    onClick={() => handleUpdateQuestionnaireFrequency(idx, qForm.id, freq.id, isEdit)}
+                                    className={`p-1.5 rounded-lg border text-left transition cursor-pointer flex flex-col justify-between ${
+                                      isSelected
+                                        ? 'bg-indigo-600 text-white border-indigo-600 shadow-2xs font-bold ring-1 ring-indigo-600'
+                                        : 'bg-slate-50/70 border-slate-200 text-slate-700 hover:bg-indigo-50/50'
+                                    }`}
+                                  >
+                                    <span className="text-[11px] flex items-center gap-1 font-bold">
+                                      <span>{freq.icon}</span>
+                                      <span className="truncate">{freq.label}</span>
+                                    </span>
+                                    <span className={`text-[9px] mt-0.5 truncate ${isSelected ? 'text-indigo-100' : 'text-slate-400'}`}>
+                                      {freq.desc}
+                                    </span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+
+                            {/* Seletor Customizado se CUSTOM selecionado */}
+                            {isCustom && (
+                              <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100 animate-in fade-in">
+                                <label className="text-[11px] font-semibold text-slate-700">Responder a cada:</label>
+                                <input
+                                  type="number"
+                                  min={1}
+                                  max={180}
+                                  value={qCustom.days || 3}
+                                  onChange={(e) =>
+                                    handleUpdateQuestionnaireCustomInterval(
+                                      idx,
+                                      qForm.id,
+                                      'days',
+                                      Math.max(1, Number(e.target.value)),
+                                      isEdit
+                                    )
+                                  }
+                                  className="w-16 px-2 py-1 border border-slate-300 rounded-lg text-xs bg-white font-bold text-center focus:ring-2 focus:ring-indigo-500"
+                                />
+                                <span className="text-[11px] text-slate-600 font-medium">dias até o próximo retorno</span>
+                                <input
+                                  type="text"
+                                  value={qCustom.description || ''}
+                                  onChange={(e) =>
+                                    handleUpdateQuestionnaireCustomInterval(
+                                      idx,
+                                      qForm.id,
+                                      'description',
+                                      e.target.value,
+                                      isEdit
+                                    )
+                                  }
+                                  placeholder="Observação (ex: nos dias pares de uso do gel caseiro)"
+                                  className="flex-1 min-w-[200px] px-2.5 py-1 border border-slate-300 rounded-lg text-xs bg-white focus:ring-2 focus:ring-indigo-500"
+                                />
+                              </div>
+                            )}
+                          </div>
+                        );
+                      });
+                    })()}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

@@ -114,8 +114,10 @@ O sistema possui acesso restrito configurado tanto em banco quanto em memória i
      - Substituição dos botões estáticos/hardcoded no card de cada consulta programada.
      - **Na Consulta (Pesquisador):** Módulos clínicos (tomada de cor VITA Classical/Bleachedguide/Easyshade, sensibilidade EVA, dentes, tecidos moles) + lista dinâmica dos formulários criados no eCRF para o pesquisador (`respondent === 'RESEARCHER'`).
      - **No Celular do Paciente:** Lista dinâmica dos questionários habilitados no eCRF (Sensibilidade EVA, Satisfação, Hábitos, OHIP-14 ou qualquer escala personalizada criada no Passo 3).
-   - **Configuração de Periodicidade de Resposta Domiciliar entre Consultas:**
-     - Seletor integrado por consulta com opções: *Padrão GCP (0h, 1h, 24h, 48h)*, *Diário (24h)*, *A cada 48h*, *Semanal (7d)*, *Quinzenal (14d)*, *Única Vez* e *Personalizado (dias configuráveis + observação)*.
+   - **Configuração de Periodicidade de Resposta Domiciliar Individual por Questionário:**
+     - Quando mais de um questionário é encaminhado ao celular do paciente na mesma consulta, **a periodicidade é personalizada de forma independente para cada instrumento** (ex: *Diário de Sensibilidade EVA a cada 24 horas*, enquanto *OHIP-14* ou *Satisfação* é configurado para *Uma Única Vez*).
+     - Cada questionário possui seu próprio painel com seletores dedicados: *Padrão GCP (0h, 1h, 24h, 48h)*, *Diário (24h)*, *A cada 48h*, *Semanal (7d)*, *Quinzenal (14d)*, *Única Vez* e *Personalizado (dias configuráveis + observação)*.
+     - Sincronização automática na mensagem de WhatsApp gerada para o paciente no Dashboard, refletindo a frequência específica de cada questionário da sessão.
    - **Alinhamento do Modal de Edição (`editTab`):** Abas reorganizadas na mesma sequência (`GENERAL` -> `GROUPS` -> `FORMS` -> `SESSIONS`) com navegação fluida pelos botões de rodapé.
 
 2. **Portal do Paciente Simplificado e Wizard Passo a Passo (`/paciente`):**

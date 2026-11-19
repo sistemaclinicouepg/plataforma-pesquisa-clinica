@@ -7382,21 +7382,38 @@ function DashboardContent() {
           }
 
           const qIds = protoSession?.patientQuestionnaireIds || ['eva'];
+          const qFreqs = (protoSession as any)?.questionnaireFrequencies || {};
+          const formatFreqText = (id: string, defaultDesc: string) => {
+            const freq = qFreqs[id];
+            if (!freq) return defaultDesc;
+            if (freq === 'GCP_HOURS') return '1h hoje, 24h amanhã, 48h em 2 dias';
+            if (freq === 'DAILY') return 'preenchimento diário a cada 24h';
+            if (freq === 'EVERY_48H') return 'a cada 48 horas';
+            if (freq === 'WEEKLY') return 'semanal (a cada 7 dias)';
+            if (freq === 'BIWEEKLY') return 'a cada 14 dias';
+            if (freq === 'ONCE') return 'resposta única';
+            if (freq === 'CUSTOM') {
+              const customInfo = (protoSession as any)?.questionnaireCustomIntervals?.[id];
+              return customInfo?.days ? `a cada ${customInfo.days} dias` : 'intervalo personalizado';
+            }
+            return defaultDesc;
+          };
+
           const bullets: string[] = [];
           if (qIds.includes('eva')) {
-            bullets.push('• Diário de Sensibilidade & Dor (1h hoje, 24h amanhã, 48h em 2 dias)');
+            bullets.push(`• Diário de Sensibilidade & Dor (${formatFreqText('eva', '1h hoje, 24h amanhã, 48h em 2 dias')})`);
           }
           if (qIds.includes('ohip')) {
-            bullets.push('• Questionário OHIP-14 (Qualidade de Vida em Saúde Bucal)');
+            bullets.push(`• Questionário OHIP-14 (${formatFreqText('ohip', 'resposta única')})`);
           }
           if (qIds.includes('satisfaction')) {
-            bullets.push('• Avaliação de Satisfação com o Tratamento');
+            bullets.push(`• Avaliação de Satisfação com o Tratamento (${formatFreqText('satisfaction', 'resposta única')})`);
           }
           if (qIds.includes('habits')) {
-            bullets.push('• Diário de Hábitos, Higiene e Dieta');
+            bullets.push(`• Diário de Hábitos, Higiene e Dieta (${formatFreqText('habits', 'preenchimento diário')})`);
           }
           if (qIds.includes('surgery_edema')) {
-            bullets.push('• Acompanhamento de Edema Facial e Conforto Mastigatório');
+            bullets.push(`• Acompanhamento de Edema Facial (${formatFreqText('surgery_edema', '1h, 24h e 48h')})`);
           }
 
           let text = `Olá, ${patientFirstName}! Seu atendimento clínico da ${sessionName} foi realizado com sucesso na UEPG.\n\nPor favor, acompanhe e registre seus relatos no seu Portal do Paciente:\n👉 ${diaryUrl}\n\n`;
