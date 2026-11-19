@@ -2677,38 +2677,45 @@ export default function HomePage() {
         )}
       </main>
 
-      {/* Modal de Criação de Projeto por Etapas (Wizard) */}
+      {/* Modal de Criação de Projeto por Etapas (Wizard em Tela Inteira) */}
       {isCreateModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-150">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl sm:max-w-4xl border border-slate-200 max-h-[92vh] flex flex-col overflow-hidden">
-            {/* Header */}
-            <div className="p-5 pb-3 border-b border-slate-100 flex items-start justify-between bg-white shrink-0">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 border border-blue-100">
-                  <FolderPlus className="w-5 h-5" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-bold text-slate-900 leading-snug">Novo Estudo Clínico por Etapas</h2>
-                  <p className="text-xs text-slate-500">
-                    Preenchimento guiado em 5 etapas para não esquecer nenhum parâmetro do protocolo.
-                  </p>
-                </div>
+        <div className="fixed inset-0 z-50 bg-slate-50 flex flex-col overflow-hidden animate-in fade-in duration-150">
+          {/* Header Superior em Tela Cheia */}
+          <div className="px-6 py-3.5 border-b border-slate-200 bg-white flex items-center justify-between shrink-0 shadow-2xs">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                <FolderPlus className="w-5 h-5" />
               </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setIsCreateModalOpen(false);
-                  setCreateStep(1);
-                  setCreateStepError(null);
-                }}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-base sm:text-lg font-bold text-slate-900 leading-tight">Novo Estudo Clínico por Etapas</h2>
+                  <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                    Etapa {createStep} de 5
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500">
+                  Preenchimento guiado em 5 etapas para padronização completa do protocolo clínico, eCRF e cronograma.
+                </p>
+              </div>
             </div>
 
-            {/* Stepper / Indicador das 5 Etapas */}
-            <div className="grid grid-cols-5 border-b border-slate-200 bg-slate-50/80 shrink-0 text-xs">
+            <button
+              type="button"
+              onClick={() => {
+                setIsCreateModalOpen(false);
+                setCreateStep(1);
+                setCreateStepError(null);
+              }}
+              className="px-3.5 py-1.5 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition cursor-pointer flex items-center gap-1.5 text-xs font-bold border border-slate-200 shadow-2xs"
+            >
+              <X className="w-4 h-4" />
+              <span>Sair / Cancelar</span>
+            </button>
+          </div>
+
+          {/* Stepper / Indicador das 5 Etapas em Largura Ampla */}
+          <div className="bg-white border-b border-slate-200 shrink-0 shadow-2xs">
+            <div className="max-w-6xl mx-auto grid grid-cols-5 text-xs">
               {[
                 { num: 1, title: '1. Identificação', sub: 'Nome e código' },
                 { num: 2, title: '2. Desenho do Estudo', sub: 'Grupos do estudo' },
@@ -2731,16 +2738,16 @@ export default function HomePage() {
                       setCreateStepError(null);
                       setCreateStep(step.num);
                     }}
-                    className={`py-3 px-2 text-left border-b-2 transition flex items-center gap-2 cursor-pointer ${
+                    className={`py-3.5 px-3 text-left border-b-2 transition flex items-center gap-2.5 cursor-pointer ${
                       isCurrent
-                        ? 'border-blue-600 bg-white text-blue-700 shadow-2xs'
+                        ? 'border-blue-600 bg-blue-50/50 text-blue-700 shadow-2xs font-bold'
                         : isPast
-                        ? 'border-emerald-500 text-emerald-800 hover:bg-slate-100'
-                        : 'border-transparent text-slate-500 hover:bg-slate-100'
+                        ? 'border-emerald-500 text-emerald-800 hover:bg-slate-50'
+                        : 'border-transparent text-slate-500 hover:bg-slate-50'
                     }`}
                   >
                     <div
-                      className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
+                      className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 shadow-2xs ${
                         isCurrent
                           ? 'bg-blue-600 text-white'
                           : isPast
@@ -2748,7 +2755,7 @@ export default function HomePage() {
                           : 'bg-slate-200 text-slate-600'
                       }`}
                     >
-                      {isPast ? <Check className="w-3.5 h-3.5" /> : step.num}
+                      {isPast ? <Check className="w-4 h-4 stroke-[2.5]" /> : step.num}
                     </div>
                     <div className="hidden sm:block min-w-0">
                       <p className="font-bold text-xs truncate leading-tight">{step.title}</p>
@@ -2758,17 +2765,21 @@ export default function HomePage() {
                 );
               })}
             </div>
+          </div>
 
-            {/* Mensagem de Erro de Etapa */}
-            {createStepError && (
-              <div className="px-5 py-2.5 bg-red-50 border-b border-red-200 text-xs text-red-700 flex items-center gap-2 shrink-0">
+          {/* Mensagem de Erro de Etapa */}
+          {createStepError && (
+            <div className="bg-red-50 border-b border-red-200 text-xs text-red-700 shrink-0">
+              <div className="max-w-6xl mx-auto px-6 py-2.5 flex items-center gap-2">
                 <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
-                <span>{createStepError}</span>
+                <span className="font-medium">{createStepError}</span>
               </div>
-            )}
+            </div>
+          )}
 
-            {/* Conteúdo com Scroll da Etapa Atual */}
-            <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4">
+          {/* Conteúdo com Scroll da Etapa Atual em Container Centralizado Amplo */}
+          <div className="flex-1 overflow-y-auto bg-slate-50/70 p-4 sm:p-6 lg:p-8">
+            <div className="max-w-6xl mx-auto w-full pb-10 space-y-4">
               {/* ETAPA 1: DADOS DO ESTUDO */}
               {createStep === 1 && (
                 <div className="space-y-4 animate-in fade-in duration-150">
@@ -2899,7 +2910,7 @@ export default function HomePage() {
                         Nenhum grupo cadastrado ainda. Use os modelos acima ou digite abaixo para adicionar.
                       </div>
                     ) : (
-                      <div className="space-y-2 max-h-[220px] overflow-y-auto p-1">
+                      <div className="space-y-2 p-1">
                         {newProjectGroups.map((grp, idx) => (
                           <div
                             key={idx}
@@ -3007,7 +3018,7 @@ export default function HomePage() {
                     )}
 
                     {/* Lista de Instrumentos / Questionários do eCRF */}
-                    <div className="space-y-2.5 max-h-[460px] overflow-y-auto p-1">
+                    <div className="space-y-3 p-1">
                       {formTargets.filter((f) => f.id !== 'anamnesis' && f.id !== 'odontogram').map((f) => {
                         const qList = Array.isArray(f.questions) && f.questions.length > 0
                           ? f.questions
@@ -3159,7 +3170,7 @@ export default function HomePage() {
                                     Nenhuma pergunta cadastrada neste questionário. Clique em <strong>Nova Pergunta</strong> para começar.
                                   </div>
                                 ) : (
-                                  <div className="space-y-2.5 max-h-[300px] overflow-y-auto p-0.5">
+                                  <div className="space-y-2.5 p-0.5">
                                     {qList.map((q: any, qIdx: number) => (
                                       <div
                                         key={q.id || qIdx}
@@ -3504,7 +3515,7 @@ export default function HomePage() {
                         </div>
 
                         {/* Lista das Perguntas */}
-                        <div className="space-y-2 max-h-[220px] overflow-y-auto p-1">
+                        <div className="space-y-2 p-1">
                           {newProjectQuestions.map((q, idx) => (
                             <div
                               key={q.id || idx}
@@ -3709,7 +3720,7 @@ export default function HomePage() {
                         <span>Adicionar Consulta</span>
                       </button>
                     </div>
-                    <div className="space-y-3 max-h-[380px] overflow-y-auto p-1">
+                    <div className="space-y-3 p-1">
                       {studySessions.map((s, idx) => renderSessionCard(s, idx, false))}
                     </div>
                   </div>
@@ -3763,9 +3774,11 @@ export default function HomePage() {
                 </div>
               )}
             </div>
+          </div>
 
-            {/* Rodapé de Navegação com Botões de Etapas */}
-            <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between shrink-0">
+          {/* Rodapé Fixo de Navegação em Tela Cheia com Botões de Etapas */}
+          <footer className="p-4 bg-white border-t border-slate-200 shrink-0 shadow-lg">
+            <div className="max-w-6xl mx-auto flex items-center justify-between">
               <div>
                 {createStep === 1 ? (
                   <button
@@ -3775,7 +3788,7 @@ export default function HomePage() {
                       setCreateStep(1);
                       setCreateStepError(null);
                     }}
-                    className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-200/60 rounded-xl transition cursor-pointer"
+                    className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition cursor-pointer"
                   >
                     Cancelar
                   </button>
@@ -3783,16 +3796,16 @@ export default function HomePage() {
                   <button
                     type="button"
                     onClick={handlePrevCreateStep}
-                    className="px-4 py-2 text-xs font-bold text-slate-700 bg-white border border-slate-300 hover:bg-slate-100 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-2xs"
+                    className="px-5 py-2.5 text-xs font-bold text-slate-700 bg-white border border-slate-300 hover:bg-slate-100 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-2xs"
                   >
-                    <ArrowLeft className="w-3.5 h-3.5" />
+                    <ArrowLeft className="w-4 h-4" />
                     <span>Voltar</span>
                   </button>
                 )}
               </div>
 
-              <div className="flex items-center gap-2">
-                <span className="text-[11px] text-slate-400 font-semibold mr-1">
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-slate-500 font-semibold mr-1">
                   Etapa {createStep} de 5
                 </span>
 
@@ -3800,21 +3813,21 @@ export default function HomePage() {
                   <button
                     type="button"
                     onClick={handleNextCreateStep}
-                    className="px-5 py-2.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-xs hover:shadow transition cursor-pointer flex items-center gap-1.5"
+                    className="px-6 py-2.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-xs hover:shadow transition cursor-pointer flex items-center gap-1.5"
                   >
                     <span>Avançar</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
+                    <ArrowRight className="w-4 h-4" />
                   </button>
                 ) : (
                   <button
                     type="button"
                     onClick={(e) => handleCreateProject(e, 'dashboard')}
                     disabled={creating || !newProjectName.trim()}
-                    className="px-6 py-2.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-xs hover:shadow transition disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
+                    className="px-7 py-2.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-xs hover:shadow transition disabled:opacity-50 cursor-pointer flex items-center gap-2"
                   >
                     {creating ? (
                       <>
-                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        <RefreshCw className="w-4 h-4 animate-spin" />
                         <span>Criando Estudo...</span>
                       </>
                     ) : (
@@ -3827,7 +3840,7 @@ export default function HomePage() {
                 )}
               </div>
             </div>
-          </div>
+          </footer>
         </div>
       )}
 
@@ -4178,7 +4191,7 @@ export default function HomePage() {
       {/* Modal de Configuração / Edição de Estudo Existente */}
       {editingProject && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6 border border-slate-200 max-h-[92vh] overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-5xl w-full p-6 border border-slate-200 max-h-[92vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
               <div>
                 <h2 className="text-xl font-bold text-slate-900">Configurar Protocolo do Estudo</h2>
@@ -4436,7 +4449,7 @@ export default function HomePage() {
                         Nenhum grupo cadastrado ainda. Use os modelos acima ou adicione abaixo.
                       </div>
                     ) : (
-                      <div className="space-y-2 max-h-[220px] overflow-y-auto p-1">
+                      <div className="space-y-2 p-1">
                         {editProjectGroups.map((grp, idx) => (
                           <div
                             key={idx}

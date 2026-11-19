@@ -118,7 +118,13 @@ O sistema possui acesso restrito configurado tanto em banco quanto em memória i
      - Quando mais de um questionário é encaminhado ao celular do paciente na mesma consulta, **a periodicidade é personalizada de forma independente para cada instrumento** (ex: *Diário de Sensibilidade EVA a cada 24 horas*, enquanto *OHIP-14* ou *Satisfação* é configurado para *Uma Única Vez*).
      - Cada questionário possui seu próprio painel com seletores dedicados: *Padrão GCP (0h, 1h, 24h, 48h)*, *Diário (24h)*, *A cada 48h*, *Semanal (7d)*, *Quinzenal (14d)*, *Única Vez* e *Personalizado (dias configuráveis + observação)*.
      - Sincronização automática na mensagem de WhatsApp gerada para o paciente no Dashboard, refletindo a frequência específica de cada questionário da sessão.
-   - **Alinhamento do Modal de Edição (`editTab`):** Abas reorganizadas na mesma sequência (`GENERAL` -> `GROUPS` -> `FORMS` -> `SESSIONS`) com navegação fluida pelos botões de rodapé.
+   - **Visualização em Tela Inteira (Full Screen) do Assistente de Novo Estudo:**
+     - Substituição do antigo modal popup flutuante estreito (`max-w-3xl`) por um assistente de tela inteira (`fixed inset-0 bg-slate-50 flex flex-col`) com container amplo centralizado (`max-w-6xl mx-auto`).
+     - Barra superior fixa com indicador da etapa e botão de saída/cancelamento.
+     - Stepper espaçoso de 5 etapas com largura total para evitar quebra de textos.
+     - Área de trabalho central de rolagem livre e confortável, com remoção de limitadores de altura (`max-h-[...]`) nas listas de grupos, instrumentos do eCRF, perguntas e consultas.
+     - Rodapé fixo na base da tela com botões amplos de avanço, retorno e criação.
+   - **Ampliação do Modal de Edição/Configuração (`editTab`):** Abas reorganizadas na mesma sequência (`GENERAL` -> `GROUPS` -> `FORMS` -> `SESSIONS`) com largura expandida (`max-w-5xl`) e navegação fluida pelos botões de rodapé.
 
 2. **Portal do Paciente Simplificado e Wizard Passo a Passo (`/paciente`):**
    - **Exclusividade da Ficha de Anamnese na Cadeira Clínica:** A Anamnese e critérios de elegibilidade são respondidos exclusivamente pelo clínico/pesquisador na cadeira odontológica (`/dashboard` e `/anamnese`). Foi removida qualquer injeção de anamnese no portal do paciente.
