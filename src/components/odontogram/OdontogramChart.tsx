@@ -497,7 +497,7 @@ export const OdontogramChart: React.FC<OdontogramChartProps> = ({
             >
               <div className="flex items-center space-x-2">
                 <Sparkles className="w-4 h-4 text-white" />
-                <span>Dentes Decíduos (de leite)</span>
+                <span>Dentes decíduos (de leite)</span>
               </div>
               <span className="transition-transform duration-200">
                 {deciduousOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
@@ -513,7 +513,7 @@ export const OdontogramChart: React.FC<OdontogramChartProps> = ({
                       onClick={() => applyBrushToTeeth(ALL_DECIDUOUS_TEETH)}
                       className="px-3 py-1 rounded-lg border border-purple-200 bg-white hover:bg-purple-50 text-purple-800 text-[11px] font-bold transition cursor-pointer"
                     >
-                      Todos Decíduos
+                      Todos os decíduos
                     </button>
                     <button
                       type="button"

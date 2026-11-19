@@ -291,10 +291,10 @@ export interface AvailableQuestionnaireOption {
 export const PRESET_QUESTIONNAIRES_CATALOG: AvailableQuestionnaireOption[] = [
   {
     id: 'eva',
-    title: 'Diário de Dor & Sensibilidade (Escala EVA)',
-    badge: 'Dor & Sensibilidade',
+    title: 'Diário de sensibilidade dental (escala EVA)',
+    badge: 'Dor e sensibilidade',
     icon: '⚡',
-    category: 'Sensibilidade & Farmacovigilância',
+    category: 'Sensibilidade e farmacovigilância',
     description: 'Monitoramento longitudinal de sensibilidade dentinária (escala 0 a 10) e uso de analgésicos.',
     defaultRespondent: 'PATIENT',
   },
@@ -384,7 +384,7 @@ export const DEFAULT_STUDY_SESSIONS: StudySessionProtocol[] = [
   {
     id: 'sess_1',
     sessionNumber: 1,
-    name: 'Sessão 1: Tomada de Cor Inicial & 1ª Aplicação do Gel',
+    name: 'Sessão 1: Tomada de cor inicial e 1ª aplicação do gel',
     type: 'CLINICAL',
     daysFromPrevious: 0,
     durationMinutes: 60,
@@ -409,7 +409,7 @@ export const DEFAULT_STUDY_SESSIONS: StudySessionProtocol[] = [
   {
     id: 'sess_2',
     sessionNumber: 2,
-    name: 'Sessão 2: 2ª Aplicação Clínica do Gel (7 Dias)',
+    name: 'Sessão 2: 2ª aplicação clínica do gel (7 dias)',
     type: 'CLINICAL',
     daysFromPrevious: 7,
     durationMinutes: 60,
@@ -432,7 +432,7 @@ export const DEFAULT_STUDY_SESSIONS: StudySessionProtocol[] = [
   {
     id: 'sess_3',
     sessionNumber: 3,
-    name: 'Sessão 3: Retorno Final (Estabilidade de Cor & Satisfação)',
+    name: 'Sessão 3: Retorno final (estabilidade de cor e satisfação)',
     type: 'EVALUATION',
     daysFromPrevious: 7,
     durationMinutes: 30,
@@ -1296,12 +1296,12 @@ export function getPresetQuestionsForMethod(methodId: string): FormQuestionProto
 export const DEFAULT_FORM_TARGETS: FormTargetProtocol[] = [
   {
     id: 'eva',
-    title: 'Diário de Sensibilidade Dental (Escala EVA)',
+    title: 'Diário de sensibilidade dental (escala EVA)',
     description: 'Avaliação da sensibilidade dentinária pelo voluntário no celular (0h a 48h pós-clareamento).',
     enabled: true,
     respondent: 'PATIENT',
     frequency: 'DAILY',
-    frequencyDescription: 'Diário de Sensibilidade (0h a 48h)',
+    frequencyDescription: 'Diário de sensibilidade (0h a 48h)',
     isPreset: true,
     questions: JSON.parse(JSON.stringify(PRESET_FORM_QUESTIONS.eva)),
   },
@@ -1318,7 +1318,7 @@ export const DEFAULT_FORM_TARGETS: FormTargetProtocol[] = [
   },
   {
     id: 'satisfaction',
-    title: 'Questionário de Satisfação com o Clareamento',
+    title: 'Questionário de satisfação com o clareamento',
     description: 'Percepção do voluntário quanto ao resultado estético do clareamento e satisfação.',
     enabled: true,
     respondent: 'PATIENT',
@@ -1329,7 +1329,7 @@ export const DEFAULT_FORM_TARGETS: FormTargetProtocol[] = [
   },
   {
     id: 'habits',
-    title: 'Mapeamento de Hábitos e Alimentos Corantes',
+    title: 'Hábitos e alimentos corantes',
     description: 'Registro de ingestão de café, chimarrão, alimentos corantes e fumo durante o estudo.',
     enabled: false,
     respondent: 'PATIENT',
@@ -1340,7 +1340,7 @@ export const DEFAULT_FORM_TARGETS: FormTargetProtocol[] = [
   },
   {
     id: 'ohip',
-    title: 'Qualidade de Vida em Saúde Bucal (OHIP-14)',
+    title: 'Qualidade de vida em saúde bucal (OHIP-14)',
     description: 'Impacto na qualidade de vida bucal com 14 perguntas em escala Likert validada internacionalmente.',
     enabled: false,
     respondent: 'PATIENT',

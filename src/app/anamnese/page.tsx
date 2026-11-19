@@ -674,9 +674,9 @@ function AnamnesisBuilderContent() {
     return (
       <div className="flex-1 bg-slate-50 p-8 flex items-center justify-center">
         <div className="max-w-2xl w-full bg-white p-8 rounded-2xl shadow-sm border border-slate-200 text-center">
-          <h2 className="text-xl font-bold text-slate-800 mb-4">Selecione um Projeto</h2>
+          <h2 className="text-xl font-bold text-slate-800 mb-4">Selecione um projeto</h2>
           <p className="text-slate-600 text-sm mb-6">
-            Para configurar a Ficha Clínica e Anamnese, escolha para qual pesquisa deseja personalizar os módulos:
+            Para configurar a ficha clínica e a anamnese, escolha para qual pesquisa deseja personalizar os módulos:
           </p>
           <div className="space-y-3">
             {projectsList.map((p) => (
@@ -692,7 +692,7 @@ function AnamnesisBuilderContent() {
           </div>
           <div className="mt-6">
             <Link href="/" className="inline-flex items-center gap-1.5 text-sm font-bold text-blue-600 hover:underline">
-              <ArrowLeft className="w-4 h-4" /> Voltar para Meus Projetos
+              <ArrowLeft className="w-4 h-4" /> Voltar aos projetos
             </Link>
           </div>
         </div>
@@ -724,22 +724,22 @@ function AnamnesisBuilderContent() {
               <Link
                 href={`/dashboard?projectId=${projectId}`}
                 className="text-slate-500 hover:text-blue-600 text-xs font-semibold transition inline-flex items-center px-2.5 py-1.5 rounded-lg hover:bg-slate-100"
-                title="Voltar ao Painel do Estudo"
+                title="Voltar ao painel do estudo"
               >
                 <ArrowLeft className="w-3.5 h-3.5 mr-1" />
-                <span>Painel da Pesquisa</span>
+                <span>Painel do estudo</span>
               </Link>
 
               <div className="hidden sm:block h-4 w-px bg-slate-200" />
 
               <div className="flex items-center gap-2">
                 <h1 className="text-sm sm:text-base font-bold text-slate-900 tracking-tight">
-                  Construtor de Ficha Clínica & Anamnese
+                  Construtor de ficha clínica e anamnese
                 </h1>
                 {saveSuccess && (
                   <span className="px-2.5 py-0.5 bg-emerald-100 text-emerald-800 rounded-full text-xs font-bold inline-flex items-center gap-1 shadow-2xs">
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700" />
-                    <span>Salvo com Sucesso!</span>
+                    <span>Salvo com sucesso!</span>
                   </span>
                 )}
               </div>
@@ -763,7 +763,7 @@ function AnamnesisBuilderContent() {
                 ) : (
                   <Save className="w-3.5 h-3.5" />
                 )}
-                <span>{saving ? 'Gravando...' : saveSuccess ? 'Salvo!' : 'Salvar Ficha'}</span>
+                <span>{saving ? 'Gravando...' : saveSuccess ? 'Salvo!' : 'Salvar ficha'}</span>
               </button>
 
               <button
@@ -772,7 +772,7 @@ function AnamnesisBuilderContent() {
                 className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold shadow-xs transition disabled:opacity-50 inline-flex items-center gap-1.5 cursor-pointer"
                 title="Salvar e retornar ao painel do estudo"
               >
-                <span>Concluir & Abrir Painel</span>
+                <span>Concluir e abrir painel</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -805,7 +805,7 @@ function AnamnesisBuilderContent() {
             }`}
           >
             <Stethoscope className="w-4 h-4" />
-            <span>Periograma (Exame Periodontal)</span>
+            <span>Periograma (exame periodontal)</span>
             {enablePeriodontogram && (
               <span className="w-2 h-2 rounded-full bg-green-500 inline-block"></span>
             )}
@@ -820,7 +820,7 @@ function AnamnesisBuilderContent() {
             }`}
           >
             <ClipboardList className="w-4 h-4" />
-            <span>Anamnese & Critérios ({questions.length})</span>
+            <span>Anamnese e critérios ({questions.length})</span>
           </button>
 
           <button
@@ -832,7 +832,7 @@ function AnamnesisBuilderContent() {
             }`}
           >
             <FileText className="w-4 h-4" />
-            <span>Questionários & eCRFs ({projectForms.length})</span>
+            <span>Questionários e eCRFs ({projectForms.length})</span>
           </button>
         </div>
       </div>
@@ -847,7 +847,7 @@ function AnamnesisBuilderContent() {
               </div>
               <div>
                 <h3 className="text-sm font-bold text-blue-950 flex items-center gap-2">
-                  <span>Configuração Inicial do Estudo</span>
+                  <span>Configuração inicial do estudo</span>
                   <span className="px-2 py-0.5 bg-blue-200 text-blue-800 text-[10px] uppercase tracking-wider font-extrabold rounded-full">Novo</span>
                 </h3>
                 <p className="text-xs text-blue-800 mt-1 leading-relaxed">
@@ -861,7 +861,7 @@ function AnamnesisBuilderContent() {
                 disabled={saving || loading}
                 className="w-full md:w-auto px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center justify-center gap-2"
               >
-                <span>Concluir e Abrir Painel</span>
+                <span>Concluir e abrir painel</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </div>
@@ -875,7 +875,7 @@ function AnamnesisBuilderContent() {
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-50 p-5 rounded-xl border border-slate-200 gap-4">
                 <div>
                   <h3 className="text-base font-bold text-slate-800 flex items-center">
-                    <Sparkles className="w-4 h-4 text-blue-600 mr-2" /> Módulo de Odontograma Interativo
+                    <Sparkles className="w-4 h-4 text-blue-600 mr-2" /> Módulo de odontograma interativo
                   </h3>
                   <p className="text-xs text-slate-500 mt-1">
                     Permite ao examinador marcar dentes hígidos, restaurados, ausentes ou cariados durante a triagem.
@@ -910,7 +910,7 @@ function AnamnesisBuilderContent() {
                 <div className="space-y-6 pt-2">
                   <div className="bg-blue-50/60 border border-blue-200 p-5 rounded-xl">
                     <label className="block text-xs font-bold text-blue-900 uppercase tracking-wider mb-2">
-                      Escopo do Odontograma na Triagem:
+                      Escopo do odontograma na triagem:
                     </label>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <label
@@ -929,7 +929,7 @@ function AnamnesisBuilderContent() {
                         />
                         <div>
                           <p className="text-sm font-bold text-slate-800">
-                            Foco em Dentes Anteriores (13 a 23 e 33 a 43)
+                            Foco em dentes anteriores (13 a 23 e 33 a 43)
                           </p>
                           <p className="text-xs text-slate-500 mt-0.5">
                             Recomendado para ensaios clínicos de clareamento dental, facetas estéticas e resinas anteriores (12 dentes analisados).
@@ -953,7 +953,7 @@ function AnamnesisBuilderContent() {
                         />
                         <div>
                           <p className="text-sm font-bold text-slate-800">
-                            Arcada Completa (18 a 48 - 32 dentes)
+                            Arcada completa (18 a 48 - 32 dentes)
                           </p>
                           <p className="text-xs text-slate-500 mt-0.5">
                             Indicado para estudos de reabilitação oral completa, periodontia ampla ou mapeamento integral de cárie (CPO-D).
@@ -967,10 +967,10 @@ function AnamnesisBuilderContent() {
                   <div className="border border-slate-200 rounded-2xl p-4 sm:p-5 bg-slate-50 space-y-3">
                     <div className="flex flex-wrap justify-between items-center gap-2">
                       <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                        Pré-visualização do Mapeamento Anatômico de Dentes na Triagem:
+                        Pré-visualização do mapeamento anatômico de dentes na triagem:
                       </h4>
                       <span className="text-[11px] text-blue-600 font-bold bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">
-                        {odontogramScope === 'anterior' ? '12 Dentes Anteriores' : 'Arcada Completa (Permanentes + Decíduos)'}
+                        {odontogramScope === 'anterior' ? '12 dentes anteriores' : 'Arcada completa (permanentes e decíduos)'}
                       </span>
                     </div>
 
@@ -991,7 +991,7 @@ function AnamnesisBuilderContent() {
                 </div>
               ) : (
                 <div className="py-12 text-center text-slate-400 bg-slate-50 rounded-xl border border-dashed border-slate-300">
-                  <p className="text-sm">O Odontograma está desabilitado para este projeto.</p>
+                  <p className="text-sm">O odontograma está desabilitado para este projeto.</p>
                   <p className="text-xs mt-1 text-slate-400">
                     Ative a chave acima se a sua pesquisa exigir mapeamento dentário na triagem.
                   </p>
@@ -1006,7 +1006,7 @@ function AnamnesisBuilderContent() {
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-50 p-5 rounded-xl border border-slate-200 gap-4">
                 <div>
                   <h3 className="text-base font-bold text-slate-800 flex items-center">
-                    <Stethoscope className="w-4 h-4 text-blue-600 mr-2" /> Módulo de Periograma (Exame Periodontal)
+                    <Stethoscope className="w-4 h-4 text-blue-600 mr-2" /> Módulo de periograma (exame periodontal)
                   </h3>
                   <p className="text-xs text-slate-500 mt-1">
                     Configure quais parâmetros de saúde periodontal e gengival o examinador deverá aferir na triagem.
@@ -1040,7 +1040,7 @@ function AnamnesisBuilderContent() {
               {enablePeriodontogram ? (
                 <div className="space-y-4 pt-2">
                   <h4 className="text-xs font-bold text-slate-600 uppercase tracking-wider">
-                    Selecione os Parâmetros Periodontais que farão parte da Ficha:
+                    Selecione os parâmetros periodontais que farão parte da ficha:
                   </h4>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1058,7 +1058,7 @@ function AnamnesisBuilderContent() {
                       />
                       <div>
                         <p className="text-sm font-bold text-slate-800">
-                          Índice de Sangramento à Sondagem (SS / BOP)
+                          Índice de sangramento à sondagem (SS / BOP)
                         </p>
                         <p className="text-xs text-slate-500 mt-0.5">
                           Aferição de inflamação gengival ativa (percentual % ou presente/ausente).
@@ -1080,7 +1080,7 @@ function AnamnesisBuilderContent() {
                       />
                       <div>
                         <p className="text-sm font-bold text-slate-800">
-                          Índice de Placa Visível (IPV)
+                          Índice de placa visível (IPV)
                         </p>
                         <p className="text-xs text-slate-500 mt-0.5">
                           Presença ou percentual de biofilme dental acumulado nas superfícies.
@@ -1102,7 +1102,7 @@ function AnamnesisBuilderContent() {
                       />
                       <div>
                         <p className="text-sm font-bold text-slate-800">
-                          Profundidade de Sondagem (PS &gt; 3mm)
+                          Profundidade de sondagem (PS &gt; 3mm)
                         </p>
                         <p className="text-xs text-slate-500 mt-0.5">
                           Detecção de bolsas periodontais patológicas ou perda de inserção clínica.
@@ -1124,7 +1124,7 @@ function AnamnesisBuilderContent() {
                       />
                       <div>
                         <p className="text-sm font-bold text-slate-800">
-                          Recessão Gengival / Lesão Cervical Não Cariosa
+                          Recessão gengival / lesão cervical não cariosa
                         </p>
                         <p className="text-xs text-slate-500 mt-0.5">
                           Exposição radicular e retração marginal que podem desencadear hipersensibilidade dentinária.
@@ -1146,7 +1146,7 @@ function AnamnesisBuilderContent() {
                       />
                       <div>
                         <p className="text-sm font-bold text-slate-800">
-                          Envolvimento de Furca & Mobilidade Dental
+                          Envolvimento de furca e mobilidade dental
                         </p>
                         <p className="text-xs text-slate-500 mt-0.5">
                           Grau de mobilidade fisiológica/patológica e lesões inter-radiculares.
@@ -1157,7 +1157,7 @@ function AnamnesisBuilderContent() {
                 </div>
               ) : (
                 <div className="py-12 text-center text-slate-400 bg-slate-50 rounded-xl border border-dashed border-slate-300">
-                  <p className="text-sm">O Periograma está desabilitado para este projeto.</p>
+                  <p className="text-sm">O periograma está desabilitado para este projeto.</p>
                   <p className="text-xs mt-1 text-slate-400">
                     Ative a chave acima se o protocolo de pesquisa exigir exame periodontal na triagem.
                   </p>
@@ -1172,7 +1172,7 @@ function AnamnesisBuilderContent() {
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-50 p-5 rounded-xl border border-slate-200 gap-4">
                 <div>
                   <h3 className="text-base font-bold text-slate-800 flex items-center">
-                    <ClipboardList className="w-4 h-4 text-blue-600 mr-2" /> Perguntas de Anamnese & Critérios de Elegibilidade
+                    <ClipboardList className="w-4 h-4 text-blue-600 mr-2" /> Perguntas de anamnese e critérios de elegibilidade
                   </h3>
                   <p className="text-xs text-slate-500 mt-1">
                     Crie perguntas personalizadas ou selecione da biblioteca clínica. Defina se a resposta atua como critério de exclusão imediato.
@@ -1185,14 +1185,14 @@ function AnamnesisBuilderContent() {
                     className="px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl text-xs font-bold transition flex items-center space-x-1.5"
                   >
                     <BookOpen className="w-3.5 h-3.5" />
-                    <span>Inserir da Biblioteca</span>
+                    <span>Inserir da biblioteca</span>
                   </button>
                   <button
                     onClick={addCustomQuestion}
                     className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-sm transition flex items-center space-x-1.5"
                   >
                     <Plus className="w-3.5 h-3.5" />
-                    <span>Nova Pergunta</span>
+                    <span>Nova pergunta</span>
                   </button>
                 </div>
               </div>
@@ -1201,7 +1201,7 @@ function AnamnesisBuilderContent() {
                 <div className="py-16 text-center text-slate-400 bg-slate-50 rounded-xl border border-dashed border-slate-300">
                   <p className="text-sm font-bold text-slate-600">Nenhuma pergunta adicionada ainda.</p>
                   <p className="text-xs text-slate-400 mt-1">
-                    Clique em <strong>+ Nova Pergunta</strong> para criar perguntas personalizadas ou use a <strong>Biblioteca Odontológica</strong> para adicionar itens rápidos.
+                    Clique em <strong>+ Nova pergunta</strong> para criar perguntas personalizadas ou use a <strong>biblioteca odontológica</strong> para adicionar itens rápidos.
                   </p>
                 </div>
               ) : (
@@ -1224,12 +1224,12 @@ function AnamnesisBuilderContent() {
                             {idx + 1}
                           </span>
                           <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                            Pergunta Clínica
+                            Pergunta clínica
                           </span>
                           {q.isCriterion && (
                             <span className="px-2 py-0.5 bg-amber-100 text-amber-800 text-[10px] font-bold rounded-full border border-amber-300 inline-flex items-center gap-1">
                               <AlertTriangle className="w-3 h-3 text-amber-700" />
-                              <span>Critério de Elegibilidade (Desqualifica se: {q.disqualifyIf?.toUpperCase()})</span>
+                              <span>Critério de elegibilidade (desqualifica se: {q.disqualifyIf?.toUpperCase()})</span>
                             </span>
                           )}
                         </div>
@@ -1247,7 +1247,7 @@ function AnamnesisBuilderContent() {
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div className="md:col-span-2">
                           <label className="block text-xs font-bold text-slate-700 mb-1">
-                            Título / Enunciado da Pergunta:
+                            Título / enunciado da pergunta:
                           </label>
                           <input
                             type="text"
@@ -1260,7 +1260,7 @@ function AnamnesisBuilderContent() {
 
                         <div>
                           <label className="block text-xs font-bold text-slate-700 mb-1">
-                            Tipo de Resposta:
+                            Tipo de resposta:
                           </label>
                           <select
                             value={q.type}
@@ -1269,12 +1269,12 @@ function AnamnesisBuilderContent() {
                             }
                             className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
                           >
-                            <option value="boolean">Sim / Não</option>
-                            <option value="vita_shade">Escala de Cor Vita (A1-D4)</option>
-                            <option value="sensitivity_scale">Escala de Sensibilidade (0 a 10)</option>
-                            <option value="text">Texto Aberto (Observação)</option>
-                            <option value="number">Valor Numérico</option>
-                            <option value="choice">Múltipla Escolha</option>
+                            <option value="boolean">Sim / não</option>
+                            <option value="vita_shade">Escala de cor Vita (A1-D4)</option>
+                            <option value="sensitivity_scale">Escala de sensibilidade (0 a 10)</option>
+                            <option value="text">Texto aberto (observação)</option>
+                            <option value="number">Valor numérico</option>
+                            <option value="choice">Múltipla escolha</option>
                           </select>
                         </div>
                       </div>
@@ -1289,7 +1289,7 @@ function AnamnesisBuilderContent() {
                               onChange={(e) => updateQuestion(q.id, { required: e.target.checked })}
                               className="rounded text-blue-600"
                             />
-                            <span className="font-semibold text-slate-700">Preenchimento Obrigatório</span>
+                            <span className="font-semibold text-slate-700">Preenchimento obrigatório</span>
                           </label>
 
                           {q.type === 'boolean' && (
@@ -1306,7 +1306,7 @@ function AnamnesisBuilderContent() {
                                 className="rounded text-amber-600"
                               />
                               <span className="font-semibold text-amber-900">
-                                Definir como Critério de Inclusão/Exclusão
+                                Definir como critério de inclusão/exclusão
                               </span>
                             </label>
                           )}
@@ -1345,10 +1345,10 @@ function AnamnesisBuilderContent() {
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-50 p-5 rounded-xl border border-slate-200 gap-4">
                 <div>
                   <h3 className="text-base font-bold text-slate-800 flex items-center">
-                    <FileText className="w-4 h-4 text-blue-600 mr-2" /> Questionários Eletrônicos & eCRFs (PROMs)
+                    <FileText className="w-4 h-4 text-blue-600 mr-2" /> Questionários eletrônicos e eCRFs (PROMs)
                   </h3>
                   <p className="text-xs text-slate-500 mt-1">
-                    Formulários preenchidos remotamente pelos voluntários (via WhatsApp ou Portal do Paciente) ou pela equipe de pesquisa.
+                    Formulários preenchidos remotamente pelos voluntários (via WhatsApp ou portal do paciente) ou pela equipe de pesquisa.
                   </p>
                 </div>
                 <Link
@@ -1356,7 +1356,7 @@ function AnamnesisBuilderContent() {
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-xs transition flex items-center gap-1.5 shrink-0"
                 >
                   <Plus className="w-3.5 h-3.5" />
-                  <span>Novo Formulário Personalizado</span>
+                  <span>Novo formulário personalizado</span>
                 </Link>
               </div>
 
@@ -1364,7 +1364,7 @@ function AnamnesisBuilderContent() {
               <div>
                 <div className="flex justify-between items-center mb-3">
                   <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                    Questionários Ativos Neste Projeto ({projectForms.length}):
+                    Questionários ativos neste projeto ({projectForms.length}):
                   </h4>
                   <button
                     onClick={loadProjectForms}
@@ -1381,7 +1381,7 @@ function AnamnesisBuilderContent() {
                     <FileText className="w-8 h-8 text-slate-400 mx-auto mb-2" />
                     <p className="text-sm font-bold text-slate-700">Nenhum questionário vinculado a este estudo ainda</p>
                     <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
-                      Crie um formulário personalizado no Construtor ou adicione um dos modelos científicos validados logo abaixo.
+                      Crie um formulário personalizado no construtor ou adicione um dos modelos científicos validados logo abaixo.
                     </p>
                   </div>
                 ) : (
@@ -1420,7 +1420,7 @@ function AnamnesisBuilderContent() {
                               href={`/construtor?projectId=${projectId}&formId=${form.id}&from=anamnese`}
                               className="flex-1 text-center py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5"
                             >
-                              <span>Editar no Construtor</span>
+                              <span>Editar no construtor</span>
                               <ExternalLink className="w-3.5 h-3.5" />
                             </Link>
 
@@ -1451,7 +1451,7 @@ function AnamnesisBuilderContent() {
                 <div className="mb-3">
                   <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
                     <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                    Modelos Científicos Validados (1 Clique)
+                    Modelos científicos validados (1 clique)
                   </h4>
                   <p className="text-[11px] text-slate-500 mt-0.5">
                     Adicione rapidamente instrumentos odontológicos padronizados e validados pela literatura:
@@ -1494,7 +1494,7 @@ function AnamnesisBuilderContent() {
                     <div>
                       <div className="flex items-center gap-2 mb-1">
                         <span className="w-2 h-2 rounded-full bg-indigo-600 shrink-0" />
-                        <h5 className="font-bold text-slate-800 text-xs truncate">OHIP-14 Odontológico</h5>
+                        <h5 className="font-bold text-slate-800 text-xs truncate">OHIP-14 odontológico</h5>
                       </div>
                       <p className="text-[11px] text-slate-500 leading-snug">
                         14 itens validados internacionalmente (Slade, 1997) para qualidade de vida bucal.
@@ -1524,7 +1524,7 @@ function AnamnesisBuilderContent() {
                     <div>
                       <div className="flex items-center gap-2 mb-1">
                         <span className="w-2 h-2 rounded-full bg-emerald-600 shrink-0" />
-                        <h5 className="font-bold text-slate-800 text-xs truncate">Satisfação & Estética</h5>
+                        <h5 className="font-bold text-slate-800 text-xs truncate">Satisfação e estética</h5>
                       </div>
                       <p className="text-[11px] text-slate-500 leading-snug">
                         Percepção estética do sorriso, cor obtida, autoconfiança e recomendação.
@@ -1543,7 +1543,7 @@ function AnamnesisBuilderContent() {
                       ) : (
                         <>
                           <Plus className="w-3 h-3" />
-                          <span>Adicionar Satisfação</span>
+                          <span>Adicionar satisfação</span>
                         </>
                       )}
                     </button>
@@ -1554,7 +1554,7 @@ function AnamnesisBuilderContent() {
                     <div>
                       <div className="flex items-center gap-2 mb-1">
                         <span className="w-2 h-2 rounded-full bg-teal-600 shrink-0" />
-                        <h5 className="font-bold text-slate-800 text-xs truncate">OES (Estética Orofacial)</h5>
+                        <h5 className="font-bold text-slate-800 text-xs truncate">OES (estética orofacial)</h5>
                       </div>
                       <p className="text-[11px] text-slate-500 leading-snug">
                         8 itens validados (Larsson et al., 2010) mensurando dentes, gengiva, lábios e estética global.
@@ -1609,14 +1609,14 @@ function AnamnesisBuilderContent() {
                 ) : (
                   <Save className="w-3.5 h-3.5" />
                 )}
-                <span>{saving ? 'Gravando...' : saveSuccess ? 'Salvo com Sucesso!' : 'Salvar Alterações'}</span>
+                <span>{saving ? 'Gravando...' : saveSuccess ? 'Salvo com sucesso!' : 'Salvar alterações'}</span>
               </button>
               <button
                 onClick={() => handleSave(true)}
                 disabled={saving || loading}
                 className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-sm transition disabled:opacity-50 flex items-center gap-1.5"
               >
-                <span>Salvar e Ir para o Painel do Estudo</span>
+                <span>Salvar e ir para o painel do estudo</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </div>
@@ -1631,7 +1631,7 @@ function AnamnesisBuilderContent() {
             <div className="flex justify-between items-center pb-3 border-b border-slate-100 mb-4">
               <div>
                 <h3 className="text-lg font-bold text-slate-800 flex items-center">
-                  <BookOpen className="w-4 h-4 text-indigo-600 mr-2" /> Biblioteca Odontológica de Perguntas
+                  <BookOpen className="w-4 h-4 text-indigo-600 mr-2" /> Biblioteca odontológica de perguntas
                 </h3>
                 <p className="text-xs text-slate-500">
                   Clique para adicionar qualquer pergunta ou critério relevante ao seu estudo.

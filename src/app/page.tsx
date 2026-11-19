@@ -116,7 +116,7 @@ const DEFAULT_PROJECT_ANAMNESIS_QUESTIONS: AnamnesisQuestion[] = [
   },
   {
     id: 'crit_baseline_color',
-    title: 'Cor inicial basal elegível (A2 ou mais escura na Escala Vita Classical)?',
+    title: 'Cor inicial basal elegível (A2 ou mais escura na escala VITA Classical)?',
     type: 'boolean',
     required: true,
     isCriterion: true,
@@ -816,7 +816,7 @@ export default function HomePage() {
         {
           id: `sess_${Date.now()}_1`,
           sessionNumber: 1,
-          name: 'Sessão 1: Tomada de Cor Inicial & 1ª Aplicação do Gel',
+          name: 'Sessão 1: tomada de cor inicial e 1ª aplicação do gel',
           type: 'CLINICAL',
           daysFromPrevious: 0,
           durationMinutes: 60,
@@ -833,7 +833,7 @@ export default function HomePage() {
         {
           id: `sess_${Date.now()}_2`,
           sessionNumber: 2,
-          name: 'Sessão 2: 2ª Aplicação Clínica do Gel',
+          name: 'Sessão 2: 2ª aplicação clínica do gel',
           type: 'CLINICAL',
           daysFromPrevious: 7,
           durationMinutes: 60,
@@ -850,7 +850,7 @@ export default function HomePage() {
         {
           id: `sess_${Date.now()}_3`,
           sessionNumber: 3,
-          name: 'Sessão 3: Retorno Final (Estabilidade de Cor & Satisfação)',
+          name: 'Sessão 3: retorno final (estabilidade de cor e satisfação)',
           type: 'EVALUATION',
           daysFromPrevious: 7,
           durationMinutes: 30,
@@ -870,7 +870,7 @@ export default function HomePage() {
         {
           id: `sess_${Date.now()}_1`,
           sessionNumber: 1,
-          name: 'Sessão 1: Moldagem, Entrega de Moldeiras & Cor Inicial',
+          name: 'Sessão 1: moldagem, entrega de moldeiras e cor inicial',
           type: 'CLINICAL',
           daysFromPrevious: 0,
           durationMinutes: 45,
@@ -887,7 +887,7 @@ export default function HomePage() {
         {
           id: `sess_${Date.now()}_2`,
           sessionNumber: 2,
-          name: 'Sessão 2: Acompanhamento Clínico (7 Dias)',
+          name: 'Sessão 2: acompanhamento clínico (7 dias)',
           type: 'EVALUATION',
           daysFromPrevious: 7,
           durationMinutes: 30,
@@ -904,7 +904,7 @@ export default function HomePage() {
         {
           id: `sess_${Date.now()}_3`,
           sessionNumber: 3,
-          name: 'Sessão 3: Avaliação de Cor Final & Encerramento (21 Dias)',
+          name: 'Sessão 3: avaliação de cor final e encerramento (21 dias)',
           type: 'EVALUATION',
           daysFromPrevious: 14,
           durationMinutes: 30,
@@ -924,7 +924,7 @@ export default function HomePage() {
         {
           id: `sess_${Date.now()}_1`,
           sessionNumber: 1,
-          name: 'Sessão 1: Tomada de Cor Inicial & Aplicação Única',
+          name: 'Sessão 1: tomada de cor inicial e aplicação única',
           type: 'CLINICAL',
           daysFromPrevious: 0,
           durationMinutes: 60,
@@ -941,7 +941,7 @@ export default function HomePage() {
         {
           id: `sess_${Date.now()}_2`,
           sessionNumber: 2,
-          name: 'Sessão 2: Retorno de Avaliação de Cor (7 Dias)',
+          name: 'Sessão 2: retorno de avaliação de cor (7 dias)',
           type: 'EVALUATION',
           daysFromPrevious: 7,
           durationMinutes: 30,
@@ -961,7 +961,7 @@ export default function HomePage() {
         {
           id: `sess_${Date.now()}_1`,
           sessionNumber: 1,
-          name: 'Sessão 1: Tomada de Cor Inicial & 1ª Aplicação',
+          name: 'Sessão 1: tomada de cor inicial e 1ª aplicação',
           type: 'CLINICAL',
           daysFromPrevious: 0,
           durationMinutes: 60,
@@ -978,7 +978,7 @@ export default function HomePage() {
         {
           id: `sess_${Date.now()}_2`,
           sessionNumber: 2,
-          name: 'Sessão 2: 2ª Aplicação Clínica',
+          name: 'Sessão 2: 2ª aplicação clínica',
           type: 'CLINICAL',
           daysFromPrevious: 7,
           durationMinutes: 60,
@@ -995,7 +995,7 @@ export default function HomePage() {
         {
           id: `sess_${Date.now()}_3`,
           sessionNumber: 3,
-          name: 'Sessão 3: 3ª Aplicação Clínica',
+          name: 'Sessão 3: 3ª aplicação clínica',
           type: 'CLINICAL',
           daysFromPrevious: 7,
           durationMinutes: 60,
@@ -1012,7 +1012,7 @@ export default function HomePage() {
         {
           id: `sess_${Date.now()}_4`,
           sessionNumber: 4,
-          name: 'Sessão 4: Retorno Final (Estabilidade de Cor & Satisfação)',
+          name: 'Sessão 4: retorno final (estabilidade de cor e satisfação)',
           type: 'EVALUATION',
           daysFromPrevious: 7,
           durationMinutes: 30,
@@ -1059,7 +1059,7 @@ export default function HomePage() {
             </span>
             <span className="text-xs font-bold text-slate-900">
               {s.sessionNumber === 1
-                ? 'Consulta 1: Linha de Base (Dia 0)'
+                ? 'Consulta 1: linha de base (dia 0)'
                 : `Consulta ${s.sessionNumber}`}
             </span>
             {s.sessionNumber > 1 ? (
@@ -1068,7 +1068,7 @@ export default function HomePage() {
               </span>
             ) : (
               <span className="text-[11px] font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-                Início do Clareamento
+                Início do clareamento
               </span>
             )}
           </div>
@@ -1088,13 +1088,13 @@ export default function HomePage() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
           <div className="sm:col-span-2">
             <label className="block text-[11px] font-bold text-slate-600 mb-1">
-              Nome da Consulta / Procedimento
+              Nome da consulta / procedimento
             </label>
             <input
               type="text"
               value={s.name}
               onChange={(e) => handleUpdateSession(idx, 'name', e.target.value, isEdit)}
-              placeholder="Ex: Sessão 1: Tomada de Cor & 1ª Aplicação"
+              placeholder="Ex: Sessão 1: tomada de cor e 1ª aplicação"
               className="w-full px-3 py-1.5 border border-slate-300 rounded-xl text-xs bg-white font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none"
             />
           </div>
@@ -1131,17 +1131,17 @@ export default function HomePage() {
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
               <Stethoscope className="w-3.5 h-3.5 text-blue-600" />
-              <span>Exames Realizados na Cadeira pelo Pesquisador:</span>
+              <span>Exames realizados na cadeira pelo pesquisador:</span>
             </span>
             <span className="text-[10px] text-slate-400">Clique para alternar</span>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 pt-0.5">
             {[
-              { key: 'colorGuide' as const, label: 'Tomada de Cor (VITA)', icon: '🎨' },
-              { key: 'painVAS' as const, label: 'Sensibilidade na Cadeira (EVA)', icon: '⚡' },
-              { key: 'toothMapping' as const, label: 'Dentes Clareados', icon: '🦷' },
-              { key: 'softTissueExam' as const, label: 'Exame de Tecidos / Gengiva', icon: '🔬' },
+              { key: 'colorGuide' as const, label: 'Tomada de cor (VITA)', icon: '🎨' },
+              { key: 'painVAS' as const, label: 'Sensibilidade na cadeira (EVA)', icon: '⚡' },
+              { key: 'toothMapping' as const, label: 'Dentes clareados', icon: '🦷' },
+              { key: 'softTissueExam' as const, label: 'Exame de tecidos / gengiva', icon: '🔬' },
             ].map((mod) => {
               const isModActive = clinicalMods[mod.key] ?? false;
               return (
@@ -1169,7 +1169,7 @@ export default function HomePage() {
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-bold text-amber-950 flex items-center gap-1.5">
                   <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-                  <span>Modelos de Tomada de Cor Selecionados:</span>
+                  <span>Modelos de tomada de cor selecionados:</span>
                 </span>
                 <span className="text-[10px] text-amber-800 font-semibold bg-amber-100/70 px-2 py-0.5 rounded-full">
                   {(clinicalMods.colorModels || ['VITA_CLASSICAL']).length} de 3 modelos ativos
@@ -1227,7 +1227,7 @@ export default function HomePage() {
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-bold text-blue-950 flex items-center gap-1.5">
                   <ClipboardList className="w-3.5 h-3.5 text-blue-600" />
-                  <span>Formulários eCRF Aplicados nesta Consulta (Pesquisador):</span>
+                  <span>Formulários eCRF aplicados nesta consulta (pesquisador):</span>
                 </span>
                 <span className="text-[10px] text-blue-800 bg-blue-100/70 px-2 py-0.5 rounded-full font-semibold">
                   {sessionForms.length} vinculados
@@ -1274,7 +1274,7 @@ export default function HomePage() {
                 onChange={(e) => handleUpdateSession(idx, 'requiresPatientQuestionnaire', e.target.checked, isEdit)}
                 className="w-4 h-4 text-indigo-600 rounded cursor-pointer"
               />
-              <span>📱 Paciente responde questionário / diário no celular após esta consulta?</span>
+              <span>Paciente responde questionário ou diário no celular após esta consulta?</span>
             </label>
             <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
               requiresProms ? 'bg-indigo-100 text-indigo-800' : 'bg-slate-100 text-slate-500'
@@ -1289,7 +1289,7 @@ export default function HomePage() {
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="text-[11px] font-bold text-indigo-950 flex items-center gap-1.5">
                     <Sliders className="w-3.5 h-3.5 text-indigo-600" />
-                    <span>Questionários do eCRF Encaminhados ao Celular:</span>
+                    <span>Questionários do eCRF encaminhados ao celular:</span>
                   </span>
                   <span className="text-[10px] text-indigo-700 bg-indigo-100/70 px-2 py-0.5 rounded-full font-semibold">
                     {activeQIds.length} selecionados
@@ -1348,7 +1348,7 @@ export default function HomePage() {
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                     <label className="text-[11px] font-bold text-indigo-950 flex items-center gap-1.5">
                       <Clock className="w-3.5 h-3.5 text-indigo-600" />
-                      <span>Periodicidade de Resposta no Celular (Individual por Questionário):</span>
+                      <span>Periodicidade de resposta no celular (individual por questionário):</span>
                     </label>
                     <span className="text-[10px] text-indigo-700 bg-indigo-100/70 px-2 py-0.5 rounded-full font-medium">
                       {activeQIds.length} {activeQIds.length === 1 ? 'questionário configurado' : 'questionários configurados'}
@@ -1397,7 +1397,7 @@ export default function HomePage() {
                                   : qFreq === 'BIWEEKLY'
                                   ? '🗓️ Quinzenal (14d)'
                                   : qFreq === 'ONCE'
-                                  ? '🎯 Única Vez'
+                                  ? '🎯 Única vez'
                                   : '⚙️ Personalizado'}
                               </span>
                             </div>
@@ -1410,7 +1410,7 @@ export default function HomePage() {
                                 { id: 'EVERY_48H', label: 'A cada 48h', desc: 'Dia sim / não', icon: '⏳' },
                                 { id: 'WEEKLY', label: 'Semanal (7d)', desc: 'A cada 7 dias', icon: '📆' },
                                 { id: 'BIWEEKLY', label: 'Quinzenal', desc: 'A cada 14 dias', icon: '🗓️' },
-                                { id: 'ONCE', label: 'Única Vez', desc: 'Pontual pós-sessão', icon: '🎯' },
+                                { id: 'ONCE', label: 'Única vez', desc: 'Pontual pós-sessão', icon: '🎯' },
                                 { id: 'CUSTOM', label: 'Personalizado', desc: 'Configurar dias', icon: '⚙️' },
                               ].map((freq) => {
                                 const isSelected = qFreq === freq.id;
@@ -1876,9 +1876,9 @@ export default function HomePage() {
       ]);
     } else if (preset === 'three') {
       setNewProjectGroups([
-        'Grupo 1: HP 35% Convencional',
-        'Grupo 2: HP 20% com Luz Violeta/LED',
-        'Grupo 3: CP 37% de Consultório',
+        'Grupo 1: HP 35% convencional',
+        'Grupo 2: HP 20% com luz violeta/LED',
+        'Grupo 3: CP 37% de consultório',
       ]);
     }
   };
@@ -1887,7 +1887,7 @@ export default function HomePage() {
     setCreateStepError(null);
     if (createStep === 1) {
       if (!newProjectName.trim()) {
-        setCreateStepError('O Nome do Estudo / Ensaio Clínico é obrigatório para avançar.');
+        setCreateStepError('O nome do estudo / ensaio clínico é obrigatório para avançar.');
         return;
       }
       setCreateStep(2);
@@ -1914,7 +1914,7 @@ export default function HomePage() {
     if (e && e.preventDefault) e.preventDefault();
     if (!newProjectName.trim()) {
       setCreateStep(1);
-      setCreateStepError('O Nome do Estudo / Ensaio Clínico é obrigatório.');
+      setCreateStepError('O nome do estudo / ensaio clínico é obrigatório.');
       return;
     }
 
@@ -2088,7 +2088,7 @@ export default function HomePage() {
                 </div>
                 <div>
                   <h2 className="text-lg font-bold text-amber-900">
-                    Novos Pesquisadores Aguardando Sua Aprovação
+                    Novos pesquisadores aguardando aprovação
                   </h2>
                   <p className="text-xs text-amber-700">
                     Pesquisadores ou alunos cadastrados que necessitam de autorização prévia.
@@ -2115,7 +2115,7 @@ export default function HomePage() {
                     className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-xs transition flex items-center space-x-1.5 cursor-pointer"
                   >
                     <Check className="w-4 h-4" />
-                    <span>Aprovar Acesso</span>
+                    <span>Aprovar acesso</span>
                   </button>
                 </div>
               ))}
@@ -2127,7 +2127,7 @@ export default function HomePage() {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
           <div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2.5">
-              <span>Projetos de Pesquisa</span>
+              <span>Projetos de pesquisa</span>
               <button
                 onClick={() => loadData(true)}
                 disabled={isRefreshing || loading}
@@ -2147,7 +2147,7 @@ export default function HomePage() {
             className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-bold rounded-xl shadow-xs hover:shadow transition flex items-center space-x-2 cursor-pointer shrink-0"
           >
             <Plus className="w-4 h-4" />
-            <span>Novo Estudo Clínico</span>
+            <span>Novo estudo clínico</span>
           </button>
         </div>
 
@@ -2262,7 +2262,7 @@ export default function HomePage() {
                     ? 'bg-white text-blue-600 shadow-2xs font-bold'
                     : 'text-slate-500 hover:text-slate-700'
                 }`}
-                title="Visualização em Grade Compacta"
+                title="Visualização em grade compacta"
               >
                 <LayoutGrid className="w-4 h-4" />
               </button>
@@ -2274,7 +2274,7 @@ export default function HomePage() {
                     ? 'bg-white text-blue-600 shadow-2xs font-bold'
                     : 'text-slate-500 hover:text-slate-700'
                 }`}
-                title="Visualização em Lista / Tabela"
+                title="Visualização em lista / tabela"
               >
                 <List className="w-4 h-4" />
               </button>
@@ -2325,14 +2325,14 @@ export default function HomePage() {
                 className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer"
               >
                 <RefreshCw className="w-3.5 h-3.5" />
-                <span>Tentar Novamente</span>
+                <span>Tentar novamente</span>
               </button>
               <Link
                 href="/login?from=/"
                 className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition flex items-center gap-1.5"
               >
                 <LogIn className="w-3.5 h-3.5" />
-                <span>Entrar Novamente</span>
+                <span>Entrar novamente</span>
               </Link>
             </div>
           </div>
@@ -2420,7 +2420,7 @@ export default function HomePage() {
                               {isBlinded ? (
                                 <span className="px-2.5 py-0.5 bg-purple-50 text-purple-700 border border-purple-200/80 text-[11px] font-bold rounded-full flex items-center space-x-1">
                                   <EyeOff className="w-3 h-3 text-purple-600" />
-                                  <span>Avaliador Cego</span>
+                                  <span>Avaliador cego</span>
                                 </span>
                               ) : (
                                 <span className="px-2.5 py-0.5 bg-slate-100 text-slate-700 text-[11px] font-semibold rounded-full border border-slate-200/60">
@@ -2467,7 +2467,7 @@ export default function HomePage() {
                             className="flex-1 py-2 px-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold text-center transition flex items-center justify-center gap-1.5 shadow-xs hover:shadow"
                           >
                             <Activity className="w-3.5 h-3.5" />
-                            <span>Abrir Prontuário</span>
+                            <span>Abrir prontuário</span>
                           </Link>
 
                           <button
@@ -2490,7 +2490,7 @@ export default function HomePage() {
                                 setDeleteError(null);
                                 setProjectToDelete(project);
                               }}
-                              title="Excluir Projeto de Pesquisa (Apenas Administrador)"
+                              title="Excluir projeto de pesquisa (apenas administrador)"
                               className="p-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl border border-red-200 transition cursor-pointer shrink-0"
                             >
                               <Trash2 className="w-4 h-4" />
@@ -2525,7 +2525,7 @@ export default function HomePage() {
                   <table className="w-full text-left text-xs">
                     <thead className="bg-slate-50/80 border-b border-slate-200 text-slate-500 uppercase tracking-wider text-[10px] font-semibold">
                       <tr>
-                        <th scope="col" className="px-4 sm:px-6 py-3">Estudo / Descrição</th>
+                        <th scope="col" className="px-4 sm:px-6 py-3">Estudo / descrição</th>
                         <th scope="col" className="px-4 py-3 hidden md:table-cell">Papel</th>
                         <th scope="col" className="px-4 py-3">Status</th>
                         <th scope="col" className="px-4 py-3 hidden sm:table-cell">Participantes</th>
@@ -2570,7 +2570,7 @@ export default function HomePage() {
                               {isBlinded ? (
                                 <span className="px-2 py-0.5 bg-purple-50 text-purple-700 border border-purple-200/60 text-[11px] font-bold rounded-full inline-flex items-center gap-1">
                                   <EyeOff className="w-3 h-3" />
-                                  <span>Avaliador Cego</span>
+                                  <span>Avaliador cego</span>
                                 </span>
                               ) : (
                                 <span className="px-2 py-0.5 bg-slate-100 text-slate-600 text-[11px] font-medium rounded-full">
@@ -2645,7 +2645,7 @@ export default function HomePage() {
                                       setDeleteError(null);
                                       setProjectToDelete(project);
                                     }}
-                                    title="Excluir Projeto de Pesquisa (Apenas Administrador)"
+                                    title="Excluir projeto de pesquisa (apenas administrador)"
                                     className="p-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg border border-red-200 transition cursor-pointer"
                                   >
                                     <Trash2 className="w-3.5 h-3.5" />
@@ -2668,7 +2668,7 @@ export default function HomePage() {
                     className="text-blue-600 hover:text-blue-800 font-bold inline-flex items-center gap-1 cursor-pointer transition"
                   >
                     <Plus className="w-3.5 h-3.5" />
-                    <span>Cadastrar Novo Estudo</span>
+                    <span>Cadastrar novo estudo</span>
                   </button>
                 </div>
               </div>
@@ -2688,13 +2688,13 @@ export default function HomePage() {
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <h2 className="text-base sm:text-lg font-bold text-slate-900 leading-tight">Novo Estudo Clínico por Etapas</h2>
+                  <h2 className="text-base sm:text-lg font-bold text-slate-900 leading-tight">Novo estudo clínico por etapas</h2>
                   <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
                     Etapa {createStep} de 5
                   </span>
                 </div>
                 <p className="text-xs text-slate-500">
-                  Preenchimento guiado em 5 etapas para padronização completa do protocolo clínico, eCRF e cronograma.
+                  Preenchimento em 5 etapas para padronização do protocolo clínico, eCRF e cronograma.
                 </p>
               </div>
             </div>
@@ -2709,7 +2709,7 @@ export default function HomePage() {
               className="px-3.5 py-1.5 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition cursor-pointer flex items-center gap-1.5 text-xs font-bold border border-slate-200 shadow-2xs"
             >
               <X className="w-4 h-4" />
-              <span>Sair / Cancelar</span>
+              <span>Sair / cancelar</span>
             </button>
           </div>
 
@@ -2718,10 +2718,10 @@ export default function HomePage() {
             <div className="max-w-6xl mx-auto grid grid-cols-5 text-xs">
               {[
                 { num: 1, title: '1. Identificação', sub: 'Nome e código' },
-                { num: 2, title: '2. Desenho do Estudo', sub: 'Grupos do estudo' },
+                { num: 2, title: '2. Desenho do estudo', sub: 'Grupos do estudo' },
                 { num: 3, title: '3. Construtor de eCRF', sub: 'Questionários e escalas' },
-                { num: 4, title: '4. Ficha Clínica', sub: 'Anamnese & Odonto' },
-                { num: 5, title: '5. Cronograma', sub: 'Consultas & diários' },
+                { num: 4, title: '4. Ficha clínica', sub: 'Anamnese e odontograma' },
+                { num: 5, title: '5. Cronograma', sub: 'Consultas e diários' },
               ].map((step) => {
                 const isCurrent = createStep === step.num;
                 const isPast = createStep > step.num;
@@ -2731,7 +2731,7 @@ export default function HomePage() {
                     type="button"
                     onClick={() => {
                       if (step.num > 1 && !newProjectName.trim()) {
-                        setCreateStepError('Preencha o Nome do Estudo antes de avançar.');
+                        setCreateStepError('Preencha o nome do estudo antes de avançar.');
                         setCreateStep(1);
                         return;
                       }
@@ -2786,7 +2786,7 @@ export default function HomePage() {
                   <div className="p-3.5 bg-blue-50/70 border border-blue-200 rounded-xl text-xs text-blue-900 flex items-start gap-2.5">
                     <FileText className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
                     <div>
-                      <p className="font-bold">Etapa 1 de 5: Identificação do Estudo de Clareamento</p>
+                      <p className="font-bold">Etapa 1 de 5: Identificação do estudo de clareamento</p>
                       <p className="text-blue-800 text-[11px] mt-0.5">
                         Defina o título do ensaio clínico de clareamento dental e prefixo dos voluntários.
                       </p>
@@ -2795,12 +2795,12 @@ export default function HomePage() {
 
                   <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-100/70 text-blue-800 text-xs font-bold border border-blue-200">
                     <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-                    <span>Linha de Pesquisa: Clareamento Dental</span>
+                    <span>Linha de pesquisa: Clareamento dental</span>
                   </div>
 
                   <div>
                     <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                      Nome do Estudo / Ensaio Clínico de Clareamento *
+                      Nome do estudo / ensaio clínico de clareamento *
                     </label>
                     <input
                       type="text"
@@ -2811,14 +2811,14 @@ export default function HomePage() {
                         setNewProjectName(e.target.value);
                         if (createStepError) setCreateStepError(null);
                       }}
-                      placeholder="Ex: Eficácia e Sensibilidade Dental de Clareamento com HP 35% vs 20%: Ensaio Clínico Randomizado"
+                      placeholder="Ex: Eficácia e sensibilidade dental de clareamento com HP 35% vs 20%: ensaio clínico randomizado"
                       className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none transition shadow-2xs"
                     />
                   </div>
 
                   <div>
                     <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
-                      Descrição / Hipótese / Metodologia (Opcional)
+                      Descrição / hipótese / metodologia (opcional)
                     </label>
                     <textarea
                       rows={3}
@@ -2837,7 +2837,7 @@ export default function HomePage() {
                   <div className="p-3.5 bg-indigo-50/70 border border-indigo-200 rounded-xl text-xs text-indigo-900 flex items-start gap-2.5">
                     <Shuffle className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
                     <div>
-                      <p className="font-bold">Etapa 2 de 5: Desenho do Estudo & Grupos Experimentais</p>
+                      <p className="font-bold">Etapa 2 de 5: Desenho do estudo e grupos experimentais</p>
                       <p className="text-indigo-800 text-[11px] mt-0.5">
                         Defina os grupos ou braços de tratamento deste estudo. Eles ficarão salvos no protocolo e prontos para seleção rápida ao randomizar qualquer paciente.
                       </p>
@@ -2847,7 +2847,7 @@ export default function HomePage() {
                   {/* Modelos Rápidos */}
                   <div>
                     <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1.5">
-                      Modelos Rápidos Pré-configurados (Clique para carregar):
+                      Modelos rápidos pré-configurados (clique para carregar):
                     </label>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                       <button
@@ -2857,7 +2857,7 @@ export default function HomePage() {
                       >
                         <p className="font-bold text-slate-800 flex items-center gap-1.5">
                           <Users className="w-3.5 h-3.5 text-indigo-600" />
-                          <span>2 Grupos Paralelos</span>
+                          <span>2 grupos paralelos</span>
                         </p>
                         <p className="text-[10px] text-slate-500 mt-0.5">Grupo A: Controle / Grupo B: Teste</p>
                       </button>
@@ -2869,7 +2869,7 @@ export default function HomePage() {
                       >
                         <p className="font-bold text-slate-800 flex items-center gap-1.5">
                           <Layers className="w-3.5 h-3.5 text-indigo-600" />
-                          <span>Boca Dividida (Split)</span>
+                          <span>Boca dividida (split-mouth)</span>
                         </p>
                         <p className="text-[10px] text-slate-500 mt-0.5">Direita vs Esquerda (HP vs CP)</p>
                       </button>
@@ -2881,7 +2881,7 @@ export default function HomePage() {
                       >
                         <p className="font-bold text-slate-800 flex items-center gap-1.5">
                           <Shuffle className="w-3.5 h-3.5 text-indigo-600" />
-                          <span>3 Grupos / Doses</span>
+                          <span>3 grupos / doses</span>
                         </p>
                         <p className="text-[10px] text-slate-500 mt-0.5">Controle + Interv. A + Interv. B</p>
                       </button>
@@ -2892,7 +2892,7 @@ export default function HomePage() {
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
-                        Grupos Salvos no Estudo ({newProjectGroups.length})
+                        Grupos configurados no estudo ({newProjectGroups.length})
                       </label>
                       {newProjectGroups.length > 0 && (
                         <button
@@ -2939,7 +2939,7 @@ export default function HomePage() {
                   {/* Campo para Criar Mais Grupos */}
                   <div className="pt-2 border-t border-slate-100">
                     <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                      + Criar Mais Grupos Personalizados
+                      + Adicionar outro grupo personalizado
                     </label>
                     <div className="flex gap-2">
                       <input
@@ -2975,7 +2975,7 @@ export default function HomePage() {
                   <div className="p-3.5 bg-emerald-50/70 border border-emerald-200 rounded-xl text-xs text-emerald-900 flex items-start gap-2.5">
                     <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                     <div>
-                      <p className="font-bold">Etapa 3 de 5: Construtor de eCRF, Questionários & Meios de Avaliação</p>
+                      <p className="font-bold">Etapa 3 de 5: Construtor de eCRF, questionários e escalas</p>
                       <p className="text-emerald-800 text-[11px] mt-0.5">
                         Defina quais questionários, escalas clínicas (EVA, OES, OHIP) e diários serão preenchidos durante a pesquisa e personalize as perguntas e quem responde (paciente ou pesquisador).
                       </p>
@@ -2988,7 +2988,7 @@ export default function HomePage() {
                       <div>
                         <label className="block text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
                           <Sliders className="w-4 h-4 text-blue-600" />
-                          <span>Questionários & Meios de Avaliação Clínicos (eCRF)</span>
+                          <span>Questionários e escalas clínicas (eCRF)</span>
                         </label>
                         <span className="text-[11px] text-slate-500">
                           Personalize as perguntas e itens de cada escala diretamente aqui antes de criar o estudo.
@@ -3004,7 +3004,7 @@ export default function HomePage() {
                           className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-2xs cursor-pointer"
                         >
                           <Plus className="w-3.5 h-3.5" />
-                          <span>Adicionar Método de Avaliação</span>
+                          <span>Adicionar instrumento ou questionário</span>
                         </button>
                       </div>
                     </div>
@@ -3119,7 +3119,7 @@ export default function HomePage() {
                                     handleUpdateFormTarget(f.id, 'frequency', 'CUSTOM', false);
                                     handleUpdateFormTarget(f.id, 'frequencyDescription', e.target.value, false);
                                   }}
-                                  placeholder="Ex: Diário de Sensibilidade (0h a 48h) ou Na sessão final"
+                                  placeholder="Ex: Diário de sensibilidade (0h a 48h) ou na sessão final"
                                   className="flex-1 px-2.5 py-1 border border-slate-300 rounded-lg text-xs bg-slate-50 text-slate-800 placeholder-slate-400 focus:bg-white focus:ring-1 focus:ring-blue-500"
                                 />
                               </div>
@@ -3133,7 +3133,7 @@ export default function HomePage() {
                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 pb-2">
                                   <div className="flex items-center gap-2">
                                     <span className="text-xs font-bold text-slate-800">
-                                      Perguntas e Itens de Avaliação ({qList.length})
+                                      Perguntas e itens de avaliação ({qList.length})
                                     </span>
                                     <span className="text-[10px] text-slate-400 italic">
                                       (Perguntas configuradas para este estudo)
@@ -3149,7 +3149,7 @@ export default function HomePage() {
                                         title="Restaurar as perguntas padrão validadas da literatura"
                                       >
                                         <RotateCcw className="w-3 h-3 text-slate-500" />
-                                        <span>Restaurar Padrão</span>
+                                        <span>Restaurar padrão</span>
                                       </button>
                                     )}
 
@@ -3159,7 +3159,7 @@ export default function HomePage() {
                                       className="text-[11px] bg-blue-600 hover:bg-blue-700 text-white font-bold px-2.5 py-1 rounded-lg transition flex items-center gap-1 shadow-2xs cursor-pointer"
                                     >
                                       <Plus className="w-3.5 h-3.5" />
-                                      <span>Nova Pergunta</span>
+                                      <span>Nova pergunta</span>
                                     </button>
                                   </div>
                                 </div>
@@ -3167,7 +3167,7 @@ export default function HomePage() {
                                 {/* Lista de Perguntas */}
                                 {qList.length === 0 ? (
                                   <div className="p-4 bg-white border border-dashed border-slate-300 rounded-xl text-center text-xs text-slate-500">
-                                    Nenhuma pergunta cadastrada neste questionário. Clique em <strong>Nova Pergunta</strong> para começar.
+                                    Nenhuma pergunta cadastrada neste questionário. Clique em <strong>Nova pergunta</strong> para começar.
                                   </div>
                                 ) : (
                                   <div className="space-y-2.5 p-0.5">
@@ -3202,9 +3202,9 @@ export default function HomePage() {
                                                 >
                                                   <option value="vas">⚡ Escala EVA (0.0 a 10.0)</option>
                                                   <option value="likert">📊 Escala Likert (5 pontos)</option>
-                                                  <option value="choice">🔘 Múltipla Escolha</option>
-                                                  <option value="boolean">✅ Sim / Não (Booleana)</option>
-                                                  <option value="text">📝 Resposta em Texto</option>
+                                                  <option value="choice">🔘 Múltipla escolha</option>
+                                                  <option value="boolean">✅ Sim / não (booleana)</option>
+                                                  <option value="text">📝 Resposta em texto</option>
                                                   <option value="number">🔢 Numérico</option>
                                                 </select>
                                               </div>
@@ -3359,7 +3359,7 @@ export default function HomePage() {
                   <div className="p-3.5 bg-indigo-50/70 border border-indigo-200 rounded-xl text-xs text-indigo-900 flex items-start gap-2.5">
                     <Stethoscope className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
                     <div>
-                      <p className="font-bold">Etapa 4 de 5: Ficha Clínica, Anamnese & Critérios de Inclusão</p>
+                      <p className="font-bold">Etapa 4 de 5: Ficha clínica, anamnese e critérios de inclusão</p>
                       <p className="text-indigo-800 text-[11px] mt-0.5">
                         Defina a meta de voluntários (tamanho amostral), configure o odontograma e personalize os critérios de inclusão/exclusão e perguntas da anamnese do projeto.
                       </p>
@@ -3370,7 +3370,7 @@ export default function HomePage() {
                   <div className="p-4 bg-white border border-slate-200 rounded-xl space-y-2 shadow-2xs">
                     <div className="flex items-center justify-between">
                       <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
-                        Número de Participantes do Projeto (Tamanho Amostral N) *
+                        Número de participantes do estudo (tamanho amostral N) *
                       </label>
                       <span className="text-[10px] text-blue-600 font-semibold bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
                         Meta Regulatória / Amostra
@@ -3407,7 +3407,7 @@ export default function HomePage() {
                           className="w-4 h-4 text-blue-600 rounded cursor-pointer"
                         />
                         <label htmlFor="enable-odontogram-toggle" className="text-xs font-bold text-slate-800 cursor-pointer">
-                          Deseja utilizar Odontograma Clínico neste estudo?
+                          Deseja utilizar odontograma clínico neste estudo?
                         </label>
                       </div>
                       <span className={'text-[10px] font-bold px-2 py-0.5 rounded-full ' + (enableOdontogram ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-500')}>
@@ -3444,7 +3444,7 @@ export default function HomePage() {
                               <div className={'w-3.5 h-3.5 rounded-full border flex items-center justify-center ' + (odontogramScope === 'anterior' ? 'border-blue-600 bg-blue-600' : 'border-slate-300')}>
                                 {odontogramScope === 'anterior' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
                               </div>
-                              <span>Modelo Setor Anterior</span>
+                              <span>Modelo setor anterior</span>
                             </div>
                           </div>
 
@@ -3458,9 +3458,9 @@ export default function HomePage() {
                           >
                             <div>
                               <div className="flex items-center justify-between mb-1">
-                                <span className="font-bold text-slate-900">Arcada Completa (18 a 48)</span>
+                                <span className="font-bold text-slate-900">Arcada completa (18 a 48)</span>
                                 <span className="text-[10px] font-semibold bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded">
-                                  32 Dentes
+                                  32 dentes
                                 </span>
                               </div>
                               <p className="text-[11px] text-slate-500 leading-relaxed">
@@ -3471,7 +3471,7 @@ export default function HomePage() {
                               <div className={'w-3.5 h-3.5 rounded-full border flex items-center justify-center ' + (odontogramScope === 'full' ? 'border-blue-600 bg-blue-600' : 'border-slate-300')}>
                                 {odontogramScope === 'full' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
                               </div>
-                              <span>Modelo Arcada Completa</span>
+                              <span>Modelo arcada completa</span>
                             </div>
                           </div>
                         </div>
@@ -3658,9 +3658,9 @@ export default function HomePage() {
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
                         <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-                        <span>Modelos Prontos de Clareamento (Clique para carregar):</span>
+                        <span>Modelos de protocolos de clareamento (clique para aplicar):</span>
                       </span>
-                      <span className="text-[10px] text-slate-400">Preenchimento com 1 toque</span>
+                      <span className="text-[10px] text-slate-400">Aplicação com 1 clique</span>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
@@ -3670,7 +3670,7 @@ export default function HomePage() {
                         className="p-2.5 bg-white border border-slate-200 hover:border-blue-500 hover:bg-blue-50/50 rounded-xl text-left transition cursor-pointer shadow-2xs group"
                       >
                         <p className="font-bold text-slate-800 text-xs group-hover:text-blue-700 flex items-center gap-1">
-                          <span>🔵 Consultório Padrão</span>
+                          <span>Consultório padrão</span>
                         </p>
                         <p className="text-[10px] text-slate-500 mt-0.5">
                           3 consultas: 1ª Aplicação (Dia 0) → 2ª Aplicação (7d) → Retorno de Cor (14d)
@@ -3683,7 +3683,7 @@ export default function HomePage() {
                         className="p-2.5 bg-white border border-slate-200 hover:border-purple-500 hover:bg-purple-50/50 rounded-xl text-left transition cursor-pointer shadow-2xs group"
                       >
                         <p className="font-bold text-slate-800 text-xs group-hover:text-purple-700 flex items-center gap-1">
-                          <span>🟣 Caseiro Supervisionado</span>
+                          <span>Caseiro supervisionado</span>
                         </p>
                         <p className="text-[10px] text-slate-500 mt-0.5">
                           3 consultas: Moldagem/Géis (Dia 0) → Acompanhamento (7d) → Retorno Final (21d)
@@ -3696,7 +3696,7 @@ export default function HomePage() {
                         className="p-2.5 bg-white border border-slate-200 hover:border-amber-500 hover:bg-amber-50/50 rounded-xl text-left transition cursor-pointer shadow-2xs group"
                       >
                         <p className="font-bold text-slate-800 text-xs group-hover:text-amber-700 flex items-center gap-1">
-                          <span>⚡ Consultório Sessão Única</span>
+                          <span>Consultório em sessão única</span>
                         </p>
                         <p className="text-[10px] text-slate-500 mt-0.5">
                           2 consultas: Aplicação Única (Dia 0) → Avaliação de Cor (7d)
@@ -3709,7 +3709,7 @@ export default function HomePage() {
                   <div className="space-y-3 pt-1">
                     <div className="flex justify-between items-center">
                       <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                        Consultas Programadas ({studySessions.length})
+                        Consultas programadas ({studySessions.length})
                       </span>
                       <button
                         type="button"
@@ -3717,7 +3717,7 @@ export default function HomePage() {
                         className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold cursor-pointer transition shadow-2xs flex items-center gap-1"
                       >
                         <Plus className="w-3.5 h-3.5" />
-                        <span>Adicionar Consulta</span>
+                        <span>Adicionar consulta</span>
                       </button>
                     </div>
                     <div className="space-y-3 p-1">
@@ -3729,42 +3729,42 @@ export default function HomePage() {
                   <div className="p-4 bg-slate-50 border-2 border-blue-200 rounded-2xl space-y-2.5 text-xs text-slate-800 shadow-2xs">
                     <h4 className="font-bold text-blue-900 text-sm flex items-center gap-2">
                       <FolderKanban className="w-4 h-4 text-blue-600" />
-                      <span>Resumo Executivo do Protocolo do Estudo</span>
+                      <span>Resumo do protocolo do estudo</span>
                     </h4>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1 border-t border-slate-200">
                       <div>
-                        <span className="text-slate-500 text-[11px] block">Nome da Pesquisa:</span>
+                        <span className="text-slate-500 text-[11px] block">Nome da pesquisa:</span>
                         <strong className="text-slate-900">{newProjectName || 'Não informado'}</strong>
                       </div>
                       <div>
-                        <span className="text-slate-500 text-[11px] block">Meta Amostral (N Voluntários):</span>
+                        <span className="text-slate-500 text-[11px] block">Meta amostral (nº de voluntários):</span>
                         <strong className="text-blue-700">{newProjectTargetParticipants || '30'} participantes planejados</strong>
                       </div>
                       <div>
-                        <span className="text-slate-500 text-[11px] block">Linha de Pesquisa:</span>
+                        <span className="text-slate-500 text-[11px] block">Linha de pesquisa:</span>
                         <span className="inline-flex items-center gap-1 font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
                           <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-                          <span>Clareamento Dental</span>
+                          <span>Clareamento dental</span>
                         </span>
                       </div>
                       <div>
-                        <span className="text-slate-500 text-[11px] block">Desenho do Estudo / Grupos:</span>
+                        <span className="text-slate-500 text-[11px] block">Desenho do estudo e grupos:</span>
                         <strong className="text-indigo-700">
                           {newProjectGroups.length > 0 ? (newProjectGroups.length + ' grupos (' + newProjectGroups.join(', ') + ')') : 'Nenhum grupo pré-configurado'}
                         </strong>
                       </div>
                       <div>
-                        <span className="text-slate-500 text-[11px] block">Cronograma Clínico:</span>
+                        <span className="text-slate-500 text-[11px] block">Cronograma clínico:</span>
                         <strong className="text-slate-900">{studySessions.length} consultas presenciais configuradas</strong>
                       </div>
                       <div>
-                        <span className="text-slate-500 text-[11px] block">Ficha Clínica & Anamnese:</span>
+                        <span className="text-slate-500 text-[11px] block">Ficha clínica e anamnese:</span>
                         <strong className="text-slate-900">
                           {enableAnamnesis ? (newProjectQuestions.length + ' critérios/perguntas') : 'Desativada'} • Odontograma: {enableOdontogram ? (odontogramScope === 'anterior' ? 'Setor Anterior (12 dentes)' : 'Arcada Completa (32 dentes)') : 'Não'}
                         </strong>
                       </div>
                       <div className="sm:col-span-2">
-                        <span className="text-slate-500 text-[11px] block">Questionários Ativos (eCRF):</span>
+                        <span className="text-slate-500 text-[11px] block">Questionários ativos (eCRF):</span>
                         <strong className="text-emerald-700">
                           {formTargets.filter((f) => f.enabled && f.id !== 'anamnesis' && f.id !== 'odontogram').length} instrumentos habilitados ({formTargets.filter((f) => f.enabled && f.id !== 'anamnesis' && f.id !== 'odontogram').map((f) => f.title).join(', ')})
                         </strong>
@@ -3828,12 +3828,12 @@ export default function HomePage() {
                     {creating ? (
                       <>
                         <RefreshCw className="w-4 h-4 animate-spin" />
-                        <span>Criando Estudo...</span>
+                        <span>Criando estudo...</span>
                       </>
                     ) : (
                       <>
                         <Check className="w-4 h-4" />
-                        <span>Concluir & Criar Estudo Clínico</span>
+                        <span>Concluir e criar estudo clínico</span>
                       </>
                     )}
                   </button>
@@ -3884,7 +3884,7 @@ export default function HomePage() {
                 }`}
               >
                 <Sparkles className="w-3.5 h-3.5" />
-                <span>Escalas Validadas</span>
+                <span>Escalas validadas</span>
               </button>
               <button
                 type="button"
@@ -3896,7 +3896,7 @@ export default function HomePage() {
                 }`}
               >
                 <Bookmark className="w-3.5 h-3.5" />
-                <span>Meus Modelos Salvos ({customTemplatesList.length})</span>
+                <span>Meus modelos salvos ({customTemplatesList.length})</span>
               </button>
               <button
                 type="button"
@@ -4015,7 +4015,7 @@ export default function HomePage() {
               {addMethodTab === 'custom' && (
                 <form onSubmit={handleCreateCustomMethodSubmit} className="space-y-3.5">
                   <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-900">
-                    <p className="font-bold">Cadastrar Novo Instrumento de Avaliação</p>
+                    <p className="font-bold">Cadastrar novo instrumento de avaliação</p>
                     <p className="text-[11px] text-blue-700 mt-0.5">
                       Crie um questionário ou método específico para o seu protocolo de pesquisa. Você poderá personalizar todas as perguntas e escalas em seguida.
                     </p>
@@ -4023,7 +4023,7 @@ export default function HomePage() {
 
                   <div>
                     <label className="block text-xs font-bold text-slate-700 mb-1">
-                      Nome do Instrumento / Questionário *
+                      Nome do instrumento / questionário *
                     </label>
                     <input
                       type="text"
@@ -4354,7 +4354,7 @@ export default function HomePage() {
                         className="w-full py-2 px-3 bg-red-50 hover:bg-red-100 text-red-700 text-xs font-bold rounded-xl border border-red-200 transition flex items-center justify-center gap-1.5 cursor-pointer"
                       >
                         <Trash2 className="w-4 h-4 text-red-600" />
-                        <span>Excluir Este Projeto Definitivamente (Admin)</span>
+                        <span>Excluir este projeto definitivamente (admin)</span>
                       </button>
                     </div>
                   )}
@@ -4547,10 +4547,10 @@ export default function HomePage() {
                             onChange={(e) => setEditEnableOdontogram(e.target.checked)}
                             className="w-4 h-4 text-blue-600 rounded"
                           />
-                          <span>Odontograma Clínico Anatômico</span>
+                          <span>Odontograma clínico anatômico</span>
                         </label>
                         <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-200 text-slate-700">
-                          🩺 Preenchido pelo Pesquisador
+                          🩺 Preenchido pelo pesquisador
                         </span>
                       </div>
                       {editEnableOdontogram && (

@@ -136,7 +136,7 @@ export default function LoginPage() {
             <ShieldCheck className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-slate-900">Acesso ao Sistema</h2>
+            <h2 className="text-lg font-bold text-slate-900">Acesso ao sistema</h2>
             <p className="text-xs text-slate-500">Informe suas credenciais para continuar</p>
           </div>
         </div>
@@ -153,7 +153,7 @@ export default function LoginPage() {
         <form className="space-y-4" onSubmit={handleSubmit}>
           <div>
             <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1.5">
-              E-mail Institucional
+              E-mail institucional
             </label>
             <div className="relative">
               <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -171,7 +171,7 @@ export default function LoginPage() {
 
           <div>
             <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1.5">
-              Senha de Acesso
+              Senha de acesso
             </label>
             <div className="relative">
               <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -205,7 +205,7 @@ export default function LoginPage() {
             ) : (
               <Lock className="w-4 h-4" />
             )}
-            <span>{loading ? 'Autenticando...' : 'Entrar no Sistema'}</span>
+            <span>{loading ? 'Autenticando...' : 'Entrar no sistema'}</span>
           </button>
         </form>
 
@@ -216,7 +216,7 @@ export default function LoginPage() {
             className="text-xs text-emerald-700 hover:text-emerald-800 font-semibold inline-flex items-center space-x-1.5 transition"
           >
             <Smartphone className="w-3.5 h-3.5 text-emerald-600" />
-            <span>É voluntário de um ensaio? Acessar Portal do Paciente →</span>
+            <span>É participante de um estudo? Acessar portal do paciente →</span>
           </Link>
         </div>
 

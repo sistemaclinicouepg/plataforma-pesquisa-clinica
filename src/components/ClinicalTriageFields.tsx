@@ -175,7 +175,7 @@ export function ClinicalTriageFields({
       <div className="space-y-1.5" ref={complaintContainerRef}>
         <div className="flex items-center justify-between">
           <label className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-            Queixa Principal / Motivo da Consulta
+            Queixa principal / motivo da consulta
           </label>
           <span className="text-[11px] text-slate-400">
             clique para ver opções ou digite
@@ -246,7 +246,7 @@ export function ClinicalTriageFields({
           {isComplaintOpen && (
             <div className="absolute left-0 right-0 top-full mt-1.5 z-40 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden divide-y divide-slate-100 max-h-56 overflow-y-auto animate-in fade-in duration-100">
               <div className="px-3 py-1.5 bg-slate-50 text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center justify-between">
-                <span>Opções Frequentes ({filteredComplaints.length})</span>
+                <span>Opções frequentes ({filteredComplaints.length})</span>
                 <span className="font-normal text-slate-400 lowercase">clique para selecionar</span>
               </div>
 
@@ -312,7 +312,7 @@ export function ClinicalTriageFields({
       {/* ALERGIAS COM LISTA OCULTA / AUTOCOMPLETE */}
       <div className="space-y-2 pt-2 border-t border-slate-100">
         <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider">
-          Alergias Prévias Relatadas
+          Alergias prévias relatadas
         </label>
 
         {/* Seletor Sim ou Não */}
@@ -327,7 +327,7 @@ export function ClinicalTriageFields({
             }`}
           >
             <Check className="w-3.5 h-3.5" />
-            <span>Não (Sem Alergias Conhecidas)</span>
+            <span>Não (sem alergias conhecidas)</span>
           </button>
 
           <button
@@ -340,7 +340,7 @@ export function ClinicalTriageFields({
             }`}
           >
             <AlertCircle className="w-3.5 h-3.5" />
-            <span>Sim (Possui Alergia)</span>
+            <span>Sim (possui alergia)</span>
           </button>
         </div>
 
@@ -416,7 +416,7 @@ export function ClinicalTriageFields({
               {isAllergyOpen && (
                 <div className="absolute left-0 right-0 top-full mt-1.5 z-40 bg-white border border-rose-200 rounded-xl shadow-xl overflow-hidden divide-y divide-rose-100 max-h-56 overflow-y-auto animate-in fade-in duration-100">
                   <div className="px-3 py-1.5 bg-rose-50 text-[10px] font-bold text-rose-800 uppercase tracking-wider flex items-center justify-between">
-                    <span>Lista de Alergias ({filteredAllergies.length})</span>
+                    <span>Lista de alergias ({filteredAllergies.length})</span>
                     <span className="font-normal text-rose-600 lowercase">clique para selecionar</span>
                   </div>
 

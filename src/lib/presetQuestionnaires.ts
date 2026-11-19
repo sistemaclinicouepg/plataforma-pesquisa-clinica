@@ -38,8 +38,8 @@ export const STANDARD_PRESETS: Record<string, PresetQuestionnaireDef> = {
         id: 'q_sens_vas',
         type: 'vas',
         title: 'Qual a intensidade da sua sensibilidade ou dor dentária neste momento?',
-        minLabel: '0.0 - Sem Dor ou Desconforto',
-        maxLabel: '10.0 - Pior Dor Imaginável',
+        minLabel: '0.0 - Sem dor ou desconforto',
+        maxLabel: '10.0 - Pior dor imaginável',
         required: true,
         observation: 'Deslize a barra contínua de 0 a 10 de acordo com sua percepção.',
         enableGateQuestion: true,
@@ -95,8 +95,8 @@ export const STANDARD_PRESETS: Record<string, PresetQuestionnaireDef> = {
         id: 'q_sat_color',
         type: 'vas',
         title: 'Qual o seu grau de satisfação com a cor final obtida em seus dentes?',
-        minLabel: '0.0 - Totalmente Insatisfeito',
-        maxLabel: '10.0 - Extremamente Satisfeito',
+        minLabel: '0.0 - Totalmente insatisfeito',
+        maxLabel: '10.0 - Extremamente satisfeito',
         required: true,
       },
       {
@@ -169,7 +169,7 @@ export const STANDARD_PRESETS: Record<string, PresetQuestionnaireDef> = {
 
   habits: {
     id: 'habits',
-    title: 'Mapeamento de Hábitos e Alimentos Corantes',
+    title: 'Hábitos e alimentos corantes',
     description: 'Modalidade: TEMPO | Frequência: 1 vez por semana | Ocorrência: Semanalmente | Registro de ingestão de café, chimarrão, alimentos corantes e fumo durante o estudo.',
     frequency: '1 vez por semana',
     modality: 'TIME_BASED',

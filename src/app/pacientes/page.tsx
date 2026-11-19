@@ -445,10 +445,10 @@ export default function PacientesPage() {
           <div>
             <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-blue-50 border border-blue-200/80 text-blue-700 text-xs font-semibold mb-2">
               <Users className="w-3.5 h-3.5" />
-              <span>Prontuário Geral Unificado (LGPD)</span>
+              <span>Prontuário geral unificado (LGPD)</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
-              <span>Diretório de Pacientes</span>
+              <span>Diretório de pacientes</span>
               <button
                 onClick={() => fetchPatients(false)}
                 disabled={isRefreshing || loading}
@@ -474,7 +474,7 @@ export default function PacientesPage() {
               title="Cadastrar um novo participante no prontuário unificado"
             >
               <Plus className="w-4 h-4" />
-              <span>Novo Paciente</span>
+              <span>Novo paciente</span>
             </button>
           )}
         </div>
@@ -486,7 +486,7 @@ export default function PacientesPage() {
               <Users className="w-5 h-5" />
             </div>
             <div className="min-w-0">
-              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total de Pacientes</p>
+              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total de pacientes</p>
               <p className="text-2xl font-black text-slate-900 leading-tight">{stats.total}</p>
             </div>
           </div>
@@ -496,7 +496,7 @@ export default function PacientesPage() {
               <CheckCircle2 className="w-5 h-5" />
             </div>
             <div className="min-w-0">
-              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Em Protocolo Ativo</p>
+              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Em protocolo ativo</p>
               <div className="flex items-center space-x-1.5">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                 <p className="text-2xl font-black text-emerald-600 leading-tight">{stats.inProtocol}</p>
@@ -509,7 +509,7 @@ export default function PacientesPage() {
               <Clock className="w-5 h-5" />
             </div>
             <div className="min-w-0">
-              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Fila de Triagem</p>
+              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Fila de triagem</p>
               <p className="text-2xl font-black text-amber-600 leading-tight">{stats.inTriage}</p>
             </div>
           </div>
@@ -624,8 +624,8 @@ export default function PacientesPage() {
                 <thead>
                   <tr className="border-b border-slate-200 bg-slate-50/90 text-[11px] font-bold uppercase tracking-wider text-slate-500 h-11">
                     <th className="py-3 px-5">Paciente</th>
-                    <th className="py-3 px-4">Documento & Contato</th>
-                    <th className="py-3 px-4">Estudos & Sessões</th>
+                    <th className="py-3 px-4">Documento e contato</th>
+                    <th className="py-3 px-4">Estudos e sessões</th>
                     <th className="py-3 px-5 text-right">Ações</th>
                   </tr>
                 </thead>
@@ -920,7 +920,7 @@ export default function PacientesPage() {
                                               className="px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow-2xs transition flex items-center gap-1 shrink-0 cursor-pointer"
                                             >
                                               <FileText className="w-3 h-3" />
-                                              <span>Abrir Prontuário</span>
+                                              <span>Abrir prontuário</span>
                                               <ChevronRight className="w-3 h-3" />
                                             </Link>
                                           </div>
@@ -956,7 +956,7 @@ export default function PacientesPage() {
                   <Plus className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-slate-900">Cadastrar Novo Paciente</h3>
+                  <h3 className="text-base font-bold text-slate-900">Cadastrar novo paciente</h3>
                   <p className="text-xs text-slate-500">Adiciona ao prontuário central e opcionalmente vincula a um estudo</p>
                 </div>
               </div>
@@ -1027,7 +1027,7 @@ export default function PacientesPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Data de Nascimento</label>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Data de nascimento</label>
                   <input
                     type="date"
                     value={newPatientForm.dateOfBirth}
@@ -1037,7 +1037,7 @@ export default function PacientesPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Sexo Biológico</label>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Sexo biológico</label>
                   <select
                     value={newPatientForm.biologicalSex}
                     onChange={(e) => setNewPatientForm({ ...newPatientForm, biologicalSex: e.target.value })}
@@ -1134,7 +1134,7 @@ export default function PacientesPage() {
                   <Pencil className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-slate-900">Editar Prontuário do Paciente</h3>
+                  <h3 className="text-base font-bold text-slate-900">Editar prontuário do paciente</h3>
                   <p className="text-xs text-slate-500">ID: {editingPatient.id}</p>
                 </div>
               </div>

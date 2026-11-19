@@ -259,7 +259,7 @@ function PatientTcleContent() {
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center text-slate-400">
-        <p className="animate-pulse text-xs">Carregando Termo de Consentimento...</p>
+        <p className="animate-pulse text-xs">Carregando termo de consentimento...</p>
       </div>
     );
   }
@@ -271,15 +271,15 @@ function PatientTcleContent() {
           <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
             <AlertTriangle className="w-8 h-8" />
           </div>
-          <h2 className="text-xl font-bold text-slate-900 mb-2">Termo Não Encontrado</h2>
+          <h2 className="text-xl font-bold text-slate-900 mb-2">Termo não encontrado</h2>
           <p className="text-xs text-slate-500 mb-6">
-            Não foi possível localizar o Termo de Consentimento para este participante.
+            Não foi possível localizar o termo de consentimento para este participante.
           </p>
           <Link
             href="/paciente"
             className="w-full inline-block py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md transition"
           >
-            Ir para o Portal do Paciente
+            Ir para o portal do paciente
           </Link>
         </div>
       </div>
@@ -297,10 +297,10 @@ function PatientTcleContent() {
           
           <div>
             <span className="px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full text-[10px] font-bold uppercase tracking-wider">
-              {auditResult.isAssent ? 'TALE Assinado' : 'TCLE Assinado'}
+              {auditResult.isAssent ? 'TALE assinado' : 'TCLE assinado'}
             </span>
             <h2 className="text-xl sm:text-2xl font-black text-slate-900 mt-2">
-              Consentimento Registrado!
+              Consentimento registrado!
             </h2>
             <p className="text-xs text-slate-500 mt-1">
               Documento validado eletronicamente em conformidade com as resoluções CNS 466/2012 e a Lei nº 13.709/2018 (LGPD).
@@ -311,10 +311,10 @@ function PatientTcleContent() {
           <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200 text-left text-xs space-y-2 font-mono text-slate-700">
             <div className="flex items-center space-x-1.5 text-emerald-700 font-bold border-b border-slate-200 pb-1.5 text-[11px]">
               <ShieldCheck className="w-4 h-4 shrink-0" />
-              <span>Selo Criptográfico de Integridade</span>
+              <span>Selo criptográfico de integridade</span>
             </div>
-            <p><strong>Código de Auditoria:</strong> {auditResult.signatureId}</p>
-            <p><strong>Data e Hora:</strong> {new Date(auditResult.signedAt).toLocaleString('pt-BR')}</p>
+            <p><strong>Código de auditoria:</strong> {auditResult.signatureId}</p>
+            <p><strong>Data e hora:</strong> {new Date(auditResult.signedAt).toLocaleString('pt-BR')}</p>
             <p><strong>Endereço IP:</strong> {auditResult.audit.ipAddress}</p>
             <p>
               <strong>Dispositivo:</strong>{' '}
@@ -332,7 +332,7 @@ function PatientTcleContent() {
             )}
             {auditResult.guardianName && (
               <p className="pt-1 border-t border-slate-200 text-[10px] text-slate-600">
-                <strong>Responsável Legal:</strong> {auditResult.guardianName} ({auditResult.guardianRelationship})
+                <strong>Responsável legal:</strong> {auditResult.guardianName} ({auditResult.guardianRelationship})
               </p>
             )}
           </div>
@@ -345,14 +345,14 @@ function PatientTcleContent() {
               className="w-full py-3.5 bg-blue-700 hover:bg-blue-800 text-white font-bold text-xs rounded-xl shadow-md transition flex items-center justify-center space-x-2"
             >
               <Printer className="w-4 h-4" />
-              <span>Baixar / Imprimir Cópia Oficial em PDF</span>
+              <span>Baixar / imprimir cópia oficial em PDF</span>
             </Link>
 
             <Link
               href={participantId && participantId !== 'demo' ? `/paciente?participantId=${participantId}` : '/paciente'}
               className="w-full inline-block py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition"
             >
-              Avançar para o Diário Clínico do Paciente →
+              Avançar para o portal do paciente →
             </Link>
           </div>
         </div>
@@ -399,7 +399,7 @@ function PatientTcleContent() {
             <div className="mt-2 p-2.5 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-[11px] flex items-center space-x-2">
               <Users className="w-4 h-4 shrink-0 text-amber-700" />
               <span>
-                <strong>Participante Menor de Idade / Vulnerável:</strong> Este documento requer a leitura conjunta e a assinatura do participante e do seu responsável legal.
+                <strong>Participante menor de idade / vulnerável:</strong> Este documento requer a leitura conjunta e a assinatura do participante e do seu responsável legal.
               </span>
             </div>
           )}
@@ -467,7 +467,7 @@ function PatientTcleContent() {
               />
               {!hasSignature && (
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none text-slate-300 text-xs font-semibold uppercase tracking-wider">
-                  Assine Aqui com o Dedo
+                  Assine aqui com o dedo ou mouse
                 </div>
               )}
             </div>
@@ -479,14 +479,14 @@ function PatientTcleContent() {
               <div className="flex items-center space-x-2 border-b border-slate-100 pb-2">
                 <Users className="w-4 h-4 text-blue-700 shrink-0" />
                 <h4 className="font-bold text-xs text-slate-900 uppercase tracking-wide">
-                  Autorização do Responsável Legal (Obrigatório)
+                  Autorização do responsável legal (obrigatório)
                 </h4>
               </div>
 
               <div className="space-y-3">
                 <div>
                   <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                    Nome Completo do Responsável: *
+                    Nome completo do responsável: *
                   </label>
                   <input
                     type="text"
@@ -501,7 +501,7 @@ function PatientTcleContent() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                      CPF do Responsável: *
+                      CPF do responsável: *
                     </label>
                     <input
                       type="text"
@@ -515,7 +515,7 @@ function PatientTcleContent() {
 
                   <div>
                     <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                      Grau de Parentesco / Vínculo: *
+                      Grau de parentesco ou vínculo: *
                     </label>
                     <select
                       value={guardianRelationship}
@@ -524,9 +524,9 @@ function PatientTcleContent() {
                     >
                       <option value="Mãe">Mãe</option>
                       <option value="Pai">Pai</option>
-                      <option value="Tutor(a) Legal">Tutor(a) Legal</option>
-                      <option value="Guardião(ã) Legal">Guardião(ã) Legal</option>
-                      <option value="Outro Responsável Legal">Outro Responsável Legal</option>
+                      <option value="Tutor(a) Legal">Tutor(a) legal</option>
+                      <option value="Guardião(ã) Legal">Guardião(ã) legal</option>
+                      <option value="Outro Responsável Legal">Outro responsável legal</option>
                     </select>
                   </div>
                 </div>
@@ -534,7 +534,7 @@ function PatientTcleContent() {
                 {/* Quadro 2: Assinatura do Responsável Legal */}
                 <div className="space-y-2 pt-2">
                   <div className="flex justify-between items-center text-xs">
-                    <span className="font-bold text-slate-700">Assinatura do Responsável Legal: *</span>
+                    <span className="font-bold text-slate-700">Assinatura do responsável legal: *</span>
                     <button
                       type="button"
                       onClick={clearGuardianCanvas}

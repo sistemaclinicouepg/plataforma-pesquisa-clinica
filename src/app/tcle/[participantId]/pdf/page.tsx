@@ -129,19 +129,19 @@ function TclePdfContent() {
           className="text-xs font-bold text-slate-600 hover:text-slate-900 flex items-center space-x-1"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>Voltar ao Portal</span>
+          <span>Voltar ao portal</span>
         </Link>
 
         <div className="flex items-center space-x-3">
           <span className="text-xs text-slate-500 hidden sm:inline">
-            Conformidade: CNS 466/12 & LGPD
+            Conformidade: CNS 466/12 e LGPD
           </span>
           <button
             onClick={() => window.print()}
             className="px-5 py-2.5 bg-blue-700 hover:bg-blue-800 text-white font-bold text-xs rounded-xl shadow transition flex items-center space-x-2"
           >
             <Printer className="w-4 h-4" />
-            <span>Imprimir / Salvar em PDF</span>
+            <span>Imprimir / salvar em PDF</span>
           </button>
         </div>
       </div>
@@ -198,7 +198,7 @@ function TclePdfContent() {
           </p>
           {consentForm.ethicsNumber && (
             <p>
-              <strong>Protocolo de Aprovação CEP:</strong> {consentForm.ethicsNumber}
+              <strong>Protocolo de aprovação do CEP:</strong> {consentForm.ethicsNumber}
             </p>
           )}
           {consentForm.ethicsContacts && (
@@ -225,18 +225,18 @@ function TclePdfContent() {
           <div>
             <span className="text-slate-500 block text-[11px]">Classificação:</span>
             <span className="font-semibold text-slate-800">
-              {isMinor ? 'Menor de 18 anos (Participante com Assentimento)' : 'Adulto Capacitado'}
+              {isMinor ? 'Menor de 18 anos (participante com assentimento)' : 'Adulto capacitado'}
             </span>
           </div>
 
           {/* Dados do Responsável Legal (se aplicável) */}
           {(isMinor || existingSignature?.guardianName) && (
             <div className="sm:col-span-2 pt-2 border-t border-slate-200 text-xs">
-              <span className="font-bold text-slate-800 block mb-0.5">Responsável Legal Cadastrado:</span>
+              <span className="font-bold text-slate-800 block mb-0.5">Responsável legal cadastrado:</span>
               <p className="text-slate-700">
                 Nome: <strong>{existingSignature?.guardianName || 'Aguardando cadastro no ato da assinatura'}</strong> | 
                 CPF: <strong className="font-mono">{existingSignature?.guardianCpf || '---'}</strong> | 
-                Vínculo: <strong>{existingSignature?.guardianRelationship || 'Responsável Legal'}</strong>
+                Vínculo: <strong>{existingSignature?.guardianRelationship || 'Responsável legal'}</strong>
               </p>
             </div>
           )}

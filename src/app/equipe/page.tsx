@@ -432,10 +432,10 @@ export default function EquipePage() {
           <div>
             <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-200/80 text-indigo-700 text-xs font-semibold mb-2">
               <GraduationCap className="w-3.5 h-3.5" />
-              <span>Corpo Docente & Pesquisadores Clínicos</span>
+              <span>Corpo docente e pesquisadores clínicos</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
-              <span>Equipe de Pesquisa</span>
+              <span>Equipe de pesquisa</span>
               <button
                 onClick={() => fetchUsers(false)}
                 disabled={isRefreshing || loading}
@@ -461,7 +461,7 @@ export default function EquipePage() {
               title="Cadastrar um novo membro ou orientador na equipe"
             >
               <Plus className="w-4 h-4" />
-              <span>Novo Membro</span>
+              <span>Novo membro</span>
             </button>
           )}
         </div>
@@ -473,7 +473,7 @@ export default function EquipePage() {
               <Users className="w-5 h-5" />
             </div>
             <div className="min-w-0">
-              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Equipe</p>
+              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total de membros</p>
               <p className="text-2xl font-black text-slate-900 leading-tight">{stats.total}</p>
             </div>
           </div>
@@ -493,7 +493,7 @@ export default function EquipePage() {
               <EyeOff className="w-5 h-5" />
             </div>
             <div className="min-w-0">
-              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Avaliadores Cegos</p>
+              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Avaliadores cegos</p>
               <p className="text-2xl font-black text-amber-700 leading-tight">{stats.blindEvaluators}</p>
             </div>
           </div>
@@ -610,9 +610,9 @@ export default function EquipePage() {
                 <thead>
                   <tr className="border-b border-slate-200 bg-slate-50/90 text-[11px] font-bold uppercase tracking-wider text-slate-500 h-11">
                     <th className="py-3 px-5">Pesquisador</th>
-                    <th className="py-3 px-4">Papel Institucional</th>
-                    <th className="py-3 px-4">Estudos Atribuídos</th>
-                    <th className="py-3 px-4">Status de Cadastro</th>
+                    <th className="py-3 px-4">Papel institucional</th>
+                    <th className="py-3 px-4">Estudos atribuídos</th>
+                    <th className="py-3 px-4">Status de cadastro</th>
                     <th className="py-3 px-5 text-right">Ações</th>
                   </tr>
                 </thead>
@@ -682,17 +682,17 @@ export default function EquipePage() {
                             {isCoordinator ? (
                               <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-purple-50 text-purple-800 border border-purple-200 flex items-center space-x-1.5 w-fit">
                                 <ShieldCheck className="w-3.5 h-3.5 text-purple-600" />
-                                <span>Coordenação Geral</span>
+                                <span>Coordenação geral</span>
                               </span>
                             ) : isBlindEvaluator ? (
                               <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-amber-50 text-amber-900 border border-amber-200 flex items-center space-x-1.5 w-fit">
                                 <EyeOff className="w-3.5 h-3.5 text-amber-600" />
-                                <span>Avaliador Cego</span>
+                                <span>Avaliador cego</span>
                               </span>
                             ) : (
                               <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-blue-50 text-blue-800 border border-blue-200 flex items-center space-x-1.5 w-fit">
                                 <Stethoscope className="w-3.5 h-3.5 text-blue-600" />
-                                <span>{roleLabels[user.role] || 'Pesquisador Clínico'}</span>
+                                <span>{roleLabels[user.role] || 'Pesquisador clínico'}</span>
                               </span>
                             )}
                           </td>
@@ -953,7 +953,7 @@ export default function EquipePage() {
                   <Plus className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-slate-900">Cadastrar Novo Pesquisador</h3>
+                  <h3 className="text-base font-bold text-slate-900">Cadastrar novo pesquisador</h3>
                   <p className="text-xs text-slate-500">Adicione um docente, avaliador cego ou operador clínico</p>
                 </div>
               </div>
@@ -1154,7 +1154,7 @@ export default function EquipePage() {
                   <Pencil className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-slate-900">Editar Membro da Equipe</h3>
+                  <h3 className="text-base font-bold text-slate-900">Editar membro da equipe</h3>
                   <p className="text-xs text-slate-500">ID: {editingUser.id}</p>
                 </div>
               </div>

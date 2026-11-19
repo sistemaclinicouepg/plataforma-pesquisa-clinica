@@ -83,7 +83,7 @@ function RelatorioCepContent() {
     };
   });
 
-  // Modal de Visualização de Arquivo (Estilo WhatsApp / macOS Quick Look)
+  // Modal de visualização rápida de arquivo (Quick Look)
   const [previewModal, setPreviewModal] = useState<{
     isOpen: boolean;
     title: string;
@@ -341,7 +341,7 @@ function RelatorioCepContent() {
     }
   };
 
-  // Visualizar arquivo em popup modal (estilo WhatsApp / Quick Look) com opção de abrir em nova aba
+  // Visualizar arquivo em popup modal com opção de abrir em nova aba
   const handleOpenFile = async (
     url?: string,
     key?: string,
@@ -605,7 +605,7 @@ function RelatorioCepContent() {
                 ) : (
                   <>
                     <Save className="w-3.5 h-3.5" />
-                    <span>Salvar Dados</span>
+                    <span>Salvar dados</span>
                   </>
                 )}
               </button>
@@ -660,7 +660,7 @@ function RelatorioCepContent() {
                     </div>
                     <div>
                       <h2 className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
-                        <span>1. Parecer de Aceite / Aprovação CEP</span>
+                        <span>1. Parecer de aceite / aprovação do CEP</span>
                         {hasCepPdf && (
                           <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
                             Anexado
@@ -743,7 +743,7 @@ function RelatorioCepContent() {
                               )
                             }
                             className="px-2.5 py-1.5 rounded-lg text-xs font-bold text-emerald-800 bg-white hover:bg-emerald-100 border border-emerald-200 transition inline-flex items-center space-x-1 shadow-2xs cursor-pointer"
-                            title="Visualizar documento em popup (estilo WhatsApp)"
+                            title="Visualizar documento em popup"
                           >
                             <Eye className="w-3.5 h-3.5 text-emerald-600" />
                             <span>Visualizar</span>
@@ -852,7 +852,7 @@ function RelatorioCepContent() {
                     </div>
                     <div>
                       <h2 className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
-                        <span>2. Projeto de Pesquisa Completo (PDF)</span>
+                        <span>2. Projeto de pesquisa completo (PDF)</span>
                         {hasProjectPdf && (
                           <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200">
                             Anexado
@@ -935,7 +935,7 @@ function RelatorioCepContent() {
                               )
                             }
                             className="px-2.5 py-1.5 rounded-lg text-xs font-bold text-blue-800 bg-white hover:bg-blue-100 border border-blue-200 transition inline-flex items-center space-x-1 shadow-2xs cursor-pointer"
-                            title="Visualizar documento em popup (estilo WhatsApp)"
+                            title="Visualizar documento em popup"
                           >
                             <Eye className="w-3.5 h-3.5 text-blue-600" />
                             <span>Visualizar</span>
@@ -1039,7 +1039,7 @@ function RelatorioCepContent() {
         </div>
       </div>
 
-      {/* Modal Popup de Visualização do Documento (Estilo WhatsApp / macOS Quick Look) */}
+      {/* Modal popup de visualização rápida do documento */}
       {previewModal && previewModal.isOpen && (
         <div
           className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 md:p-6 animate-in fade-in duration-150"

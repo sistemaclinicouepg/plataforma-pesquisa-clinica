@@ -290,7 +290,7 @@ export function StudySidebar({
               title="Cadastrar novo participante voluntário no estudo"
             >
               <Plus className="w-4 h-4" />
-              <span>Cadastrar Paciente</span>
+              <span>Cadastrar paciente</span>
             </button>
 
             <button
@@ -299,7 +299,7 @@ export function StudySidebar({
               title="Adicionar ou vincular pesquisador ao estudo"
             >
               <UserPlus className="w-3.5 h-3.5 text-indigo-600" />
-              <span>Adicionar Pesquisador</span>
+              <span>Adicionar pesquisador</span>
             </button>
           </div>
         </div>
@@ -327,7 +327,7 @@ export function StudySidebar({
                       activeItem === 'active' ? 'text-blue-600' : 'text-slate-400 group-hover:text-slate-600'
                     }`}
                   />
-                  <span className="truncate">Prontuários & Consultas</span>
+                  <span className="truncate">Prontuários e consultas</span>
                 </div>
                 {approvedCount > 0 && (
                   <span
@@ -355,7 +355,7 @@ export function StudySidebar({
                       activeItem === 'triage' ? 'text-blue-600' : 'text-slate-400 group-hover:text-slate-600'
                     }`}
                   />
-                  <span className="truncate">Triagem & Inclusão</span>
+                  <span className="truncate">Triagem e inclusão</span>
                 </div>
                 {pendingCount > 0 && (
                   <span
@@ -391,7 +391,7 @@ export function StudySidebar({
                       activeItem === 'team' ? 'text-blue-600' : 'text-slate-400 group-hover:text-slate-600'
                     }`}
                   />
-                  <span className="truncate">Equipe do Estudo</span>
+                  <span className="truncate">Equipe do estudo</span>
                 </div>
                 {membersCount > 0 && (
                   <span
@@ -418,7 +418,7 @@ export function StudySidebar({
                     activeItem === 'tcle' ? 'text-emerald-600' : 'text-emerald-500/80 group-hover:text-emerald-600'
                   }`}
                 />
-                <span className="truncate">Termo de Aceite (TCLE)</span>
+                <span className="truncate">Termo de aceite (TCLE)</span>
               </Link>
 
               <button
@@ -435,7 +435,7 @@ export function StudySidebar({
                     activeItem === 'settings' ? 'text-blue-600' : 'text-slate-400 group-hover:text-slate-600'
                   }`}
                 />
-                <span className="truncate">Editar Dados do Estudo</span>
+                <span className="truncate">Editar dados do estudo</span>
               </button>
             </div>
           </div>
@@ -460,7 +460,7 @@ export function StudySidebar({
                     activeItem === 'export' ? 'text-blue-600' : 'text-slate-400 group-hover:text-slate-600'
                   }`}
                 />
-                <span className="truncate">Exportar Dados</span>
+                <span className="truncate">Exportar dados</span>
               </button>
 
               {userIsAdmin && (
@@ -479,7 +479,7 @@ export function StudySidebar({
                         activeItem === 'audit' ? 'text-indigo-600' : 'text-slate-400 group-hover:text-slate-600'
                       }`}
                     />
-                    <span className="truncate">Trilha de Auditoria</span>
+                    <span className="truncate">Trilha de auditoria</span>
                   </div>
                   {auditLogsCount > 0 && (
                     <span

@@ -225,7 +225,7 @@ function TcleEditorContent() {
                 className="text-slate-500 hover:text-blue-600 text-xs font-semibold transition inline-flex items-center px-2.5 py-1.5 rounded-lg hover:bg-slate-100"
               >
                 <ArrowLeft className="w-3.5 h-3.5 mr-1" />
-                <span>Voltar ao Painel</span>
+                <span>Voltar ao painel</span>
               </Link>
               <div className="hidden sm:block h-4 w-px bg-slate-200" />
               <h1 className="text-sm sm:text-base font-bold text-slate-900 tracking-tight">
@@ -234,7 +234,7 @@ function TcleEditorContent() {
               {savedSuccess && (
                 <span className="px-2.5 py-0.5 bg-emerald-100 text-emerald-800 rounded-full text-xs font-bold inline-flex items-center gap-1 shadow-2xs">
                   <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700" />
-                  <span>Salvo com Sucesso!</span>
+                  <span>Salvo com sucesso!</span>
                 </span>
               )}
             </div>
@@ -244,10 +244,10 @@ function TcleEditorContent() {
                 href={`/tcle/demo?projectId=${projectId}`}
                 target="_blank"
                 className="px-3.5 py-2 border border-slate-300 text-slate-700 rounded-lg text-xs font-bold hover:bg-slate-50 transition inline-flex items-center gap-1.5 cursor-pointer shadow-2xs"
-                title="Pré-visualizar como o participante voluntário verá o termo no portal"
+                title="Pré-visualizar como o participante verá o termo no portal"
               >
                 <Eye className="w-3.5 h-3.5" />
-                <span>Ver Visão do Paciente</span>
+                <span>Ver visão do paciente</span>
               </Link>
               <button
                 onClick={handleSave}
@@ -256,7 +256,7 @@ function TcleEditorContent() {
                 title="Salvar alterações do termo TCLE deste estudo"
               >
                 {saving ? <Clock className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-                <span>{saving ? 'Salvando...' : 'Salvar Termo do Estudo'}</span>
+                <span>{saving ? 'Salvando...' : 'Salvar termo do estudo'}</span>
               </button>
             </div>
           </div>
@@ -274,14 +274,14 @@ function TcleEditorContent() {
           <div className="bg-white rounded-2xl shadow-xs border border-slate-200 p-6 space-y-4">
             <div className="flex justify-between items-center border-b border-slate-100 pb-2">
               <h3 className="text-base font-bold text-slate-900">
-                1. Identificação do Estudo e Pesquisadores Responsáveis
+                1. Identificação do estudo e pesquisadores responsáveis
               </h3>
               <span className="text-[11px] text-slate-400">Dados oficiais exigidos pelo CEP/CONEP</span>
             </div>
 
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
-                Título Oficial da Pesquisa
+                Título oficial da pesquisa
               </label>
               <input
                 type="text"
@@ -295,7 +295,7 @@ function TcleEditorContent() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
-                  Pesquisador(a) Responsável
+                  Pesquisador(a) responsável
                 </label>
                 <input
                   type="text"
@@ -309,7 +309,7 @@ function TcleEditorContent() {
 
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
-                  Orientador(a) / Co-pesquisador
+                  Orientador(a) / co-pesquisador
                 </label>
                 <input
                   type="text"
@@ -324,7 +324,7 @@ function TcleEditorContent() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
-                  Instituição Proponente
+                  Instituição proponente
                 </label>
                 <input
                   type="text"
@@ -363,7 +363,7 @@ function TcleEditorContent() {
 
             {/* Aviso de contatos da pesquisadora no termo */}
             <div className="p-3 bg-blue-50/70 border border-blue-200/80 rounded-xl text-xs text-blue-900 flex items-center justify-between flex-wrap gap-2">
-              <span className="font-semibold">Contato da Pesquisadora no Protocolo:</span>
+              <span className="font-semibold">Contato da pesquisadora no protocolo:</span>
               <span className="text-blue-800 font-mono text-[11px]">
                 Tel: (42) 99946-5140 • robertinhamicheten@hotmail.com
               </span>
@@ -375,7 +375,7 @@ function TcleEditorContent() {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-100 pb-3 gap-2">
               <div>
                 <h3 className="text-base font-bold text-slate-900">
-                  2. Redação dos Termos de Esclarecimento
+                  2. Redação dos termos de esclarecimento
                 </h3>
                 <p className="text-xs text-slate-500">
                   Selecione a aba para editar o termo destinado a adultos (TCLE) ou a menores/vulneráveis (TALE).
@@ -408,7 +408,7 @@ function TcleEditorContent() {
             {activeTab === 'tcle' ? (
               <div className="space-y-2">
                 <div className="flex justify-between items-center text-xs text-slate-500">
-                  <span className="font-semibold text-slate-700">Texto Integral do TCLE (Suporta Markdown #, ##, -):</span>
+                  <span className="font-semibold text-slate-700">Texto integral do TCLE (suporta Markdown #, ##, -):</span>
                   <span>Exibido antes da assinatura do voluntário</span>
                 </div>
                 <textarea
@@ -422,7 +422,7 @@ function TcleEditorContent() {
             ) : (
               <div className="space-y-2">
                 <div className="flex justify-between items-center text-xs text-slate-500">
-                  <span className="font-semibold text-purple-700">Texto do Termo de Assentimento (TALE):</span>
+                  <span className="font-semibold text-purple-700">Texto do termo de assentimento (TALE):</span>
                   <span>Linguagem acessível para menores com leitura conjunta dos pais</span>
                 </div>
                 <textarea

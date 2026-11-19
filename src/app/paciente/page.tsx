@@ -538,7 +538,7 @@ function PacienteContent() {
             <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 mb-2 border border-amber-200 shadow-2xs">
               <ShieldCheck className="w-6 h-6" />
             </div>
-            <h1 className="text-lg font-extrabold text-slate-900 tracking-tight">Confirmação de Segurança</h1>
+            <h1 className="text-lg font-extrabold text-slate-900 tracking-tight">Confirmação de segurança</h1>
             <p className="text-xs text-slate-500 mt-1 leading-relaxed">
               O código informado participa de mais de um estudo clínico na plataforma.
               Para proteger seus dados (LGPD), confirme um dado pessoal abaixo:
@@ -639,10 +639,10 @@ function PacienteContent() {
             <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white mb-3 shadow-md shadow-blue-500/20">
               <span className="font-black text-xl">U</span>
             </div>
-            <h1 className="text-xl font-extrabold text-slate-900 tracking-tight">Portal do Participante</h1>
+            <h1 className="text-xl font-extrabold text-slate-900 tracking-tight">Portal do participante</h1>
             <p className="text-xs text-slate-500 mt-1 leading-relaxed">
               Universidade Estadual de Ponta Grossa • UEPG <br />
-              Pesquisa Clínica & Instrumentos de Avaliação
+              Pesquisa clínica e instrumentos de avaliação
             </p>
           </div>
 
@@ -676,7 +676,7 @@ function PacienteContent() {
               disabled={loading}
               className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs hover:shadow transition disabled:opacity-50 flex items-center justify-center space-x-2 cursor-pointer"
             >
-              <span>{loading ? 'Identificando...' : 'Acessar Meus Questionários'}</span>
+              <span>{loading ? 'Identificando...' : 'Acessar meus questionários'}</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </form>
@@ -840,7 +840,7 @@ function PacienteContent() {
               </div>
               <div>
                 <h3 className="text-lg font-black text-slate-900">
-                  {formRedAlert ? 'Questionário Gravado com Alerta Prioritário!' : 'Questionário Gravado com Sucesso!'}
+                  {formRedAlert ? 'Questionário gravado com alerta prioritário' : 'Questionário gravado com sucesso!'}
                 </h3>
                 <p className="text-xs text-slate-500 mt-1 leading-relaxed">
                   {formSuccessMessage}
@@ -851,7 +851,7 @@ function PacienteContent() {
                 <div className="p-4 bg-red-50 border-2 border-red-400 rounded-2xl text-left text-xs space-y-2.5">
                   <h4 className="font-black text-red-900 flex items-center space-x-1.5 text-xs">
                     <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
-                    <span>Orientações Imediatas de Suporte Clínico:</span>
+                    <span>Orientações de suporte clínico:</span>
                   </h4>
                   <p className="text-red-900 text-[11px] leading-relaxed">
                     Seu relato identificou sintoma severo{formRedAlert.severeDesc ? ` - "${formRedAlert.severeDesc}"` : ''}. A equipe clínica foi alertada.
@@ -870,7 +870,7 @@ function PacienteContent() {
                     className="w-full py-3 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl shadow-md transition flex items-center justify-center space-x-2"
                   >
                     <Phone className="w-4 h-4" />
-                    <span>Falar com o Pesquisador Responsável (WhatsApp)</span>
+                    <span>Falar com o pesquisador responsável (WhatsApp)</span>
                   </a>
                 </div>
               )}
@@ -885,7 +885,7 @@ function PacienteContent() {
                 }}
                 className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-xl shadow-md transition cursor-pointer"
               >
-                ← Voltar à Página Inicial
+                ← Voltar ao início
               </button>
             </div>
           )}
@@ -904,7 +904,7 @@ function PacienteContent() {
                       <div className="flex items-center justify-between gap-2">
                         <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold bg-blue-100 text-blue-800 border border-blue-200">
                           <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
-                          Disponível para Preenchimento
+                          Disponível para preenchimento
                         </span>
                         <span className="text-[11px] font-bold text-slate-600 bg-white px-2.5 py-0.5 rounded-full border border-slate-200 shadow-2xs">
                           {friendly.friendlyOccurrence}
@@ -945,7 +945,7 @@ function PacienteContent() {
                         onClick={() => activateForm(primaryPendingForm)}
                         className="w-full py-4 bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white font-black text-base rounded-2xl shadow-lg shadow-blue-500/25 transition-all transform active:scale-[0.99] flex items-center justify-center gap-2.5 cursor-pointer"
                       >
-                        <span>Iniciar Questionário</span>
+                        <span>Iniciar questionário</span>
                         <ArrowRight className="w-5 h-5" />
                       </button>
                     </div>
@@ -1102,7 +1102,7 @@ function PacienteContent() {
                     <div className="p-3 bg-amber-50/90 border border-amber-200 rounded-2xl flex items-center gap-2.5 text-xs text-amber-900">
                       <Lock className="w-4 h-4 text-amber-600 shrink-0" />
                       <div className="leading-snug">
-                        <span className="font-bold block">Respostas já enviadas (Edição Bloqueada)</span>
+                        <span className="font-bold block">Respostas já enviadas (edição bloqueada)</span>
                         <span className="text-[11px] text-amber-800">
                           Este questionário já foi finalizado. Caso precise alterar alguma resposta, solicite a liberação da edição ao pesquisador.
                         </span>
@@ -1115,9 +1115,9 @@ function PacienteContent() {
                     <div className="p-3 bg-emerald-50 border border-emerald-300 rounded-2xl flex items-center gap-2.5 text-xs text-emerald-900">
                       <Unlock className="w-4 h-4 text-emerald-600 shrink-0" />
                       <div className="leading-snug">
-                        <span className="font-bold block">Edição Liberada pelo Pesquisador</span>
+                        <span className="font-bold block">Edição liberada pelo pesquisador</span>
                         <span className="text-[11px] text-emerald-800">
-                          Você pode alterar suas respostas. Ao concluir a última etapa, clique em &quot;Salvar Alterações&quot;.
+                          Você pode alterar suas respostas. Ao concluir a última etapa, clique em &quot;Salvar alterações&quot;.
                         </span>
                       </div>
                     </div>
@@ -1328,7 +1328,7 @@ function PacienteContent() {
                                 }`}
                               >
                                 {hasPain && <Check className="w-4 h-4 stroke-[3]" />}
-                                <span>Sim (Tive dor)</span>
+                                <span>Sim (tive dor)</span>
                               </button>
                               <button
                                 type="button"
@@ -1350,7 +1350,7 @@ function PacienteContent() {
                                 }`}
                               >
                                 {isBlockedNoPain && <Check className="w-4 h-4 stroke-[3]" />}
-                                <span>Não (Sem dor)</span>
+                                <span>Não (sem dor)</span>
                               </button>
                             </div>
                           </div>
@@ -1438,8 +1438,8 @@ function PacienteContent() {
                     return (
                       <div className="pt-2 space-y-3">
                         <div className="flex justify-between items-center text-[10px] text-slate-500 font-semibold px-0.5">
-                          <span>1 = Pior / Mínimo</span>
-                          <span>10 = Excelente / Máximo</span>
+                          <span>1 = pior / mínimo</span>
+                          <span>10 = excelente / máximo</span>
                         </div>
                         <div className="grid grid-cols-6 sm:grid-cols-11 gap-1.5">
                           {options.map((opt) => {
@@ -1589,7 +1589,7 @@ function PacienteContent() {
                       className="py-3 px-5 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs sm:text-sm rounded-xl transition cursor-pointer ml-auto flex items-center gap-1.5"
                     >
                       <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                      <span>Concluído • Voltar ao Início</span>
+                      <span>Concluído • Voltar ao início</span>
                     </button>
                   ) : isUnlockedByResearcher ? (
                     // MODO EDIÇÃO AUTORIZADA PELO PESQUISADOR
@@ -1600,11 +1600,11 @@ function PacienteContent() {
                       className="py-3 px-5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:bg-slate-200 disabled:text-slate-400 text-white font-black text-xs sm:text-sm rounded-xl shadow-lg transition-all flex items-center gap-1.5 cursor-pointer disabled:cursor-not-allowed ml-auto"
                     >
                       {submittingForm ? (
-                        <span>Salvando Alterações...</span>
+                        <span>Salvando alterações...</span>
                       ) : (
                         <>
                           <CheckCircle2 className="w-4 h-4" />
-                          <span>Salvar Alterações Autorizadas</span>
+                          <span>Salvar alterações autorizadas</span>
                         </>
                       )}
                     </button>
@@ -1621,7 +1621,7 @@ function PacienteContent() {
                       ) : (
                         <>
                           <CheckCircle2 className="w-4 h-4" />
-                          <span>Finalizar e Enviar</span>
+                          <span>Finalizar e enviar</span>
                         </>
                       )}
                     </button>

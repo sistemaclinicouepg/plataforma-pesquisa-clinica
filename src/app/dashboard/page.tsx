@@ -2752,14 +2752,14 @@ function DashboardContent() {
             className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-xs"
           >
             <RefreshCw className="w-3.5 h-3.5" />
-            <span>Tentar Novamente</span>
+            <span>Tentar novamente</span>
           </button>
           <Link
             href="/"
             className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition flex items-center gap-1.5"
           >
             <ChevronLeft className="w-3.5 h-3.5" />
-            <span>Meus Projetos</span>
+            <span>Meus projetos</span>
           </Link>
         </div>
       </div>
@@ -2852,7 +2852,7 @@ function DashboardContent() {
             <button
               onClick={() => setShowNewPatientModal(true)}
               className="p-1.5 bg-blue-600 text-white rounded-lg text-xs font-bold"
-              title="Cadastrar Paciente"
+              title="Cadastrar paciente"
             >
               <Plus className="w-4 h-4" />
             </button>
@@ -2916,7 +2916,7 @@ function DashboardContent() {
                       title="Configurar a trilha de sessões clínicas, consultas, checklists e módulos deste estudo"
                     >
                       <Sliders className="w-3.5 h-3.5 text-blue-600" />
-                      <span>Trilha de Atendimento</span>
+                      <span>Trilha de atendimento</span>
                     </button>
                   )}
                   <button
@@ -2924,7 +2924,7 @@ function DashboardContent() {
                     className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-xs hover:shadow transition flex items-center space-x-1.5 cursor-pointer shrink-0 self-start sm:self-auto"
                   >
                     <Plus className="w-3.5 h-3.5" />
-                    <span>Novo Paciente</span>
+                    <span>Novo paciente</span>
                   </button>
                 </div>
               )}
@@ -2938,7 +2938,7 @@ function DashboardContent() {
               <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-center space-x-2.5 text-xs text-amber-900 shadow-2xs">
                 <Lock className="w-4 h-4 text-amber-700 shrink-0" />
                 <span>
-                  <strong>Modo Avaliador Cego Ativo ({currentUser?.name || currentUser?.email}):</strong> Os grupos de intervenção (Grupo A vs Grupo B / Intervenção vs Controle) e respostas subjetivas permanecem mascarados conforme diretrizes CONSORT.
+                  <strong>Modo avaliador cego ativo ({currentUser?.name || currentUser?.email}):</strong> Os grupos de intervenção (Grupo A vs Grupo B / Intervenção vs Controle) e respostas subjetivas permanecem mascarados conforme diretrizes CONSORT.
                 </span>
               </div>
             )}
@@ -2951,7 +2951,7 @@ function DashboardContent() {
                     <AlertTriangle className="w-4 h-4 text-amber-600" />
                   </div>
                   <span className="text-amber-900 leading-snug">
-                    <strong className="font-semibold">Atenção de Janela Clínica:</strong>{' '}
+                    <strong className="font-semibold">Atenção à janela clínica:</strong>{' '}
                     {overdueVisits.length > 0 && `${overdueVisits.length} consulta(s) com prazo estourado.`}{' '}
                     {dueNowVisits.length > 0 && `${dueNowVisits.length} consulta(s) dentro da janela regulatória de retorno.`}
                   </span>
@@ -2965,7 +2965,7 @@ function DashboardContent() {
                       : 'bg-white hover:bg-amber-100/60 text-amber-900 border border-amber-300/80 shadow-2xs'
                   }`}
                 >
-                  {activeFilter === 'PENDING' ? 'Mostrar Todos os Participantes' : 'Filtrar Apenas Retornos Pendentes'}
+                  {activeFilter === 'PENDING' ? 'Mostrar todos os participantes' : 'Filtrar apenas retornos pendentes'}
                 </button>
               </div>
             )}
@@ -2994,7 +2994,7 @@ function DashboardContent() {
                           : 'text-slate-600 hover:text-slate-900'
                       }`}
                     >
-                      <span>Retornos Pendentes</span>
+                      <span>Retornos pendentes</span>
                       <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
                         activeFilter === 'PENDING' ? 'bg-amber-700 text-white' : 'bg-slate-300 text-slate-700'
                       }`}>
@@ -3046,7 +3046,7 @@ function DashboardContent() {
                   <ClipboardList className="w-8 h-8 text-slate-300 mx-auto mb-2" />
                   <p className="font-semibold text-slate-600">Nenhum participante ativo ainda.</p>
                   <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
-                    Acesse a aba <strong>Triagem & Critérios</strong> para avaliar candidatos e aprovar participantes no estudo.
+                    Acesse a aba <strong>Triagem e critérios</strong> para avaliar candidatos e aprovar participantes no estudo.
                   </p>
                   {pendingList.length > 0 && (
                     <button
@@ -3054,7 +3054,7 @@ function DashboardContent() {
                       className="mt-4 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition inline-flex items-center space-x-1.5 shadow-xs"
                     >
                       <ClipboardList className="w-3.5 h-3.5" />
-                      <span>Acessar Fila de Triagem ({pendingList.length} aguardando)</span>
+                      <span>Acessar fila de triagem ({pendingList.length} aguardando)</span>
                     </button>
                   )}
                 </div>
@@ -3066,7 +3066,7 @@ function DashboardContent() {
                         <th className="py-2.5 px-3 min-w-[190px]">Participante</th>
                         <th className="py-2.5 px-2 min-w-[110px]">Grupo</th>
                         <th className="py-2.5 px-2 min-w-[80px]">Sessões</th>
-                        <th className="py-2.5 px-2 min-w-[130px]">Status da Janela</th>
+                        <th className="py-2.5 px-2 min-w-[130px]">Status da janela</th>
                         <th className="py-2.5 px-3 text-right min-w-[240px]">Ações</th>
                       </tr>
                     </thead>
@@ -3092,7 +3092,7 @@ function DashboardContent() {
                                   <div
                                     onClick={() => openPatientDossier(part)}
                                     className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-2xs cursor-pointer select-none tracking-tight hover:opacity-90 transition"
-                                    title="Abrir Prontuário Clínico"
+                                    title="Abrir prontuário clínico"
                                   >
                                     {(part.patient?.fullName || 'P')
                                       .split(' ')
@@ -3108,7 +3108,7 @@ function DashboardContent() {
                                         type="button"
                                         onClick={() => openPatientDossier(part)}
                                         className="font-bold text-slate-900 hover:text-blue-600 text-xs truncate max-w-[160px] text-left transition cursor-pointer"
-                                        title={`Abrir Prontuário de ${part.patient.fullName}`}
+                                        title={`Abrir prontuário de ${part.patient.fullName}`}
                                       >
                                         {part.patient.fullName}
                                       </button>
@@ -3181,7 +3181,7 @@ function DashboardContent() {
                                     title="Alocar participante a um grupo de intervenção ou controle"
                                   >
                                     <Shuffle className="w-3 h-3 text-amber-600" />
-                                    <span>Alocar Grupo</span>
+                                    <span>Alocar grupo</span>
                                   </button>
                                 )}
                               </td>
@@ -3298,7 +3298,7 @@ function DashboardContent() {
                                     type="button"
                                     onClick={() => openPatientDossier(part)}
                                     className="h-8.5 px-3 bg-white hover:bg-slate-50 text-slate-700 hover:text-blue-600 border border-slate-200 hover:border-blue-200 rounded-xl text-xs font-bold transition inline-flex items-center justify-center gap-1.5 shadow-2xs shrink-0 cursor-pointer"
-                                    title="Abrir Prontuário do Participante (Cadastro, Timeline, Questionários e Galeria)"
+                                    title="Abrir prontuário do participante (cadastro, linha do tempo, questionários e galeria)"
                                   >
                                     <FileSpreadsheet className="w-3.5 h-3.5 text-blue-600" />
                                     <span>Prontuário</span>
@@ -3363,7 +3363,7 @@ function DashboardContent() {
                                     {activeRowMenu === part.id && (
                                       <div className="absolute right-0 top-full mt-1.5 w-52 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 z-40 text-xs text-left animate-in fade-in zoom-in-95 duration-100">
                                         <div className="px-3 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100">
-                                          Mais Opções
+                                          Mais opções
                                         </div>
 
                                         {/* eCRF */}
@@ -3399,7 +3399,7 @@ function DashboardContent() {
                                           className="w-full px-3 py-2 text-left hover:bg-slate-50 flex items-center gap-2 text-slate-700 transition"
                                         >
                                           <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
-                                          <span>Portal do Paciente</span>
+                                          <span>Portal do paciente</span>
                                         </a>
 
                                         {/* TCLE Oficial PDF */}
@@ -3425,7 +3425,7 @@ function DashboardContent() {
                                         >
                                           <span className="flex items-center gap-2">
                                             <Clock className="w-3.5 h-3.5 text-slate-500" />
-                                            <span>Linha do Tempo</span>
+                                            <span>Linha do tempo</span>
                                           </span>
                                           <span className="text-[10px] text-slate-400 font-mono">
                                             {sessionCount}/4
@@ -3443,7 +3443,7 @@ function DashboardContent() {
                                             className="w-full px-3 py-2 text-left hover:bg-slate-50 flex items-center gap-2 text-slate-700 transition cursor-pointer"
                                           >
                                             <Edit className="w-3.5 h-3.5 text-slate-500" />
-                                            <span>Editar Cadastro</span>
+                                            <span>Editar cadastro</span>
                                           </button>
                                         </div>
                                       </div>
@@ -3472,10 +3472,10 @@ function DashboardContent() {
                 <ClipboardList className="w-5 h-5 text-indigo-700 mt-0.5 shrink-0" />
                 <div>
                   <h3 className="text-base font-bold text-slate-900">
-                    Triagem de Candidatos & Validação de Critérios Clínicos
+                    Triagem de candidatos e validação de critérios clínicos
                   </h3>
                   <p className="text-xs text-slate-600 mt-0.5 leading-relaxed">
-                    Admissão de voluntários e verificação dos critérios de inclusão/exclusão. A inclusão no estudo exige o preenchimento obrigatório da <strong>Ficha & Anamnese Clínica</strong> e a assinatura do <strong>TCLE Digital</strong>.
+                    Admissão de voluntários e verificação dos critérios de inclusão/exclusão. A inclusão no estudo exige o preenchimento obrigatório da <strong>ficha clínica e anamnese</strong> e a assinatura do <strong>TCLE digital</strong>.
                   </p>
                 </div>
               </div>
@@ -3485,7 +3485,7 @@ function DashboardContent() {
                 className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center space-x-1.5 shrink-0"
               >
                 <Plus className="w-3.5 h-3.5" />
-                <span>Cadastrar Candidato</span>
+                <span>Cadastrar candidato</span>
               </button>
             </div>
 
@@ -3496,7 +3496,7 @@ function DashboardContent() {
                   <Users className="w-5 h-5" />
                 </div>
                 <div className="ml-3.5">
-                  <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total de Inscritos</p>
+                  <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total de inscritos</p>
                   <p className="text-2xl font-black text-slate-900">{project.participants.length}</p>
                 </div>
               </div>
@@ -3506,7 +3506,7 @@ function DashboardContent() {
                   <Clock className="w-5 h-5" />
                 </div>
                 <div className="ml-3.5">
-                  <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Aguardando Triagem</p>
+                  <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Aguardando triagem</p>
                   <p className="text-2xl font-black text-slate-900">{pendingList.length}</p>
                 </div>
               </div>
@@ -3516,7 +3516,7 @@ function DashboardContent() {
                   <CheckCircle2 className="w-5 h-5" />
                 </div>
                 <div className="ml-3.5">
-                  <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Ficha Preenchida</p>
+                  <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Ficha preenchida</p>
                   <p className="text-2xl font-black text-slate-900">{pendingList.filter(p => p.anamnesisDone).length}</p>
                 </div>
               </div>
@@ -3526,7 +3526,7 @@ function DashboardContent() {
                   <X className="w-5 h-5" />
                 </div>
                 <div className="ml-3.5">
-                  <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Excluídos na Triagem</p>
+                  <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Excluídos na triagem</p>
                   <p className="text-2xl font-black text-slate-900">{excludedList.length}</p>
                 </div>
               </div>
@@ -3536,7 +3536,7 @@ function DashboardContent() {
             <div className="bg-white rounded-2xl shadow-xs border border-slate-200 overflow-hidden flex flex-col">
               <div className="px-6 py-4 border-b border-slate-200 bg-slate-50/70 flex justify-between items-center">
                 <div>
-                  <h3 className="text-base font-bold text-slate-800">Fila de Triagem & Elegibilidade</h3>
+                  <h3 className="text-base font-bold text-slate-800">Fila de triagem e elegibilidade</h3>
                   <p className="text-xs text-slate-500">
                     A inclusão na pesquisa é desbloqueada após a validação clínica dos critérios na ficha do estudo.
                   </p>
@@ -3551,7 +3551,7 @@ function DashboardContent() {
                   <div className="p-12 text-center text-slate-400 text-sm">
                     <ClipboardList className="w-8 h-8 text-slate-300 mx-auto mb-2" />
                     <p className="font-semibold text-slate-600">Nenhum voluntário aguardando triagem neste momento.</p>
-                    <p className="text-xs text-slate-400 mt-1">Clique em "Cadastrar Candidato" acima para incluir um novo paciente na fila.</p>
+                    <p className="text-xs text-slate-400 mt-1">Clique em "Cadastrar candidato" acima para incluir um novo paciente na fila.</p>
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
@@ -3559,8 +3559,8 @@ function DashboardContent() {
                       <thead className="bg-slate-50 text-slate-600 font-bold uppercase tracking-wider border-b border-slate-200">
                         <tr>
                           <th className="py-2.5 px-4">Candidato</th>
-                          <th className="py-2.5 px-3">Contato & Triagem</th>
-                          <th className="py-2.5 px-3 text-center">Ficha Clínica</th>
+                          <th className="py-2.5 px-3">Contato e triagem</th>
+                          <th className="py-2.5 px-3 text-center">Ficha clínica</th>
                           <th className="py-2.5 px-3 text-center">Documentos</th>
                           <th className="py-2.5 px-4 text-right">Elegibilidade</th>
                         </tr>
@@ -3578,7 +3578,7 @@ function DashboardContent() {
                                     type="button"
                                     onClick={() => openPatientDossier(part)}
                                     className="px-2 py-0.5 bg-slate-900 hover:bg-blue-700 text-white font-mono font-bold text-[11px] rounded shadow-2xs transition cursor-pointer"
-                                    title="Abrir Prontuário Clínico Completo"
+                                    title="Abrir prontuário clínico completo"
                                   >
                                     {part.researchCode}
                                   </button>
@@ -3586,7 +3586,7 @@ function DashboardContent() {
                                     type="button"
                                     onClick={() => openPatientDossier(part)}
                                     className="font-bold text-slate-900 hover:text-blue-600 text-xs sm:text-sm text-left transition cursor-pointer"
-                                    title={`Abrir Prontuário / Ficha de ${part.patient?.fullName || 'Paciente'}`}
+                                    title={`Abrir prontuário / ficha de ${part.patient?.fullName || 'Paciente'}`}
                                   >
                                     {part.patient?.fullName || 'Paciente'}
                                   </button>
@@ -3646,12 +3646,12 @@ function DashboardContent() {
                                         ? 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100'
                                         : 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100'
                                     }`}
-                                    title={isAnamnesisDone ? 'Ver Prontuário Clínico Completo' : 'Preencher Ficha Clínica Obrigatória'}
+                                    title={isAnamnesisDone ? 'Ver prontuário clínico completo' : 'Preencher ficha clínica obrigatória'}
                                   >
                                     {isAnamnesisDone ? (
                                       <>
                                         <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" />
-                                        <span>Ficha Ok</span>
+                                        <span>Ficha preenchida</span>
                                       </>
                                     ) : (
                                       <>
@@ -3913,7 +3913,7 @@ function DashboardContent() {
                   <p className="text-xs text-blue-800 mt-1 leading-relaxed">
                     Em ensaios clínicos randomizados (split-mouth ou grupos paralelos), os avaliadores que medem desfechos ou examinam o paciente 
                     <strong> nunca devem saber qual material, grupo ou intervenção foi aplicada em cada lado</strong>. 
-                    Membros marcados como <strong>'Avaliador Cego'</strong> verão os grupos alocados como <span className="font-mono bg-blue-100 px-1 py-0.5 rounded font-bold inline-flex items-center"><Lock className="w-3 h-3 mr-1 inline" />OCULTO</span>.
+                    Membros marcados como <strong>'Avaliador cego'</strong> verão os grupos alocados como <span className="font-mono bg-blue-100 px-1 py-0.5 rounded font-bold inline-flex items-center"><Lock className="w-3 h-3 mr-1 inline" />OCULTO</span>.
                   </p>
                 </div>
               </div>
@@ -3934,7 +3934,7 @@ function DashboardContent() {
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow-sm transition flex items-center space-x-1.5"
                 >
                   <Plus className="w-3.5 h-3.5" />
-                  <span>Adicionar Pesquisador</span>
+                  <span>Adicionar pesquisador</span>
                 </button>
               </div>
 
@@ -3985,7 +3985,7 @@ function DashboardContent() {
                             ) : (
                               <Eye className="w-3.5 h-3.5 text-slate-500" />
                             )}
-                            <span>{member.isBlinded ? 'Avaliador Cego (Ativo)' : 'Não Cego (Visualiza Grupos)'}</span>
+                            <span>{member.isBlinded ? 'Avaliador cego (ativo)' : 'Não cego (visualiza grupos)'}</span>
                           </button>
                         </td>
 
@@ -4102,9 +4102,9 @@ function DashboardContent() {
               {/* Cabeçalho da Aba de Resultados & Central de Exportação Unificada */}
               <div className="bg-white rounded-2xl shadow-xs border border-slate-200 p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
-                  <h2 className="text-base font-bold text-slate-900">Bioestatística & Resultados do Ensaio</h2>
+                  <h2 className="text-base font-bold text-slate-900">Bioestatística e resultados do ensaio</h2>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    Desfechos clínicos primários (Cinética de Dor EVA, Desfechos Operatórios e Eficácia Clínica) e exportação científica.
+                    Desfechos clínicos primários (cinética de dor EVA, desfechos operatórios e eficácia clínica) e exportação científica.
                   </p>
                 </div>
 
@@ -4116,7 +4116,7 @@ function DashboardContent() {
                     title="Exportar planilha completa de dados clínicos desidentificados (.CSV)"
                   >
                     <Download className="w-3.5 h-3.5" />
-                    <span>Exportar Dados (.CSV)</span>
+                    <span>Exportar dados (.CSV)</span>
                   </button>
 
                   {/* Dropdown de Exportações Especializadas para Softwares Estatísticos */}
@@ -4128,14 +4128,14 @@ function DashboardContent() {
                       title="Opções especializadas de exportação (SPSS, R, Prism, Codebook)"
                     >
                       <BarChart3 className="w-3.5 h-3.5 text-indigo-600" />
-                      <span>Softwares Estatísticos</span>
+                      <span>Softwares estatísticos</span>
                       <ChevronDown className="w-3 h-3 text-slate-400" />
                     </button>
 
                     {showExportMenu && (
                       <div className="absolute right-0 mt-2 w-72 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 z-30 text-xs divide-y divide-slate-100">
-                        <div className="px-3 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                          Formatos para Pacotes Estatísticos
+                        <div className="px-3 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100">
+                          Formatos para pacotes estatísticos
                         </div>
                         <div className="py-1">
                           <button
@@ -4145,7 +4145,7 @@ function DashboardContent() {
                           >
                             <FileSpreadsheet className="w-4 h-4 text-emerald-600 shrink-0" />
                             <div>
-                              <div className="font-bold text-slate-800">Banco Numérico Codificado</div>
+                              <div className="font-bold text-slate-800">Banco numérico codificado</div>
                               <div className="text-[10px] text-slate-400">Variáveis numéricas prontas para SPSS, R e Jamovi</div>
                             </div>
                           </button>
@@ -4193,7 +4193,7 @@ function DashboardContent() {
                           >
                             <FileText className="w-4 h-4 text-slate-500 shrink-0" />
                             <div>
-                              <div className="font-bold text-slate-800">Dicionário de Variáveis (Codebook)</div>
+                              <div className="font-bold text-slate-800">Dicionário de variáveis (codebook)</div>
                               <div className="text-[10px] text-slate-400">Metadados de codificação e escalas (.txt)</div>
                             </div>
                           </button>
@@ -4208,7 +4208,7 @@ function DashboardContent() {
                             >
                               <ClipboardList className="w-4 h-4 text-amber-600 shrink-0" />
                               <div>
-                                <div className="font-bold text-amber-900">Cadastro Geral Identificado</div>
+                                <div className="font-bold text-amber-900">Cadastro geral identificado</div>
                                 <div className="text-[10px] text-amber-700">Restrito à coordenação do estudo</div>
                               </div>
                             </button>
@@ -4229,15 +4229,15 @@ function DashboardContent() {
                 </div>
 
                 <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-2xs">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Eficácia Estética / ΔSGU</p>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Eficácia estética / ΔSGU</p>
                   <p className="text-xl font-black text-emerald-600 mt-0.5">
                     +{deltaCount > 0 ? ((avgDeltaR + avgDeltaL) / 2).toFixed(1) : 0} <span className="text-xs font-normal text-slate-400">ΔSGU</span>
                   </p>
-                  <p className="text-[10px] text-slate-500 mt-0.5">Escala Vita Classical (quando aferido)</p>
+                  <p className="text-[10px] text-slate-500 mt-0.5">Escala VITA Classical (quando aferido)</p>
                 </div>
 
                 <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-2xs">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Pico Médio de Dor</p>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Pico médio de dor</p>
                   <p className="text-xl font-black text-amber-600 mt-0.5">
                     {peakPainAll} <span className="text-xs text-slate-400 font-normal">/ 10</span>
                   </p>
@@ -4262,7 +4262,7 @@ function DashboardContent() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-2">
                         <Zap className="w-5 h-5 text-amber-600" />
-                        <h3 className="text-base font-bold text-slate-900">Cinética de Dor / Sensibilidade (EVA)</h3>
+                        <h3 className="text-base font-bold text-slate-900">Cinética de dor e sensibilidade (EVA)</h3>
                       </div>
                       <span className="text-xs font-semibold text-slate-400">Média ± DP (0-10)</span>
                     </div>
@@ -4346,7 +4346,7 @@ function DashboardContent() {
 
                   <div className="mt-4 p-3 bg-slate-50 border border-slate-100 rounded-xl text-[11px] text-slate-600 flex items-start space-x-1.5">
                     <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
-                    <span><strong>Interpretação Clínica:</strong> O perfil cinético da dor pós-operatória reflete a resposta inflamatória e nociceptiva das primeiras horas após a intervenção clínica, decrescendo progressivamente ao longo de 48 horas.</span>
+                    <span><strong>Interpretação clínica:</strong> O perfil cinético da dor pós-operatória reflete a resposta inflamatória e nociceptiva das primeiras horas após a intervenção clínica, decrescendo progressivamente ao longo de 48 horas.</span>
                   </div>
                 </div>
 
@@ -4356,9 +4356,9 @@ function DashboardContent() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-2">
                         <Sparkles className="w-5 h-5 text-blue-600" />
-                        <h3 className="text-base font-bold text-slate-900">Eficácia Estética / Alteração de Cor (ΔSGU Vita)</h3>
+                        <h3 className="text-base font-bold text-slate-900">Eficácia estética e alteração de cor (ΔSGU VITA)</h3>
                       </div>
-                      <span className="text-xs font-semibold text-slate-400">Escala Vita Classical</span>
+                      <span className="text-xs font-semibold text-slate-400">Escala VITA Classical</span>
                     </div>
                     <p className="text-xs text-slate-500 mt-1">
                       Alteração média por hemi-arco em unidades da guia Vita (quando aplicável ao protocolo de pesquisa).
@@ -4411,8 +4411,8 @@ function DashboardContent() {
 
                       <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl flex items-center justify-between text-xs">
                         <div>
-                          <span className="text-blue-900 font-semibold block">Diferença Pareada Inter-grupos:</span>
-                          <span className="text-[10px] text-blue-700">Teste t Pareado / Wilcoxon Boca Dividida</span>
+                          <span className="text-blue-900 font-semibold block">Diferença pareada inter-grupos:</span>
+                          <span className="text-[10px] text-blue-700">Teste t pareado / Wilcoxon boca dividida</span>
                         </div>
                         <span className="font-mono font-bold text-blue-900 text-sm">
                           {Math.abs(meanDiff)} ± {sdDiff} ΔSGU
@@ -4437,7 +4437,7 @@ function DashboardContent() {
                     <div className="flex items-center space-x-2">
                       <ClipboardList className="w-5 h-5 text-indigo-600" />
                       <h3 className="text-base font-bold text-slate-900">
-                        Questionários Clínicos Eletrônicos (eCRFs / PROMs)
+                        Questionários clínicos eletrônicos (eCRFs / PROMs)
                       </h3>
                     </div>
                     <p className="text-xs text-slate-500 mt-1">
@@ -4449,7 +4449,7 @@ function DashboardContent() {
                     href={`/construtor?projectId=${project.id}`}
                     className="text-xs font-bold text-blue-600 hover:text-blue-800 flex items-center space-x-1"
                   >
-                    <span>+ Gerenciar Formulários no Construtor</span>
+                    <span>+ Gerenciar formulários no construtor</span>
                     <span>→</span>
                   </Link>
                 </div>
@@ -4458,7 +4458,7 @@ function DashboardContent() {
                   <div className="p-8 text-center text-slate-400 text-xs">
                     Nenhum formulário eCRF cadastrado neste projeto. Crie questionários personalizados no{' '}
                     <Link href={`/construtor?projectId=${project.id}`} className="text-blue-600 underline font-bold">
-                      Construtor de Fichas
+                      Construtor de fichas
                     </Link>.
                   </div>
                 ) : (
@@ -4629,19 +4629,19 @@ function DashboardContent() {
                       {editProjectStatus === 'ACTIVE' && (
                         <span className="px-3 py-1 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-full text-xs font-bold inline-flex items-center gap-1.5 shadow-2xs">
                           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                          <span>Em Andamento / Ativo</span>
+                          <span>Em andamento / ativo</span>
                         </span>
                       )}
                       {editProjectStatus === 'COMPLETED' && (
                         <span className="px-3 py-1 bg-blue-50 text-blue-800 border border-blue-200 rounded-full text-xs font-bold inline-flex items-center gap-1.5 shadow-2xs">
                           <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" />
-                          <span>Finalizado / Concluído</span>
+                          <span>Finalizado / concluído</span>
                         </span>
                       )}
                       {editProjectStatus === 'CANCELLED' && (
                         <span className="px-3 py-1 bg-rose-50 text-rose-800 border border-rose-200 rounded-full text-xs font-bold inline-flex items-center gap-1.5 shadow-2xs">
                           <X className="w-3.5 h-3.5 text-rose-600" />
-                          <span>Cancelado / Interrompido</span>
+                          <span>Cancelado / interrompido</span>
                         </span>
                       )}
                     </div>
@@ -4651,7 +4651,7 @@ function DashboardContent() {
                     {/* Nome do Projeto */}
                     <div>
                       <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                        Nome do Projeto / Ensaio Clínico <span className="text-red-500">*</span>
+                        Nome do projeto / ensaio clínico <span className="text-red-500">*</span>
                       </label>
                       <input
                         type="text"
@@ -4669,7 +4669,7 @@ function DashboardContent() {
                     {/* Descrição / Hipótese */}
                     <div>
                       <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                        Descrição / Hipótese do Estudo <span className="text-slate-400 font-normal">(Opcional)</span>
+                        Descrição / hipótese do estudo <span className="text-slate-400 font-normal">(Opcional)</span>
                       </label>
                       <textarea
                         rows={4}
@@ -4686,7 +4686,7 @@ function DashboardContent() {
                     {/* Status do Estudo */}
                     <div>
                       <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
-                        Status do Estudo
+                        Status do estudo
                       </label>
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <button
@@ -4700,7 +4700,7 @@ function DashboardContent() {
                         >
                           <div className="flex items-center space-x-2">
                             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                            <span className="text-xs font-bold text-slate-800">Em Andamento / Ativo</span>
+                            <span className="text-xs font-bold text-slate-800">Em andamento / ativo</span>
                           </div>
                           <p className="text-[11px] text-slate-500 mt-2 leading-snug">
                             Recebendo novos voluntários, triagens e atendimentos clínicos regulares.
@@ -4718,7 +4718,7 @@ function DashboardContent() {
                         >
                           <div className="flex items-center space-x-2">
                             <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" />
-                            <span className="text-xs font-bold text-slate-800">Finalizado / Concluído</span>
+                            <span className="text-xs font-bold text-slate-800">Finalizado / concluído</span>
                           </div>
                           <p className="text-[11px] text-slate-500 mt-2 leading-snug">
                             Protocolo finalizado. Bloqueado para novas inclusões de pacientes.
@@ -4736,7 +4736,7 @@ function DashboardContent() {
                         >
                           <div className="flex items-center space-x-2">
                             <X className="w-3.5 h-3.5 text-rose-600" />
-                            <span className="text-xs font-bold text-slate-800">Cancelado / Interrompido</span>
+                            <span className="text-xs font-bold text-slate-800">Cancelado / interrompido</span>
                           </div>
                           <p className="text-[11px] text-slate-500 mt-2 leading-snug">
                             Interrompido antes da conclusão prevista por critérios clínicos ou regulatórios.
@@ -4767,7 +4767,7 @@ function DashboardContent() {
                       }}
                       className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition cursor-pointer border border-slate-200"
                     >
-                      Descartar Alterações
+                      Descartar alterações
                     </button>
 
                     <button
@@ -4783,7 +4783,7 @@ function DashboardContent() {
                       ) : (
                         <>
                           <Check className="w-4 h-4" />
-                          <span>Salvar Alterações do Estudo</span>
+                          <span>Salvar alterações do estudo</span>
                         </>
                       )}
                     </button>
@@ -4809,7 +4809,7 @@ function DashboardContent() {
                   <Shuffle className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-slate-900 leading-snug">Alocação de Randomização</h3>
+                  <h3 className="text-lg font-bold text-slate-900 leading-snug">Alocação de randomização</h3>
                   <p className="text-xs text-slate-500">
                     Defina o grupo do voluntário. Novos grupos criados ficam salvos no estudo para outros pacientes.
                   </p>
@@ -4840,7 +4840,7 @@ function DashboardContent() {
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-indigo-950 text-xs flex items-center gap-1.5">
                     <Shuffle className="w-3.5 h-3.5 text-indigo-600" />
-                    <span>Randomização Automatizada em Bloco</span>
+                    <span>Randomização automatizada em bloco</span>
                   </span>
                   <span className="text-[10px] text-indigo-800 font-semibold bg-indigo-100 px-2 py-0.5 rounded-full border border-indigo-200">
                     Padrão CONSORT / GCP
@@ -4855,7 +4855,7 @@ function DashboardContent() {
                   className="w-full py-2 px-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-xs transition flex items-center justify-center gap-2 cursor-pointer shadow-xs"
                 >
                   <Shuffle className="w-4 h-4" />
-                  <span>Sortear / Randomizar Paciente Agora</span>
+                  <span>Randomizar paciente agora</span>
                 </button>
               </div>
 
@@ -4865,7 +4865,7 @@ function DashboardContent() {
                   <div className="flex items-center justify-between">
                     <span className="font-bold text-slate-800 text-xs flex items-center gap-1.5">
                       <span>👄</span>
-                      <span>Configuração por Hemi-arco (Boca Dividida)</span>
+                      <span>Configuração por hemi-arco (boca dividida)</span>
                     </span>
                     <span className="text-[10px] text-slate-500">Q1/Q4 vs Q2/Q3</span>
                   </div>
@@ -5007,7 +5007,7 @@ function DashboardContent() {
               {/* Seção 2: Criar Mais Grupos & Salvar no Estudo */}
               <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="font-bold text-slate-700 text-xs">+ Criar Mais Grupos no Estudo</span>
+                  <span className="font-bold text-slate-700 text-xs">+ Criar mais grupos no estudo</span>
                   {savingStudyGroups && <span className="text-[10px] text-blue-600 animate-pulse font-medium">Salvando no estudo...</span>}
                 </div>
                 <div className="flex gap-2">
@@ -5072,7 +5072,7 @@ function DashboardContent() {
                     ) : (
                       <>
                         <Check className="w-4 h-4" />
-                        <span>Salvar Alocação</span>
+                        <span>Salvar alocação</span>
                       </>
                     )}
                   </button>
@@ -5088,7 +5088,7 @@ function DashboardContent() {
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-slate-200">
             <div className="flex items-center justify-between mb-1">
-              <h3 className="text-lg font-bold text-slate-900">Adicionar Pesquisador ao Estudo</h3>
+              <h3 className="text-lg font-bold text-slate-900">Adicionar pesquisador ao estudo</h3>
               <button
                 type="button"
                 onClick={() => setShowAddMemberModal(false)}
@@ -5113,7 +5113,7 @@ function DashboardContent() {
                 }`}
               >
                 <Users className="w-3.5 h-3.5" />
-                <span>Pesquisador Cadastrado</span>
+                <span>Pesquisador cadastrado</span>
               </button>
               <button
                 type="button"
@@ -5125,7 +5125,7 @@ function DashboardContent() {
                 }`}
               >
                 <Plus className="w-3.5 h-3.5" />
-                <span>Digitar por E-mail</span>
+                <span>Digitar por e-mail</span>
               </button>
             </div>
 
@@ -5140,7 +5140,7 @@ function DashboardContent() {
                 <div className="space-y-3">
                   <div>
                     <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">
-                      Pesquisar Pesquisador Cadastrado
+                      Pesquisar pesquisador cadastrado
                     </label>
                     <div className="relative">
                       <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
@@ -5157,7 +5157,7 @@ function DashboardContent() {
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
                       <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                        Pesquisadores Disponíveis ({filteredAvailableResearchers.length})
+                        Pesquisadores disponíveis ({filteredAvailableResearchers.length})
                       </p>
                       {selectedResearcherId && (
                         <span className="text-[10px] text-blue-600 font-bold">1 selecionado</span>
@@ -5389,7 +5389,7 @@ function DashboardContent() {
                     </span>
                     <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
                       <Stethoscope className="w-5 h-5 text-blue-600" />
-                      <span>Odontograma Anatômico & Ficha Clínica</span>
+                      <span>Odontograma anatômico e ficha clínica</span>
                     </h2>
                   </div>
                   <p className="text-xs text-slate-500 mt-1">
@@ -5409,7 +5409,7 @@ function DashboardContent() {
                 <div className="mb-4 bg-blue-50 border border-blue-200 p-3 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
                   <div className="flex items-center space-x-2 text-blue-900">
                     <Sparkles className="w-4 h-4 text-blue-600 shrink-0" />
-                    <span>O Odontograma Interativo está disponível para preenchimento. Para adicionar critérios de exclusão ou perguntas adicionais a este estudo, personalize a ficha.</span>
+                    <span>O odontograma interativo está disponível para preenchimento. Para adicionar critérios de exclusão ou perguntas adicionais a este estudo, personalize a ficha.</span>
                   </div>
                   <Link
                     href={`/anamnese?projectId=${project.id}`}
@@ -5447,7 +5447,7 @@ function DashboardContent() {
                   <div className="flex items-center justify-between">
                     <h4 className="font-bold text-slate-800 text-xs uppercase tracking-wider flex items-center gap-1.5">
                       <FileText className="w-4 h-4 text-blue-600" />
-                      <span>Queixa Principal & Alergias (Específicas deste Estudo)</span>
+                      <span>Queixa principal e alergias (específicas deste estudo)</span>
                     </h4>
                     <span className="text-[10px] text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full font-bold">
                       Isolado por Estudo
@@ -5458,7 +5458,7 @@ function DashboardContent() {
                   </p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-slate-700 font-semibold mb-1">Queixa Principal Relatada no Estudo</label>
+                      <label className="block text-slate-700 font-semibold mb-1">Queixa principal relatada no estudo</label>
                       <input
                         type="text"
                         value={anamnesisData.chiefComplaint || ''}
@@ -5468,7 +5468,7 @@ function DashboardContent() {
                       />
                     </div>
                     <div>
-                      <label className="block text-slate-700 font-semibold mb-1">Alergias Relatadas no Estudo</label>
+                      <label className="block text-slate-700 font-semibold mb-1">Alergias relatadas no estudo</label>
                       <input
                         type="text"
                         value={anamnesisData.allergies || ''}
@@ -5487,7 +5487,7 @@ function DashboardContent() {
                       <div>
                         <h4 className="font-bold text-slate-800 text-sm flex items-center">
                           <Stethoscope className="w-4 h-4 text-indigo-600 mr-2 inline" />
-                          <span>Mapeamento Anatômico Dental (Odontograma Clínico)</span>
+                          <span>Mapeamento anatômico dental (odontograma clínico)</span>
                         </h4>
                         <p className="text-[11px] text-slate-500">
                           Escopo: {config.odontogramScope === 'anterior' ? 'Dentes Anteriores (13 a 23 e 33 a 43)' : 'Arcada Completa'} • Clique no dente para alterar o status
@@ -5500,7 +5500,7 @@ function DashboardContent() {
                         className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs transition flex items-center space-x-1.5 cursor-pointer"
                       >
                         <Search className="w-3.5 h-3.5" />
-                        <span>Abrir Seletor de Elementos</span>
+                        <span>Abrir seletor de elementos</span>
                       </button>
                     </div>
 
@@ -5528,7 +5528,7 @@ function DashboardContent() {
                   <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl space-y-3">
                     <h4 className="font-bold text-slate-800 text-sm flex items-center">
                       <Stethoscope className="w-4 h-4 text-blue-600 mr-2 inline" />
-                      <span>Exame Periodontal (Periograma)</span>
+                      <span>Exame periodontal (periograma)</span>
                     </h4>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -5664,7 +5664,7 @@ function DashboardContent() {
                   <div className="space-y-3">
                     <h4 className="font-bold text-slate-800 text-sm flex items-center">
                       <ClipboardList className="w-4 h-4 text-slate-700 mr-2 inline" />
-                      <span>Perguntas de Anamnese & Elegibilidade</span>
+                      <span>Perguntas de anamnese e elegibilidade</span>
                     </h4>
 
                     <div className="space-y-3">
@@ -5777,9 +5777,9 @@ function DashboardContent() {
                                   className="w-full h-2.5 bg-gradient-to-r from-emerald-400 via-amber-400 to-red-500 rounded-lg appearance-none cursor-pointer accent-blue-600 focus:outline-none"
                                 />
                                 <div className="flex justify-between text-[10px] font-bold text-slate-400">
-                                  <span>0.0 - Sem Sensibilidade</span>
+                                  <span>0.0 - Sem dor ou sensibilidade</span>
                                   <span>5.0 - Moderada</span>
-                                  <span>10.0 - Dor Severa</span>
+                                  <span>10.0 - Dor intensa / pior dor possível</span>
                                 </div>
                               </div>
                             )}
@@ -5822,7 +5822,7 @@ function DashboardContent() {
               {/* Anotações Gerais do Examinador */}
               <div>
                 <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">
-                  Parecer do Examinador / Observações Adicionais:
+                  Parecer do examinador / observações adicionais:
                 </label>
                 <textarea
                   rows={3}
@@ -5850,7 +5850,7 @@ function DashboardContent() {
                   className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow-sm transition disabled:opacity-50 flex items-center space-x-1.5"
                 >
                   <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>{savingAnamnesis ? 'Gravando Ficha...' : 'Salvar Ficha Clínica'}</span>
+                  <span>{savingAnamnesis ? 'Salvando ficha...' : 'Salvar ficha clínica'}</span>
                 </button>
               </div>
             </form>
@@ -5863,7 +5863,7 @@ function DashboardContent() {
       <ToothSelectorModal
         isOpen={showToothSelectorModal}
         onClose={() => setShowToothSelectorModal(false)}
-        title="Selecione os Elementos"
+        title="Selecione os elementos"
         subtitle={
           currentAnamnesisPart
             ? `Paciente: ${currentAnamnesisPart.patient.fullName} • ${project?.name || ''}`
@@ -5883,7 +5883,7 @@ function DashboardContent() {
       {showRejectModal && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-slate-200">
-            <h3 className="text-lg font-bold text-slate-900">Excluir Paciente da Pesquisa</h3>
+            <h3 className="text-lg font-bold text-slate-900">Excluir paciente da pesquisa</h3>
             <p className="text-xs text-slate-500 mt-2">
               Você está excluindo <strong>{selectedParticipant?.patient.fullName}</strong>. Conforme o protocolo do Comitê de Ética, o motivo é obrigatório para as estatísticas de exclusão.
             </p>
@@ -5925,7 +5925,7 @@ function DashboardContent() {
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto">
           <div className="bg-white rounded-2xl shadow-2xl max-w-xl w-full p-6 border border-slate-200 my-8 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-1">
-              <h2 className="text-xl font-bold text-slate-900">Adicionar Paciente ao Estudo</h2>
+              <h2 className="text-xl font-bold text-slate-900">Adicionar paciente ao estudo</h2>
               <button
                 type="button"
                 onClick={() => setShowNewPatientModal(false)}
@@ -5950,7 +5950,7 @@ function DashboardContent() {
                 }`}
               >
                 <UserCheck className="w-4 h-4" />
-                <span>Selecionar Já Cadastrado</span>
+                <span>Selecionar já cadastrado</span>
               </button>
 
               <button
@@ -5963,7 +5963,7 @@ function DashboardContent() {
                 }`}
               >
                 <Plus className="w-4 h-4" />
-                <span>Cadastrar Novo Paciente</span>
+                <span>Cadastrar novo paciente</span>
               </button>
             </div>
 
@@ -5972,7 +5972,7 @@ function DashboardContent() {
                 <div className="space-y-4">
                   <div>
                     <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">
-                      Pesquisar Paciente Cadastrado
+                      Pesquisar paciente cadastrado
                     </label>
                     <div className="relative">
                       <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
@@ -6001,7 +6001,7 @@ function DashboardContent() {
                         <Users className="w-8 h-8 mx-auto text-slate-300 mb-1" />
                         <p className="text-xs font-semibold text-slate-600">Nenhum paciente encontrado com esses dados.</p>
                         <p className="text-[11px] text-slate-400 mt-1">
-                          Você pode alternar para a aba <strong>"Cadastrar Novo Paciente"</strong> acima.
+                          Você pode alternar para a aba <strong>"Cadastrar novo paciente"</strong> acima.
                         </p>
                       </div>
                     ) : (
@@ -6186,7 +6186,7 @@ function DashboardContent() {
               <div className="p-3 bg-indigo-50/60 border border-indigo-200 rounded-xl space-y-1.5">
                 <label className="block text-xs font-bold text-indigo-900 flex items-center gap-1.5">
                   <Shuffle className="w-3.5 h-3.5 text-indigo-600" />
-                  <span>Grupo de Randomização / Alocação Inicial (Opcional)</span>
+                  <span>Grupo de randomização / alocação inicial (opcional)</span>
                 </label>
                 <RandomizationGroupSelector
                   value={selectedAdmissionGroup}
@@ -6234,9 +6234,9 @@ function DashboardContent() {
                       <span>Salvando...</span>
                     </>
                   ) : patientModalMode === 'select' ? (
-                    'Vincular Paciente ao Estudo'
+                    'Vincular paciente ao estudo'
                   ) : (
-                    'Salvar e Vincular Novo Paciente'
+                    'Salvar e vincular novo paciente'
                   )}
                 </button>
               </div>
@@ -6256,7 +6256,7 @@ function DashboardContent() {
                 </div>
                 <div>
                   <h3 className="text-lg font-bold text-slate-900">
-                    Alteração de Dados Cadastrais do Paciente
+                    Alteração de dados cadastrais do paciente
                   </h3>
                   <p className="text-xs text-slate-500">
                     Código: <strong className="font-mono text-blue-700">{editingParticipant.researchCode}</strong> • Prontuário Central Global
@@ -6280,7 +6280,7 @@ function DashboardContent() {
             <div className="mb-5 p-3.5 bg-indigo-50/70 border border-indigo-200 rounded-2xl text-xs text-indigo-900 flex items-start space-x-2.5">
               <ShieldCheck className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
               <div className="leading-relaxed">
-                <strong>Conformidade Ética & Regulatória (GCP / ICH E6 & 21 CFR Part 11):</strong>
+                <strong>Conformidade ética e regulatória (GCP / ICH E6 e 21 CFR Part 11):</strong>
                 <p className="text-indigo-800 text-[11px] mt-0.5">
                   Cada campo alterado será gravado com valor anterior, novo valor, identificação do pesquisador, endereço IP e data/hora oficial na Trilha de Auditoria.
                 </p>
@@ -6864,7 +6864,7 @@ function DashboardContent() {
                     className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-2xs transition flex items-center gap-1.5 cursor-pointer"
                   >
                     <Plus className="w-3.5 h-3.5" />
-                    <span>Adicionar Consulta à Trilha</span>
+                    <span>Adicionar consulta à trilha</span>
                   </button>
                 </div>
 
@@ -7223,7 +7223,7 @@ function DashboardContent() {
                               className="text-[10px] text-blue-600 hover:text-blue-800 font-bold flex items-center gap-1 cursor-pointer"
                             >
                               <Plus className="w-3 h-3" />
-                              <span>Adicionar Etapa</span>
+                              <span>Adicionar etapa</span>
                             </button>
                           </div>
 
@@ -7295,12 +7295,12 @@ function DashboardContent() {
                   {savingTrail ? (
                     <>
                       <RotateCcw className="w-3.5 h-3.5 animate-spin" />
-                      <span>Gravando Trilha...</span>
+                      <span>Salvando trilha...</span>
                     </>
                   ) : (
                     <>
                       <Check className="w-3.5 h-3.5 stroke-[3]" />
-                      <span>Salvar Trilha de Atendimento</span>
+                      <span>Salvar trilha de atendimento</span>
                     </>
                   )}
                 </button>
@@ -7540,7 +7540,7 @@ function DashboardContent() {
                     <div className="space-y-4 animate-fadeIn">
                       <div className="flex items-center gap-2 text-slate-900 font-bold text-sm border-b border-slate-100 pb-2">
                         <Sparkles className="w-4 h-4 text-amber-500" />
-                        <span>Passo 1: Checagem Inicial & Parâmetros</span>
+                        <span>Etapa 1: Checagem inicial e parâmetros</span>
                       </div>
 
                       {/* Data do Atendimento */}
@@ -7581,7 +7581,7 @@ function DashboardContent() {
                           <div className="flex items-center justify-between">
                             <span className="font-bold text-blue-950 text-xs inline-flex items-center gap-1.5">
                               <span>🦷</span>
-                              <span>Mapeamento de Dentes / Elementos Tratados</span>
+                              <span>Mapeamento de dentes / elementos tratados</span>
                             </span>
                             <span className="text-[10px] text-blue-700 font-medium">Arcada Superior & Inferior</span>
                           </div>
@@ -7607,7 +7607,7 @@ function DashboardContent() {
                               <div>
                                 <span className="font-bold text-amber-950 text-xs inline-flex items-center gap-1.5">
                                   <Sparkles className="w-4 h-4 text-amber-600" />
-                                  <span>Aferição de Cor Dental do Estudo</span>
+                                  <span>Aferição de cor dental do estudo</span>
                                 </span>
                                 <p className="text-[10px] text-amber-900/80 mt-0.5">
                                   Preencha os desfechos com base nos modelos selecionados para esta consulta:
@@ -7653,7 +7653,7 @@ function DashboardContent() {
                                 <div className="flex items-center justify-between">
                                   <span className="font-bold text-amber-950 text-xs flex items-center gap-1.5">
                                     <span>🎨</span>
-                                    <span>Modelo 1: Escala VITA Classical (Ordenada por Valor / Luminosidade)</span>
+                                    <span>Modelo 1: Escala VITA Classical (ordenada por valor / luminosidade)</span>
                                   </span>
                                   <span className="text-[10px] text-amber-900 bg-amber-100 font-bold px-2 py-0.5 rounded-full">
                                     16 Níveis (SGU 1 a 16)
@@ -7688,7 +7688,7 @@ function DashboardContent() {
                                       ))}
                                     </select>
                                     <div className="mt-1.5 flex items-center justify-between text-[11px] text-slate-600">
-                                      <span>Escore Numérico (SGU):</span>
+                                      <span>Escore numérico (SGU):</span>
                                       <strong className="text-amber-700 bg-white px-2 py-0.5 rounded border border-slate-200">
                                         {colorAssessment.vitaClassical?.sguRight ?? getVitaSGU(currentSessionForm.shadeRight)} / 16
                                       </strong>
@@ -7723,7 +7723,7 @@ function DashboardContent() {
                                       ))}
                                     </select>
                                     <div className="mt-1.5 flex items-center justify-between text-[11px] text-slate-600">
-                                      <span>Escore Numérico (SGU):</span>
+                                      <span>Escore numérico (SGU):</span>
                                       <strong className="text-amber-700 bg-white px-2 py-0.5 rounded border border-slate-200">
                                         {colorAssessment.vitaClassical?.sguLeft ?? getVitaSGU(currentSessionForm.shadeLeft)} / 16
                                       </strong>
@@ -7742,7 +7742,7 @@ function DashboardContent() {
                                     <span>Modelo 2: VITA Bleachedguide 3D-MASTER (Vita 3D)</span>
                                   </span>
                                   <span className="text-[10px] text-indigo-900 bg-indigo-100 font-bold px-2 py-0.5 rounded-full">
-                                    29 Níveis (15 Abas Físicas + 14 Intermediários)
+                                    29 níveis (15 abas físicas + 14 intermediários)
                                   </span>
                                 </div>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-0.5">
@@ -7823,7 +7823,7 @@ function DashboardContent() {
                                 <div className="flex items-center justify-between">
                                   <span className="font-bold text-emerald-950 text-xs flex items-center gap-1.5">
                                     <span>📟</span>
-                                    <span>Modelo 3: VITA Easyshade (Espectrofotômetro Digital CIELAB)</span>
+                                    <span>Modelo 3: VITA Easyshade (espectrofotômetro digital CIELAB)</span>
                                   </span>
                                   <span className="text-[10px] text-emerald-900 bg-emerald-100 font-bold px-2 py-0.5 rounded-full">
                                     Coordenadas L*, a*, b*
@@ -8171,7 +8171,7 @@ function DashboardContent() {
                       <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1.5 text-slate-600 text-[11px]">
                         <span className="font-bold text-slate-800 text-xs flex items-center gap-1.5">
                           <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                          <span>Confirmação Pré-Procedimento:</span>
+                          <span>Confirmação pré-procedimento:</span>
                         </span>
                         <p className="leading-relaxed">
                           • Ausência de contraindicações imediatas ou dor aguda espontânea impeditiva antes do atendimento.<br />
@@ -8186,7 +8186,7 @@ function DashboardContent() {
                     <div className="space-y-4 animate-fadeIn">
                       <div className="flex items-center gap-2 text-slate-900 font-bold text-sm border-b border-slate-100 pb-2">
                         <Clock className="w-4 h-4 text-blue-600" />
-                        <span>Passo 2: {isInterventionSession ? 'Execução do Procedimento Clínico' : 'Avaliação Clínica e Protocolo'}</span>
+                        <span>Etapa 2: {isInterventionSession ? 'Execução do procedimento clínico' : 'Avaliação clínica e protocolo'}</span>
                       </div>
 
                       {/* Checklist Clínico Dinâmico Adaptado à Sessão */}
@@ -8194,7 +8194,7 @@ function DashboardContent() {
                         <span className="font-bold text-blue-950 flex items-center justify-between">
                           <span className="flex items-center gap-1.5">
                             <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" />
-                            <span>Etapas Padronizadas ({protoSession?.name || 'Procedimento Clínico'}):</span>
+                            <span>Etapas padronizadas ({protoSession?.name || 'Procedimento clínico'}):</span>
                           </span>
                         </span>
                         <ul className="space-y-1.5 text-[11px] text-blue-900">
@@ -8219,7 +8219,7 @@ function DashboardContent() {
                         <div className="p-3 bg-amber-50/70 border border-amber-200 rounded-xl space-y-1 text-xs text-amber-950">
                           <span className="font-bold flex items-center gap-1.5">
                             <span>📏</span>
-                            <span>Módulo Cirúrgico: Avaliação de Edema e Abertura Bucal (Trismo)</span>
+                            <span>Módulo cirúrgico: Avaliação de edema e abertura bucal (trismo)</span>
                           </span>
                           <p className="text-[11px] text-amber-800">
                             Aferir distância interincisal máxima e inspecionar contorno facial para documentar na ficha clínica.
@@ -8231,7 +8231,7 @@ function DashboardContent() {
                         <div className="p-3 bg-indigo-50/70 border border-indigo-200 rounded-xl space-y-1 text-xs text-indigo-950">
                           <span className="font-bold flex items-center gap-1.5">
                             <span>💎</span>
-                            <span>Módulo Restaurador: Critérios Clínicos FDI</span>
+                            <span>Módulo restaurador: Critérios clínicos FDI</span>
                           </span>
                           <p className="text-[11px] text-indigo-800">
                             Exame sistemático de Estética (brilho, translucidez), Função (fratura, retenção, contorno) e Biologia (resposta pulpar, mancha marginal).
@@ -8243,7 +8243,7 @@ function DashboardContent() {
                         <div className="p-3 bg-rose-50/70 border border-rose-200 rounded-xl space-y-1 text-xs text-rose-950">
                           <span className="font-bold flex items-center gap-1.5">
                             <span>🔨</span>
-                            <span>Módulo Endodôntico: Testes de Percussão & Palpação</span>
+                            <span>Módulo endodôntico: Testes de percussão e palpação</span>
                           </span>
                           <p className="text-[11px] text-rose-800">
                             Testes periapicais de percussão vertical/horizontal e palpação do fundo de vestíbulo para acompanhamento biológico.
@@ -8257,7 +8257,7 @@ function DashboardContent() {
                           <div className="flex items-center justify-between text-xs text-slate-300">
                             <span className="font-semibold flex items-center gap-1.5">
                               <Clock className="w-3.5 h-3.5 text-blue-400" />
-                              <span>Cronômetro Clínico do Atendimento</span>
+                              <span>Cronômetro clínico do atendimento</span>
                             </span>
                             <span className="text-[10px] text-slate-400">
                               {gelTimerRunning ? 'Cronometrando...' : 'Pausado'}
@@ -8285,12 +8285,12 @@ function DashboardContent() {
                               {gelTimerRunning ? (
                                 <>
                                   <Pause className="w-3.5 h-3.5 fill-current" />
-                                  <span>Pausar Tempo</span>
+                                  <span>Pausar tempo</span>
                                 </>
                               ) : (
                                 <>
                                   <Play className="w-3.5 h-3.5 fill-current" />
-                                  <span>Iniciar Tempo</span>
+                                  <span>Iniciar tempo</span>
                                 </>
                               )}
                             </button>
@@ -8373,7 +8373,7 @@ function DashboardContent() {
                     <div className="space-y-4 animate-fadeIn">
                       <div className="flex items-center gap-2 text-slate-900 font-bold text-sm border-b border-slate-100 pb-2">
                         <Zap className="w-4 h-4 text-blue-600" />
-                        <span>Passo 3: Desfechos Clínicos & Fichas eCRF do Estudo</span>
+                        <span>Etapa 3: Desfechos clínicos e formulários eCRF do estudo</span>
                       </div>
 
                       {/* Sensibilidade Imediata EVA 0h na Cadeira (Quando Ativo no Protocolo) */}
@@ -8382,7 +8382,7 @@ function DashboardContent() {
                           <div className="flex justify-between items-center">
                             <span className="font-bold text-slate-800 text-xs inline-flex items-center gap-1.5">
                               <Zap className="w-4 h-4 text-amber-500" />
-                              <span>Dor ou Sensibilidade Imediata no Consultório (Escala EVA: 0 - 10)</span>
+                              <span>Dor ou sensibilidade imediata no consultório (escala EVA: 0 - 10)</span>
                             </span>
                           </div>
                           <p className="text-[11px] text-slate-500 leading-relaxed">
@@ -8676,7 +8676,7 @@ function DashboardContent() {
                     <div className="space-y-4 animate-fadeIn">
                       <div className="flex items-center gap-2 text-slate-900 font-bold text-sm border-b border-slate-100 pb-2">
                         <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                        <span>Passo 4: Equipe Responsável e Envio do Diário ao Paciente</span>
+                        <span>Etapa 4: Equipe responsável e envio do diário ao paciente</span>
                       </div>
 
                       {/* Operador e Avaliador Cegado */}
@@ -8755,10 +8755,10 @@ function DashboardContent() {
                           <div className="flex items-center justify-between">
                             <span className="font-bold text-slate-800 text-xs flex items-center gap-1.5">
                               <ClipboardList className="w-4 h-4 text-blue-600" />
-                              <span>Questionários do Estudo para esta Consulta:</span>
+                              <span>Questionários do estudo para esta consulta:</span>
                             </span>
                             <span className="text-[10px] text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full font-bold">
-                              Opção de Disponibilizar
+                              Opção de disponibilizar
                             </span>
                           </div>
 
@@ -8799,7 +8799,7 @@ function DashboardContent() {
                                               : 'bg-blue-50 text-blue-800 border-blue-200'
                                           }`}
                                         >
-                                          {isTimeBased ? '⏱️ Domiciliar por Tempo' : '🩺 Consulta Clínica'}
+                                          {isTimeBased ? '⏱️ Domiciliar por tempo' : '🩺 Consulta clínica'}
                                         </span>
                                       </div>
                                     </div>
@@ -8825,7 +8825,7 @@ function DashboardContent() {
                                           title="Disponibilizar este questionário para resposta imediata no portal do paciente"
                                         >
                                           <Unlock className="w-3 h-3 text-white" />
-                                          <span>{isActionLoading ? '...' : 'Disponibilizar Agora'}</span>
+                                          <span>{isActionLoading ? '...' : 'Disponibilizar agora'}</span>
                                         </button>
                                       )}
                                     </div>
@@ -8844,7 +8844,7 @@ function DashboardContent() {
                               className="w-full py-2.5 bg-[#25D366] hover:bg-[#128C7E] text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center justify-center space-x-2 cursor-pointer"
                             >
                               <MessageSquare className="w-4 h-4" />
-                              <span>Enviar Link dos Questionários no WhatsApp do Paciente</span>
+                              <span>Enviar link dos questionários no WhatsApp do paciente</span>
                             </a>
                           </div>
                         </div>
@@ -8894,7 +8894,7 @@ function DashboardContent() {
                         className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-md transition disabled:opacity-50 inline-flex items-center gap-1.5 cursor-pointer"
                       >
                         <CheckCircle2 className="w-4 h-4" />
-                        <span>{savingSession ? 'Salvando...' : 'Concluir & Gravar Atendimento'}</span>
+                        <span>{savingSession ? 'Salvando...' : 'Concluir e salvar atendimento'}</span>
                       </button>
                     )}
                   </div>
@@ -9032,7 +9032,7 @@ function DashboardContent() {
                         {part.researchCode}
                       </span>
                       <h2 className="text-lg sm:text-xl font-bold text-slate-900">
-                        Respostas do Paciente & Painel Bioestatístico
+                        Respostas do paciente e painel bioestatístico
                       </h2>
                     </div>
                     <p className="text-xs sm:text-sm text-slate-600 mt-1">
@@ -9048,7 +9048,7 @@ function DashboardContent() {
                       title="Recarregar respostas em tempo real"
                     >
                       <RefreshCw className={`w-3.5 h-3.5 ${refreshingResponses ? 'animate-spin' : ''}`} />
-                      <span>{refreshingResponses ? 'Atualizando...' : 'Atualizar Respostas'}</span>
+                      <span>{refreshingResponses ? 'Atualizando...' : 'Atualizar respostas'}</span>
                     </button>
                     <button
                       onClick={() => setShowResponsesModal(false)}
@@ -9062,7 +9062,7 @@ function DashboardContent() {
                 {/* Simulador Interativo de Cegamento */}
                 <div className="flex flex-wrap items-center gap-2 mt-3 pt-2.5 border-t border-slate-200/70">
                   <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                    Simular Papel:
+                    Simular papel:
                   </span>
                   <button
                     type="button"
@@ -9072,10 +9072,10 @@ function DashboardContent() {
                         ? 'bg-blue-600 text-white shadow-xs ring-2 ring-blue-300'
                         : 'bg-white hover:bg-slate-100 text-slate-600 border border-slate-200'
                     }`}
-                    title="Simular Pesquisador Não-Cego ou Coordenador (visualiza todas as respostas)"
+                    title="Simular pesquisador não cego ou coordenador (visualiza todas as respostas)"
                   >
                     <Eye className="w-3.5 h-3.5" />
-                    <span>Pesquisador Não-Cego (Ver Respostas)</span>
+                    <span>Pesquisador não cego (ver respostas)</span>
                   </button>
                   <button
                     type="button"
@@ -9085,10 +9085,10 @@ function DashboardContent() {
                         ? 'bg-amber-600 text-white shadow-xs ring-2 ring-amber-300'
                         : 'bg-white hover:bg-slate-100 text-slate-600 border border-slate-200'
                     }`}
-                    title="Simular Avaliador Cego (respostas mascaradas conforme protocolo)"
+                    title="Simular avaliador cego (respostas mascaradas conforme protocolo)"
                   >
                     <Lock className="w-3.5 h-3.5" />
-                    <span>Avaliador Cego (Mascarado)</span>
+                    <span>Avaliador cego (mascarado)</span>
                   </button>
                   {overrideBlindedView !== null && (
                     <button
@@ -9097,7 +9097,7 @@ function DashboardContent() {
                       className="text-[11px] text-slate-400 hover:text-slate-600 underline ml-1 cursor-pointer"
                       title="Restaurar regra original do usuário logado"
                     >
-                      Resetar ({project?.isBlinded ? 'Cego' : 'Não-Cego'})
+                      Resetar ({project?.isBlinded ? 'Cego' : 'Não cego'})
                     </button>
                   )}
                 </div>
@@ -9114,7 +9114,7 @@ function DashboardContent() {
                     }`}
                   >
                     <BarChart3 className="w-4 h-4" />
-                    <span>Escalas Clínicas & Diários (EVA)</span>
+                    <span>Escalas clínicas e diários (EVA)</span>
                     <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-indigo-100 text-indigo-800 font-bold">
                       {sessions.length} {sessions.length === 1 ? 'sessão' : 'sessões'}
                     </span>
@@ -9130,7 +9130,7 @@ function DashboardContent() {
                     }`}
                   >
                     <ClipboardList className="w-4 h-4" />
-                    <span>Questionários & eCRF</span>
+                    <span>Questionários e eCRF</span>
                     <span
                       className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
                         responses.length > 0
@@ -9154,7 +9154,7 @@ function DashboardContent() {
                     }`}
                   >
                     <Download className="w-4 h-4" />
-                    <span>Exportar Respostas (Estatística)</span>
+                    <span>Exportar respostas (estatística)</span>
                   </button>
                 </div>
               </div>
@@ -9171,10 +9171,10 @@ function DashboardContent() {
                           <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
                           <div>
                             <h4 className="text-xs font-bold text-slate-900">
-                              {parsedFormResponses.length} Questionário(s) Respondido(s) pelo Paciente
+                              {parsedFormResponses.length} questionário(s) respondido(s) pelo paciente
                             </h4>
                             <p className="text-xs text-slate-600 mt-0.5">
-                              As respostas completas das perguntas e escalas clínicas estão correlacionadas abaixo nas sessões e detalhadas na aba Questionários & eCRF.
+                              As respostas completas das perguntas e escalas clínicas estão correlacionadas abaixo nas sessões e detalhadas na aba questionários e eCRF.
                             </p>
                           </div>
                         </div>
@@ -9184,7 +9184,7 @@ function DashboardContent() {
                           className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition shrink-0 cursor-pointer flex items-center justify-center space-x-1.5 shadow-2xs"
                         >
                           <ClipboardList className="w-3.5 h-3.5" />
-                          <span>Ver na Aba Questionários</span>
+                          <span>Ver na aba questionários</span>
                         </button>
                       </div>
                     )}
@@ -9231,12 +9231,12 @@ function DashboardContent() {
                                   {isManualMode ? (
                                     <>
                                       <Lock className="w-3.5 h-3.5 text-amber-600" />
-                                      <span>Modo Manual</span>
+                                      <span>Modo manual</span>
                                     </>
                                   ) : (
                                     <>
                                       <Clock className="w-3.5 h-3.5 text-emerald-600" />
-                                      <span>Liberação Automática (GCP)</span>
+                                      <span>Liberação automática (GCP)</span>
                                     </>
                                   )}
                                 </div>
@@ -9254,7 +9254,7 @@ function DashboardContent() {
                                     )
                                   }
                                   className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold border border-slate-200 transition cursor-pointer"
-                                  title="Alternar entre Liberação Automática por Tempo e Liberação Manual"
+                                  title="Alternar entre liberação automática por tempo e liberação manual"
                                 >
                                   {isManualMode ? 'Mudar p/ Automático' : 'Mudar p/ Manual'}
                                 </button>
@@ -9269,7 +9269,7 @@ function DashboardContent() {
                                   title="Liberar imediatamente todos os 4 momentos de dor para o paciente responder agora"
                                 >
                                   <Unlock className="w-3.5 h-3.5 text-indigo-600" />
-                                  <span>Liberar Todos</span>
+                                  <span>Liberar todos</span>
                                 </button>
                               </div>
                             </div>
@@ -9469,7 +9469,7 @@ function DashboardContent() {
                                             title="Bloquear novamente este momento no portal do paciente"
                                           >
                                             <Lock className="w-3 h-3 text-slate-500" />
-                                            <span>{isActionLoading ? 'Processando...' : 'Bloquear Acesso'}</span>
+                                            <span>{isActionLoading ? 'Processando...' : 'Bloquear acesso'}</span>
                                           </button>
                                         ) : (
                                           <button
@@ -9487,7 +9487,7 @@ function DashboardContent() {
                                             title="Liberar imediatamente este momento no celular do paciente agora"
                                           >
                                             <Unlock className="w-3 h-3 text-white" />
-                                            <span>{isActionLoading ? 'Liberando...' : 'Liberar Agora'}</span>
+                                            <span>{isActionLoading ? 'Liberando...' : 'Liberar agora'}</span>
                                           </button>
                                         )}
 
@@ -9730,7 +9730,7 @@ function DashboardContent() {
                                         title="Liberar este questionário para resposta imediata no portal do paciente"
                                       >
                                         <Unlock className="w-3 h-3 text-white" />
-                                        <span>{isActionLoading ? '...' : 'Liberar Questionário Agora'}</span>
+                                        <span>{isActionLoading ? '...' : 'Liberar questionário agora'}</span>
                                       </button>
                                     )}
 
@@ -9778,7 +9778,7 @@ function DashboardContent() {
                                           className="text-xs font-bold text-blue-700 hover:text-blue-900 underline inline-flex items-center gap-1 cursor-pointer"
                                         >
                                           <Eye className="w-3.5 h-3.5" />
-                                          <span>Alternar para visão Não-Cego e ver respostas</span>
+                                          <span>Alternar para visão não cega e ver respostas</span>
                                         </button>
                                       </div>
                                     </div>
@@ -9789,7 +9789,7 @@ function DashboardContent() {
                                   <div className="flex items-center justify-between bg-blue-50/60 border border-blue-200 rounded-lg px-3 py-1.5 text-xs text-blue-800">
                                     <span className="font-semibold flex items-center space-x-1.5">
                                       <Eye className="w-3.5 h-3.5 text-blue-700" />
-                                      <span>Acesso Não-Cego / Coordenação: Visualização integral das respostas</span>
+                                      <span>Acesso não cego / coordenação: visualização integral das respostas</span>
                                     </span>
                                     <span className="font-mono text-[11px] text-blue-600">ID: {resp.id.slice(0, 8)}</span>
                                   </div>
@@ -9826,7 +9826,7 @@ function DashboardContent() {
                                             <div className="shrink-0 text-right">
                                               {q.type === 'instruction' ? (
                                                 <span className="px-2.5 py-1 bg-slate-100 text-slate-500 rounded text-xs font-medium">
-                                                  Texto Informativo
+                                                  Texto informativo
                                                 </span>
                                               ) : q.type === 'vas' ? (
                                                 <div className="inline-flex flex-col items-end">
@@ -9913,7 +9913,7 @@ function DashboardContent() {
                       <div>
                         <h3 className="text-sm font-bold text-emerald-900 flex items-center space-x-1.5">
                           <CheckCircle2 className="w-4 h-4 text-emerald-700" />
-                          <span>Base de Respostas Estruturada para Bioestatística</span>
+                          <span>Base de respostas estruturada para bioestatística</span>
                         </h3>
                         <p className="text-xs text-emerald-800 mt-0.5">
                           Dados desidentificados de todas as sessões e questionários deste voluntário. Copie para colar diretamente no <strong>Excel, SPSS, GraphPad Prism, Jamovi ou R</strong>.
@@ -9938,7 +9938,7 @@ function DashboardContent() {
                           }`}
                         >
                           <Copy className="w-3.5 h-3.5" />
-                          <span>{copiedTSV ? 'Copiado para Área de Transferência!' : 'Copiar TSV / Excel'}</span>
+                          <span>{copiedTSV ? 'Copiado para a área de transferência!' : 'Copiar TSV / Excel'}</span>
                         </button>
 
                         <button
@@ -9985,7 +9985,7 @@ function DashboardContent() {
                     <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
                       <div className="p-3.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
                         <span className="text-xs font-bold text-slate-700 uppercase tracking-wide">
-                          Pré-visualização Tabular (Matriz Longitudinal por Sessão)
+                          Pré-visualização tabular (matriz longitudinal por sessão)
                         </span>
                         <span className="text-[11px] text-slate-500">
                           {exportData.summaryRows.length} {exportData.summaryRows.length === 1 ? 'linha gerada' : 'linhas geradas'}
@@ -10043,7 +10043,7 @@ function DashboardContent() {
                     {/* Resumo dos Questionários Preenchidos */}
                     <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs">
                       <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide mb-3">
-                        Questionários Preenchidos pelo Voluntário ({responses.length} de {projectForms.length})
+                        Questionários preenchidos pelo voluntário ({responses.length} de {projectForms.length})
                       </h4>
                       {responses.length === 0 ? (
                         <p className="text-xs text-slate-400 italic">Nenhum questionário preenchido ainda.</p>
@@ -10087,7 +10087,7 @@ function DashboardContent() {
               {/* Rodapé */}
               <div className="p-4 border-t border-slate-100 flex items-center justify-between bg-slate-50/70">
                 <div className="text-xs text-slate-500">
-                  Sessões: <strong className="text-slate-700">{sessions.length}</strong> | Formulários Respondidos: <strong className="text-emerald-600">{responses.length}</strong> de <strong className="text-slate-700">{projectForms.length}</strong>
+                  Sessões: <strong className="text-slate-700">{sessions.length}</strong> | Formulários respondidos: <strong className="text-emerald-600">{responses.length}</strong> de <strong className="text-slate-700">{projectForms.length}</strong>
                 </div>
                 <button
                   type="button"

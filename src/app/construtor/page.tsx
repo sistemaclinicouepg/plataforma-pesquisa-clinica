@@ -1080,7 +1080,7 @@ function FormBuilderContent() {
                     title="Alternar entre questionários deste estudo"
                   >
                     {currentProjectForms.length > 0 && (
-                      <optgroup label="Fichas Deste Estudo">
+                      <optgroup label="Fichas deste estudo">
                         {currentProjectForms.map((f) => (
                           <option key={f.id} value={f.id}>
                             {f.title}
@@ -1088,7 +1088,7 @@ function FormBuilderContent() {
                         ))}
                       </optgroup>
                     )}
-                    <option value="new">+ Nova Ficha em Branco</option>
+                    <option value="new">+ Nova ficha em branco</option>
                   </select>
 
                   <button
@@ -1162,7 +1162,7 @@ function FormBuilderContent() {
                   title="Salvar este questionário na biblioteca de modelos"
                 >
                   <BookmarkPlus className="w-3.5 h-3.5 text-slate-500" />
-                  <span className="hidden lg:inline">Salvar Modelo</span>
+                  <span className="hidden lg:inline">Salvar modelo</span>
                 </button>
 
                 {/* Excluir Ficha (se existente) */}
@@ -1198,7 +1198,7 @@ function FormBuilderContent() {
                   ) : (
                     <Save className="w-3.5 h-3.5" />
                   )}
-                  <span>{saving ? 'Salvando...' : savedSuccess ? 'Salvo!' : 'Salvar Ficha'}</span>
+                  <span>{saving ? 'Salvando...' : savedSuccess ? 'Salvo!' : 'Salvar ficha'}</span>
                 </button>
 
               </div>
@@ -1212,7 +1212,7 @@ function FormBuilderContent() {
           <div className="p-4 bg-emerald-50 border border-emerald-300 rounded-2xl text-emerald-900 text-xs font-bold space-y-2 animate-fadeIn shadow-sm">
             <div className="flex items-center space-x-2">
               <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
-              <span>Ficha Clínica salva com sucesso no banco de dados e vinculada ao estudo!</span>
+              <span>Ficha clínica salva com sucesso no banco de dados e vinculada ao estudo!</span>
             </div>
             <div className="flex flex-wrap items-center gap-2 pt-1">
               <Link
@@ -1220,14 +1220,14 @@ function FormBuilderContent() {
                 className="px-3.5 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-xs"
               >
                 <LayoutDashboard className="w-3.5 h-3.5" />
-                <span>Ver no Dashboard de Pacientes</span>
+                <span>Ver no painel do estudo</span>
               </Link>
               <Link
                 href="/paciente"
                 className="px-3.5 py-1.5 bg-white hover:bg-slate-50 text-emerald-900 border border-emerald-300 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-xs"
               >
                 <Smartphone className="w-3.5 h-3.5" />
-                <span>Testar no Portal do Paciente</span>
+                <span>Testar no portal do paciente</span>
               </Link>
             </div>
           </div>
@@ -1274,10 +1274,10 @@ function FormBuilderContent() {
                 <div>
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-bold text-slate-900 text-sm sm:text-base">
-                      Modelos de Questionários da Odontologia
+                      Modelos de questionários da odontologia
                     </span>
                     <span className="px-2 py-0.5 bg-indigo-100 text-indigo-800 text-[10px] font-extrabold rounded-full uppercase tracking-wider">
-                      Validados & Prontos
+                      Validados e prontos
                     </span>
                     {customTemplates.length > 0 && (
                       <span className="px-2 py-0.5 bg-purple-100 text-purple-800 text-[10px] font-extrabold rounded-full">
@@ -1298,7 +1298,7 @@ function FormBuilderContent() {
                   className="w-full md:w-auto h-9 px-4 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg shadow-2xs transition flex items-center justify-center space-x-2 cursor-pointer"
                 >
                   <BookOpen className="w-3.5 h-3.5" />
-                  <span>Ver Modelos Validados</span>
+                  <span>Ver modelos validados</span>
                 </button>
                 {questions.length > 0 && (
                   <button
@@ -1308,7 +1308,7 @@ function FormBuilderContent() {
                     title="Salvar questionário atual como um modelo reutilizável"
                   >
                     <BookmarkPlus className="w-3.5 h-3.5 text-indigo-600" />
-                    <span>Salvar como Modelo</span>
+                    <span>Salvar como modelo</span>
                   </button>
                 )}
               </div>
@@ -1319,7 +1319,7 @@ function FormBuilderContent() {
               <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono uppercase tracking-wider text-slate-400">
                 <div className="flex items-center space-x-2">
                   <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-                  <span>Instrumento Clínico Odontológico • eCRF</span>
+                  <span>Instrumento clínico odontológico • eCRF</span>
                 </div>
                 <div>
                   Código: <strong className="text-slate-600">CRF-{selectedProjectId ? selectedProjectId.slice(0, 6).toUpperCase() : 'NOVO'}</strong>
@@ -1329,13 +1329,13 @@ function FormBuilderContent() {
               {/* Título da Ficha */}
               <div>
                 <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
-                  Título da Ficha Clínica / Questionário:
+                  Título da ficha clínica ou questionário:
                 </label>
                 <input
                   type="text"
                   value={formTitle}
                   onChange={(e) => setFormTitle(e.target.value)}
-                  placeholder="Ex: Ficha de Avaliação de Sensibilidade Pós-Operatória..."
+                  placeholder="Ex: Ficha de avaliação de sensibilidade pós-operatória..."
                   className="w-full text-xl sm:text-2xl font-bold text-slate-900 border-b-2 border-slate-200 hover:border-slate-300 focus:border-blue-600 focus:outline-none transition py-1 bg-transparent"
                 />
               </div>
@@ -1343,7 +1343,7 @@ function FormBuilderContent() {
               {/* Descrição e Orientações */}
               <div>
                 <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
-                  Instruções aos Voluntários / Pesquisadores:
+                  Instruções aos participantes e pesquisadores:
                 </label>
                 <textarea
                   rows={2}
@@ -1392,22 +1392,22 @@ function FormBuilderContent() {
                       }}
                       className="bg-transparent font-semibold text-blue-950 focus:outline-none text-xs cursor-pointer max-w-[210px] truncate"
                     >
-                      <optgroup label="🩺 Vinculado à Consulta Clínica (Presencial)">
-                        <option value="Sessão Clínica Presencial">Sessão Clínica (Liberado na Consulta)</option>
-                        <option value="Linha de Base / Admissão">Linha de Base / Admissão (Consulta Inicial)</option>
-                        <option value="A cada Consulta Clínica">A cada Consulta Clínica</option>
-                        <option value="Retorno Final / Conclusão">Retorno Final / Conclusão Presencial</option>
+                      <optgroup label="🩺 Vinculado à consulta clínica (presencial)">
+                        <option value="Sessão Clínica Presencial">Sessão clínica (liberado na consulta)</option>
+                        <option value="Linha de Base / Admissão">Linha de base / admissão (consulta inicial)</option>
+                        <option value="A cada Consulta Clínica">A cada consulta clínica</option>
+                        <option value="Retorno Final / Conclusão">Retorno final / conclusão presencial</option>
                       </optgroup>
-                      <optgroup label="⏱️ Domiciliar por Tempo (Sem Consulta - Clareamento/Remoto)">
-                        <option value="CUSTOM_HOME">✏️ Personalizar Frequência / Cronograma...</option>
-                        <option value="Tempo: 24h, 48h, 7d, 14d e 21d (Clareamento Caseiro)">Clareamento Caseiro (24h, 48h, 7d, 14d, 21d)</option>
-                        <option value="Tempo: 24 Horas (Domiciliar)">Tempo: 24 Horas (Domiciliar)</option>
-                        <option value="Tempo: 48 Horas (Domiciliar)">Tempo: 48 Horas (Domiciliar)</option>
-                        <option value="Tempo: 7 Dias (Domiciliar)">Tempo: 7 Dias / 1ª Sem (Domiciliar)</option>
-                        <option value="Tempo: 14 Dias (Domiciliar)">Tempo: 14 Dias / 2ª Sem (Domiciliar)</option>
-                        <option value="Tempo: 21 Dias (Domiciliar)">Tempo: 21 Dias / 3ª Sem (Domiciliar)</option>
-                        <option value="Tempo: 30 Dias (Domiciliar)">Tempo: 30 Dias / 1 Mês (Domiciliar)</option>
-                        <option value="Tempo: Contínuo / Livre">Tempo: Contínuo / Livre (A qualquer momento)</option>
+                      <optgroup label="⏱️ Domiciliar por tempo (sem consulta - clareamento/remoto)">
+                        <option value="CUSTOM_HOME">✏️ Personalizar frequência e cronograma...</option>
+                        <option value="Tempo: 24h, 48h, 7d, 14d e 21d (Clareamento Caseiro)">Clareamento caseiro (24h, 48h, 7d, 14d, 21d)</option>
+                        <option value="Tempo: 24 Horas (Domiciliar)">Tempo: 24 horas (domiciliar)</option>
+                        <option value="Tempo: 48 Horas (Domiciliar)">Tempo: 48 horas (domiciliar)</option>
+                        <option value="Tempo: 7 Dias (Domiciliar)">Tempo: 7 dias / 1ª semana (domiciliar)</option>
+                        <option value="Tempo: 14 Dias (Domiciliar)">Tempo: 14 dias / 2ª semana (domiciliar)</option>
+                        <option value="Tempo: 21 Dias (Domiciliar)">Tempo: 21 dias / 3ª semana (domiciliar)</option>
+                        <option value="Tempo: 30 Dias (Domiciliar)">Tempo: 30 dias / 1 mês (domiciliar)</option>
+                        <option value="Tempo: Contínuo / Livre">Tempo: contínuo / livre (a qualquer momento)</option>
                       </optgroup>
                     </select>
                   </div>
@@ -1427,7 +1427,7 @@ function FormBuilderContent() {
                     title="Definir dias e horários exatos para o paciente responder em casa"
                   >
                     <Clock className="w-3.5 h-3.5 text-amber-600" />
-                    <span>{isCustomFrequency || occurrence === 'CUSTOM_HOME' ? 'Frequência Personalizada' : 'Personalizar Frequência'}</span>
+                    <span>{isCustomFrequency || occurrence === 'CUSTOM_HOME' ? 'Frequência personalizada' : 'Personalizar frequência'}</span>
                   </button>
 
                   {/* Validade */}
@@ -1471,7 +1471,7 @@ function FormBuilderContent() {
                   <div className="flex items-center justify-between">
                     <span className="font-bold text-amber-950 text-xs flex items-center gap-1.5">
                       <Clock className="w-4 h-4 text-amber-600" />
-                      <span>Cronograma & Frequência de Resposta Domiciliar (em Casa):</span>
+                      <span>Cronograma e frequência de resposta domiciliar (em casa):</span>
                     </span>
                     <button
                       type="button"
@@ -1546,7 +1546,7 @@ function FormBuilderContent() {
                       className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center space-x-1.5"
                     >
                       <BookOpen className="w-3.5 h-3.5" />
-                      <span>Carregar Modelo Pronto (OHIP-14...)</span>
+                      <span>Carregar modelo pronto (OHIP-14...)</span>
                     </button>
                     <button
                       type="button"
@@ -1554,7 +1554,7 @@ function FormBuilderContent() {
                       className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center space-x-1.5"
                     >
                       <Zap className="w-3.5 h-3.5" />
-                      <span>Adicionar Escala EVA</span>
+                      <span>Adicionar escala EVA</span>
                     </button>
                   </div>
                 </div>
@@ -1583,13 +1583,13 @@ function FormBuilderContent() {
                           className="px-2.5 py-1 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-700 focus:ring-1 focus:ring-blue-500 focus:outline-none cursor-pointer"
                         >
                           <option value="vas">Escala EVA</option>
-                          <option value="matrix">Tabela de Avaliação (1 a 10 + NA)</option>
-                          <option value="likert">Escala Likert (Frequência / Acordo)</option>
-                          <option value="boolean">Sim ou Não (Binário)</option>
-                          <option value="choice">Múltipla Escolha</option>
-                          <option value="instruction">Instruções / Texto Informativo</option>
-                          <option value="text">Texto Aberto</option>
-                          <option value="number">Valor Numérico</option>
+                          <option value="matrix">Tabela de avaliação (1 a 10 + NA)</option>
+                          <option value="likert">Escala Likert (frequência / concordância)</option>
+                          <option value="boolean">Sim ou não (binário)</option>
+                          <option value="choice">Múltipla escolha</option>
+                          <option value="instruction">Instruções / texto informativo</option>
+                          <option value="text">Texto aberto</option>
+                          <option value="number">Valor numérico</option>
                         </select>
 
                         {q.required ? (
@@ -1691,7 +1691,7 @@ function FormBuilderContent() {
                               onChange={(e) => updateQuestionEnableGate(q.id, e.target.checked)}
                               className="w-4 h-4 text-blue-600 rounded cursor-pointer"
                             />
-                            <span className="text-xs">Exigir pergunta preliminar (Sim / Não) antes de liberar a escala</span>
+                            <span className="text-xs">Exigir pergunta preliminar (sim / não) antes de liberar a escala</span>
                           </label>
                           <p className="text-[11px] text-slate-500 pl-6 leading-tight">
                             Se ativado, a régua de intensidade só abre se o participante responder &quot;Sim&quot;. Se responder &quot;Não&quot;, a escala permanece bloqueada com nota 0.0.
@@ -1716,7 +1716,7 @@ function FormBuilderContent() {
                         {/* Prévia da Linha Contínua da EVA */}
                         <div className="pt-2">
                           <div className="flex justify-between items-center text-[10px] text-slate-400 mb-1.5 font-mono">
-                            <span>Escala Visual Analógica Neutra (Sem números expostos ao voluntário)</span>
+                            <span>Escala visual analógica neutra (sem números expostos ao participante)</span>
                             <span className="text-blue-600 font-bold bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
                               Gravação: 0.0 a 10.0 mm
                             </span>
@@ -1846,7 +1846,7 @@ function FormBuilderContent() {
                           className="mt-1 text-xs text-blue-600 hover:text-blue-800 font-bold flex items-center space-x-1"
                         >
                           <span>+</span>
-                          <span>Adicionar Opção</span>
+                          <span>Adicionar opção</span>
                         </button>
                       </div>
                     )}
@@ -1854,7 +1854,7 @@ function FormBuilderContent() {
                     {/* TIPO: SIM OU NÃO */}
                     {q.type === 'boolean' && (
                       <div className="bg-white rounded-xl p-3.5 border border-slate-200 flex items-center space-x-4">
-                        <span className="text-xs text-slate-500 font-semibold">Formato de Resposta:</span>
+                        <span className="text-xs text-slate-500 font-semibold">Formato de resposta:</span>
                         <div className="flex items-center space-x-2">
                           <span className="px-3.5 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-slate-700 text-xs font-bold inline-flex items-center gap-1">
                             <Check className="w-3 h-3 text-emerald-600" /> Sim
@@ -1884,9 +1884,9 @@ function FormBuilderContent() {
                     {q.type === 'matrix' && (
                       <div className="bg-white rounded-xl p-4 border border-slate-200 space-y-3">
                         <div className="flex justify-between items-center text-xs text-slate-600 font-semibold">
-                          <span>Escala Numérica Padronizada:</span>
+                          <span>Escala numérica padronizada:</span>
                           <span className="text-[10px] font-mono text-purple-700 bg-purple-50 px-2 py-0.5 rounded border border-purple-200 font-bold">
-                            1 a 10 + NA (Não se Aplica)
+                            1 a 10 + NA (Não se aplica)
                           </span>
                         </div>
                         <div className="grid grid-cols-6 sm:grid-cols-11 gap-1.5 pt-1">
@@ -1914,7 +1914,7 @@ function FormBuilderContent() {
                       <div className="bg-blue-50/70 rounded-xl p-4 border border-blue-200 space-y-2">
                         <span className="text-xs font-bold text-blue-900 flex items-center gap-1.5">
                           <Info className="w-3.5 h-3.5 text-blue-600" />
-                          Texto Informativo de Orientação ao Voluntário (Sem campo de resposta):
+                          Texto informativo de orientação ao participante (sem campo de resposta):
                         </span>
                         <textarea
                           rows={2}
@@ -1945,7 +1945,7 @@ function FormBuilderContent() {
                           onChange={(e) => updateQuestionRequired(q.id, e.target.checked)}
                           className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
                         />
-                        <span>Resposta Obrigatória</span>
+                        <span>Resposta obrigatória</span>
                       </label>
                     </div>
 
@@ -1957,7 +1957,7 @@ function FormBuilderContent() {
             {/* BARRA DE ADIÇÃO RÁPIDA DE ITENS CLÍNICOS */}
             <div className="pt-6 border-t border-slate-200 space-y-3">
               <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider text-center">
-                + Adicionar Item à Prancheta Clínica:
+                + Adicionar item à prancheta clínica:
               </h4>
 
               <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
@@ -1968,7 +1968,7 @@ function FormBuilderContent() {
                 >
                   <Zap className="w-5 h-5 text-amber-500 group-hover:scale-110 transition" />
                   <span className="text-xs font-bold text-slate-800">Escala EVA</span>
-                  <span className="text-[10px] text-slate-400 font-medium">Dor / Sensib.</span>
+                  <span className="text-[10px] text-slate-400 font-medium">Dor / sensib.</span>
                 </button>
 
                 <button
@@ -1997,7 +1997,7 @@ function FormBuilderContent() {
                   className="p-3 bg-white hover:bg-blue-50 border border-slate-200 hover:border-blue-400 rounded-2xl text-center transition flex flex-col items-center justify-center space-y-1 shadow-2xs group"
                 >
                   <CheckSquare className="w-5 h-5 text-emerald-500 group-hover:scale-110 transition" />
-                  <span className="text-xs font-bold text-slate-800">Sim / Não</span>
+                  <span className="text-xs font-bold text-slate-800">Sim / não</span>
                   <span className="text-[10px] text-slate-400 font-medium">Binário</span>
                 </button>
 
@@ -2054,7 +2054,7 @@ function FormBuilderContent() {
                     className="text-xs font-bold text-indigo-700 hover:text-indigo-900 flex items-center space-x-1.5 cursor-pointer"
                   >
                     <BookOpen className="w-3.5 h-3.5" />
-                    <span>Ver Modelos Validados da Odontologia</span>
+                    <span>Ver modelos validados da odontologia</span>
                   </button>
 
                   <button
@@ -2065,7 +2065,7 @@ function FormBuilderContent() {
                     title="Salvar questionário atual como um modelo reutilizável"
                   >
                     <BookmarkPlus className="w-3.5 h-3.5 text-indigo-600" />
-                    <span>Salvar como Modelo</span>
+                    <span>Salvar como modelo</span>
                   </button>
                 </div>
 
@@ -2086,7 +2086,7 @@ function FormBuilderContent() {
                   ) : (
                     <Save className="w-3.5 h-3.5" />
                   )}
-                  <span>{saving ? 'Publicando...' : savedSuccess ? 'Salvo com Sucesso!' : 'Salvar Ficha Clínica'}</span>
+                  <span>{saving ? 'Publicando...' : savedSuccess ? 'Salvo com sucesso!' : 'Salvar ficha clínica'}</span>
                 </button>
               </div>
             </div>
@@ -2451,7 +2451,7 @@ function FormBuilderContent() {
                 }`}
               >
                 <BookOpen className="w-3.5 h-3.5" />
-                <span>Modelos Validados (Odontologia)</span>
+                <span>Modelos validados (odontologia)</span>
                 <span className="px-1.5 py-0.2 bg-white/20 rounded-full text-[10px]">6</span>
               </button>
 
@@ -2465,7 +2465,7 @@ function FormBuilderContent() {
                 }`}
               >
                 <Bookmark className="w-3.5 h-3.5" />
-                <span>Meus Modelos Salvos</span>
+                <span>Meus modelos salvos</span>
                 {customTemplates.length > 0 && (
                   <span className="px-1.5 py-0.2 bg-indigo-200 text-indigo-900 rounded-full text-[10px]">
                     {customTemplates.length}
@@ -2486,7 +2486,7 @@ function FormBuilderContent() {
                 }`}
               >
                 <FolderKanban className="w-3.5 h-3.5" />
-                <span>Importar de Outras Pesquisas</span>
+                <span>Importar de outras pesquisas</span>
               </button>
             </div>
 
@@ -2612,7 +2612,7 @@ function FormBuilderContent() {
                           className="mt-4 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-xs transition inline-flex items-center space-x-1.5 cursor-pointer"
                         >
                           <BookmarkPlus className="w-4 h-4" />
-                          <span>Salvar Questionário Atual como Modelo</span>
+                          <span>Salvar questionário atual como modelo</span>
                         </button>
                       )}
                     </div>
@@ -2795,7 +2795,7 @@ function FormBuilderContent() {
                   <BookmarkPlus className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-slate-900">Salvar como Modelo</h3>
+                  <h3 className="text-base font-bold text-slate-900">Salvar como modelo</h3>
                   <p className="text-xs text-slate-500">Reutilize este questionário em outras pesquisas com 1 clique</p>
                 </div>
               </div>
@@ -2811,40 +2811,40 @@ function FormBuilderContent() {
             <form onSubmit={handleConfirmSaveTemplate} className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Nome do Modelo <span className="text-red-500">*</span>
+                  Nome do modelo <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   required
                   value={saveTemplateForm.name}
                   onChange={(e) => setSaveTemplateForm({ ...saveTemplateForm, name: e.target.value })}
-                  placeholder="Ex: Questionário de Sensibilidade Pós-Clareamento..."
+                  placeholder="Ex: Questionário de sensibilidade pós-clareamento..."
                   className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 font-semibold"
                 />
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Categoria Clínica
+                  Categoria clínica
                 </label>
                 <select
                   value={saveTemplateForm.category}
                   onChange={(e) => setSaveTemplateForm({ ...saveTemplateForm, category: e.target.value })}
                   className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs bg-white text-slate-800 font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
                 >
-                  <option value="Clareamento & Estética">Clareamento & Estética</option>
-                  <option value="Sensibilidade & Dor">Sensibilidade & Dor</option>
-                  <option value="Dentística Restauradora">Dentística Restauradora</option>
-                  <option value="Periodontia & Tecidos">Periodontia & Tecidos</option>
-                  <option value="Ortodontia & Oclusão">Ortodontia & Oclusão</option>
-                  <option value="Qualidade de Vida (PROMs)">Qualidade de Vida (PROMs)</option>
-                  <option value="Anamnese Geral">Anamnese Geral</option>
+                  <option value="Clareamento e estética">Clareamento e estética</option>
+                  <option value="Sensibilidade e dor">Sensibilidade e dor</option>
+                  <option value="Dentística restauradora">Dentística restauradora</option>
+                  <option value="Periodontia e tecidos">Periodontia e tecidos</option>
+                  <option value="Ortodontia e oclusão">Ortodontia e oclusão</option>
+                  <option value="Qualidade de vida (PROMs)">Qualidade de vida (PROMs)</option>
+                  <option value="Anamnese geral">Anamnese geral</option>
                 </select>
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Descrição e Orientações (opcional)
+                  Descrição e orientações (opcional)
                 </label>
                 <textarea
                   rows={2}
@@ -2875,7 +2875,7 @@ function FormBuilderContent() {
                   className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-xs cursor-pointer"
                 >
                   <BookmarkPlus className="w-4 h-4" />
-                  <span>Salvar Modelo Reutilizável</span>
+                  <span>Salvar modelo reutilizável</span>
                 </button>
               </div>
             </form>
