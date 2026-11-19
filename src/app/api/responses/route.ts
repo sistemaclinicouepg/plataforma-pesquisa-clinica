@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/auth';
-import { encodeDetailedDiaryReport } from '@/lib/unlockProtocol';
+import { encodeDetailedDiaryReport, parseUnlockMeta } from '@/lib/unlockProtocol';
 
 export async function GET(req: Request) {
   try {
@@ -140,8 +140,27 @@ export async function POST(req: Request) {
     if (participantId && targetFormId && String(targetFormId).startsWith('anamnesis_')) {
       const part = await prisma.participant.findUnique({
         where: { id: participantId },
+        include: { sessions: true },
       });
       if (part) {
+        // Bloqueio de edição para anamnese já concluída se não liberada pelo pesquisador
+        if (part.anamnesisDone) {
+          const allUnlockedForms = (part.sessions || []).flatMap(
+            (s) => parseUnlockMeta(s.notes).unlockedForms
+          );
+          const isUnlocked =
+            allUnlockedForms.includes(targetFormId) || allUnlockedForms.includes('anamnesis');
+          if (!isUnlocked) {
+            return NextResponse.json(
+              {
+                error:
+                  'A ficha inicial de anamnese já foi gravada e está bloqueada para alterações. O pesquisador precisa liberar a edição no painel.',
+              },
+              { status: 403 }
+            );
+          }
+        }
+
         let existingAnamnesis: any = {};
         try {
           existingAnamnesis = part.anamnesisData ? JSON.parse(part.anamnesisData) : {};
@@ -167,7 +186,7 @@ export async function POST(req: Request) {
       }
     }
 
-    // Se o participante já respondeu a este formulário, atualiza; senão cria
+    // Se o participante já respondeu a este formulário, atualiza (se liberado); senão cria
     let response;
     if (participantId && targetFormId) {
       const existing = await prisma.formResponse.findFirst({
@@ -175,6 +194,27 @@ export async function POST(req: Request) {
       });
 
       if (existing) {
+        // Regra de Integridade Ética (GCP/ICH): Respostas anteriores são bloqueadas após envio.
+        // Apenas o pesquisador pode autorizar alterações liberando a edição explicitamente.
+        const partWithSessions = await prisma.participant.findUnique({
+          where: { id: participantId },
+          include: { sessions: true },
+        });
+        const allUnlockedForms = (partWithSessions?.sessions || []).flatMap(
+          (s) => parseUnlockMeta(s.notes).unlockedForms
+        );
+        const isUnlocked = allUnlockedForms.includes(targetFormId);
+
+        if (!isUnlocked) {
+          return NextResponse.json(
+            {
+              error:
+                'Este questionário já foi enviado anteriormente e está bloqueado para edições. Caso seja necessário alterá-lo, o pesquisador responsável precisa liberar a edição no painel.',
+            },
+            { status: 403 }
+          );
+        }
+
         response = await prisma.formResponse.update({
           where: { id: existing.id },
           data: {

@@ -104,10 +104,12 @@ O sistema possui acesso restrito configurado tanto em banco quanto em memória i
 ## 🔄 7. Resumo das Últimas Atualizações Realizadas
 
 1. **Portal do Paciente Simplificado e Wizard Passo a Passo (`/paciente`):**
-   - Página inicial limpa e acolhedora com destaque único no questionário disponível e botão proeminente "Iniciar Questionário".
-   - Fluxo interativo passo a passo (1 questão por tela/etapa), com barra de progresso animada, eliminando sobrecarga cognitiva e impedindo que o paciente pule perguntas acidentalmente.
-   - Componentes touch otimizados para celular (Likert, EVA/VAS com régua contínua e pergunta preliminar de dor, Múltipla Escolha, Matriz 1-10 e Sim/Não).
-   - Seção recolhível e discreta para histórico de questionários já respondidos.
+   - **Nomenclatura Amigável:** Títulos, descrições e ocorrências científicas foram convertidos para linguagem simples e humana (ex: *OHIP-14* virou *"Qualidade de Vida e Saúde Bucal"*, *Linha de Base* virou *"Avaliação Inicial"*, e descrições acadêmicas foram simplificadas para evitar intimidação do voluntário).
+   - **Bloqueio Estrito de Edição após Envio (GCP / ICH E6):** Respostas anteriores não podem ser editadas após envio. O questionário concluído passa a modo de consulta (somente leitura com inputs desabilitados). Alterações só são autorizadas quando o pesquisador clicar em "Liberar Agora" no painel (`/resultados` ou `/dashboard`), com bloqueio também em nível de API (`POST /api/responses`).
+   - **Página Inicial Limpa:** Destaque único no questionário ativo disponível e botão proeminente "Iniciar Questionário".
+   - **Fluxo Passo a Passo (1 questão por tela/etapa):** Com barra de progresso animada, eliminando sobrecarga cognitiva e impedindo que o paciente pule perguntas acidentalmente.
+   - **Componentes Touch:** Otimizados para celular (Likert, EVA/VAS com régua contínua e pergunta preliminar de dor, Múltipla Escolha, Matriz 1-10 e Sim/Não).
+   - **Histórico Recolhível:** Seção discreta no rodapé para questionários já respondidos.
 2. **Visualizador de Documentos CEP (`/relatorio-cep`):**
    - Modal interativo integrado para visualização de PDFs (estilo WhatsApp) com botão para abrir em aba separada.
    - Cache otimizado para eliminar o delay visual de carregamento de arquivos.

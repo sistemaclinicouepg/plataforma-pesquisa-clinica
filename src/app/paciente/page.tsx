@@ -22,6 +22,9 @@ import {
   ChevronUp,
   Check,
   X,
+  Lock,
+  Unlock,
+  Eye,
 } from 'lucide-react';
 import {
   StudyProtocolConfig,
@@ -66,6 +69,7 @@ type FormItem = {
   allowLate: boolean;
   createdAt: string;
   isCompleted: boolean;
+  isUnlocked?: boolean;
   submittedAt: string | null;
   myAnswers: Record<string, FormAnswerValue> | null;
 };
@@ -115,6 +119,112 @@ function cleanFormDescription(desc: string | null | undefined) {
     .replace(/^preenchido por:\s*[^|]+\|\s*/i, '')
     .replace(/^ocorrência:\s*[^|]+\|\s*/i, '')
     .trim();
+}
+
+/**
+ * Converte títulos, descrições e ocorrências científicas/técnicas (ex: OHIP-14, EVA, Linha de Base)
+ * em linguagem amigável, clara e acessível para o paciente voluntário da pesquisa.
+ */
+function getPatientFriendlyForm(form: FormItem) {
+  const originalTitle = form.title || '';
+  const originalDesc = form.description || '';
+  const originalOcc = form.occurrence || '';
+
+  const lowerTitle = originalTitle.toLowerCase();
+  const lowerDesc = originalDesc.toLowerCase();
+
+  let friendlyTitle = originalTitle;
+  let friendlyDesc = cleanFormDescription(originalDesc);
+  let friendlyOccurrence = originalOcc;
+  let technicalTag: string | null = null;
+
+  // 1. OHIP-14 (Oral Health Impact Profile)
+  if (lowerTitle.includes('ohip') || lowerDesc.includes('ohip')) {
+    friendlyTitle = 'Qualidade de Vida e Saúde Bucal';
+    friendlyDesc =
+      'Avalia como seus dentes e sua saúde bucal influenciam sua alimentação, fala e bem-estar no seu dia a dia.';
+    technicalTag = 'Instrumento OHIP-14';
+  }
+  // 2. EVA / VAS / Dor e Sensibilidade
+  else if (lowerTitle.includes('eva') || lowerTitle.includes('sensib') || lowerTitle.includes('dor')) {
+    friendlyTitle = 'Acompanhamento de Sensibilidade e Dor';
+    friendlyDesc =
+      'Avalia a intensidade de qualquer sensibilidade ou desconforto que você tenha sentido após o atendimento.';
+    technicalTag = 'Escala EVA';
+  }
+  // 3. Satisfação / OES / Estética
+  else if (
+    lowerTitle.includes('satisfa') ||
+    lowerTitle.includes('oes') ||
+    lowerTitle.includes('estét') ||
+    lowerTitle.includes('estet')
+  ) {
+    friendlyTitle = 'Satisfação com o Tratamento e Sorriso';
+    friendlyDesc = 'Avalia sua percepção e satisfação com a estética e o resultado do seu tratamento.';
+    if (lowerTitle.includes('oes')) technicalTag = 'Escala OES';
+  }
+  // 4. Hábitos
+  else if (lowerTitle.includes('hábito') || lowerTitle.includes('habito')) {
+    friendlyTitle = 'Hábitos e Cuidados Diários';
+    friendlyDesc = 'Perguntas sobre sua rotina diária de alimentação, consumo e higiene bucal.';
+  }
+  // 5. Anamnese
+  else if (
+    lowerTitle.includes('anamnese') ||
+    lowerTitle.includes('critérios') ||
+    lowerTitle.includes('criterios')
+  ) {
+    friendlyTitle = 'Questionário Inicial de Saúde';
+    friendlyDesc = 'Perguntas sobre seu histórico de saúde para o início da sua participação na pesquisa.';
+  } else {
+    // Limpeza genérica de siglas em outros formulários
+    friendlyTitle = originalTitle
+      .replace(/\s*\([^)]*Likert[^)]*\)/gi, '')
+      .replace(/\s*\([^)]*eCRF[^)]*\)/gi, '')
+      .replace(/\s*\([^)]*Oral Health Impact Profile[^)]*\)/gi, '')
+      .trim();
+
+    friendlyDesc = friendlyDesc
+      .replace(/Escala Likert\s*\d+\s*pontos\.?/gi, '')
+      .replace(
+        /Avalia as \d+ dimensões do impacto da saúde bucal[^.]*\.?/gi,
+        'Avalia a influência da saúde bucal no seu dia a dia.'
+      )
+      .trim();
+  }
+
+  // Ocorrência / Momento amigável
+  if (
+    originalOcc.toLowerCase().includes('linha de base') ||
+    originalOcc.toLowerCase().includes('admissão') ||
+    originalOcc.toLowerCase().includes('admissao')
+  ) {
+    friendlyOccurrence = 'Avaliação Inicial';
+  } else if (originalOcc.toLowerCase().includes('24h') || originalOcc.toLowerCase().includes('24 horas')) {
+    friendlyOccurrence = 'Acompanhamento 24 Horas';
+  } else if (originalOcc.toLowerCase().includes('48h') || originalOcc.toLowerCase().includes('48 horas')) {
+    friendlyOccurrence = 'Acompanhamento 48 Horas';
+  } else if (originalOcc.toLowerCase().includes('7 dias')) {
+    friendlyOccurrence = 'Acompanhamento 7 Dias';
+  } else if (originalOcc.toLowerCase().includes('14 dias')) {
+    friendlyOccurrence = 'Acompanhamento 14 Dias';
+  } else if (originalOcc.toLowerCase().includes('21 dias')) {
+    friendlyOccurrence = 'Acompanhamento 21 Dias';
+  } else if (
+    originalOcc.toLowerCase().includes('a cada consulta') ||
+    originalOcc.toLowerCase().includes('a cada sessão')
+  ) {
+    friendlyOccurrence = 'A cada Consulta';
+  } else if (originalOcc.toLowerCase().includes('conclusão') || originalOcc.toLowerCase().includes('final')) {
+    friendlyOccurrence = 'Consulta Final';
+  }
+
+  return {
+    friendlyTitle,
+    friendlyDesc: friendlyDesc || 'Responda as perguntas a seguir sobre o acompanhamento da sua saúde.',
+    friendlyOccurrence,
+    technicalTag,
+  };
 }
 
 function PacienteContent() {
@@ -292,11 +402,10 @@ function PacienteContent() {
     loadParticipant(clean);
   };
 
-  const handleSelectForm = (form: FormItem) => {
-    activateForm(form);
-  };
-
   const handleFormAnswerChange = (questionId: string | number, value: FormAnswerValue) => {
+    // Se estiver em modo somente leitura (bloqueado), não permite alterações
+    if (selectedForm?.isCompleted && !selectedForm?.isUnlocked) return;
+
     const key = String(questionId);
     setFormAnswers((prev) => ({ ...prev, [key]: value, [questionId]: value }));
     setStepHint(null);
@@ -359,6 +468,12 @@ function PacienteContent() {
     if (e) e.preventDefault();
     if (!selectedForm || !participant) return;
 
+    // Se o formulário já foi respondido e NÃO foi liberado pelo pesquisador, impede envio
+    if (selectedForm.isCompleted && !selectedForm.isUnlocked) {
+      setFormError('Este questionário já foi enviado e está bloqueado para edições.');
+      return;
+    }
+
     // Validação preventiva de todas as perguntas obrigatórias
     const missing = selectedForm.questions.filter((q) => {
       if (q.type === 'instruction') return false;
@@ -395,7 +510,7 @@ function PacienteContent() {
         throw new Error(data.error || 'Erro ao enviar questionário.');
       }
 
-      setFormSuccessMessage(`Suas respostas para "${selectedForm.title}" foram gravadas com sucesso!`);
+      setFormSuccessMessage(`Suas respostas foram gravadas com sucesso!`);
 
       if (data.isRedAlert) {
         setFormRedAlert({
@@ -586,16 +701,23 @@ function PacienteContent() {
   const currentQuestion = questions[currentStepIndex];
   const isLastStep = currentStepIndex === totalSteps - 1;
 
+  // Regra de Permissão de Edição: se já foi enviado e NÃO foi liberado pelo pesquisador, é somente leitura
+  const isReadOnly = Boolean(selectedForm?.isCompleted && !selectedForm?.isUnlocked);
+  const isUnlockedByResearcher = Boolean(selectedForm?.isCompleted && selectedForm?.isUnlocked);
+
+  // Metadados Amigáveis para o Formulário Ativo
+  const friendlyActiveForm = selectedForm ? getPatientFriendlyForm(selectedForm) : null;
+
   // Numeração de perguntas reais (excluindo telas de orientação do contador)
   const nonInstructionQuestions = questions.filter((q) => q.type !== 'instruction');
   const totalQuestionsCount = nonInstructionQuestions.length;
-  const currentQuestionNumber = currentQuestion?.type === 'instruction'
-    ? null
-    : questions.slice(0, currentStepIndex + 1).filter((q) => q.type !== 'instruction').length;
+  const currentQuestionNumber =
+    currentQuestion?.type === 'instruction'
+      ? null
+      : questions.slice(0, currentStepIndex + 1).filter((q) => q.type !== 'instruction').length;
 
-  const progressPercent = totalSteps > 0
-    ? Math.round(((currentStepIndex + 1) / totalSteps) * 100)
-    : 100;
+  const progressPercent =
+    totalSteps > 0 ? Math.round(((currentStepIndex + 1) / totalSteps) * 100) : 100;
 
   return (
     <div className="min-h-screen bg-slate-100 font-sans text-slate-800 flex justify-center">
@@ -668,13 +790,27 @@ function PacienteContent() {
                     : `Pergunta ${currentQuestionNumber} de ${totalQuestionsCount}`}
                 </span>
                 <span className="text-xs font-extrabold text-slate-800 truncate block max-w-[200px]">
-                  {selectedForm.title}
+                  {friendlyActiveForm?.friendlyTitle || selectedForm.title}
                 </span>
               </div>
 
-              <span className="text-xs font-mono font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200 shrink-0">
-                {progressPercent}%
-              </span>
+              <div className="flex items-center gap-1.5 shrink-0">
+                {isReadOnly && (
+                  <span className="text-[10px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-300 flex items-center gap-1">
+                    <Lock className="w-3 h-3" />
+                    <span className="hidden sm:inline">Bloqueado</span>
+                  </span>
+                )}
+                {isUnlockedByResearcher && (
+                  <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full border border-emerald-300 flex items-center gap-1">
+                    <Unlock className="w-3 h-3 text-emerald-600" />
+                    <span className="hidden sm:inline">Liberado</span>
+                  </span>
+                )}
+                <span className="text-xs font-mono font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
+                  {progressPercent}%
+                </span>
+              </div>
             </div>
 
             {/* Barra de Progresso Animada */}
@@ -727,7 +863,7 @@ function PacienteContent() {
                   </ul>
                   <a
                     href={`https://wa.me/${getWhatsAppTarget()}?text=${encodeURIComponent(
-                      `[ALERTA CLÍNICO UEPG] Olá! Sou o voluntário ${participant?.patientName} (${participant?.researchCode}) da pesquisa "${participant?.projectName}". Registrei agora dor/desconforto intenso no questionário "${selectedForm?.title}" e gostaria de suporte da equipe de pesquisa.`
+                      `[ALERTA CLÍNICO UEPG] Olá! Sou o voluntário ${participant?.patientName} (${participant?.researchCode}) da pesquisa "${participant?.projectName}". Registrei agora desconforto no questionário "${friendlyActiveForm?.friendlyTitle || selectedForm?.title}" e gostaria de suporte da equipe de pesquisa.`
                     )}`}
                     target="_blank"
                     rel="noopener noreferrer"
@@ -759,53 +895,62 @@ function PacienteContent() {
             <div className="space-y-5 flex-1 flex flex-col justify-between">
               
               <div className="space-y-4">
-                {/* 1. SE HOUVER QUESTIONÁRIO PENDENTE: CARTÃO DE DESTAQUE COM BOTÃO INICIAR */}
-                {primaryPendingForm ? (
-                  <div className="bg-gradient-to-br from-blue-50/90 via-indigo-50/50 to-white rounded-3xl p-6 border-2 border-blue-200/90 shadow-md space-y-4 animate-fadeIn">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold bg-blue-100 text-blue-800 border border-blue-200">
-                        <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
-                        Disponível para Preenchimento
-                      </span>
-                      {primaryPendingForm.occurrence && (
-                        <span className="text-[11px] font-bold text-slate-600 bg-white px-2.5 py-0.5 rounded-full border border-slate-200 shadow-2xs">
-                          {primaryPendingForm.occurrence}
-                        </span>
-                      )}
-                    </div>
+                {/* 1. SE HOUVER QUESTIONÁRIO PENDENTE: CARTÃO DE DESTAQUE COM NOMENCLATURA AMIGÁVEL */}
+                {primaryPendingForm ? (() => {
+                  const friendly = getPatientFriendlyForm(primaryPendingForm);
 
-                    <div>
-                      <h3 className="text-lg font-black text-slate-900 tracking-tight leading-snug">
-                        {primaryPendingForm.title}
-                      </h3>
-                      <p className="text-xs text-slate-600 mt-1.5 leading-relaxed">
-                        {cleanFormDescription(primaryPendingForm.description) ||
-                          'Responda como você está se sentindo nesta etapa. Suas respostas auxiliam diretamente no acompanhamento da sua saúde.'}
-                      </p>
-                      
-                      <div className="flex items-center gap-3 mt-3 text-[11px] text-slate-500 font-semibold">
-                        <span className="flex items-center gap-1">
-                          <Clock className="w-3.5 h-3.5 text-blue-600" />
-                          Leva cerca de 2 minutos
+                  return (
+                    <div className="bg-gradient-to-br from-blue-50/90 via-indigo-50/50 to-white rounded-3xl p-6 border-2 border-blue-200/90 shadow-md space-y-4 animate-fadeIn">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold bg-blue-100 text-blue-800 border border-blue-200">
+                          <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
+                          Disponível para Preenchimento
                         </span>
-                        <span>•</span>
-                        <span>
-                          {primaryPendingForm.questions.filter((q) => q.type !== 'instruction').length} perguntas focadas
+                        <span className="text-[11px] font-bold text-slate-600 bg-white px-2.5 py-0.5 rounded-full border border-slate-200 shadow-2xs">
+                          {friendly.friendlyOccurrence}
                         </span>
                       </div>
-                    </div>
 
-                    {/* BOTÃO PRINCIPAL DE INÍCIO */}
-                    <button
-                      type="button"
-                      onClick={() => activateForm(primaryPendingForm)}
-                      className="w-full py-4 bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white font-black text-base rounded-2xl shadow-lg shadow-blue-500/25 transition-all transform active:scale-[0.99] flex items-center justify-center gap-2.5 cursor-pointer"
-                    >
-                      <span>Iniciar Questionário</span>
-                      <ArrowRight className="w-5 h-5" />
-                    </button>
-                  </div>
-                ) : (
+                      <div>
+                        <div className="flex items-baseline gap-2 flex-wrap">
+                          <h3 className="text-lg font-black text-slate-900 tracking-tight leading-snug">
+                            {friendly.friendlyTitle}
+                          </h3>
+                          {friendly.technicalTag && (
+                            <span className="text-[10px] font-mono font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md">
+                              {friendly.technicalTag}
+                            </span>
+                          )}
+                        </div>
+
+                        <p className="text-xs text-slate-600 mt-1.5 leading-relaxed">
+                          {friendly.friendlyDesc}
+                        </p>
+                        
+                        <div className="flex items-center gap-3 mt-3 text-[11px] text-slate-500 font-semibold">
+                          <span className="flex items-center gap-1">
+                            <Clock className="w-3.5 h-3.5 text-blue-600" />
+                            Leva cerca de 2 minutos
+                          </span>
+                          <span>•</span>
+                          <span>
+                            {primaryPendingForm.questions.filter((q) => q.type !== 'instruction').length} perguntas focadas
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* BOTÃO PRINCIPAL DE INÍCIO */}
+                      <button
+                        type="button"
+                        onClick={() => activateForm(primaryPendingForm)}
+                        className="w-full py-4 bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white font-black text-base rounded-2xl shadow-lg shadow-blue-500/25 transition-all transform active:scale-[0.99] flex items-center justify-center gap-2.5 cursor-pointer"
+                      >
+                        <span>Iniciar Questionário</span>
+                        <ArrowRight className="w-5 h-5" />
+                      </button>
+                    </div>
+                  );
+                })() : (
                   // SE NÃO HOUVER NENHUM PENDENTE
                   <div className="p-8 bg-white rounded-3xl border border-slate-200 text-center space-y-3 shadow-xs">
                     <div className="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto border border-emerald-200 shadow-2xs">
@@ -824,28 +969,31 @@ function PacienteContent() {
                     <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider px-1">
                       Outros questionários aguardando resposta:
                     </p>
-                    {otherPendingForms.map((f) => (
-                      <div
-                        key={f.id}
-                        className="p-4 bg-white rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between gap-3"
-                      >
-                        <div className="min-w-0">
-                          <h4 className="font-bold text-slate-900 text-xs truncate">{f.title}</h4>
-                          <p className="text-[10px] text-slate-400 mt-0.5">{f.occurrence || 'Aguardando preenchimento'}</p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => activateForm(f)}
-                          className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl text-xs font-bold transition cursor-pointer shrink-0"
+                    {otherPendingForms.map((f) => {
+                      const friendly = getPatientFriendlyForm(f);
+                      return (
+                        <div
+                          key={f.id}
+                          className="p-4 bg-white rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between gap-3"
                         >
-                          Iniciar →
-                        </button>
-                      </div>
-                    ))}
+                          <div className="min-w-0">
+                            <h4 className="font-bold text-slate-900 text-xs truncate">{friendly.friendlyTitle}</h4>
+                            <p className="text-[10px] text-slate-400 mt-0.5">{friendly.friendlyOccurrence}</p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => activateForm(f)}
+                            className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl text-xs font-bold transition cursor-pointer shrink-0"
+                          >
+                            Iniciar →
+                          </button>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
 
-                {/* 3. HISTÓRICO DE QUESTIONÁRIOS JÁ RESPONDIDOS (DISCRETO / RECOLHÍVEL) */}
+                {/* 3. HISTÓRICO DE QUESTIONÁRIOS JÁ RESPONDIDOS (COM STATUS DE BLOQUEIO / LIBERAÇÃO) */}
                 {completedForms.length > 0 && (
                   <div className="pt-2">
                     <button
@@ -864,26 +1012,56 @@ function PacienteContent() {
 
                     {showCompletedHistory && (
                       <div className="mt-2.5 space-y-2 animate-fadeIn">
-                        {completedForms.map((f) => (
-                          <div
-                            key={f.id}
-                            className="p-3.5 bg-white rounded-2xl border border-slate-200 flex items-center justify-between gap-3 text-xs"
-                          >
-                            <div className="min-w-0">
-                              <p className="font-bold text-slate-800 truncate text-xs">{f.title}</p>
-                              <p className="text-[10px] text-slate-400 mt-0.5">
-                                {f.submittedAt ? `Enviado em ${f.submittedAt}` : 'Concluído'}
-                              </p>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => activateForm(f)}
-                              className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-[11px] font-semibold shrink-0 cursor-pointer"
+                        {completedForms.map((f) => {
+                          const friendly = getPatientFriendlyForm(f);
+                          return (
+                            <div
+                              key={f.id}
+                              className="p-3.5 bg-white rounded-2xl border border-slate-200 flex items-center justify-between gap-3 text-xs"
                             >
-                              Revisar
-                            </button>
-                          </div>
-                        ))}
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-1.5">
+                                  <p className="font-bold text-slate-800 truncate text-xs">{friendly.friendlyTitle}</p>
+                                  {f.isUnlocked ? (
+                                    <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-0.5 shrink-0">
+                                      <Unlock className="w-2.5 h-2.5 text-emerald-600" />
+                                      <span>Liberado</span>
+                                    </span>
+                                  ) : (
+                                    <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-slate-100 text-slate-500 border border-slate-200 flex items-center gap-0.5 shrink-0">
+                                      <Lock className="w-2.5 h-2.5 text-slate-400" />
+                                      <span>Bloqueado</span>
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-[10px] text-slate-400 mt-0.5">
+                                  {friendly.friendlyOccurrence} • {f.submittedAt ? `Enviado em ${f.submittedAt}` : 'Concluído'}
+                                </p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => activateForm(f)}
+                                className={`px-2.5 py-1.5 rounded-lg text-[11px] font-bold shrink-0 cursor-pointer transition flex items-center gap-1 ${
+                                  f.isUnlocked
+                                    ? 'bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200'
+                                    : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
+                                }`}
+                              >
+                                {f.isUnlocked ? (
+                                  <>
+                                    <Unlock className="w-3 h-3" />
+                                    <span>Editar</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Eye className="w-3 h-3" />
+                                    <span>Consultar</span>
+                                  </>
+                                )}
+                              </button>
+                            </div>
+                          );
+                        })}
                       </div>
                     )}
                   </div>
@@ -904,7 +1082,7 @@ function PacienteContent() {
               {/* CARTÃO DA QUESTÃO ATUAL */}
               <div className="bg-white rounded-3xl border border-slate-200 p-5 sm:p-6 shadow-xs flex-1 flex flex-col justify-between space-y-4 animate-fadeIn">
                 
-                {/* TOPO DA PERGUNTA: TÍTULO E ORIENTAÇÕES */}
+                {/* TOPO DA PERGUNTA: TÍTULO, AVISO DE BLOQUEIO/LIBERAÇÃO E ORIENTAÇÕES */}
                 <div className="space-y-2.5">
                   <div className="flex items-center justify-between gap-2">
                     <span className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-200">
@@ -918,6 +1096,32 @@ function PacienteContent() {
                       </span>
                     )}
                   </div>
+
+                  {/* AVISO QUANDO O QUESTIONÁRIO ESTIVER BLOQUEADO (RESPOSTAS ANTERIORES) */}
+                  {isReadOnly && (
+                    <div className="p-3 bg-amber-50/90 border border-amber-200 rounded-2xl flex items-center gap-2.5 text-xs text-amber-900">
+                      <Lock className="w-4 h-4 text-amber-600 shrink-0" />
+                      <div className="leading-snug">
+                        <span className="font-bold block">Respostas já enviadas (Edição Bloqueada)</span>
+                        <span className="text-[11px] text-amber-800">
+                          Este questionário já foi finalizado. Caso precise alterar alguma resposta, solicite a liberação da edição ao pesquisador.
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* AVISO QUANDO O PESQUISADOR LIBEROU A EDIÇÃO */}
+                  {isUnlockedByResearcher && (
+                    <div className="p-3 bg-emerald-50 border border-emerald-300 rounded-2xl flex items-center gap-2.5 text-xs text-emerald-900">
+                      <Unlock className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <div className="leading-snug">
+                        <span className="font-bold block">Edição Liberada pelo Pesquisador</span>
+                        <span className="text-[11px] text-emerald-800">
+                          Você pode alterar suas respostas. Ao concluir a última etapa, clique em &quot;Salvar Alterações&quot;.
+                        </span>
+                      </div>
+                    </div>
+                  )}
 
                   <h3 className="text-base sm:text-lg font-black text-slate-900 leading-snug">
                     {currentQuestion.title}
@@ -956,10 +1160,15 @@ function PacienteContent() {
                             <button
                               key={opt.value}
                               type="button"
-                              onClick={() => handleFormAnswerChange(currentQuestion.id, opt.value)}
-                              className={`w-full p-4 rounded-2xl border-2 text-left transition flex items-center justify-between cursor-pointer ${
+                              disabled={isReadOnly}
+                              onClick={() => !isReadOnly && handleFormAnswerChange(currentQuestion.id, opt.value)}
+                              className={`w-full p-4 rounded-2xl border-2 text-left transition flex items-center justify-between ${
+                                isReadOnly ? 'cursor-default' : 'cursor-pointer'
+                              } ${
                                 isSelected
                                   ? 'bg-blue-600 border-blue-600 text-white font-bold shadow-md ring-2 ring-blue-300 scale-[1.01]'
+                                  : isReadOnly
+                                  ? 'bg-slate-50 border-slate-200 text-slate-400 opacity-60'
                                   : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50'
                               }`}
                             >
@@ -997,10 +1206,15 @@ function PacienteContent() {
                             <button
                               key={opt.value}
                               type="button"
-                              onClick={() => handleFormAnswerChange(currentQuestion.id, opt.value)}
-                              className={`w-full p-4 rounded-2xl border-2 text-left transition flex items-center justify-between cursor-pointer ${
+                              disabled={isReadOnly}
+                              onClick={() => !isReadOnly && handleFormAnswerChange(currentQuestion.id, opt.value)}
+                              className={`w-full p-4 rounded-2xl border-2 text-left transition flex items-center justify-between ${
+                                isReadOnly ? 'cursor-default' : 'cursor-pointer'
+                              } ${
                                 isSelected
                                   ? 'bg-blue-600 border-blue-600 text-white font-bold shadow-md ring-2 ring-blue-300 scale-[1.01]'
+                                  : isReadOnly
+                                  ? 'bg-slate-50 border-slate-200 text-slate-400 opacity-60'
                                   : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50'
                               }`}
                             >
@@ -1033,10 +1247,15 @@ function PacienteContent() {
                             <button
                               key={item.val}
                               type="button"
-                              onClick={() => handleFormAnswerChange(currentQuestion.id, item.val)}
-                              className={`py-4 px-3 rounded-2xl border-2 text-center text-sm font-black transition cursor-pointer flex items-center justify-center gap-2 ${
+                              disabled={isReadOnly}
+                              onClick={() => !isReadOnly && handleFormAnswerChange(currentQuestion.id, item.val)}
+                              className={`py-4 px-3 rounded-2xl border-2 text-center text-sm font-black transition flex items-center justify-center gap-2 ${
+                                isReadOnly ? 'cursor-default' : 'cursor-pointer'
+                              } ${
                                 isSelected
                                   ? `${item.bgActive} shadow-md scale-[1.02]`
+                                  : isReadOnly
+                                  ? 'bg-slate-50 border-slate-200 text-slate-400 opacity-60'
                                   : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50'
                               }`}
                             >
@@ -1089,16 +1308,22 @@ function PacienteContent() {
                             <div className="grid grid-cols-2 gap-2.5 pt-1">
                               <button
                                 type="button"
+                                disabled={isReadOnly}
                                 onClick={() => {
+                                  if (isReadOnly) return;
                                   handleFormAnswerChange(gateKey, 'sim');
                                   handleFormAnswerChange(`${currentQuestion.id}_gate`, 'sim');
                                   if (currentAnswer === undefined || currentAnswer === null) {
                                     handleFormAnswerChange(currentQuestion.id, 0);
                                   }
                                 }}
-                                className={`py-3 px-3 rounded-xl text-xs sm:text-sm font-bold transition flex items-center justify-center gap-1.5 border-2 cursor-pointer ${
+                                className={`py-3 px-3 rounded-xl text-xs sm:text-sm font-bold transition flex items-center justify-center gap-1.5 border-2 ${
+                                  isReadOnly ? 'cursor-default' : 'cursor-pointer'
+                                } ${
                                   hasPain
                                     ? 'bg-blue-600 text-white border-blue-600 shadow-sm ring-2 ring-blue-300'
+                                    : isReadOnly
+                                    ? 'bg-slate-50 border-slate-200 text-slate-400 opacity-60'
                                     : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
                                 }`}
                               >
@@ -1107,14 +1332,20 @@ function PacienteContent() {
                               </button>
                               <button
                                 type="button"
+                                disabled={isReadOnly}
                                 onClick={() => {
+                                  if (isReadOnly) return;
                                   handleFormAnswerChange(gateKey, 'nao');
                                   handleFormAnswerChange(`${currentQuestion.id}_gate`, 'nao');
                                   handleFormAnswerChange(currentQuestion.id, 0);
                                 }}
-                                className={`py-3 px-3 rounded-xl text-xs sm:text-sm font-bold transition flex items-center justify-center gap-1.5 border-2 cursor-pointer ${
+                                className={`py-3 px-3 rounded-xl text-xs sm:text-sm font-bold transition flex items-center justify-center gap-1.5 border-2 ${
+                                  isReadOnly ? 'cursor-default' : 'cursor-pointer'
+                                } ${
                                   isBlockedNoPain
                                     ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm ring-2 ring-emerald-300'
+                                    : isReadOnly
+                                    ? 'bg-slate-50 border-slate-200 text-slate-400 opacity-60'
                                     : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
                                 }`}
                               >
@@ -1131,7 +1362,11 @@ function PacienteContent() {
                             <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
                             <div className="leading-snug">
                               <span className="font-bold block text-xs">Ausência de dor registrada (Nota 0.0)</span>
-                              <span className="text-emerald-700 text-[11px]">Você informou que não sentiu dor. Clique em &quot;Próxima&quot; para continuar.</span>
+                              <span className="text-emerald-700 text-[11px]">
+                                {isReadOnly
+                                  ? 'Você informou ausência de dor nesta etapa.'
+                                  : 'Você informou que não sentiu dor. Clique em "Próxima" para continuar.'}
+                              </span>
                             </div>
                           </div>
                         )}
@@ -1156,7 +1391,9 @@ function PacienteContent() {
                             </div>
 
                             <p className="text-[11px] text-slate-500 italic text-center">
-                              Arraste a barra para marcar a intensidade do que você sentiu:
+                              {isReadOnly
+                                ? 'Intensidade registrada na escala:'
+                                : 'Arraste a barra para marcar a intensidade do que você sentiu:'}
                             </p>
 
                             <div className="relative flex items-center py-2 px-1">
@@ -1167,15 +1404,19 @@ function PacienteContent() {
                                 max="10"
                                 step="0.1"
                                 value={vasVal}
-                                onTouchStart={() => handleFormAnswerChange(currentQuestion.id, vasVal)}
-                                onMouseDown={() => handleFormAnswerChange(currentQuestion.id, vasVal)}
+                                disabled={isReadOnly}
+                                onTouchStart={() => !isReadOnly && handleFormAnswerChange(currentQuestion.id, vasVal)}
+                                onMouseDown={() => !isReadOnly && handleFormAnswerChange(currentQuestion.id, vasVal)}
                                 onChange={(e) =>
+                                  !isReadOnly &&
                                   handleFormAnswerChange(
                                     currentQuestion.id,
                                     parseFloat(parseFloat(e.target.value).toFixed(1))
                                   )
                                 }
-                                className="w-full h-3.5 bg-slate-200 border border-slate-300 rounded-lg appearance-none cursor-pointer accent-blue-600 focus:outline-none"
+                                className={`w-full h-3.5 bg-slate-200 border border-slate-300 rounded-lg appearance-none accent-blue-600 focus:outline-none ${
+                                  isReadOnly ? 'cursor-default opacity-80' : 'cursor-pointer'
+                                }`}
                               />
                               <div className="w-1.5 h-7 bg-slate-400 rounded-full shrink-0 -ml-1 z-10" />
                             </div>
@@ -1224,10 +1465,15 @@ function PacienteContent() {
                               <button
                                 key={opt.value}
                                 type="button"
-                                onClick={() => handleFormAnswerChange(currentQuestion.id, opt.value)}
-                                className={`h-12 rounded-xl text-xs font-bold transition flex items-center justify-center cursor-pointer ${
+                                disabled={isReadOnly}
+                                onClick={() => !isReadOnly && handleFormAnswerChange(currentQuestion.id, opt.value)}
+                                className={`h-12 rounded-xl text-xs font-bold transition flex items-center justify-center ${
+                                  isReadOnly ? 'cursor-default' : 'cursor-pointer'
+                                } ${
                                   isSelected
                                     ? 'bg-blue-600 text-white border-2 border-blue-600 shadow-md ring-2 ring-blue-300 scale-[1.05]'
+                                    : isReadOnly
+                                    ? 'bg-slate-50 text-slate-400 border border-slate-200 opacity-60'
                                     : isNA
                                     ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300'
                                     : 'bg-white hover:bg-slate-100 text-slate-800 border border-slate-200'
@@ -1256,10 +1502,14 @@ function PacienteContent() {
                       <div className="pt-2">
                         <textarea
                           rows={4}
+                          disabled={isReadOnly}
+                          readOnly={isReadOnly}
                           value={(currentAnswer as string | undefined) ?? ''}
                           onChange={(e) => handleFormAnswerChange(currentQuestion.id, e.target.value)}
-                          placeholder="Digite sua resposta aqui..."
-                          className="w-full p-4 border-2 border-slate-200 rounded-2xl text-xs sm:text-sm bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 focus:outline-none transition"
+                          placeholder={isReadOnly ? 'Nenhum texto informado.' : 'Digite sua resposta detalhada aqui...'}
+                          className={`w-full p-4 border-2 border-slate-200 rounded-2xl text-xs sm:text-sm transition ${
+                            isReadOnly ? 'bg-slate-50 text-slate-600' : 'bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 focus:outline-none'
+                          }`}
                         />
                       </div>
                     );
@@ -1273,10 +1523,14 @@ function PacienteContent() {
                         <input
                           type="number"
                           inputMode="numeric"
+                          disabled={isReadOnly}
+                          readOnly={isReadOnly}
                           value={(currentAnswer as string | number | undefined) ?? ''}
                           onChange={(e) => handleFormAnswerChange(currentQuestion.id, e.target.value)}
                           placeholder="Informe um número..."
-                          className="w-full p-4 border-2 border-slate-200 rounded-2xl text-base font-mono font-bold bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 focus:outline-none transition text-center"
+                          className={`w-full p-4 border-2 border-slate-200 rounded-2xl text-base font-mono font-bold transition text-center ${
+                            isReadOnly ? 'bg-slate-50 text-slate-600' : 'bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 focus:outline-none'
+                          }`}
                         />
                       </div>
                     );
@@ -1337,21 +1591,41 @@ function PacienteContent() {
                       disabled={!isStepAnswered(currentQuestion)}
                       className="py-3 px-5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 text-white font-extrabold text-xs sm:text-sm rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer disabled:cursor-not-allowed ml-auto"
                     >
-                      <span>{currentQuestion.type === 'instruction' ? 'Continuar' : 'Próxima'}</span>
+                      <span>{currentQuestion?.type === 'instruction' ? 'Continuar' : 'Próxima'}</span>
                       <ChevronRight className="w-4 h-4" />
                     </button>
-                  ) : selectedForm.isCompleted ? (
+                  ) : isReadOnly ? (
+                    // MODO SOMENTE LEITURA (QUESTIONÁRIO JÁ ENVIADO E BLOQUEADO)
                     <button
                       type="button"
                       onClick={() => {
                         setSelectedForm(null);
                         setCurrentStepIndex(0);
                       }}
-                      className="py-3 px-5 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs sm:text-sm rounded-xl transition cursor-pointer ml-auto"
+                      className="py-3 px-5 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs sm:text-sm rounded-xl transition cursor-pointer ml-auto flex items-center gap-1.5"
                     >
-                      <span>Voltar ao Início</span>
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                      <span>Concluído • Voltar ao Início</span>
+                    </button>
+                  ) : isUnlockedByResearcher ? (
+                    // MODO EDIÇÃO AUTORIZADA PELO PESQUISADOR
+                    <button
+                      type="button"
+                      onClick={() => handleSubmitCustomForm()}
+                      disabled={submittingForm || !isStepAnswered(currentQuestion)}
+                      className="py-3 px-5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:bg-slate-200 disabled:text-slate-400 text-white font-black text-xs sm:text-sm rounded-xl shadow-lg transition-all flex items-center gap-1.5 cursor-pointer disabled:cursor-not-allowed ml-auto"
+                    >
+                      {submittingForm ? (
+                        <span>Salvando Alterações...</span>
+                      ) : (
+                        <>
+                          <CheckCircle2 className="w-4 h-4" />
+                          <span>Salvar Alterações Autorizadas</span>
+                        </>
+                      )}
                     </button>
                   ) : (
+                    // MODO NORMAL DE PRIMEIRO ENVIO
                     <button
                       type="button"
                       onClick={() => handleSubmitCustomForm()}

@@ -515,6 +515,8 @@ export async function GET(req: Request) {
         occurrence = 'Retorno Final / Conclusão';
       }
 
+      const isUnlocked = allUnlockedForms.includes(f.id);
+
       return {
         id: f.id,
         title: f.title,
@@ -526,6 +528,7 @@ export async function GET(req: Request) {
         allowLate: f.allowLate,
         createdAt: f.createdAt,
         isCompleted: Boolean(resp),
+        isUnlocked: Boolean(isUnlocked),
         submittedAt: resp?.submittedAt ? new Date(resp.submittedAt).toLocaleString('pt-BR') : null,
         myAnswers: resp ? JSON.parse(resp.answersJson || '{}') : null,
       };
@@ -562,6 +565,10 @@ export async function GET(req: Request) {
         Object.values(parsedAnamnesisAnswers).some((v) => v !== undefined && v !== null && v !== '')
       );
       const isCompleted = hasAnsweredAnamnesis;
+      const isUnlockedAnamnesis =
+        allUnlockedForms.includes(`anamnesis_${participant.project.id}`) ||
+        allUnlockedForms.includes('anamnesis');
+
       allFormsWithStatus.unshift({
         id: `anamnesis_${participant.project.id}`,
         title: 'Ficha de Anamnese & Critérios de Participação',
@@ -582,6 +589,7 @@ export async function GET(req: Request) {
         allowLate: true,
         createdAt: participant.createdAt,
         isCompleted,
+        isUnlocked: Boolean(isUnlockedAnamnesis),
         submittedAt: isCompleted ? new Date(participant.createdAt).toLocaleString('pt-BR') : null,
         myAnswers: parsedAnamnesisAnswers,
       });
